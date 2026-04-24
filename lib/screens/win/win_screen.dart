@@ -8,6 +8,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/game_constants.dart';
 import '../../providers/providers.dart';
 import '../../models/game_image_model.dart';
+import '../../models/player_model.dart';
 import '../../widgets/common/gradient_button.dart';
 import '../../widgets/common/player_avatar.dart';
 
@@ -251,7 +252,7 @@ class _WinScreenState extends ConsumerState<WinScreen> {
 
 class _ScoreRow extends StatelessWidget {
   final int rank;
-  final dynamic player;
+  final PlayerModel player;
   final bool isWinner;
   final bool isCurrentUser;
 

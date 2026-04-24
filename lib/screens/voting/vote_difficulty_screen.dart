@@ -60,9 +60,10 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
           });
         }
 
-        final isHost = currentUser?.id == room.hostId;
+        if (currentUser == null) return const SizedBox();
+        final isHost = currentUser.id == room.hostId;
         final allVoted = room.difficultyVotes.length >= room.players.length;
-        final myVote = room.difficultyVotes[currentUser?.id];
+        final myVote = room.difficultyVotes[currentUser.id];
 
         return Scaffold(
           appBar: AppBar(

@@ -6,6 +6,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/game_constants.dart';
 import '../../providers/providers.dart';
 import '../../models/room_model.dart';
+import '../../models/player_model.dart';
 import '../../widgets/common/gradient_button.dart';
 import '../../widgets/common/player_avatar.dart';
 
@@ -199,7 +200,7 @@ class LobbyScreen extends ConsumerWidget {
 }
 
 class _PlayerTile extends StatelessWidget {
-  final dynamic player;
+  final PlayerModel player;
   final bool isCurrentUser;
 
   const _PlayerTile({required this.player, required this.isCurrentUser});

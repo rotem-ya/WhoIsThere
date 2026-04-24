@@ -66,8 +66,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(children: [
-              Text('✅ Piece placed! +${0} points'),
+            content: Row(children: [
+              Text('✅ Piece placed! +${difficulty.placePiecePoints} points'),
             ]),
             backgroundColor: AppColors.accent,
             duration: const Duration(seconds: 1),
@@ -216,10 +216,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
           });
         }
 
+        if (currentUser == null) return const SizedBox();
         final difficulty = room.selectedDifficulty ?? Difficulty.easy;
         final gridSize = difficulty.gridSize;
-        final isMyTurn = room.currentTurnUserId == currentUser?.id;
-        final myPlayer = room.players[currentUser?.id];
+        final isMyTurn = room.currentTurnUserId == currentUser.id;
+        final myPlayer = room.players[currentUser.id];
 
         // Reset turn state when turn changes
         if (isMyTurn && _hasPlacedPiece && !_hasGuessed) {

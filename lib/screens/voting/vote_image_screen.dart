@@ -69,9 +69,10 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
         }
 
         final currentUser = ref.read(currentUserProvider).value;
-        final isHost = currentUser?.id == room.hostId;
+        if (currentUser == null) return const SizedBox();
+        final isHost = currentUser.id == room.hostId;
         final allVoted = room.imageVotes.length >= room.players.length;
-        final myVote = room.imageVotes[currentUser?.id];
+        final myVote = room.imageVotes[currentUser.id];
 
         return Scaffold(
           appBar: AppBar(
