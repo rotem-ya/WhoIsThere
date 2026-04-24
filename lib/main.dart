@@ -9,9 +9,14 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  Object? firebaseError;
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    firebaseError = e;
+  }
 
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -25,7 +30,62 @@ void main() async {
     ),
   );
 
+  if (firebaseError != null) {
+    runApp(_ErrorApp(error: firebaseError.toString()));
+    return;
+  }
+
   runApp(const ProviderScope(child: WhoIsThereApp()));
+}
+
+class _ErrorApp extends StatelessWidget {
+  final String error;
+  const _ErrorApp({required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        backgroundColor: const Color(0xFF2D3561),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('⚠️', style: TextStyle(fontSize: 64)),
+                const SizedBox(height: 16),
+                const Text(
+                  'Startup Error',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.black38,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: SelectableText(
+                    error,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class WhoIsThereApp extends ConsumerWidget {
