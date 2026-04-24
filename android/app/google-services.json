@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "815269999993",
+    "project_id": "whoisthere-380fa",
+    "storage_bucket": "whoisthere-380fa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:815269999993:android:539ce470735526187b2ba8",
+        "android_client_info": {
+          "package_name": "com.whoisthere.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDoChtGi-uEV3ZWV31-yikolOfPF8pOiX4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
