@@ -1,0 +1,79 @@
+[
+  {
+    "id": "img_001",
+    "name": "The Eiffel Tower",
+    "answer": "Eiffel Tower",
+    "acceptedAnswers": ["eiffel tower", "tour eiffel", "paris tower"],
+    "category": "landmark",
+    "isPremium": false,
+    "cost": 0,
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/1200px-Smiley.svg.png",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/400px-Smiley.svg.png"
+  },
+  {
+    "id": "img_002",
+    "name": "Big Ben",
+    "answer": "Big Ben",
+    "acceptedAnswers": ["big ben", "clock tower", "elizabeth tower"],
+    "category": "landmark",
+    "isPremium": false,
+    "cost": 0,
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/1200px-Smiley.svg.png",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/400px-Smiley.svg.png"
+  },
+  {
+    "id": "img_003",
+    "name": "Colosseum",
+    "answer": "Colosseum",
+    "acceptedAnswers": ["colosseum", "coliseum", "rome arena"],
+    "category": "landmark",
+    "isPremium": false,
+    "cost": 0,
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/1200px-Smiley.svg.png",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/400px-Smiley.svg.png"
+  },
+  {
+    "id": "img_004",
+    "name": "Statue of Liberty",
+    "answer": "Statue of Liberty",
+    "acceptedAnswers": ["statue of liberty", "liberty", "new york statue"],
+    "category": "landmark",
+    "isPremium": false,
+    "cost": 0,
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/1200px-Smiley.svg.png",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/400px-Smiley.svg.png"
+  },
+  {
+    "id": "img_005",
+    "name": "Sydney Opera House",
+    "answer": "Sydney Opera House",
+    "acceptedAnswers": ["sydney opera house", "opera house", "sydney opera"],
+    "category": "landmark",
+    "isPremium": false,
+    "cost": 0,
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/1200px-Smiley.svg.png",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/400px-Smiley.svg.png"
+  },
+  {
+    "id": "img_006",
+    "name": "Taj Mahal",
+    "answer": "Taj Mahal",
+    "acceptedAnswers": ["taj mahal", "tajmahal", "agra"],
+    "category": "landmark",
+    "isPremium": false,
+    "cost": 0,
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/1200px-Smiley.svg.png",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/400px-Smiley.svg.png"
+  },
+  {
+    "id": "img_premium_001",
+    "name": "Celebrities Pack Vol.1",
+    "answer": "Michael Jackson",
+    "acceptedAnswers": ["michael jackson", "mj", "king of pop"],
+    "category": "singer",
+    "isPremium": true,
+    "cost": 50,
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/1200px-Smiley.svg.png",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/400px-Smiley.svg.png"
+  }
+]
