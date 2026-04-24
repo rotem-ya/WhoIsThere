@@ -23,23 +23,21 @@ class DefaultFirebaseOptions {
     }
   }
 
-  // TODO: Replace with your Firebase project values after running:
-  // flutterfire configure --project=YOUR_FIREBASE_PROJECT_ID
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'YOUR_ANDROID_API_KEY',
-    appId: 'YOUR_ANDROID_APP_ID',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_PROJECT_ID.appspot.com',
+    apiKey: 'AIzaSyDoChtGi-uEV3ZWV31-yikolOfPF8p0iX4',
+    appId: '1:815269999993:android:539ce470735526187b2ba8',
+    messagingSenderId: '815269999993',
+    projectId: 'whoisthere-380fa',
+    storageBucket: 'whoisthere-380fa.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'YOUR_IOS_API_KEY',
-    appId: 'YOUR_IOS_APP_ID',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_PROJECT_ID.appspot.com',
-    iosClientId: 'YOUR_IOS_CLIENT_ID',
-    iosBundleId: 'com.yourcompany.whoisthere',
+    apiKey: 'AIzaSyDoChtGi-uEV3ZWV31-yikolOfPF8p0iX4',
+    appId: '1:815269999993:ios:whoisthere',
+    messagingSenderId: '815269999993',
+    projectId: 'whoisthere-380fa',
+    storageBucket: 'whoisthere-380fa.firebasestorage.app',
+    iosClientId: '',
+    iosBundleId: 'com.whoisthere.app',
   );
 }
