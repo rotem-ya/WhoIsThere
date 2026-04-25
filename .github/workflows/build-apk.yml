@@ -38,12 +38,19 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build APK debug
-        run: flutter build apk --debug
+      - name: Build APK release (split per ABI)
+        run: flutter build apk --release --split-per-abi
 
-      - name: Upload APK
+      - name: Upload arm64 APK (Samsung Galaxy)
         uses: actions/upload-artifact@v4
         with:
-          name: WhoIsThere-debug
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: WhoIsThere-arm64
+          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          retention-days: 14
+
+      - name: Upload all release APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: WhoIsThere-release-all
+          path: build/app/outputs/flutter-apk/app-*-release.apk
           retention-days: 14
