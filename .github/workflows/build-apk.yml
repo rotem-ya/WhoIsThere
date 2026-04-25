@@ -42,15 +42,20 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_CONTENT" ]; then
             echo "$KEYSTORE_CONTENT" | base64 -d > android/app/keystore.jks
+            STOREPASS="${KEYSTORE_STORE_PASS:-WhoIsThere2024!}"
             echo "Using release keystore"
           else
-            cp ~/.android/debug.keystore android/app/keystore.jks
-            echo "No KEYSTORE_CONTENT secret found, using debug keystore"
+            keytool -genkey -v \
+              -keystore android/app/keystore.jks \
+              -alias whoisthere \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass 'WhoIsThere2024!' -keypass 'WhoIsThere2024!' \
+              -dname "CN=WhoIsThere, O=WhoIsThere, C=IL" 2>/dev/null
+            STOREPASS="WhoIsThere2024!"
+            echo "No KEYSTORE_CONTENT secret - generated temporary keystore"
           fi
-          STOREPASS="${KEYSTORE_STORE_PASS:-android}"
-          echo "=== SHA-1 fingerprint (add to Firebase Console) ==="
-          keytool -list -v -keystore android/app/keystore.jks -storepass "$STOREPASS" 2>/dev/null | grep "SHA1:" || \
-          keytool -list -v -keystore android/app/keystore.jks -storepass android 2>/dev/null | grep "SHA1:" || true
+          echo "=== SHA-1 (add to Firebase Console) ==="
+          keytool -list -v -keystore android/app/keystore.jks -storepass "$STOREPASS" 2>/dev/null | grep "SHA1:" || true
         env:
           KEYSTORE_CONTENT: ${{ secrets.KEYSTORE_CONTENT }}
           KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
