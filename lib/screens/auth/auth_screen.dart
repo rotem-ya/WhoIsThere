@@ -35,6 +35,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
+  Future<void> _signInAnonymously() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = await ref.read(authServiceProvider).signInAnonymously();
+      if (user != null && mounted) {
+        context.go('/home');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sign in failed: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _signInWithApple() async {
     setState(() => _isLoading = true);
     try {
@@ -152,6 +170,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             textColor: Colors.white,
                           ),
                         ],
+                        const SizedBox(height: 12),
+                        _SocialSignInButton(
+                          onPressed: _signInAnonymously,
+                          icon: '👤',
+                          label: 'Continue as Guest',
+                          color: Colors.grey.shade100,
+                          textColor: Colors.grey.shade700,
+                          borderColor: Colors.grey.shade300,
+                        ),
                       ],
                       const SizedBox(height: 16),
                       Text(

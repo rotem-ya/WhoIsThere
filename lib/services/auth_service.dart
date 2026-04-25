@@ -12,6 +12,23 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  Future<UserModel?> signInAnonymously() async {
+    final userCredential = await _auth.signInAnonymously();
+    final user = userCredential.user!;
+    final docRef = _firestore.collection('users').doc(user.uid);
+    final doc = await docRef.get();
+    if (!doc.exists) {
+      final newUser = UserModel(
+        id: user.uid,
+        name: 'Guest${user.uid.substring(0, 4).toUpperCase()}',
+        photoUrl: null,
+      );
+      await docRef.set(newUser.toMap());
+      return newUser;
+    }
+    return UserModel.fromFirestore(doc);
+  }
+
   Future<UserModel?> signInWithGoogle() async {
     final googleUser = await _googleSignIn.signIn();
     if (googleUser == null) return null;
