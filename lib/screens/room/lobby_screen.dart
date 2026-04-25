@@ -78,13 +78,16 @@ class LobbyScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          room.code,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 8,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            room.code,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 40,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 8,
+                            ),
                           ),
                         ),
                       ],
@@ -239,6 +242,8 @@ class _PlayerTile extends StatelessWidget {
           Expanded(
             child: Text(
               player.name + (isCurrentUser ? ' (You)' : ''),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 15,
