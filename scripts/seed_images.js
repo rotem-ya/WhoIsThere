@@ -57,7 +57,7 @@ const images = [
     id: 'taj-mahal',
     name: 'Taj Mahal',
     answer: 'Taj Mahal',
-    acceptedAnswers: ['taj mahal', 'tajmahal', 'taj', 'טאג' מאהל'],
+    acceptedAnswers: ['taj mahal', 'tajmahal', 'taj', 'טאג מאהל'],
     category: 'landmark',
     isPremium: false,
     cost: 0,
