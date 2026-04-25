@@ -22,7 +22,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   Future<void> _createRoom() async {
     setState(() => _isLoading = true);
     try {
-      final user = ref.read(currentUserProvider).value;
+      final user = await ref.read(currentUserProvider.future);
       if (user == null) return;
 
       final room = await ref.read(roomServiceProvider).createRoom(

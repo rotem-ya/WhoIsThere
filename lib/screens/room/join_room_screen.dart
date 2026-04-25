@@ -31,7 +31,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
     });
 
     try {
-      final user = ref.read(currentUserProvider).value;
+      final user = await ref.read(currentUserProvider.future);
       if (user == null) return;
 
       final room = await ref.read(roomServiceProvider).joinRoom(
