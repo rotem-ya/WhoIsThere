@@ -37,13 +37,26 @@ android {
         multiDexEnabled true
     }
 
+    signingConfigs {
+        release {
+            def keystoreFile = file("keystore.jks")
+            if (keystoreFile.exists()) {
+                storeFile keystoreFile
+                storePassword System.getenv("KEYSTORE_STORE_PASS") ?: "WhoIsThere2024!"
+                keyAlias System.getenv("KEYSTORE_ALIAS") ?: "whoisthere"
+                keyPassword System.getenv("KEYSTORE_KEY_PASS") ?: "WhoIsThere2024!"
+            }
+        }
+    }
+
     buildTypes {
         debug {
             shrinkResources false
             minifyEnabled false
         }
         release {
-            signingConfig signingConfigs.debug
+            def keystoreFile = file("keystore.jks")
+            signingConfig keystoreFile.exists() ? signingConfigs.release : signingConfigs.debug
             shrinkResources false
             minifyEnabled false
         }

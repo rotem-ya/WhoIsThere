@@ -38,8 +38,29 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Setup signing keystore
+        run: |
+          if [ -n "$KEYSTORE_CONTENT" ]; then
+            echo "$KEYSTORE_CONTENT" | base64 -d > android/app/keystore.jks
+            echo "Using release keystore"
+          else
+            cp ~/.android/debug.keystore android/app/keystore.jks
+            echo "No KEYSTORE_CONTENT secret found, using debug keystore"
+          fi
+          STOREPASS="${KEYSTORE_STORE_PASS:-android}"
+          echo "=== SHA-1 fingerprint (add to Firebase Console) ==="
+          keytool -list -v -keystore android/app/keystore.jks -storepass "$STOREPASS" 2>/dev/null | grep "SHA1:" || \
+          keytool -list -v -keystore android/app/keystore.jks -storepass android 2>/dev/null | grep "SHA1:" || true
+        env:
+          KEYSTORE_CONTENT: ${{ secrets.KEYSTORE_CONTENT }}
+          KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
+
       - name: Build APK release (split per ABI)
         run: flutter build apk --release --split-per-abi
+        env:
+          KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEYSTORE_KEY_PASS: ${{ secrets.KEYSTORE_KEY_PASS }}
 
       - name: Upload arm64 APK (Samsung Galaxy)
         uses: actions/upload-artifact@v4
