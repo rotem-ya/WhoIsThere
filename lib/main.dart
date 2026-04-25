@@ -11,10 +11,12 @@ void main() async {
 
   Object? firebaseError;
   try {
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } on FirebaseException catch (e) {
+    if (e.code != 'duplicate-app') {
+      firebaseError = e;
     }
   } catch (e) {
     firebaseError = e;
