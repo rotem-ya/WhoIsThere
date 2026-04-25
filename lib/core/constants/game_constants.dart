@@ -144,7 +144,7 @@ extension ImageCategoryExtension on ImageCategory {
 
 class GameConstants {
   static const int maxPlayers = 8;
-  static const int minPlayers = 2;
+  static const int minPlayers = 1;
   static const int roomCodeLength = 6;
   static const int hostVoteWeight = 2;
   static const int regularVoteWeight = 1;

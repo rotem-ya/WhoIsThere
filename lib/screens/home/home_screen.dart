@@ -31,32 +31,35 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 // Header
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        userAsync.when(
-                          data: (user) => Text(
-                            'Hi, ${user?.name.split(' ').first ?? 'Player'}! 👋',
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.darkBlue,
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          userAsync.when(
+                            data: (user) => Text(
+                              'Hi, ${user?.name.split(' ').first ?? 'Player'}! 👋',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.darkBlue,
+                              ),
+                            ),
+                            loading: () => const SizedBox(height: 28),
+                            error: (_, __) => const Text('Welcome!'),
+                          ),
+                          const Text(
+                            'Ready to play?',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          loading: () => const SizedBox(height: 28),
-                          error: (_, __) => const Text('Welcome!'),
-                        ),
-                        const Text(
-                          'Ready to play?',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     Row(
                       children: [
