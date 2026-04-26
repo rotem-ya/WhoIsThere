@@ -299,6 +299,25 @@ class RoomService {
     }
   }
 
+  Future<void> addBotPlayer(String roomId, String botName) async {
+    final botId = 'bot_${DateTime.now().millisecondsSinceEpoch}';
+    final bot = PlayerModel(
+      id: botId,
+      name: botName,
+      score: 0,
+      isBot: true,
+    );
+    await _rooms.doc(roomId).update({
+      'players.$botId': bot.toMap(),
+    });
+  }
+
+  Future<void> removeBotPlayer(String roomId, String botId) async {
+    await _rooms.doc(roomId).update({
+      'players.$botId': FieldValue.delete(),
+    });
+  }
+
   Future<List<GameImageModel>> getPublicImages() async {
     final query = await _firestore
         .collection('images')

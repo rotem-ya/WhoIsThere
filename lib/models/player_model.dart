@@ -7,6 +7,7 @@ class PlayerModel extends Equatable {
   final int score;
   final bool isEliminated;
   final bool isHost;
+  final bool isBot;
 
   const PlayerModel({
     required this.id,
@@ -15,6 +16,7 @@ class PlayerModel extends Equatable {
     required this.score,
     this.isEliminated = false,
     this.isHost = false,
+    this.isBot = false,
   });
 
   factory PlayerModel.fromMap(String id, Map<String, dynamic> data) {
@@ -25,6 +27,7 @@ class PlayerModel extends Equatable {
       score: data['score'] ?? 0,
       isEliminated: data['isEliminated'] ?? false,
       isHost: data['isHost'] ?? false,
+      isBot: data['isBot'] ?? false,
     );
   }
 
@@ -34,6 +37,7 @@ class PlayerModel extends Equatable {
         'score': score,
         'isEliminated': isEliminated,
         'isHost': isHost,
+        'isBot': isBot,
       };
 
   PlayerModel copyWith({
@@ -42,6 +46,7 @@ class PlayerModel extends Equatable {
     int? score,
     bool? isEliminated,
     bool? isHost,
+    bool? isBot,
   }) =>
       PlayerModel(
         id: id,
@@ -50,8 +55,9 @@ class PlayerModel extends Equatable {
         score: score ?? this.score,
         isEliminated: isEliminated ?? this.isEliminated,
         isHost: isHost ?? this.isHost,
+        isBot: isBot ?? this.isBot,
       );
 
   @override
-  List<Object?> get props => [id, name, score, isEliminated, isHost];
+  List<Object?> get props => [id, name, score, isEliminated, isHost, isBot];
 }

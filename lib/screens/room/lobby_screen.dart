@@ -147,7 +147,24 @@ class LobbyScreen extends ConsumerWidget {
 
                   const SizedBox(height: 16),
 
-                  if (isHost)
+                  if (isHost) ...[
+                    if (room.players.length < GameConstants.maxPlayers)
+                      OutlinedButton.icon(
+                        onPressed: () => _addBot(context, ref, roomId, room),
+                        icon: const Text('🤖', style: TextStyle(fontSize: 16)),
+                        label: const Text(
+                          'הוסף שחקן בוט',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 48),
+                          side: BorderSide(
+                              color: AppColors.primary.withOpacity(0.4)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ).animate(delay: 250.ms).fadeIn(),
+                    const SizedBox(height: 10),
                     GradientButton(
                       text: canStart ? 'התחל משחק' : 'ממתין לשחקנים...',
                       icon: Icons.play_arrow_rounded,
@@ -156,7 +173,8 @@ class LobbyScreen extends ConsumerWidget {
                               .read(roomServiceProvider)
                               .startVotingImage(roomId)
                           : null,
-                    ).animate(delay: 300.ms).fadeIn()
+                    ).animate(delay: 300.ms).fadeIn(),
+                  ]
                   else
                     Container(
                       width: double.infinity,
