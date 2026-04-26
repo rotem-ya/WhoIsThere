@@ -21,8 +21,7 @@ class GameBoardScreen extends ConsumerStatefulWidget {
 }
 
 class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
-  int? _selectedPieceIndex;
-  bool _hasPlacedPiece = false;
+  bool _hasFlipped = false;
   bool _hasGuessed = false;
   bool _isActing = false;
   GameImageModel? _gameImage;
@@ -48,65 +47,43 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     }
   }
 
-  Future<void> _tryPlacePiece(int slotIndex, RoomModel room) async {
-    if (_selectedPieceIndex == null || _hasPlacedPiece || _isActing) return;
+  Future<void> _flipPiece(int pieceIndex, RoomModel room) async {
+    if (_hasFlipped || _isActing) return;
     final difficulty = room.selectedDifficulty!;
     final user = ref.read(currentUserProvider).value;
     if (user == null) return;
 
     setState(() => _isActing = true);
 
-    // Correct placement: piece index matches slot index
-    final isCorrect = _selectedPieceIndex == slotIndex;
+    await ref.read(roomServiceProvider).revealPiece(
+          roomId: widget.roomId,
+          userId: user.id,
+          pieceIndex: pieceIndex,
+          difficulty: difficulty,
+        );
 
-    if (isCorrect) {
-      await ref.read(roomServiceProvider).placePiece(
-            roomId: widget.roomId,
-            userId: user.id,
-            pieceIndex: _selectedPieceIndex!,
-            difficulty: difficulty,
-          );
+    if (mounted) {
       setState(() {
-        _hasPlacedPiece = true;
-        _selectedPieceIndex = null;
+        _hasFlipped = true;
+        _isActing = false;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(children: [
-              Text('✅ חתיכה הונחה! +${difficulty.placePiecePoints} נקודות'),
-            ]),
-            backgroundColor: AppColors.accent,
-            duration: const Duration(seconds: 1),
-          ),
-        );
-      }
-    } else {
-      // Wrong placement - piece bounces back
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ לא מתאים כאן! נסה חריץ אחר.'),
-            backgroundColor: AppColors.secondary,
-            duration: Duration(seconds: 1),
-          ),
-        );
-      }
-      // Don't advance turn - they still have their guess
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ חתיכה נחשפה! +${difficulty.placePiecePoints} נקודות'),
+          backgroundColor: AppColors.accent,
+          duration: const Duration(seconds: 1),
+        ),
+      );
     }
-
-    setState(() => _isActing = false);
   }
 
-  Future<void> _skipPiecePlacement() async {
+  Future<void> _endTurn() async {
     if (_isActing) return;
     setState(() => _isActing = true);
-    await ref.read(roomServiceProvider).skipPiecePlacement(roomId: widget.roomId);
-    setState(() {
-      _hasPlacedPiece = true;
-      _selectedPieceIndex = null;
-      _isActing = false;
-    });
+    await ref
+        .read(roomServiceProvider)
+        .skipPiecePlacement(roomId: widget.roomId);
+    if (mounted) setState(() => _isActing = false);
   }
 
   void _showGuessDialog(RoomModel room) {
@@ -186,9 +163,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         );
 
     if (mounted) {
-      if (isCorrect) {
-        // Navigation handled by room state listener
-      } else {
+      if (!isCorrect) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -196,16 +171,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             backgroundColor: AppColors.secondary,
           ),
         );
-        // If placed piece already, advance turn
-        if (_hasPlacedPiece) {
-          setState(() => _isActing = false);
-        } else {
-          setState(() => _isActing = false);
-        }
       }
+      setState(() => _isActing = false);
     }
-
-    setState(() => _isActing = false);
   }
 
   @override
@@ -228,22 +196,23 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         final gridSize = difficulty.gridSize;
         final isMyTurn = room.currentTurnUserId == currentUser.id;
         final myPlayer = room.players[currentUser.id];
+        final allRevealed = room.availablePieceIndices.isEmpty;
 
         // Reset turn state when turn changes
-        if (isMyTurn && _hasPlacedPiece && !_hasGuessed) {
-          // Still on our turn, can guess
-        }
-        if (!isMyTurn) {
+        if (!isMyTurn && (_hasFlipped || _hasGuessed)) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && (_hasPlacedPiece || _hasGuessed)) {
+            if (mounted) {
               setState(() {
-                _hasPlacedPiece = false;
+                _hasFlipped = false;
                 _hasGuessed = false;
-                _selectedPieceIndex = null;
               });
             }
           });
         }
+
+        final canFlipPiece =
+            isMyTurn && !_hasFlipped && !allRevealed && !_isActing;
+        final effectivelyFlipped = _hasFlipped || allRevealed;
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -254,20 +223,27 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               onPressed: () => showDialog(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  title: const Text('לצאת מהמשחק?', style: TextStyle(fontWeight: FontWeight.w800)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
+                  title: const Text('לצאת מהמשחק?',
+                      style: TextStyle(fontWeight: FontWeight.w800)),
                   content: const Text('תאבד את ההתקדמות שלך בסיבוב זה.'),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('הישאר')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('הישאר')),
                     ElevatedButton(
                       onPressed: () async {
                         Navigator.pop(ctx);
                         if (currentUser != null) {
-                          await ref.read(roomServiceProvider).leaveRoom(widget.roomId, currentUser.id);
+                          await ref
+                              .read(roomServiceProvider)
+                              .leaveRoom(widget.roomId, currentUser.id);
                         }
                         if (context.mounted) context.go('/home');
                       },
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.secondary),
                       child: const Text('צא'),
                     ),
                   ],
@@ -296,90 +272,94 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             child: Column(
               children: [
                 // Players row
-                _PlayersBar(room: room, currentUserId: currentUser?.id),
+                _PlayersBar(room: room, currentUserId: currentUser.id),
 
-                // Board
+                // Board — takes most of the screen
                 Expanded(
-                  flex: 5,
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: _PuzzleBoard(
                       room: room,
                       gameImage: _gameImage,
                       gridSize: gridSize,
-                      selectedPieceIndex: _selectedPieceIndex,
-                      isMyTurn: isMyTurn,
-                      onSlotTap: isMyTurn && _selectedPieceIndex != null
-                          ? (i) => _tryPlacePiece(i, room)
-                          : null,
+                      canFlipPiece: canFlipPiece,
+                      onFlip: (index) => _flipPiece(index, room),
                     ),
                   ),
                 ),
 
-                // Pieces tray
+                // Bottom action area
                 if (isMyTurn) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'חתיכות זמינות',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.darkBlue,
-                                fontSize: 14,
+                  if (!effectivelyFlipped)
+                    // Instruction: tap a piece to flip
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('👆', style: TextStyle(fontSize: 20)),
+                          SizedBox(width: 10),
+                          Text(
+                            'הפוך חתיכה על הלוח!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    // After flipping: guess or end turn
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed:
+                                  (_hasGuessed || myPlayer?.isEliminated == true)
+                                      ? null
+                                      : () => _showGuessDialog(room),
+                              icon: const Icon(Icons.psychology_rounded),
+                              label:
+                                  Text(_hasGuessed ? 'ניחשת!' : 'נחש'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.secondary,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
                             ),
-                            if (!_hasPlacedPiece)
-                              TextButton(
-                                onPressed: _skipPiecePlacement,
-                                child: const Text('דלג על הנחה'),
-                              ),
-                          ],
-                        ),
-                        SizedBox(
-                          height: 72,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: room.availablePieceIndices.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(width: 8),
-                            itemBuilder: (context, i) {
-                              final pieceIdx =
-                                  room.availablePieceIndices[i];
-                              final isSelected =
-                                  _selectedPieceIndex == pieceIdx;
-
-                              return GestureDetector(
-                                onTap: _hasPlacedPiece
-                                    ? null
-                                    : () => setState(
-                                          () => _selectedPieceIndex =
-                                              isSelected ? null : pieceIdx,
-                                        ),
-                                child: _PieceTile(
-                                  pieceIndex: pieceIdx,
-                                  gridSize: gridSize,
-                                  imageUrl: _gameImage?.imageUrl,
-                                  isSelected: isSelected,
-                                  isLocked: _hasPlacedPiece,
-                                ),
-                              );
-                            },
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 10),
+                          ElevatedButton.icon(
+                            onPressed: _isActing ? null : _endTurn,
+                            icon: const Icon(Icons.skip_next_rounded),
+                            label: const Text('סיים תור'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.accent,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                 ] else ...[
+                  // Waiting for other player
                   Container(
                     padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(0.06),
                       borderRadius: BorderRadius.circular(14),
@@ -391,7 +371,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                             color: AppColors.primary, size: 18),
                         const SizedBox(width: 8),
                         Text(
-                          '${room.players[room.currentTurnUserId]?.name ?? '...'} משחק...',
+                          '${room.players[room.currentTurnUserId]?.name ?? '...'} מהפך חתיכה...',
                           style: const TextStyle(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w700,
@@ -402,46 +382,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   ),
                 ],
 
-                // Action buttons
-                if (isMyTurn)
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: (_hasGuessed || myPlayer?.isEliminated == true)
-                                ? null
-                                : () => _showGuessDialog(room),
-                            icon: const Icon(Icons.psychology_rounded),
-                            label: Text(_hasGuessed ? 'ניחשת!' : 'נחש'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.secondary,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                          ),
-                        ),
-                        if (_hasPlacedPiece && _hasGuessed) ...[
-                          const SizedBox(width: 8),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              // Turn ends automatically via Firestore
-                            },
-                            icon: const Icon(Icons.done_rounded),
-                            label: const Text('סיים תור'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.accent,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-
                 const SizedBox(height: 8),
               ],
             ),
@@ -450,7 +390,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
+      error: (e, _) => Scaffold(body: Center(child: Text('שגיאה: $e'))),
     );
   }
 }
@@ -501,17 +441,15 @@ class _PuzzleBoard extends StatelessWidget {
   final RoomModel room;
   final GameImageModel? gameImage;
   final int gridSize;
-  final int? selectedPieceIndex;
-  final bool isMyTurn;
-  final void Function(int slotIndex)? onSlotTap;
+  final bool canFlipPiece;
+  final void Function(int pieceIndex)? onFlip;
 
   const _PuzzleBoard({
     required this.room,
     this.gameImage,
     required this.gridSize,
-    this.selectedPieceIndex,
-    required this.isMyTurn,
-    this.onSlotTap,
+    required this.canFlipPiece,
+    this.onFlip,
   });
 
   @override
@@ -539,49 +477,82 @@ class _PuzzleBoard extends StatelessWidget {
             mainAxisSpacing: 3,
           ),
           itemCount: gridSize * gridSize,
-          itemBuilder: (context, slotIndex) {
-            final isPlaced = room.placedPieces.containsKey(slotIndex);
-            final placedByUserId = room.placedPieces[slotIndex];
-            final canDrop = onSlotTap != null && !isPlaced;
+          itemBuilder: (context, index) {
+            final isRevealed = room.placedPieces.containsKey(index);
+            final canFlip = canFlipPiece && !isRevealed;
 
             return GestureDetector(
-              onTap: canDrop ? () => onSlotTap!(slotIndex) : null,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4),
-                  color: isPlaced
-                      ? Colors.transparent
-                      : canDrop
-                          ? AppColors.primary.withOpacity(0.15)
-                          : AppColors.pieceSlotEmpty.withOpacity(0.5),
-                  border: Border.all(
-                    color: canDrop
-                        ? AppColors.primary.withOpacity(0.5)
-                        : Colors.transparent,
-                    width: 1.5,
-                  ),
+              onTap: canFlip ? () => onFlip?.call(index) : null,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                transitionBuilder: (child, animation) => ScaleTransition(
+                  scale: animation,
+                  child: child,
                 ),
-                child: isPlaced && gameImage != null
+                child: isRevealed && gameImage != null
                     ? ClipRRect(
+                        key: ValueKey('r_$index'),
                         borderRadius: BorderRadius.circular(3),
                         child: _PieceImage(
                           imageUrl: gameImage!.imageUrl,
-                          pieceIndex: slotIndex,
+                          pieceIndex: index,
                           gridSize: gridSize,
                         ),
                       )
-                    : isPlaced
-                        ? Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.accent.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          )
-                        : null,
+                    : _HiddenPiece(
+                        key: ValueKey('h_$index'),
+                        isFlippable: canFlip,
+                      ),
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _HiddenPiece extends StatelessWidget {
+  final bool isFlippable;
+
+  const _HiddenPiece({super.key, required this.isFlippable});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        gradient: isFlippable
+            ? AppColors.primaryGradient
+            : const LinearGradient(
+                colors: [Color(0xFF3D4B8F), Color(0xFF2D3561)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        border: Border.all(
+          color: isFlippable
+              ? Colors.white.withOpacity(0.6)
+              : Colors.white.withOpacity(0.08),
+          width: isFlippable ? 1.5 : 0.5,
+        ),
+        boxShadow: isFlippable
+            ? [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.4),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                )
+              ]
+            : null,
+      ),
+      child: Center(
+        child: Text(
+          isFlippable ? '👆' : '?',
+          style: TextStyle(
+            fontSize: isFlippable ? 14 : 10,
+            color: Colors.white.withOpacity(isFlippable ? 0.9 : 0.3),
+          ),
         ),
       ),
     );
@@ -635,77 +606,5 @@ class _PieceImage extends StatelessWidget {
         );
       },
     );
-  }
-}
-
-class _PieceTile extends StatelessWidget {
-  final int pieceIndex;
-  final int gridSize;
-  final String? imageUrl;
-  final bool isSelected;
-  final bool isLocked;
-
-  const _PieceTile({
-    required this.pieceIndex,
-    required this.gridSize,
-    this.imageUrl,
-    required this.isSelected,
-    required this.isLocked,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isSelected ? AppColors.primary : AppColors.pieceSlotEmpty,
-          width: isSelected ? 2.5 : 1.5,
-        ),
-        boxShadow: isSelected
-            ? [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.4),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                )
-              ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                )
-              ],
-        color: isLocked ? Colors.grey.shade200 : Colors.white,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: imageUrl != null
-            ? _PieceImage(
-                imageUrl: imageUrl!,
-                pieceIndex: pieceIndex,
-                gridSize: gridSize,
-              )
-            : Center(
-                child: Text(
-                  '#$pieceIndex',
-                  style: TextStyle(
-                    color: isSelected ? AppColors.primary : Colors.grey,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-      ),
-    )
-        .animate(target: isSelected ? 1 : 0)
-        .scale(
-            begin: const Offset(1, 1),
-            end: const Offset(1.1, 1.1),
-            duration: 150.ms);
   }
 }

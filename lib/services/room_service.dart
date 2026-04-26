@@ -205,8 +205,8 @@ class RoomService {
       (id, player) => MapEntry(id, player.copyWith(score: startScore)),
     );
 
-    final totalPieces = difficulty.pieces;
-    final allPieces = List.generate(totalPieces, (i) => i)..shuffle();
+    final totalCells = difficulty.gridSize * difficulty.gridSize;
+    final allCells = List.generate(totalCells, (i) => i);
 
     await _rooms.doc(roomId).update({
       'phase': GamePhase.playing.name,
@@ -215,11 +215,11 @@ class RoomService {
       'currentTurnIndex': 0,
       'players': updatedPlayers.map((k, v) => MapEntry(k, v.toMap())),
       'placedPieces': {},
-      'availablePieceIndices': allPieces,
+      'availablePieceIndices': allCells,
     });
   }
 
-  Future<void> placePiece({
+  Future<void> revealPiece({
     required String roomId,
     required String userId,
     required int pieceIndex,
@@ -228,15 +228,13 @@ class RoomService {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
 
-    final newAvailable = room.availablePieceIndices.where((i) => i != pieceIndex).toList();
+    final newHidden = room.availablePieceIndices.where((i) => i != pieceIndex).toList();
     final newScore = (room.players[userId]?.score ?? 0) + difficulty.placePiecePoints;
-    final newTurnIndex = room.currentTurnIndex + 1;
 
     await _rooms.doc(roomId).update({
       'placedPieces.${pieceIndex.toString()}': userId,
-      'availablePieceIndices': newAvailable,
+      'availablePieceIndices': newHidden,
       'players.$userId.score': newScore,
-      'currentTurnIndex': newTurnIndex,
     });
   }
 
