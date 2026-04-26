@@ -603,7 +603,6 @@ class _PieceImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final row = pieceIndex ~/ gridSize;
     final col = pieceIndex % gridSize;
-    // Avoid division by zero for single-piece grids
     final divisor = gridSize <= 1 ? 1 : gridSize - 1;
     final alignX = gridSize <= 1 ? 0.0 : col / divisor * 2 - 1;
     final alignY = gridSize <= 1 ? 0.0 : row / divisor * 2 - 1;
@@ -614,15 +613,20 @@ class _PieceImage extends StatelessWidget {
             constraints.maxWidth.isFinite ? constraints.maxWidth : 100.0;
         final cellH =
             constraints.maxHeight.isFinite ? constraints.maxHeight : 100.0;
+        final imageW = cellW * gridSize;
+        final imageH = cellH * gridSize;
+
         return ClipRect(
-          child: Align(
+          child: OverflowBox(
+            minWidth: imageW,
+            maxWidth: imageW,
+            minHeight: imageH,
+            maxHeight: imageH,
             alignment: Alignment(alignX, alignY),
-            widthFactor: 1.0 / gridSize,
-            heightFactor: 1.0 / gridSize,
             child: CachedNetworkImage(
               imageUrl: imageUrl,
-              width: cellW * gridSize,
-              height: cellH * gridSize,
+              width: imageW,
+              height: imageH,
               fit: BoxFit.cover,
               placeholder: (_, __) =>
                   Container(color: Colors.grey.shade200),
