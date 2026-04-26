@@ -8,6 +8,9 @@ build/
 # Android
 android/local.properties
 android/app/src/main/java/io/flutter/plugins/
+*.jks
+*.keystore
+key.properties
 
 # iOS
 ios/.symlinks/
