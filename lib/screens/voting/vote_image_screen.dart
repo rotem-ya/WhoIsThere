@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,28 +28,34 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
 
     setState(() => _hasVoted = true);
 
-    // Cast real user's vote
-    await ref.read(roomServiceProvider).castImageVote(
-          roomId: widget.roomId,
-          userId: user.id,
-          categoryName: _selectedCategory!,
-        );
-
-    // Auto-vote all virtual players with the same category
-    final virtualPlayers = room.players.values.where((p) => p.isBot);
-    for (final player in virtualPlayers) {
+    try {
       await ref.read(roomServiceProvider).castImageVote(
             roomId: widget.roomId,
-            userId: player.id,
+            userId: user.id,
             categoryName: _selectedCategory!,
           );
-    }
 
-    // Resolve immediately after all votes are in
-    if (mounted) {
-      await ref
-          .read(roomServiceProvider)
-          .resolveImageVote(widget.roomId, user.id);
+      final virtualPlayers = room.players.values.where((p) => p.isBot);
+      for (final player in virtualPlayers) {
+        await ref.read(roomServiceProvider).castImageVote(
+              roomId: widget.roomId,
+              userId: player.id,
+              categoryName: _selectedCategory!,
+            );
+      }
+
+      if (mounted) {
+        await ref
+            .read(roomServiceProvider)
+            .resolveImageVote(widget.roomId, user.id);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _hasVoted = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה בהצבעה: $e')),
+        );
+      }
     }
   }
 
@@ -78,6 +83,15 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
           appBar: AppBar(
             title: const Text('הצבע על נושא'),
             automaticallyImplyLeading: false,
+            leading: IconButton(
+              icon: const Icon(Icons.exit_to_app_rounded),
+              onPressed: () async {
+                await ref
+                    .read(roomServiceProvider)
+                    .leaveRoom(widget.roomId, currentUser.id);
+                if (context.mounted) context.go('/home');
+              },
+            ),
           ),
           body: SafeArea(
             child: Padding(
@@ -136,8 +150,41 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                             .toList();
 
                         if (availableCategories.isEmpty) {
-                          return const Center(
-                            child: Text('אין תמונות זמינות'),
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('😕',
+                                      style: TextStyle(fontSize: 48)),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'אין תמונות במאגר',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.darkBlue,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'יש להריץ את סקריפט הסידינג\nnode scripts/seed_images.js',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: Colors.grey,
+                                        fontFamily: 'monospace'),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  ElevatedButton.icon(
+                                    onPressed: () =>
+                                        ref.refresh(publicImagesProvider),
+                                    icon: const Icon(Icons.refresh_rounded),
+                                    label: const Text('נסה שוב'),
+                                  ),
+                                ],
+                              ),
+                            ),
                           );
                         }
 

@@ -31,8 +31,9 @@ final currentRoomProvider = StreamProvider<RoomModel?>((ref) {
 // Selected image for game
 final selectedGameImageProvider = StateProvider<GameImageModel?>((ref) => null);
 
-// Public images list
-final publicImagesProvider = FutureProvider<List<GameImageModel>>((ref) {
+// Public images list — autoDispose so it re-fetches fresh each time screen is mounted
+final publicImagesProvider =
+    FutureProvider.autoDispose<List<GameImageModel>>((ref) {
   return ref.watch(roomServiceProvider).getPublicImages();
 });
 

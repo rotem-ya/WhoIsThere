@@ -30,28 +30,36 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
 
     setState(() => _hasVoted = true);
 
-    await ref.read(roomServiceProvider).castDifficultyVote(
-          roomId: widget.roomId,
-          userId: user.id,
-          difficulty: _selected!,
-        );
-
-    // Auto-vote all virtual players — pick random difficulty each
-    final virtualPlayers = room.players.values.where((p) => p.isBot);
-    for (final player in virtualPlayers) {
-      final randomDifficulty =
-          Difficulty.values[Random().nextInt(Difficulty.values.length)];
+    try {
       await ref.read(roomServiceProvider).castDifficultyVote(
             roomId: widget.roomId,
-            userId: player.id,
-            difficulty: randomDifficulty,
+            userId: user.id,
+            difficulty: _selected!,
           );
-    }
 
-    if (mounted) {
-      await ref
-          .read(roomServiceProvider)
-          .resolveDifficultyVote(widget.roomId, user.id);
+      final virtualPlayers = room.players.values.where((p) => p.isBot);
+      for (final player in virtualPlayers) {
+        final randomDifficulty =
+            Difficulty.values[Random().nextInt(Difficulty.values.length)];
+        await ref.read(roomServiceProvider).castDifficultyVote(
+              roomId: widget.roomId,
+              userId: player.id,
+              difficulty: randomDifficulty,
+            );
+      }
+
+      if (mounted) {
+        await ref
+            .read(roomServiceProvider)
+            .resolveDifficultyVote(widget.roomId, user.id);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _hasVoted = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה בהצבעה: $e')),
+        );
+      }
     }
   }
 
@@ -79,6 +87,15 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
           appBar: AppBar(
             title: const Text('בחר רמת קושי'),
             automaticallyImplyLeading: false,
+            leading: IconButton(
+              icon: const Icon(Icons.exit_to_app_rounded),
+              onPressed: () async {
+                await ref
+                    .read(roomServiceProvider)
+                    .leaveRoom(widget.roomId, currentUser.id);
+                if (context.mounted) context.go('/home');
+              },
+            ),
           ),
           body: SafeArea(
             child: Padding(
