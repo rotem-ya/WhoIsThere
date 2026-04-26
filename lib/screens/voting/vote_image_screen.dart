@@ -94,11 +94,15 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          '🗳️ Vote for the image to reveal!',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.darkBlue,
+                        const Flexible(
+                          child: Text(
+                            '🗳️ Vote for the image to reveal!',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.darkBlue,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Text(

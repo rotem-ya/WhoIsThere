@@ -26,19 +26,26 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   bool _hasGuessed = false;
   bool _isActing = false;
   GameImageModel? _gameImage;
+  bool _imageLoadStarted = false;
 
   @override
   void initState() {
     super.initState();
-    _loadImage();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadImage());
   }
 
   Future<void> _loadImage() async {
-    final room = await ref.read(currentRoomProvider.future);
-    if (room?.selectedImageId == null) return;
-    final img =
-        await ref.read(roomServiceProvider).getImage(room!.selectedImageId!);
-    if (mounted) setState(() => _gameImage = img);
+    if (_imageLoadStarted) return;
+    _imageLoadStarted = true;
+    try {
+      final room = await ref.read(currentRoomProvider.future);
+      if (room?.selectedImageId == null) return;
+      final img =
+          await ref.read(roomServiceProvider).getImage(room!.selectedImageId!);
+      if (mounted) setState(() => _gameImage = img);
+    } catch (e) {
+      debugPrint('Failed to load game image: $e');
+    }
   }
 
   Future<void> _tryPlacePiece(int slotIndex, RoomModel room) async {
@@ -596,33 +603,33 @@ class _PieceImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final row = pieceIndex ~/ gridSize;
     final col = pieceIndex % gridSize;
+    // Avoid division by zero for single-piece grids
+    final divisor = gridSize <= 1 ? 1 : gridSize - 1;
+    final alignX = gridSize <= 1 ? 0.0 : col / divisor * 2 - 1;
+    final alignY = gridSize <= 1 ? 0.0 : row / divisor * 2 - 1;
 
-    return ClipRect(
-      child: OverflowBox(
-        maxWidth: double.infinity,
-        maxHeight: double.infinity,
-        alignment: Alignment(
-          col / (gridSize - 1) * 2 - 1,
-          row / (gridSize - 1) * 2 - 1,
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          height: double.infinity,
-          child: Transform.scale(
-            scale: gridSize.toDouble(),
-            alignment: Alignment(
-              col / (gridSize - 1) * 2 - 1,
-              row / (gridSize - 1) * 2 - 1,
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cellW =
+            constraints.maxWidth.isFinite ? constraints.maxWidth : 100.0;
+        final cellH =
+            constraints.maxHeight.isFinite ? constraints.maxHeight : 100.0;
+        return ClipRect(
+          child: Align(
+            alignment: Alignment(alignX, alignY),
+            widthFactor: 1.0 / gridSize,
+            heightFactor: 1.0 / gridSize,
             child: CachedNetworkImage(
               imageUrl: imageUrl,
+              width: cellW * gridSize,
+              height: cellH * gridSize,
               fit: BoxFit.cover,
               placeholder: (_, __) =>
-                  Container(color: AppColors.boardBackground),
+                  Container(color: Colors.grey.shade200),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
