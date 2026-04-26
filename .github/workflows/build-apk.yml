@@ -38,46 +38,15 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Setup signing keystore
-        run: |
-          if [ -n "$KEYSTORE_CONTENT" ]; then
-            echo "$KEYSTORE_CONTENT" | base64 -d > android/app/keystore.jks
-            echo "Using release keystore from GitHub Secrets"
-          else
-            echo "KEYSTORE_CONTENT secret is missing. Release APK cannot be signed."
-            exit 1
-          fi
+      - name: Analyze
+        run: flutter analyze
 
-          if [ -z "$KEYSTORE_STORE_PASS" ] || [ -z "$KEYSTORE_ALIAS" ] || [ -z "$KEYSTORE_KEY_PASS" ]; then
-            echo "One or more signing secrets are missing: KEYSTORE_STORE_PASS, KEYSTORE_ALIAS, KEYSTORE_KEY_PASS."
-            exit 1
-          fi
+      - name: Build debug APK
+        run: flutter build apk --debug
 
-          echo "=== SHA-1 (Firebase Console) ==="
-          keytool -list -v -keystore android/app/keystore.jks -storepass "$KEYSTORE_STORE_PASS" 2>/dev/null | grep "SHA1:" || true
-        env:
-          KEYSTORE_CONTENT: ${{ secrets.KEYSTORE_CONTENT }}
-          KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
-          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
-          KEYSTORE_KEY_PASS: ${{ secrets.KEYSTORE_KEY_PASS }}
-
-      - name: Build APK release (split per ABI)
-        run: flutter build apk --release --split-per-abi
-        env:
-          KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
-          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
-          KEYSTORE_KEY_PASS: ${{ secrets.KEYSTORE_KEY_PASS }}
-
-      - name: Upload arm64 APK (Samsung Galaxy)
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: GuessThePlace-arm64
-          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-          retention-days: 14
-
-      - name: Upload all release APKs
-        uses: actions/upload-artifact@v4
-        with:
-          name: GuessThePlace-release-all
-          path: build/app/outputs/flutter-apk/app-*-release.apk
+          name: GuessThePlace-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 14
