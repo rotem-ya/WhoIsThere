@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,7 +23,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
   Difficulty? _selected;
   bool _hasVoted = false;
 
-  Future<void> _confirmVote() async {
+  Future<void> _confirmVote(RoomModel room) async {
     if (_selected == null || _hasVoted) return;
     final user = ref.read(currentUserProvider).value;
     if (user == null) return;
@@ -35,13 +36,22 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
           difficulty: _selected!,
         );
 
-    final room = ref.read(currentRoomProvider).value;
-    if (room != null && user.id == room.hostId) {
-      if (room.difficultyVotes.length + 1 >= room.players.length) {
-        await ref
-            .read(roomServiceProvider)
-            .resolveDifficultyVote(widget.roomId, user.id);
-      }
+    // Auto-vote all virtual players — pick random difficulty each
+    final virtualPlayers = room.players.values.where((p) => p.isBot);
+    for (final player in virtualPlayers) {
+      final randomDifficulty =
+          Difficulty.values[Random().nextInt(Difficulty.values.length)];
+      await ref.read(roomServiceProvider).castDifficultyVote(
+            roomId: widget.roomId,
+            userId: player.id,
+            difficulty: randomDifficulty,
+          );
+    }
+
+    if (mounted) {
+      await ref
+          .read(roomServiceProvider)
+          .resolveDifficultyVote(widget.roomId, user.id);
     }
   }
 
@@ -167,7 +177,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
                           ? 'אשר רמת קושי'
                           : 'בחר רמת קושי תחילה',
                       gradient: AppColors.secondaryGradient,
-                      onPressed: _selected != null ? _confirmVote : null,
+                      onPressed: _selected != null ? () => _confirmVote(room) : null,
                     ).animate(delay: 400.ms).fadeIn()
                   else if (isHost && allVoted)
                     GradientButton(

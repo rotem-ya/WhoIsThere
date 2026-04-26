@@ -140,6 +140,23 @@ extension ImageCategoryExtension on ImageCategory {
         return 'אתר';
     }
   }
+
+  String get emoji {
+    switch (this) {
+      case ImageCategory.singer:
+        return '🎤';
+      case ImageCategory.actor:
+        return '🎬';
+      case ImageCategory.athlete:
+        return '⚽';
+      case ImageCategory.politician:
+        return '🏛️';
+      case ImageCategory.place:
+        return '🗺️';
+      case ImageCategory.landmark:
+        return '🏰';
+    }
+  }
 }
 
 class GameConstants {

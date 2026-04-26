@@ -124,9 +124,9 @@ class RoomService {
   Future<void> castImageVote({
     required String roomId,
     required String userId,
-    required String imageId,
+    required String categoryName,
   }) async {
-    await _rooms.doc(roomId).update({'imageVotes.$userId': imageId});
+    await _rooms.doc(roomId).update({'imageVotes.$userId': categoryName});
   }
 
   Future<void> castDifficultyVote({
@@ -143,6 +143,7 @@ class RoomService {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
 
+    // Tally votes by category name
     final tally = <String, int>{};
     for (final entry in room.imageVotes.entries) {
       final weight = entry.key == hostId
@@ -159,16 +160,33 @@ class RoomService {
         .map((e) => e.key)
         .toList();
 
-    // Tie → host's vote wins; otherwise random among tied
-    String selected;
-    if (room.imageVotes.containsKey(hostId) && winners.contains(room.imageVotes[hostId])) {
-      selected = room.imageVotes[hostId]!;
+    String winningCategory;
+    final hostVotedCategory = room.imageVotes[hostId];
+    if (hostVotedCategory != null && winners.contains(hostVotedCategory)) {
+      winningCategory = hostVotedCategory;
     } else {
-      selected = winners[Random().nextInt(winners.length)];
+      winningCategory = winners[Random().nextInt(winners.length)];
     }
 
+    // Pick a random public image from the winning category
+    var query = await _firestore
+        .collection('images')
+        .where('isPremium', isEqualTo: false)
+        .where('category', isEqualTo: winningCategory)
+        .get();
+
+    // Fallback: any public image
+    if (query.docs.isEmpty) {
+      query = await _firestore
+          .collection('images')
+          .where('isPremium', isEqualTo: false)
+          .get();
+    }
+    if (query.docs.isEmpty) return;
+
+    final selectedDoc = query.docs[Random().nextInt(query.docs.length)];
     await _rooms.doc(roomId).update({
-      'selectedImageId': selected,
+      'selectedImageId': selectedDoc.id,
       'phase': GamePhase.votingDifficulty.name,
     });
   }

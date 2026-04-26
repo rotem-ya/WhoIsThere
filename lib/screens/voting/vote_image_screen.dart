@@ -1,12 +1,11 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/game_constants.dart';
 import '../../providers/providers.dart';
-import '../../models/game_image_model.dart';
 import '../../models/room_model.dart';
 import '../../widgets/common/gradient_button.dart';
 
@@ -20,34 +19,38 @@ class VoteImageScreen extends ConsumerStatefulWidget {
 }
 
 class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
-  String? _selectedImageId;
+  String? _selectedCategory;
   bool _hasVoted = false;
 
-  void _vote(String imageId) {
-    if (_hasVoted) return;
-    setState(() => _selectedImageId = imageId);
-  }
-
-  Future<void> _confirmVote() async {
-    if (_selectedImageId == null || _hasVoted) return;
+  Future<void> _confirmVote(RoomModel room) async {
+    if (_selectedCategory == null || _hasVoted) return;
     final user = ref.read(currentUserProvider).value;
     if (user == null) return;
 
     setState(() => _hasVoted = true);
 
+    // Cast real user's vote
     await ref.read(roomServiceProvider).castImageVote(
           roomId: widget.roomId,
           userId: user.id,
-          imageId: _selectedImageId!,
+          categoryName: _selectedCategory!,
         );
 
-    final room = ref.read(currentRoomProvider).value;
-    if (room != null && user.id == room.hostId) {
-      if (room.imageVotes.length + 1 >= room.players.length) {
-        await ref
-            .read(roomServiceProvider)
-            .resolveImageVote(widget.roomId, user.id);
-      }
+    // Auto-vote all virtual players with the same category
+    final virtualPlayers = room.players.values.where((p) => p.isBot);
+    for (final player in virtualPlayers) {
+      await ref.read(roomServiceProvider).castImageVote(
+            roomId: widget.roomId,
+            userId: player.id,
+            categoryName: _selectedCategory!,
+          );
+    }
+
+    // Resolve immediately after all votes are in
+    if (mounted) {
+      await ref
+          .read(roomServiceProvider)
+          .resolveImageVote(widget.roomId, user.id);
     }
   }
 
@@ -69,12 +72,11 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
         final currentUser = ref.read(currentUserProvider).value;
         if (currentUser == null) return const SizedBox();
         final isHost = currentUser.id == room.hostId;
-        final allVoted = room.imageVotes.length >= room.players.length;
         final myVote = room.imageVotes[currentUser.id];
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('הצבע על תמונה'),
+            title: const Text('הצבע על נושא'),
             automaticallyImplyLeading: false,
           ),
           body: SafeArea(
@@ -82,97 +84,96 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
+                  // Vote counter + host badge
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Flexible(
-                          child: const Text(
-                            '🗳️ הצבע על התמונה לחשיפה!',
+                        const Expanded(
+                          child: Text(
+                            '🗳️ בחרו נושא לפאזל',
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               color: AppColors.darkBlue,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Text(
-                          '${room.imageVotes.length}/${room.players.length}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
-                            fontSize: 16,
+                        if (isHost)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              '👑 ×2',
+                              style: TextStyle(
+                                color: AppColors.warning,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ).animate().fadeIn(),
 
-                  const SizedBox(height: 16),
-
-                  if (isHost)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.warning.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('👑', style: TextStyle(fontSize: 14)),
-                          SizedBox(width: 6),
-                          Text(
-                            'הצבעתך שווה 2 נקודות!',
-                            style: TextStyle(
-                              color: AppColors.warning,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ).animate(delay: 200.ms).fadeIn(),
-
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
                   Expanded(
                     child: imagesAsync.when(
                       data: (images) {
-                        final displayImages = images.take(6).toList();
+                        // Group by category — only show categories that have images
+                        final availableCategories = ImageCategory.values
+                            .where((cat) =>
+                                images.any((img) => img.category == cat))
+                            .toList();
+
+                        if (availableCategories.isEmpty) {
+                          return const Center(
+                            child: Text('אין תמונות זמינות'),
+                          );
+                        }
+
                         return GridView.builder(
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            childAspectRatio: 1.2,
+                            childAspectRatio: 1.1,
                           ),
-                          itemCount: displayImages.length,
+                          itemCount: availableCategories.length,
                           itemBuilder: (context, i) {
-                            final img = displayImages[i];
-                            final isSelected = _selectedImageId == img.id;
-                            final hasVotedFor = room.imageVotes.values
-                                .where((v) => v == img.id)
+                            final cat = availableCategories[i];
+                            final isSelected =
+                                _selectedCategory == cat.name;
+                            final voteCount = room.imageVotes.values
+                                .where((v) => v == cat.name)
                                 .length;
 
                             return GestureDetector(
-                              onTap: myVote == null ? () => _vote(img.id) : null,
-                              child: _ImageCard(
-                                image: img,
+                              onTap: myVote == null
+                                  ? () => setState(
+                                      () => _selectedCategory = cat.name)
+                                  : null,
+                              child: _CategoryCard(
+                                category: cat,
+                                imageCount: images
+                                    .where((img) => img.category == cat)
+                                    .length,
                                 isSelected: isSelected,
-                                voteCount: hasVotedFor,
+                                voteCount: voteCount,
                                 isLocked: myVote != null,
                               ),
                             )
-                                .animate(delay: (i * 100).ms)
+                                .animate(delay: (i * 80).ms)
                                 .fadeIn()
                                 .scale(curve: Curves.elasticOut);
                           },
@@ -180,7 +181,8 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                       },
                       loading: () => const Center(
                           child: CircularProgressIndicator()),
-                      error: (e, _) => Center(child: Text('שגיאה: $e')),
+                      error: (e, _) =>
+                          Center(child: Text('שגיאה: $e')),
                     ),
                   ),
 
@@ -188,19 +190,13 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
 
                   if (myVote == null)
                     GradientButton(
-                      text: _selectedImageId != null
-                          ? 'אשר הצבעה'
-                          : 'בחר תמונה תחילה',
-                      onPressed: _selectedImageId != null ? _confirmVote : null,
-                    ).animate(delay: 400.ms).fadeIn()
-                  else if (isHost && allVoted)
-                    GradientButton(
-                      text: 'חשוף תוצאה והמשך',
-                      icon: Icons.arrow_forward_rounded,
-                      onPressed: () => ref
-                          .read(roomServiceProvider)
-                          .resolveImageVote(widget.roomId, currentUser!.id),
-                    ).animate().fadeIn()
+                      text: _selectedCategory != null
+                          ? 'אשר בחירה'
+                          : 'בחר נושא תחילה',
+                      onPressed: _selectedCategory != null
+                          ? () => _confirmVote(room)
+                          : null,
+                    ).animate(delay: 300.ms).fadeIn()
                   else
                     Container(
                       width: double.infinity,
@@ -216,7 +212,7 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                               color: AppColors.accent),
                           SizedBox(width: 8),
                           Text(
-                            'הצבעה נשלחה! ממתין לאחרים...',
+                            'הצבעה נשלחה! עובר לשלב הבא...',
                             style: TextStyle(
                               color: AppColors.accent,
                               fontWeight: FontWeight.w700,
@@ -238,14 +234,16 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
   }
 }
 
-class _ImageCard extends StatelessWidget {
-  final GameImageModel image;
+class _CategoryCard extends StatelessWidget {
+  final ImageCategory category;
+  final int imageCount;
   final bool isSelected;
   final int voteCount;
   final bool isLocked;
 
-  const _ImageCard({
-    required this.image,
+  const _CategoryCard({
+    required this.category,
+    required this.imageCount,
     required this.isSelected,
     required this.voteCount,
     required this.isLocked,
@@ -256,110 +254,91 @@ class _ImageCard extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isSelected ? AppColors.primary : Colors.transparent,
-          width: 3,
+          width: 2.5,
         ),
         boxShadow: [
           BoxShadow(
             color: isSelected
-                ? AppColors.primary.withOpacity(0.4)
-                : Colors.black.withOpacity(0.08),
+                ? AppColors.primary.withOpacity(0.25)
+                : Colors.black.withOpacity(0.06),
             blurRadius: isSelected ? 16 : 8,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            CachedNetworkImage(
-              imageUrl: image.thumbnailUrl,
-              fit: BoxFit.cover,
-              placeholder: (_, __) => Container(
-                color: AppColors.boardBackground,
-                child: const Center(
-                  child: Icon(Icons.image_rounded,
-                      color: AppColors.pieceSlotEmpty, size: 40),
-                ),
-              ),
-              errorWidget: (_, __, ___) => Container(
-                color: AppColors.boardBackground,
-                child: Center(
-                  child: Text(
-                    image.category.label,
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
+      child: Stack(
+        children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    category.emoji,
+                    style: const TextStyle(fontSize: 44),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    category.label,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.darkBlue,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$imageCount תמונות',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
+                ],
               ),
             ),
+          ),
+          if (isSelected)
+            const Positioned(
+              top: 8,
+              right: 8,
+              child: CircleAvatar(
+                radius: 12,
+                backgroundColor: AppColors.primary,
+                child: Icon(Icons.check, color: Colors.white, size: 14),
+              ),
+            ),
+          if (voteCount > 0)
             Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
+              top: 8,
+              left: 8,
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.black.withOpacity(0.7),
-                      Colors.transparent
-                    ],
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                  ),
+                  color: AppColors.secondary,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      image.category.label,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (voteCount > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '🗳️ $voteCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                  ],
+                child: Text(
+                  '🗳️ $voteCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),
-            if (isSelected)
-              const Positioned(
-                top: 8,
-                right: 8,
-                child: CircleAvatar(
-                  radius: 12,
-                  backgroundColor: AppColors.primary,
-                  child: Icon(Icons.check, color: Colors.white, size: 14),
-                ),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
