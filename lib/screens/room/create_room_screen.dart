@@ -18,6 +18,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   bool _isLoading = false;
   String? _roomCode;
   String? _roomId;
+  int _playerCount = 2;
 
   Future<void> _createRoom() async {
     setState(() => _isLoading = true);
@@ -29,6 +30,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
             hostId: user.id,
             hostName: user.name,
             hostPhotoUrl: user.photoUrl,
+            playerCount: _playerCount,
           );
 
       ref.read(currentRoomIdProvider.notifier).state = room.id;
@@ -45,12 +47,6 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _createRoom();
   }
 
   @override
@@ -81,92 +77,14 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                   child: _isLoading
                       ? const CircularProgressIndicator(color: AppColors.primary)
                       : _roomCode != null
-                          ? Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(28),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.primary.withOpacity(0.1),
-                                    blurRadius: 24,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text('🎉', style: TextStyle(fontSize: 48)),
-                                  const SizedBox(height: 12),
-                                  const Text(
-                                    'החדר נוצר!',
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.darkBlue,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  const Text(
-                                    'שתף את הקוד עם החברים שלך',
-                                    style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  GestureDetector(
-                                    onTap: () {
-                                      Clipboard.setData(ClipboardData(text: _roomCode!));
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('הקוד הועתק!')),
-                                      );
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                                      decoration: BoxDecoration(
-                                        gradient: AppColors.primaryGradient,
-                                        borderRadius: BorderRadius.circular(20),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: AppColors.primary.withOpacity(0.4),
-                                            blurRadius: 16,
-                                            offset: const Offset(0, 8),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            _roomCode!,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 32,
-                                              fontWeight: FontWeight.w800,
-                                              letterSpacing: 8,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          const Icon(Icons.copy_rounded, color: Colors.white70, size: 20),
-                                        ],
-                                      ),
-                                    ),
-                                  )
-                                      .animate(onPlay: (c) => c.repeat(reverse: true))
-                                      .scale(
-                                        begin: const Offset(1, 1),
-                                        end: const Offset(1.02, 1.02),
-                                        duration: 1200.ms,
-                                      ),
-                                  const SizedBox(height: 10),
-                                  const Text(
-                                    'לחץ להעתקה',
-                                    style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
+                          ? _RoomCreatedCard(
+                              roomCode: _roomCode!,
+                              playerCount: _playerCount,
                             ).animate().scale(curve: Curves.elasticOut)
-                          : const SizedBox(),
+                          : _PlayerCountPicker(
+                              selected: _playerCount,
+                              onChanged: (v) => setState(() => _playerCount = v),
+                            ).animate().fadeIn(),
                 ),
               ),
               if (_roomCode != null) ...[
@@ -177,10 +95,203 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                   onPressed: () => context.go('/lobby/$_roomId'),
                 ),
                 const SizedBox(height: 8),
+              ] else ...[
+                const SizedBox(height: 12),
+                GradientButton(
+                  text: 'צור חדר',
+                  icon: Icons.add_rounded,
+                  onPressed: _createRoom,
+                ),
+                const SizedBox(height: 8),
               ],
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PlayerCountPicker extends StatelessWidget {
+  final int selected;
+  final ValueChanged<int> onChanged;
+
+  const _PlayerCountPicker({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.1),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('👥', style: TextStyle(fontSize: 48)),
+          const SizedBox(height: 12),
+          const Text(
+            'כמה שחקנים?',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: AppColors.darkBlue,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'השחקנים הנוספים יצטרפו בהמשך',
+            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 28),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [2, 3, 4, 5].map((count) {
+              final isSelected = selected == count;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: GestureDetector(
+                  onTap: () => onChanged(count),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: isSelected ? AppColors.primaryGradient : null,
+                      color: isSelected ? null : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: AppColors.primary.withOpacity(0.4),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              )
+                            ]
+                          : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$count',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: isSelected ? Colors.white : AppColors.darkBlue,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoomCreatedCard extends StatelessWidget {
+  final String roomCode;
+  final int playerCount;
+
+  const _RoomCreatedCard({required this.roomCode, required this.playerCount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.1),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🎉', style: TextStyle(fontSize: 48)),
+          const SizedBox(height: 12),
+          const Text(
+            'החדר נוצר!',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: AppColors.darkBlue,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '$playerCount שחקנים • שתף את הקוד עם החברים',
+            style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 20),
+          GestureDetector(
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: roomCode));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('הקוד הועתק!')),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.4),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    roomCode,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 8,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Icon(Icons.copy_rounded, color: Colors.white70, size: 20),
+                ],
+              ),
+            ),
+          )
+              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .scale(
+                begin: const Offset(1, 1),
+                end: const Offset(1.02, 1.02),
+                duration: 1200.ms,
+              ),
+          const SizedBox(height: 10),
+          const Text(
+            'לחץ להעתקה',
+            style: TextStyle(
+                color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }

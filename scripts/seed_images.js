@@ -8,8 +8,8 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
+// All images are Israeli landmarks. URLs from Wikimedia Commons.
 const images = [
-  // ──── אתרים ישראלים ────
   {
     id: 'kotel',
     name: 'הכותל המערבי',
@@ -18,8 +18,8 @@ const images = [
     category: 'landmark',
     isPremium: false,
     cost: 0,
-    imageUrl: 'https://images.unsplash.com/photo-1552423314-cf29ab68ad73?w=800&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1552423314-cf29ab68ad73?w=300&q=80',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Western_Wall_in_Jerusalem.jpg/800px-Western_Wall_in_Jerusalem.jpg',
+    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Western_Wall_in_Jerusalem.jpg/400px-Western_Wall_in_Jerusalem.jpg',
   },
   {
     id: 'masada',
@@ -29,8 +29,8 @@ const images = [
     category: 'landmark',
     isPremium: false,
     cost: 0,
-    imageUrl: 'https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=800&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=300&q=80',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Masada_on_a_clear_day.jpg/800px-Masada_on_a_clear_day.jpg',
+    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Masada_on_a_clear_day.jpg/400px-Masada_on_a_clear_day.jpg',
   },
   {
     id: 'dead-sea',
@@ -40,30 +40,8 @@ const images = [
     category: 'place',
     isPremium: false,
     cost: 0,
-    imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=300&q=80',
-  },
-  {
-    id: 'tel-aviv',
-    name: 'תל אביב',
-    answer: 'תל אביב',
-    acceptedAnswers: ['תל אביב', 'tel aviv', 'תל-אביב'],
-    category: 'place',
-    isPremium: false,
-    cost: 0,
-    imageUrl: 'https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?w=800&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?w=300&q=80',
-  },
-  {
-    id: 'kinneret',
-    name: 'כינרת',
-    answer: 'כינרת',
-    acceptedAnswers: ['כינרת', 'ים כינרת', 'sea of galilee', 'lake tiberias', 'כנרת'],
-    category: 'place',
-    isPremium: false,
-    cost: 0,
-    imageUrl: 'https://images.unsplash.com/photo-1544551763-77ef2d0cfc6c?w=800&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1544551763-77ef2d0cfc6c?w=300&q=80',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Dead_Sea_by_David_Shankbone.jpg/800px-Dead_Sea_by_David_Shankbone.jpg',
+    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Dead_Sea_by_David_Shankbone.jpg/400px-Dead_Sea_by_David_Shankbone.jpg',
   },
   {
     id: 'bahai-gardens',
@@ -73,19 +51,8 @@ const images = [
     category: 'landmark',
     isPremium: false,
     cost: 0,
-    imageUrl: 'https://images.unsplash.com/photo-1529973625058-a665431328fb?w=800&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1529973625058-a665431328fb?w=300&q=80',
-  },
-  {
-    id: 'jerusalem-old-city',
-    name: 'העיר העתיקה - ירושלים',
-    answer: 'ירושלים',
-    acceptedAnswers: ['ירושלים', 'jerusalem', 'עיר עתיקה', 'old city'],
-    category: 'place',
-    isPremium: false,
-    cost: 0,
-    imageUrl: 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?w=800&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?w=300&q=80',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Bahai_gardens_Haifa_aerial_view.jpg/800px-Bahai_gardens_Haifa_aerial_view.jpg',
+    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Bahai_gardens_Haifa_aerial_view.jpg/400px-Bahai_gardens_Haifa_aerial_view.jpg',
   },
   {
     id: 'dome-of-rock',
@@ -95,19 +62,19 @@ const images = [
     category: 'landmark',
     isPremium: false,
     cost: 0,
-    imageUrl: 'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=800&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=300&q=80',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Dome_of_the_rock_w_sign.jpg/800px-Dome_of_the_rock_w_sign.jpg',
+    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Dome_of_the_rock_w_sign.jpg/400px-Dome_of_the_rock_w_sign.jpg',
   },
   {
-    id: 'negev-desert',
-    name: 'מדבר הנגב',
-    answer: 'נגב',
-    acceptedAnswers: ['נגב', 'מדבר הנגב', 'negev', 'negev desert'],
+    id: 'ramon-crater',
+    name: 'מכתש רמון',
+    answer: 'מכתש רמון',
+    acceptedAnswers: ['מכתש רמון', 'ramon crater', 'מכתש', 'נגב', 'negev'],
     category: 'place',
     isPremium: false,
     cost: 0,
-    imageUrl: 'https://images.unsplash.com/photo-1540979388789-6cee28a1cdc9?w=800&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1540979388789-6cee28a1cdc9?w=300&q=80',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Makhtesh_Ramon_Crater_Panorama.jpg/800px-Makhtesh_Ramon_Crater_Panorama.jpg',
+    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Makhtesh_Ramon_Crater_Panorama.jpg/400px-Makhtesh_Ramon_Crater_Panorama.jpg',
   },
   {
     id: 'caesarea',
@@ -117,37 +84,46 @@ const images = [
     category: 'landmark',
     isPremium: false,
     cost: 0,
-    imageUrl: 'https://images.unsplash.com/photo-1589308078055-0b27a7e8b02f?w=800&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1589308078055-0b27a7e8b02f?w=300&q=80',
-  },
-
-  // ──── חבילת פרמיום: ידוענים ישראלים ────
-  {
-    id: 'gal-gadot',
-    name: 'גל גדות',
-    answer: 'גל גדות',
-    acceptedAnswers: ['גל גדות', 'gal gadot', 'גדות', 'gadot'],
-    category: 'actor',
-    isPremium: true,
-    cost: 50,
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Gal_Gadot_at_the_2021_Met_Gala.jpg/800px-Gal_Gadot_at_the_2021_Met_Gala.jpg',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Gal_Gadot_at_the_2021_Met_Gala.jpg/300px-Gal_Gadot_at_the_2021_Met_Gala.jpg',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Caesarea_Maritima_aerial_view.jpg/800px-Caesarea_Maritima_aerial_view.jpg',
+    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Caesarea_Maritima_aerial_view.jpg/400px-Caesarea_Maritima_aerial_view.jpg',
   },
   {
-    id: 'noa-kirel',
-    name: 'נועה קירל',
-    answer: 'נועה קירל',
-    acceptedAnswers: ['נועה קירל', 'noa kirel', 'קירל', 'נועה'],
-    category: 'singer',
-    isPremium: true,
-    cost: 50,
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Noa_Kirel_-_Eurovision_2023_-_Israel.jpg/800px-Noa_Kirel_-_Eurovision_2023_-_Israel.jpg',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Noa_Kirel_-_Eurovision_2023_-_Israel.jpg/300px-Noa_Kirel_-_Eurovision_2023_-_Israel.jpg',
+    id: 'akko',
+    name: 'עכו',
+    answer: 'עכו',
+    acceptedAnswers: ['עכו', 'עכא', 'akko', 'acre', 'akka'],
+    category: 'place',
+    isPremium: false,
+    cost: 0,
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Old_City_Acre_aerial_view.jpg/800px-Old_City_Acre_aerial_view.jpg',
+    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Old_City_Acre_aerial_view.jpg/400px-Old_City_Acre_aerial_view.jpg',
+  },
+  {
+    id: 'tel-aviv-skyline',
+    name: 'תל אביב',
+    answer: 'תל אביב',
+    acceptedAnswers: ['תל אביב', 'tel aviv', 'תל-אביב'],
+    category: 'place',
+    isPremium: false,
+    cost: 0,
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Tel_Aviv_Skyline_from_Jaffa.jpg/800px-Tel_Aviv_Skyline_from_Jaffa.jpg',
+    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Tel_Aviv_Skyline_from_Jaffa.jpg/400px-Tel_Aviv_Skyline_from_Jaffa.jpg',
+  },
+  {
+    id: 'sea-of-galilee',
+    name: 'כינרת',
+    answer: 'כינרת',
+    acceptedAnswers: ['כינרת', 'ים כינרת', 'sea of galilee', 'lake tiberias', 'כנרת', 'כינרת'],
+    category: 'place',
+    isPremium: false,
+    cost: 0,
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/Sea_of_Galilee_at_sunrise.jpg/800px-Sea_of_Galilee_at_sunrise.jpg',
+    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/Sea_of_Galilee_at_sunrise.jpg/400px-Sea_of_Galilee_at_sunrise.jpg',
   },
 ];
 
 async function seed() {
-  console.log('Seeding images...');
+  console.log('Seeding Israeli landmark images...');
   const batch = db.batch();
 
   for (const image of images) {

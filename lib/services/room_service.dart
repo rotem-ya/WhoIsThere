@@ -15,6 +15,7 @@ class RoomService {
     required String hostId,
     required String hostName,
     String? hostPhotoUrl,
+    int playerCount = 1,
   }) async {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
@@ -27,11 +28,23 @@ class RoomService {
       isHost: true,
     );
 
+    final players = <String, PlayerModel>{hostId: host};
+
+    for (int i = 2; i <= playerCount; i++) {
+      final virtualId = 'virtual_${i}_${docRef.id}';
+      players[virtualId] = PlayerModel(
+        id: virtualId,
+        name: 'שחקן $i',
+        score: 0,
+        isBot: true,
+      );
+    }
+
     final room = RoomModel(
       id: docRef.id,
       code: code,
       hostId: hostId,
-      players: {hostId: host},
+      players: players,
       createdAt: DateTime.now(),
     );
 
@@ -297,25 +310,6 @@ class RoomService {
         'winnerId': active.first.id,
       });
     }
-  }
-
-  Future<void> addBotPlayer(String roomId, String botName) async {
-    final botId = 'bot_${DateTime.now().millisecondsSinceEpoch}';
-    final bot = PlayerModel(
-      id: botId,
-      name: botName,
-      score: 0,
-      isBot: true,
-    );
-    await _rooms.doc(roomId).update({
-      'players.$botId': bot.toMap(),
-    });
-  }
-
-  Future<void> removeBotPlayer(String roomId, String botId) async {
-    await _rooms.doc(roomId).update({
-      'players.$botId': FieldValue.delete(),
-    });
   }
 
   Future<List<GameImageModel>> getPublicImages() async {
