@@ -78,7 +78,6 @@ class _WinScreenState extends ConsumerState<WinScreen> {
         return Scaffold(
           body: Stack(
             children: [
-              // Confetti
               Align(
                 alignment: Alignment.topCenter,
                 child: ConfettiWidget(
@@ -108,9 +107,8 @@ class _WinScreenState extends ConsumerState<WinScreen> {
                       children: [
                         const SizedBox(height: 16),
 
-                        // Winner announcement
                         Text(
-                          isWinner ? '🏆 You Won!' : '🎉 Game Over!',
+                          isWinner ? '🏆 ניצחת!' : '🎉 המשחק נגמר!',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 36,
@@ -123,8 +121,8 @@ class _WinScreenState extends ConsumerState<WinScreen> {
                         if (winner != null)
                           Text(
                             isWinner
-                                ? 'Amazing! You identified it!'
-                                : '${winner.name} got it right!',
+                                ? 'מדהים! זיהית אותו!'
+                                : '${winner.name} צדק/ה!',
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 16,
@@ -134,7 +132,6 @@ class _WinScreenState extends ConsumerState<WinScreen> {
 
                         const SizedBox(height: 24),
 
-                        // Revealed image
                         if (_gameImage != null) ...[
                           Container(
                             decoration: BoxDecoration(
@@ -181,7 +178,6 @@ class _WinScreenState extends ConsumerState<WinScreen> {
 
                         const SizedBox(height: 28),
 
-                        // Scoreboard
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(20),
@@ -194,7 +190,7 @@ class _WinScreenState extends ConsumerState<WinScreen> {
                           child: Column(
                             children: [
                               const Text(
-                                'Final Scores',
+                                'ניקוד סופי',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 18,
@@ -221,7 +217,7 @@ class _WinScreenState extends ConsumerState<WinScreen> {
                         const SizedBox(height: 24),
 
                         GradientButton(
-                          text: 'Back to Home',
+                          text: 'חזור לבית',
                           icon: Icons.home_rounded,
                           gradient: isWinner
                               ? AppColors.accentGradient
@@ -245,7 +241,7 @@ class _WinScreenState extends ConsumerState<WinScreen> {
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
+      error: (e, _) => Scaffold(body: Center(child: Text('שגיאה: $e'))),
     );
   }
 }
@@ -290,7 +286,7 @@ class _ScoreRow extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              player.name + (isCurrentUser ? ' (You)' : ''),
+              player.name + (isCurrentUser ? ' (את/ה)' : ''),
               style: TextStyle(
                 color: isCurrentUser ? AppColors.warning : Colors.white,
                 fontWeight: FontWeight.w700,
@@ -301,7 +297,7 @@ class _ScoreRow extends StatelessWidget {
           if (isWinner)
             const Text('👑 ', style: TextStyle(fontSize: 14)),
           Text(
-            '${player.score} pts',
+            '${player.score} נק׳',
             style: TextStyle(
               color: isWinner ? AppColors.warning : Colors.white70,
               fontWeight: FontWeight.w800,

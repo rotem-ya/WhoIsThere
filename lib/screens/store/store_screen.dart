@@ -18,7 +18,7 @@ class StoreScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Store'),
+        title: const Text('חנות'),
         actions: [
           userAsync.when(
             data: (user) => Padding(
@@ -53,7 +53,6 @@ class StoreScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Hint card
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -64,7 +63,7 @@ class StoreScreen extends ConsumerWidget {
                   child: const Column(
                     children: [
                       Text(
-                        '🛍️ Spend your points!',
+                        '🛍️ נצל את הנקודות שלך!',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -73,7 +72,7 @@ class StoreScreen extends ConsumerWidget {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        'Unlock premium image packs to make\nyour games more exciting!',
+                        'פתח חבילות תמונות פרמיום כדי\nלהפוך את המשחקים שלך למרגשים יותר!',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white70,
@@ -87,9 +86,8 @@ class StoreScreen extends ConsumerWidget {
 
                 const SizedBox(height: 24),
 
-                // Game hints section
                 const Text(
-                  '⚡ In-Game Hints',
+                  '⚡ רמזים במשחק',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
@@ -104,8 +102,8 @@ class StoreScreen extends ConsumerWidget {
                     Expanded(
                       child: _HintCard(
                         emoji: '🔍',
-                        title: 'Piece Hint',
-                        description: 'Auto-place one piece',
+                        title: 'רמז חתיכה',
+                        description: 'הנחה אוטומטית של חתיכה אחת',
                         cost: GameConstants.hintCost,
                         canAfford: (user?.totalPoints ?? 0) >=
                             GameConstants.hintCost,
@@ -116,8 +114,8 @@ class StoreScreen extends ConsumerWidget {
                     Expanded(
                       child: _HintCard(
                         emoji: '💬',
-                        title: 'Category Hint',
-                        description: 'Reveal the category',
+                        title: 'רמז קטגוריה',
+                        description: 'חשוף את הקטגוריה',
                         cost: GameConstants.categoryHintCost,
                         canAfford: (user?.totalPoints ?? 0) >=
                             GameConstants.categoryHintCost,
@@ -131,7 +129,7 @@ class StoreScreen extends ConsumerWidget {
 
                 if (premiumImages.isNotEmpty) ...[
                   const Text(
-                    '🌟 Premium Image Packs',
+                    '🌟 חבילות תמונות פרמיום',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -176,7 +174,7 @@ class StoreScreen extends ConsumerWidget {
                 if (freeImages.isNotEmpty) ...[
                   const SizedBox(height: 24),
                   const Text(
-                    '🆓 Free Images',
+                    '🆓 תמונות חינמיות',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -185,7 +183,7 @@ class StoreScreen extends ConsumerWidget {
                   ).animate(delay: 300.ms).fadeIn(),
                   const SizedBox(height: 8),
                   Text(
-                    '${freeImages.length} images available for everyone',
+                    '${freeImages.length} תמונות זמינות לכולם',
                     style: const TextStyle(
                       color: Colors.grey,
                       fontWeight: FontWeight.w600,
@@ -198,7 +196,7 @@ class StoreScreen extends ConsumerWidget {
         },
         loading: () =>
             const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(child: Text('שגיאה: $e')),
       ),
     );
   }
@@ -211,7 +209,7 @@ class StoreScreen extends ConsumerWidget {
   ) async {
     if (userPoints < image.cost) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Not enough points!')),
+        const SnackBar(content: Text('אין מספיק נקודות!')),
       );
       return;
     }
@@ -220,17 +218,16 @@ class StoreScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Confirm Purchase'),
-        content: Text(
-            'Buy "${image.name}" for ${image.cost} points?'),
+        title: const Text('אישור רכישה'),
+        content: Text('לקנות "${image.name}" תמורת ${image.cost} נקודות?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: const Text('ביטול'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Buy'),
+            child: const Text('קנה'),
           ),
         ],
       ),
@@ -247,7 +244,7 @@ class StoreScreen extends ConsumerWidget {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✅ "${image.name}" unlocked!'),
+          content: Text('✅ "${image.name}" נפתח!'),
           backgroundColor: AppColors.accent,
         ),
       );
@@ -421,7 +418,7 @@ class _ImageStoreCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10)),
                     ),
                     child: Text(
-                      isOwned ? '✅ Owned' : '⭐ ${image.cost}',
+                      isOwned ? '✅ בבעלותך' : '⭐ ${image.cost}',
                       style: const TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 12,

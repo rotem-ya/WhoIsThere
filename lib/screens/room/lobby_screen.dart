@@ -29,7 +29,6 @@ class LobbyScreen extends ConsumerWidget {
           return const SizedBox();
         }
 
-        // Navigate when game starts
         if (room.phase == GamePhase.votingImage) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             context.go('/vote-image/$roomId');
@@ -41,7 +40,7 @@ class LobbyScreen extends ConsumerWidget {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Lobby'),
+            title: const Text('לובי'),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded),
               onPressed: () async {
@@ -60,7 +59,6 @@ class LobbyScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Room code display
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -71,7 +69,7 @@ class LobbyScreen extends ConsumerWidget {
                     child: Column(
                       children: [
                         const Text(
-                          'Room Code',
+                          'קוד חדר',
                           style: TextStyle(
                             color: Colors.white70,
                             fontWeight: FontWeight.w600,
@@ -100,7 +98,7 @@ class LobbyScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Players (${room.players.length}/${GameConstants.maxPlayers})',
+                        'שחקנים (${room.players.length}/${GameConstants.maxPlayers})',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
@@ -116,7 +114,7 @@ class LobbyScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            'Need ${GameConstants.minPlayers - room.players.length} more',
+                            'חסרים עוד ${GameConstants.minPlayers - room.players.length}',
                             style: const TextStyle(
                               color: AppColors.warning,
                               fontWeight: FontWeight.w700,
@@ -151,7 +149,7 @@ class LobbyScreen extends ConsumerWidget {
 
                   if (isHost)
                     GradientButton(
-                      text: canStart ? 'Start Game' : 'Waiting for players...',
+                      text: canStart ? 'התחל משחק' : 'ממתין לשחקנים...',
                       icon: Icons.play_arrow_rounded,
                       onPressed: canStart
                           ? () => ref
@@ -177,7 +175,7 @@ class LobbyScreen extends ConsumerWidget {
                               color: AppColors.primary),
                           SizedBox(width: 8),
                           Text(
-                            'Waiting for host to start...',
+                            'ממתין למארח להתחיל...',
                             style: TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w700,
@@ -196,7 +194,7 @@ class LobbyScreen extends ConsumerWidget {
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => Scaffold(
-        body: Center(child: Text('Error: $e')),
+        body: Center(child: Text('שגיאה: $e')),
       ),
     );
   }
@@ -241,7 +239,7 @@ class _PlayerTile extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              player.name + (isCurrentUser ? ' (You)' : ''),
+              player.name + (isCurrentUser ? ' (את/ה)' : ''),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -260,7 +258,7 @@ class _PlayerTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
-                '👑 Host',
+                '👑 מארח',
                 style: TextStyle(
                   color: AppColors.warning,
                   fontWeight: FontWeight.w700,

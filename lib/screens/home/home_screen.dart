@@ -38,7 +38,7 @@ class HomeScreen extends ConsumerWidget {
                         children: [
                           userAsync.when(
                             data: (user) => Text(
-                              'Hi, ${user?.name.split(' ').first ?? 'Player'}! 👋',
+                              'היי, ${user?.name.split(' ').first ?? 'שחקן'}! 👋',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -48,10 +48,10 @@ class HomeScreen extends ConsumerWidget {
                               ),
                             ),
                             loading: () => const SizedBox(height: 28),
-                            error: (_, __) => const Text('Welcome!'),
+                            error: (_, __) => const Text('ברוך הבא!'),
                           ),
                           const Text(
-                            'Ready to play?',
+                            'מוכן לשחק?',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey,
@@ -63,7 +63,6 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     Row(
                       children: [
-                        // Points badge
                         userAsync.when(
                           data: (user) => Container(
                             padding: const EdgeInsets.symmetric(
@@ -110,7 +109,6 @@ class HomeScreen extends ConsumerWidget {
 
                 const SizedBox(height: 32),
 
-                // Big puzzle icon
                 Center(
                   child: Container(
                     width: 180,
@@ -139,7 +137,7 @@ class HomeScreen extends ConsumerWidget {
 
                 const Center(
                   child: Text(
-                    'WhoIsThere?',
+                    'מי שם?',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
@@ -150,9 +148,8 @@ class HomeScreen extends ConsumerWidget {
 
                 const Spacer(),
 
-                // Action buttons
                 GradientButton(
-                  text: 'Create Room',
+                  text: 'צור חדר',
                   icon: Icons.add_rounded,
                   gradient: AppColors.primaryGradient,
                   onPressed: () => context.push('/create-room'),
@@ -161,7 +158,7 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: 12),
 
                 GradientButton(
-                  text: 'Join Room',
+                  text: 'הצטרף לחדר',
                   icon: Icons.login_rounded,
                   gradient: AppColors.secondaryGradient,
                   onPressed: () => context.push('/join-room'),
@@ -175,7 +172,7 @@ class HomeScreen extends ConsumerWidget {
                       child: OutlinedButton.icon(
                         onPressed: () => context.push('/store'),
                         icon: const Icon(Icons.store_rounded),
-                        label: const Text('Store'),
+                        label: const Text('חנות'),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
@@ -186,7 +183,7 @@ class HomeScreen extends ConsumerWidget {
                       child: OutlinedButton.icon(
                         onPressed: () => context.push('/profile'),
                         icon: const Icon(Icons.person_rounded),
-                        label: const Text('Profile'),
+                        label: const Text('פרופיל'),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),

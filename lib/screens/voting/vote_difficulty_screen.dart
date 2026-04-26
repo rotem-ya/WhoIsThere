@@ -67,7 +67,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Choose Difficulty'),
+            title: const Text('בחר רמת קושי'),
             automaticallyImplyLeading: false,
           ),
           body: SafeArea(
@@ -85,7 +85,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          '🎯 How hard should it be?',
+                          '🎯 כמה קשה יהיה?',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             color: AppColors.darkBlue,
@@ -118,7 +118,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
                           Text('👑', style: TextStyle(fontSize: 14)),
                           SizedBox(width: 6),
                           Text(
-                            'Your vote counts as 2!',
+                            'הצבעתך שווה 2!',
                             style: TextStyle(
                               color: AppColors.warning,
                               fontWeight: FontWeight.w700,
@@ -164,14 +164,14 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
                   if (myVote == null)
                     GradientButton(
                       text: _selected != null
-                          ? 'Confirm Difficulty'
-                          : 'Select difficulty first',
+                          ? 'אשר רמת קושי'
+                          : 'בחר רמת קושי תחילה',
                       gradient: AppColors.secondaryGradient,
                       onPressed: _selected != null ? _confirmVote : null,
                     ).animate(delay: 400.ms).fadeIn()
                   else if (isHost && allVoted)
                     GradientButton(
-                      text: 'Start the Puzzle!',
+                      text: 'התחל את הפאזל!',
                       icon: Icons.play_arrow_rounded,
                       onPressed: () => ref
                           .read(roomServiceProvider)
@@ -193,7 +193,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
                               color: AppColors.accent),
                           SizedBox(width: 8),
                           Text(
-                            'Vote submitted! Waiting...',
+                            'הצבעה נשלחה! ממתין...',
                             style: TextStyle(
                               color: AppColors.accent,
                               fontWeight: FontWeight.w700,
@@ -210,7 +210,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
+      error: (e, _) => Scaffold(body: Center(child: Text('שגיאה: $e'))),
     );
   }
 }
@@ -281,7 +281,7 @@ class _DifficultyCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${difficulty.pieces} pieces  •  +${difficulty.placePiecePoints}pt/piece  •  Win: +${difficulty.winReward}pt',
+                      '${difficulty.pieces} חתיכות  •  +${difficulty.placePiecePoints}נק׳/חתיכה  •  ניצחון: +${difficulty.winReward}נק׳',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade500,

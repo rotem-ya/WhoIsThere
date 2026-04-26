@@ -16,7 +16,7 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: const Text('פרופיל'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout_rounded),
@@ -35,7 +35,6 @@ class ProfileScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
-                // Avatar + name
                 Center(
                   child: Column(
                     children: [
@@ -59,13 +58,12 @@ class ProfileScreen extends ConsumerWidget {
 
                 const SizedBox(height: 28),
 
-                // Stats cards
                 Row(
                   children: [
                     Expanded(
                       child: _StatCard(
                         emoji: '⭐',
-                        label: 'Total Points',
+                        label: 'סה"כ נקודות',
                         value: '${user.totalPoints}',
                         gradient: AppColors.primaryGradient,
                       ),
@@ -74,7 +72,7 @@ class ProfileScreen extends ConsumerWidget {
                     Expanded(
                       child: _StatCard(
                         emoji: '🖼️',
-                        label: 'Owned Images',
+                        label: 'תמונות שבבעלותך',
                         value: '${user.purchasedImageIds.length}',
                         gradient: AppColors.secondaryGradient,
                       ),
@@ -89,7 +87,7 @@ class ProfileScreen extends ConsumerWidget {
                     Expanded(
                       child: _StatCard(
                         emoji: '🎨',
-                        label: 'Themes',
+                        label: 'ערכות נושא',
                         value: '${user.purchasedThemeIds.length}',
                         gradient: AppColors.accentGradient,
                       ),
@@ -98,7 +96,7 @@ class ProfileScreen extends ConsumerWidget {
                     Expanded(
                       child: _StatCard(
                         emoji: '🏆',
-                        label: 'Win Bonus',
+                        label: 'בונוס ניצחון',
                         value: '+10~40',
                         gradient: const LinearGradient(
                           colors: [AppColors.warning, Color(0xFFFF8C00)],
@@ -110,7 +108,6 @@ class ProfileScreen extends ConsumerWidget {
 
                 const SizedBox(height: 28),
 
-                // Points info box
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -125,7 +122,7 @@ class ProfileScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        '💡 How to earn points',
+                        '💡 איך להרוויח נקודות',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -133,10 +130,10 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _PointInfo('🧩 Place a piece', '+1 to +4 pts (by difficulty)'),
-                      _PointInfo('🏆 Correct guess', '+10 to +40 pts (by difficulty)'),
-                      _PointInfo('❌ Wrong guess', '-1 to -4 pts (by difficulty)'),
-                      _PointInfo('👑 Host vote', 'Your vote counts ×2'),
+                      _PointInfo('🧩 הנח חתיכה', '+1 עד +4 נק׳ (לפי קושי)'),
+                      _PointInfo('🏆 ניחוש נכון', '+10 עד +40 נק׳ (לפי קושי)'),
+                      _PointInfo('❌ ניחוש שגוי', '-1 עד -4 נק׳ (לפי קושי)'),
+                      _PointInfo('👑 הצבעת מארח', 'הצבעתך שווה ×2'),
                     ],
                   ),
                 ).animate(delay: 500.ms).fadeIn(),
@@ -144,7 +141,7 @@ class ProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
 
                 GradientButton(
-                  text: 'Go to Store',
+                  text: 'עבור לחנות',
                   icon: Icons.store_rounded,
                   gradient: AppColors.secondaryGradient,
                   onPressed: () => context.push('/store'),
@@ -154,7 +151,7 @@ class ProfileScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(child: Text('שגיאה: $e')),
       ),
     );
   }

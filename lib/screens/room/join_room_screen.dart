@@ -21,7 +21,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
   Future<void> _joinRoom() async {
     final code = _codeController.text.trim().toUpperCase();
     if (code.length != 6) {
-      setState(() => _errorMessage = 'Please enter a 6-character code');
+      setState(() => _errorMessage = 'נא להזין קוד בן 6 תווים');
       return;
     }
 
@@ -42,14 +42,14 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
           );
 
       if (room == null) {
-        setState(() => _errorMessage = 'Room not found or already started');
+        setState(() => _errorMessage = 'החדר לא נמצא או כבר התחיל');
         return;
       }
 
       ref.read(currentRoomIdProvider.notifier).state = room.id;
       if (mounted) context.go('/lobby/${room.id}');
     } catch (e) {
-      setState(() => _errorMessage = 'Failed to join: $e');
+      setState(() => _errorMessage = 'ההצטרפות נכשלה: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -64,7 +64,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Join Room')),
+      appBar: AppBar(title: const Text('הצטרף לחדר')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -77,7 +77,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
               ).animate().scale(curve: Curves.elasticOut, duration: 600.ms),
               const SizedBox(height: 24),
               const Text(
-                'Enter Room Code',
+                'הכנס קוד חדר',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
@@ -86,7 +86,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
               ).animate(delay: 200.ms).fadeIn(),
               const SizedBox(height: 8),
               const Text(
-                'Ask your friend for the 6-digit code',
+                'בקש מהחבר שלך את הקוד בן 6 הספרות',
                 style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
               ).animate(delay: 300.ms).fadeIn(),
               const SizedBox(height: 32),
@@ -118,7 +118,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
               _isLoading
                   ? const CircularProgressIndicator(color: AppColors.primary)
                   : GradientButton(
-                      text: 'Join Game',
+                      text: 'הצטרף למשחק',
                       icon: Icons.login_rounded,
                       gradient: AppColors.secondaryGradient,
                       onPressed: _joinRoom,

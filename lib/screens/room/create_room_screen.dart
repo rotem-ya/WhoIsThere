@@ -39,7 +39,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create room: $e')),
+          SnackBar(content: Text('יצירת החדר נכשלה: $e')),
         );
       }
     } finally {
@@ -57,7 +57,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Room'),
+        title: const Text('צור חדר'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () {
@@ -101,7 +101,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                                   const Text('🎉', style: TextStyle(fontSize: 48)),
                                   const SizedBox(height: 12),
                                   const Text(
-                                    'Room Created!',
+                                    'החדר נוצר!',
                                     style: TextStyle(
                                       fontSize: 22,
                                       fontWeight: FontWeight.w800,
@@ -110,7 +110,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                                   ),
                                   const SizedBox(height: 6),
                                   const Text(
-                                    'Share this code with your friends',
+                                    'שתף את הקוד עם החברים שלך',
                                     style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
                                   ),
                                   const SizedBox(height: 20),
@@ -118,7 +118,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                                     onTap: () {
                                       Clipboard.setData(ClipboardData(text: _roomCode!));
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Code copied!')),
+                                        const SnackBar(content: Text('הקוד הועתק!')),
                                       );
                                     },
                                     child: Container(
@@ -160,7 +160,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                                       ),
                                   const SizedBox(height: 10),
                                   const Text(
-                                    'Tap to copy',
+                                    'לחץ להעתקה',
                                     style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w600),
                                   ),
                                 ],
@@ -172,7 +172,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
               if (_roomCode != null) ...[
                 const SizedBox(height: 12),
                 GradientButton(
-                  text: 'Go to Lobby',
+                  text: 'עבור ללובי',
                   icon: Icons.meeting_room_rounded,
                   onPressed: () => context.go('/lobby/$_roomId'),
                 ),

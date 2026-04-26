@@ -27,7 +27,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sign in failed: ${e.toString()}')),
+          SnackBar(content: Text('ההתחברות נכשלה: ${e.toString()}')),
         );
       }
     } finally {
@@ -45,7 +45,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sign in failed: ${e.toString()}')),
+          SnackBar(content: Text('ההתחברות נכשלה: ${e.toString()}')),
         );
       }
     } finally {
@@ -63,7 +63,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sign in failed: ${e.toString()}')),
+          SnackBar(content: Text('ההתחברות נכשלה: ${e.toString()}')),
         );
       }
     } finally {
@@ -106,7 +106,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     .scale(duration: 600.ms, curve: Curves.elasticOut),
                 const SizedBox(height: 24),
                 const Text(
-                  'WhoIsThere?',
+                  'מי שם?',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 32,
@@ -115,7 +115,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 ).animate(delay: 200.ms).fadeIn().slideY(begin: 0.3),
                 const SizedBox(height: 8),
                 const Text(
-                  'Build the puzzle. Guess the face!',
+                  'בנה את הפאזל. נחש מי זה!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white70,
@@ -140,7 +140,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   child: Column(
                     children: [
                       const Text(
-                        'Sign in to play',
+                        'התחבר כדי לשחק',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
@@ -155,7 +155,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         _SocialSignInButton(
                           onPressed: _signInWithGoogle,
                           icon: '🌐',
-                          label: 'Continue with Google',
+                          label: 'המשך עם Google',
                           color: Colors.white,
                           textColor: AppColors.darkBlue,
                           borderColor: AppColors.pieceSlotEmpty,
@@ -165,7 +165,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           _SocialSignInButton(
                             onPressed: _signInWithApple,
                             icon: '🍎',
-                            label: 'Continue with Apple',
+                            label: 'המשך עם Apple',
                             color: Colors.black,
                             textColor: Colors.white,
                           ),
@@ -174,7 +174,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         _SocialSignInButton(
                           onPressed: _signInAnonymously,
                           icon: '👤',
-                          label: 'Continue as Guest',
+                          label: 'המשך כאורח',
                           color: Colors.grey.shade100,
                           textColor: Colors.grey.shade700,
                           borderColor: Colors.grey.shade300,
@@ -182,7 +182,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ],
                       const SizedBox(height: 16),
                       Text(
-                        'By signing in you agree to our Terms of Service',
+                        'בהתחברות אתה מסכים לתנאי השימוש',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 12,

@@ -67,7 +67,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   .fadeIn(),
               const SizedBox(height: 24),
               const Text(
-                'WhoIsThere?',
+                'מי שם?',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 36,
@@ -80,7 +80,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   .fadeIn(),
               const SizedBox(height: 8),
               const Text(
-                'Puzzle your way to the answer!',
+                'פתור את הפאזל ומצא את התשובה!',
                 style: TextStyle(
                   color: Colors.white70,
                   fontSize: 16,

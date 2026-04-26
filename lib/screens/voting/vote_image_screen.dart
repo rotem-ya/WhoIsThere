@@ -41,7 +41,6 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
           imageId: _selectedImageId!,
         );
 
-    // If host, check if all voted
     final room = ref.read(currentRoomProvider).value;
     if (room != null && user.id == room.hostId) {
       if (room.imageVotes.length + 1 >= room.players.length) {
@@ -61,7 +60,6 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
       data: (room) {
         if (room == null) return const SizedBox();
 
-        // Navigate to difficulty voting
         if (room.phase == GamePhase.votingDifficulty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             context.go('/vote-difficulty/${widget.roomId}');
@@ -76,7 +74,7 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Vote for Image'),
+            title: const Text('הצבע על תמונה'),
             automaticallyImplyLeading: false,
           ),
           body: SafeArea(
@@ -84,7 +82,6 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // Vote progress
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -94,9 +91,9 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Flexible(
-                          child: Text(
-                            '🗳️ Vote for the image to reveal!',
+                        Flexible(
+                          child: const Text(
+                            '🗳️ הצבע על התמונה לחשיפה!',
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               color: AppColors.darkBlue,
@@ -119,7 +116,6 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Host vote weight info
                   if (isHost)
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -134,7 +130,7 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                           Text('👑', style: TextStyle(fontSize: 14)),
                           SizedBox(width: 6),
                           Text(
-                            'Your vote counts as 2 points!',
+                            'הצבעתך שווה 2 נקודות!',
                             style: TextStyle(
                               color: AppColors.warning,
                               fontWeight: FontWeight.w700,
@@ -184,7 +180,7 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                       },
                       loading: () => const Center(
                           child: CircularProgressIndicator()),
-                      error: (e, _) => Center(child: Text('Error: $e')),
+                      error: (e, _) => Center(child: Text('שגיאה: $e')),
                     ),
                   ),
 
@@ -193,13 +189,13 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                   if (myVote == null)
                     GradientButton(
                       text: _selectedImageId != null
-                          ? 'Confirm Vote'
-                          : 'Select an image first',
+                          ? 'אשר הצבעה'
+                          : 'בחר תמונה תחילה',
                       onPressed: _selectedImageId != null ? _confirmVote : null,
                     ).animate(delay: 400.ms).fadeIn()
                   else if (isHost && allVoted)
                     GradientButton(
-                      text: 'Reveal Result & Continue',
+                      text: 'חשוף תוצאה והמשך',
                       icon: Icons.arrow_forward_rounded,
                       onPressed: () => ref
                           .read(roomServiceProvider)
@@ -220,7 +216,7 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                               color: AppColors.accent),
                           SizedBox(width: 8),
                           Text(
-                            'Vote submitted! Waiting for others...',
+                            'הצבעה נשלחה! ממתין לאחרים...',
                             style: TextStyle(
                               color: AppColors.accent,
                               fontWeight: FontWeight.w700,
@@ -237,7 +233,7 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
+      error: (e, _) => Scaffold(body: Center(child: Text('שגיאה: $e'))),
     );
   }
 }
@@ -303,7 +299,6 @@ class _ImageCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Blur overlay for category
             Positioned(
               bottom: 0,
               left: 0,

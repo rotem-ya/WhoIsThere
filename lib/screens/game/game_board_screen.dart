@@ -74,7 +74,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(children: [
-              Text('✅ Piece placed! +${difficulty.placePiecePoints} points'),
+              Text('✅ חתיכה הונחה! +${difficulty.placePiecePoints} נקודות'),
             ]),
             backgroundColor: AppColors.accent,
             duration: const Duration(seconds: 1),
@@ -86,7 +86,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('❌ Doesn\'t fit here! Try another slot.'),
+            content: Text('❌ לא מתאים כאן! נסה חריץ אחר.'),
             backgroundColor: AppColors.secondary,
             duration: Duration(seconds: 1),
           ),
@@ -119,14 +119,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text(
-          '🤔 Who is there?',
+          '🤔 מי שם?',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Wrong guess: -${difficulty.wrongGuessPenalty} points',
+              'ניחוש שגוי: -${difficulty.wrongGuessPenalty} נקודות',
               style: const TextStyle(
                 color: AppColors.secondary,
                 fontWeight: FontWeight.w600,
@@ -139,7 +139,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               autofocus: true,
               textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(
-                hintText: 'Type your guess...',
+                hintText: 'הקלד את הניחוש שלך...',
                 prefixIcon: Icon(Icons.search_rounded),
               ),
               onSubmitted: (v) {
@@ -152,7 +152,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: const Text('ביטול'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -160,7 +160,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               Navigator.pop(ctx);
               _submitGuess(guess, room);
             },
-            child: const Text('Guess!'),
+            child: const Text('נחש!'),
           ),
         ],
       ),
@@ -192,7 +192,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                '❌ Wrong! -${room.selectedDifficulty!.wrongGuessPenalty} points'),
+                '❌ שגוי! -${room.selectedDifficulty!.wrongGuessPenalty} נקודות'),
             backgroundColor: AppColors.secondary,
           ),
         );
@@ -255,10 +255,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 context: context,
                 builder: (ctx) => AlertDialog(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  title: const Text('Leave Game?', style: TextStyle(fontWeight: FontWeight.w800)),
-                  content: const Text('You will lose your progress in this round.'),
+                  title: const Text('לצאת מהמשחק?', style: TextStyle(fontWeight: FontWeight.w800)),
+                  content: const Text('תאבד את ההתקדמות שלך בסיבוב זה.'),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Stay')),
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('הישאר')),
                     ElevatedButton(
                       onPressed: () async {
                         Navigator.pop(ctx);
@@ -268,14 +268,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         if (context.mounted) context.go('/home');
                       },
                       style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
-                      child: const Text('Leave'),
+                      child: const Text('צא'),
                     ),
                   ],
                 ),
               ),
             ),
             title: Text(
-              isMyTurn ? '⭐ Your Turn!' : 'Watching...',
+              isMyTurn ? '⭐ התור שלך!' : 'צופה...',
               style: TextStyle(
                 color: isMyTurn ? AppColors.primary : Colors.grey,
                 fontWeight: FontWeight.w800,
@@ -328,7 +328,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text(
-                              'Available Pieces',
+                              'חתיכות זמינות',
                               style: TextStyle(
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.darkBlue,
@@ -338,7 +338,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                             if (!_hasPlacedPiece)
                               TextButton(
                                 onPressed: _skipPiecePlacement,
-                                child: const Text('Skip placement'),
+                                child: const Text('דלג על הנחה'),
                               ),
                           ],
                         ),
@@ -391,7 +391,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                             color: AppColors.primary, size: 18),
                         const SizedBox(width: 8),
                         Text(
-                          '${room.players[room.currentTurnUserId]?.name ?? '...'} is playing...',
+                          '${room.players[room.currentTurnUserId]?.name ?? '...'} משחק...',
                           style: const TextStyle(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w700,
@@ -415,7 +415,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 ? null
                                 : () => _showGuessDialog(room),
                             icon: const Icon(Icons.psychology_rounded),
-                            label: Text(_hasGuessed ? 'Guessed!' : 'Make a Guess'),
+                            label: Text(_hasGuessed ? 'ניחשת!' : 'נחש'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.secondary,
                               padding:
@@ -430,7 +430,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                               // Turn ends automatically via Firestore
                             },
                             icon: const Icon(Icons.done_rounded),
-                            label: const Text('End Turn'),
+                            label: const Text('סיים תור'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.accent,
                               padding:

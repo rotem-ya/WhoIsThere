@@ -4,13 +4,13 @@ extension DifficultyExtension on Difficulty {
   String get label {
     switch (this) {
       case Difficulty.veryEasy:
-        return 'Very Easy';
+        return 'קל מאוד';
       case Difficulty.easy:
-        return 'Easy';
+        return 'קל';
       case Difficulty.medium:
-        return 'Medium';
+        return 'בינוני';
       case Difficulty.hard:
-        return 'Hard';
+        return 'קשה';
     }
   }
 
@@ -127,17 +127,17 @@ extension ImageCategoryExtension on ImageCategory {
   String get label {
     switch (this) {
       case ImageCategory.singer:
-        return 'Singer';
+        return 'זמר/ת';
       case ImageCategory.actor:
-        return 'Actor';
+        return 'שחקן/ית';
       case ImageCategory.athlete:
-        return 'Athlete';
+        return 'ספורטאי/ת';
       case ImageCategory.politician:
-        return 'Politician';
+        return 'פוליטיקאי/ת';
       case ImageCategory.place:
-        return 'Place';
+        return 'מקום';
       case ImageCategory.landmark:
-        return 'Landmark';
+        return 'אתר';
     }
   }
 }
