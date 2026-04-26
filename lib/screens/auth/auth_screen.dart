@@ -1,11 +1,11 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:io' show Platform;
 import '../../core/constants/app_colors.dart';
 import '../../providers/providers.dart';
-import '../../widgets/common/gradient_button.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -99,14 +99,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     ],
                   ),
                   child: const Center(
-                    child: Text('🧩', style: TextStyle(fontSize: 52)),
+                    child: Text('🗺️', style: TextStyle(fontSize: 52)),
                   ),
                 )
                     .animate()
                     .scale(duration: 600.ms, curve: Curves.elasticOut),
                 const SizedBox(height: 24),
                 const Text(
-                  'מי שם?',
+                  'Guess the Place',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 32,
@@ -115,7 +115,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 ).animate(delay: 200.ms).fadeIn().slideY(begin: 0.3),
                 const SizedBox(height: 8),
                 const Text(
-                  'בנה את הפאזל. נחש מי זה!',
+                  'חשוף את הפאזל. זהה את המקום.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white70,
