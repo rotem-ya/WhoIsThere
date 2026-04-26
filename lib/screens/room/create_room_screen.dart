@@ -268,17 +268,23 @@ class _RoomCreatedCard extends StatelessWidget {
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    roomCode,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 8,
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        roomCode,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 6,
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   const Icon(Icons.copy_rounded, color: Colors.white70, size: 20),
                 ],
               ),

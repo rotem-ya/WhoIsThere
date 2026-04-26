@@ -47,7 +47,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     }
   }
 
-  // The "acting user" is whoever's turn it is — real or virtual.
   String _actingUserId(RoomModel room) {
     final user = ref.read(currentUserProvider).value;
     return room.currentTurnUserId ?? user?.id ?? '';
@@ -56,43 +55,41 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   Future<void> _flipPiece(int pieceIndex, RoomModel room) async {
     if (_hasFlipped || _isActing) return;
     final difficulty = room.selectedDifficulty!;
-
     setState(() => _isActing = true);
 
-    await ref.read(roomServiceProvider).revealPiece(
-          roomId: widget.roomId,
-          userId: _actingUserId(room),
-          pieceIndex: pieceIndex,
-          difficulty: difficulty,
-        );
-
-    if (mounted) {
-      setState(() {
-        _hasFlipped = true;
-        _isActing = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✅ חתיכה נחשפה! +${difficulty.placePiecePoints} נקודות'),
-          backgroundColor: AppColors.accent,
-          duration: const Duration(seconds: 1),
-        ),
-      );
+    try {
+      await ref.read(roomServiceProvider).revealPiece(
+            roomId: widget.roomId,
+            userId: _actingUserId(room),
+            pieceIndex: pieceIndex,
+            difficulty: difficulty,
+          );
+      if (mounted) {
+        setState(() {
+          _hasFlipped = true;
+          _isActing = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isActing = false);
     }
   }
 
   Future<void> _endTurn() async {
     if (_isActing) return;
     setState(() => _isActing = true);
-    await ref
-        .read(roomServiceProvider)
-        .skipPiecePlacement(roomId: widget.roomId);
-    if (mounted) {
-      setState(() {
-        _isActing = false;
-        _hasFlipped = false;
-        _hasGuessed = false;
-      });
+    try {
+      await ref
+          .read(roomServiceProvider)
+          .skipPiecePlacement(roomId: widget.roomId);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isActing = false;
+          _hasFlipped = false;
+          _hasGuessed = false;
+        });
+      }
     }
   }
 
@@ -162,24 +159,36 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       _isActing = true;
     });
 
-    final isCorrect = await ref.read(roomServiceProvider).makeGuess(
-          roomId: widget.roomId,
-          userId: _actingUserId(room),
-          guess: guess,
-          image: _gameImage!,
-          difficulty: room.selectedDifficulty!,
-        );
+    try {
+      final isCorrect = await ref.read(roomServiceProvider).makeGuess(
+            roomId: widget.roomId,
+            userId: _actingUserId(room),
+            guess: guess,
+            image: _gameImage!,
+            difficulty: room.selectedDifficulty!,
+          );
 
-    if (mounted) {
-      if (!isCorrect) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '❌ שגוי! -${room.selectedDifficulty!.wrongGuessPenalty} נקודות'),
-            backgroundColor: AppColors.secondary,
-          ),
-        );
+      if (mounted) {
+        if (!isCorrect) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  '❌ שגוי! -${room.selectedDifficulty!.wrongGuessPenalty} נקודות'),
+              backgroundColor: AppColors.secondary,
+            ),
+          );
+        }
         setState(() => _isActing = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה: $e')),
+        );
+        setState(() {
+          _hasGuessed = false;
+          _isActing = false;
+        });
       }
     }
   }
@@ -205,12 +214,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         final gridSize = difficulty.gridSize;
         final currentPlayer = room.players[room.currentTurnUserId];
         final isVirtualTurn = currentPlayer?.isBot == true;
-        // Real user controls all turns — their own and all virtual players'
-        final isMyTurn = room.currentTurnUserId == currentUser.id || isVirtualTurn;
-        final actingPlayer = currentPlayer;
+        final isMyTurn =
+            room.currentTurnUserId == currentUser.id || isVirtualTurn;
         final myPlayer = room.players[currentUser.id];
         final allRevealed = room.availablePieceIndices.isEmpty;
-        final canFlipPiece = isMyTurn && !_hasFlipped && !allRevealed && !_isActing;
+        final canFlipPiece =
+            isMyTurn && !_hasFlipped && !allRevealed && !_isActing;
         final effectivelyFlipped = _hasFlipped || allRevealed;
 
         return Scaffold(
@@ -219,41 +228,26 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             automaticallyImplyLeading: false,
             leading: IconButton(
               icon: const Icon(Icons.exit_to_app_rounded),
-              onPressed: () => showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
-                  title: const Text('לצאת מהמשחק?',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
-                  content: const Text('תאבד את ההתקדמות שלך בסיבוב זה.'),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('הישאר')),
-                    ElevatedButton(
-                      onPressed: () async {
-                        Navigator.pop(ctx);
-                        await ref
-                            .read(roomServiceProvider)
-                            .leaveRoom(widget.roomId, currentUser.id);
-                        if (context.mounted) context.go('/home');
-                      },
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.secondary),
-                      child: const Text('צא'),
-                    ),
-                  ],
-                ),
-              ),
+              onPressed: () => _confirmExit(context, currentUser.id),
             ),
             title: isVirtualTurn
-                ? Text(
-                    'תור של ${actingPlayer?.name ?? '...'}',
-                    style: const TextStyle(
-                      color: AppColors.accent,
-                      fontWeight: FontWeight.w800,
-                    ),
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('🎮 ',
+                          style: TextStyle(fontSize: 14)),
+                      Flexible(
+                        child: Text(
+                          'תור של ${currentPlayer?.name ?? '...'}',
+                          style: const TextStyle(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   )
                 : Text(
                     isMyTurn ? '⭐ התור שלך!' : '...',
@@ -280,7 +274,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
 
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                     child: _PuzzleBoard(
                       room: room,
                       gameImage: _gameImage,
@@ -291,22 +285,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   ),
                 ),
 
-                // Bottom action area
-                _BottomActionArea(
+                _BottomBar(
                   isMyTurn: isMyTurn,
                   isVirtualTurn: isVirtualTurn,
-                  actingPlayerName: actingPlayer?.name,
+                  actingPlayerName: currentPlayer?.name,
                   effectivelyFlipped: effectivelyFlipped,
-                  hasFlipped: _hasFlipped,
                   hasGuessed: _hasGuessed,
                   isActing: _isActing,
                   isEliminated: myPlayer?.isEliminated == true,
-                  difficulty: difficulty,
                   onGuess: () => _showGuessDialog(room),
                   onEndTurn: _endTurn,
                 ),
-
-                const SizedBox(height: 8),
               ],
             ),
           ),
@@ -317,31 +306,59 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       error: (e, _) => Scaffold(body: Center(child: Text('שגיאה: $e'))),
     );
   }
+
+  void _confirmExit(BuildContext context, String userId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('לצאת מהמשחק?',
+            style: TextStyle(fontWeight: FontWeight.w800)),
+        content: const Text('תאבד את ההתקדמות שלך בסיבוב זה.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הישאר')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ref
+                  .read(roomServiceProvider)
+                  .leaveRoom(widget.roomId, userId);
+              if (context.mounted) context.go('/home');
+            },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.secondary),
+            child: const Text('צא'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _BottomActionArea extends StatelessWidget {
+// ─── Bottom Bar ───────────────────────────────────────────────
+
+class _BottomBar extends StatelessWidget {
   final bool isMyTurn;
   final bool isVirtualTurn;
   final String? actingPlayerName;
   final bool effectivelyFlipped;
-  final bool hasFlipped;
   final bool hasGuessed;
   final bool isActing;
   final bool isEliminated;
-  final Difficulty difficulty;
   final VoidCallback onGuess;
   final VoidCallback onEndTurn;
 
-  const _BottomActionArea({
+  const _BottomBar({
     required this.isMyTurn,
     required this.isVirtualTurn,
     required this.actingPlayerName,
     required this.effectivelyFlipped,
-    required this.hasFlipped,
     required this.hasGuessed,
     required this.isActing,
     required this.isEliminated,
-    required this.difficulty,
     required this.onGuess,
     required this.onEndTurn,
   });
@@ -349,92 +366,86 @@ class _BottomActionArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!isMyTurn) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.hourglass_bottom_rounded,
-                color: AppColors.primary, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              '${actingPlayerName ?? '...'} מהפך חתיכה...',
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
+      return _infoBar(
+        '⏳ ${actingPlayerName ?? '...'} מהפך חתיכה...',
+        AppColors.primary.withOpacity(0.08),
+        AppColors.primary,
       );
     }
 
     if (!effectivelyFlipped) {
-      return Container(
-        width: double.infinity,
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          gradient: isVirtualTurn
-              ? AppColors.accentGradient
-              : AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('👆', style: TextStyle(fontSize: 20)),
-            const SizedBox(width: 10),
-            Text(
-              isVirtualTurn
-                  ? 'הפוך חתיכה עבור ${actingPlayerName ?? 'שחקן'}!'
-                  : 'הפוך חתיכה על הלוח!',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                fontSize: 15,
-              ),
-            ),
-          ],
-        ),
+      return _infoBar(
+        isVirtualTurn
+            ? '👆 הפוך עבור ${actingPlayerName ?? 'שחקן'}'
+            : '👆 הפוך חתיכה על הלוח!',
+        isVirtualTurn
+            ? AppColors.accent.withOpacity(0.12)
+            : AppColors.primary.withOpacity(0.1),
+        isVirtualTurn ? AppColors.accent : AppColors.primary,
       );
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
       child: Row(
         children: [
           Expanded(
+            flex: 3,
             child: ElevatedButton.icon(
               onPressed: (hasGuessed || isEliminated) ? null : onGuess,
-              icon: const Icon(Icons.psychology_rounded),
-              label: Text(hasGuessed ? 'ניחשת!' : 'נחש'),
+              icon: const Icon(Icons.psychology_rounded, size: 18),
+              label: Text(hasGuessed ? 'ניחשת' : 'נחש'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.secondary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
+                textStyle: const TextStyle(
+                    fontWeight: FontWeight.w800, fontSize: 15),
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          ElevatedButton.icon(
-            onPressed: isActing ? null : onEndTurn,
-            icon: const Icon(Icons.skip_next_rounded),
-            label: const Text('סיים תור'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              padding: const EdgeInsets.symmetric(vertical: 14),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 3,
+            child: ElevatedButton.icon(
+              onPressed: isActing ? null : onEndTurn,
+              icon: const Icon(Icons.skip_next_rounded, size: 18),
+              label: const Text('סיים תור'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                textStyle: const TextStyle(
+                    fontWeight: FontWeight.w800, fontSize: 15),
+              ),
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _infoBar(String text, Color bg, Color textColor) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: textColor,
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
 }
+
+// ─── Players Bar ─────────────────────────────────────────────
 
 class _PlayersBar extends StatelessWidget {
   final RoomModel room;
@@ -445,14 +456,14 @@ class _PlayersBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 80,
+      height: 76,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         children: room.sortedPlayers.map((player) {
           final isCurrentTurn = room.currentTurnUserId == player.id;
           return Padding(
-            padding: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.only(right: 10),
             child: Column(
               children: [
                 PlayerAvatar(
@@ -478,12 +489,14 @@ class _PlayersBar extends StatelessWidget {
   }
 }
 
+// ─── Puzzle Board (image + card overlay) ─────────────────────
+
 class _PuzzleBoard extends StatelessWidget {
   final RoomModel room;
   final GameImageModel? gameImage;
   final int gridSize;
   final bool canFlipPiece;
-  final void Function(int pieceIndex)? onFlip;
+  final void Function(int)? onFlip;
 
   const _PuzzleBoard({
     required this.room,
@@ -502,150 +515,103 @@ class _PuzzleBoard extends StatelessWidget {
         border: Border.all(color: AppColors.pieceSlotEmpty, width: 2),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.1),
+            color: AppColors.primary.withOpacity(0.12),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: gridSize,
-            crossAxisSpacing: 3,
-            mainAxisSpacing: 3,
-          ),
-          itemCount: gridSize * gridSize,
-          itemBuilder: (context, index) {
-            final isRevealed = room.placedPieces.containsKey(index);
-            final canFlip = canFlipPiece && !isRevealed;
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // ── Full image background ──
+            if (gameImage != null)
+              CachedNetworkImage(
+                imageUrl: gameImage!.imageUrl,
+                fit: BoxFit.cover,
+                placeholder: (_, __) =>
+                    Container(color: AppColors.boardBackground),
+                errorWidget: (_, __, ___) =>
+                    Container(color: AppColors.boardBackground),
+              )
+            else
+              Container(color: AppColors.boardBackground),
 
-            return GestureDetector(
-              onTap: canFlip ? () => onFlip?.call(index) : null,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 350),
-                transitionBuilder: (child, animation) => ScaleTransition(
-                  scale: animation,
-                  child: child,
+            // ── Card overlay grid ──
+            Padding(
+              padding: const EdgeInsets.all(3),
+              child: GridView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: gridSize,
+                  crossAxisSpacing: 2,
+                  mainAxisSpacing: 2,
                 ),
-                child: isRevealed && gameImage != null
-                    ? ClipRRect(
-                        key: ValueKey('r_$index'),
-                        borderRadius: BorderRadius.circular(3),
-                        child: _PieceImage(
-                          imageUrl: gameImage!.imageUrl,
-                          pieceIndex: index,
-                          gridSize: gridSize,
-                        ),
-                      )
-                    : _HiddenPiece(
-                        key: ValueKey('h_$index'),
-                        isFlippable: canFlip,
-                      ),
+                itemCount: gridSize * gridSize,
+                itemBuilder: (context, index) {
+                  final isRevealed = room.placedPieces.containsKey(index);
+                  final canFlip = canFlipPiece && !isRevealed;
+
+                  return AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    transitionBuilder: (child, anim) =>
+                        FadeTransition(opacity: anim, child: child),
+                    child: isRevealed
+                        ? SizedBox.expand(key: ValueKey('r_$index'))
+                        : GestureDetector(
+                            key: ValueKey('h_$index'),
+                            onTap: canFlip ? () => onFlip?.call(index) : null,
+                            child: _HiddenCard(isFlippable: canFlip),
+                          ),
+                  );
+                },
               ),
-            );
-          },
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _HiddenPiece extends StatelessWidget {
+// ─── Hidden Card ─────────────────────────────────────────────
+
+class _HiddenCard extends StatelessWidget {
   final bool isFlippable;
 
-  const _HiddenPiece({super.key, required this.isFlippable});
+  const _HiddenCard({required this.isFlippable});
 
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(3),
         gradient: isFlippable
             ? AppColors.primaryGradient
             : const LinearGradient(
-                colors: [Color(0xFF3D4B8F), Color(0xFF2D3561)],
+                colors: [Color(0xFF3A4580), Color(0xFF252E66)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
         border: Border.all(
           color: isFlippable
-              ? Colors.white.withOpacity(0.6)
-              : Colors.white.withOpacity(0.08),
-          width: isFlippable ? 1.5 : 0.5,
+              ? Colors.white.withOpacity(0.5)
+              : Colors.white.withOpacity(0.06),
+          width: 0.5,
         ),
-        boxShadow: isFlippable
-            ? [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.4),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                )
-              ]
-            : null,
       ),
       child: Center(
         child: Text(
           isFlippable ? '👆' : '?',
           style: TextStyle(
-            fontSize: isFlippable ? 14 : 10,
-            color: Colors.white.withOpacity(isFlippable ? 0.9 : 0.3),
+            fontSize: isFlippable ? 13 : 9,
+            color: Colors.white.withOpacity(isFlippable ? 0.9 : 0.25),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _PieceImage extends StatelessWidget {
-  final String imageUrl;
-  final int pieceIndex;
-  final int gridSize;
-
-  const _PieceImage({
-    required this.imageUrl,
-    required this.pieceIndex,
-    required this.gridSize,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final row = pieceIndex ~/ gridSize;
-    final col = pieceIndex % gridSize;
-    final divisor = gridSize <= 1 ? 1 : gridSize - 1;
-    final alignX = gridSize <= 1 ? 0.0 : col / divisor * 2 - 1;
-    final alignY = gridSize <= 1 ? 0.0 : row / divisor * 2 - 1;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cellW =
-            constraints.maxWidth.isFinite ? constraints.maxWidth : 100.0;
-        final cellH =
-            constraints.maxHeight.isFinite ? constraints.maxHeight : 100.0;
-        final imageW = cellW * gridSize;
-        final imageH = cellH * gridSize;
-
-        return ClipRect(
-          child: OverflowBox(
-            minWidth: imageW,
-            maxWidth: imageW,
-            minHeight: imageH,
-            maxHeight: imageH,
-            alignment: Alignment(alignX, alignY),
-            child: CachedNetworkImage(
-              imageUrl: imageUrl,
-              width: imageW,
-              height: imageH,
-              fit: BoxFit.cover,
-              placeholder: (_, __) =>
-                  Container(color: Colors.grey.shade200),
-            ),
-          ),
-        );
-      },
     );
   }
 }

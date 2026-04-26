@@ -121,6 +121,7 @@ enum ImageCategory {
   politician,
   place,
   landmark,
+  israeliLandmark,
 }
 
 extension ImageCategoryExtension on ImageCategory {
@@ -137,7 +138,9 @@ extension ImageCategoryExtension on ImageCategory {
       case ImageCategory.place:
         return 'מקום';
       case ImageCategory.landmark:
-        return 'אתר';
+        return 'מקומות בעולם';
+      case ImageCategory.israeliLandmark:
+        return 'מקומות בישראל';
     }
   }
 
@@ -154,7 +157,9 @@ extension ImageCategoryExtension on ImageCategory {
       case ImageCategory.place:
         return '🗺️';
       case ImageCategory.landmark:
-        return '🏰';
+        return '🌍';
+      case ImageCategory.israeliLandmark:
+        return '🇮🇱';
     }
   }
 }
