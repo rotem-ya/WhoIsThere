@@ -40,11 +40,19 @@ android {
     signingConfigs {
         release {
             def keystoreFile = file("keystore.jks")
+            def storePass = System.getenv("KEYSTORE_STORE_PASS")
+            def keyAliasValue = System.getenv("KEYSTORE_ALIAS")
+            def keyPass = System.getenv("KEYSTORE_KEY_PASS")
+
             if (keystoreFile.exists()) {
+                if (!storePass || !keyAliasValue || !keyPass) {
+                    throw new GradleException("Release keystore exists, but KEYSTORE_STORE_PASS, KEYSTORE_ALIAS, or KEYSTORE_KEY_PASS is missing.")
+                }
+
                 storeFile keystoreFile
-                storePassword System.getenv("KEYSTORE_STORE_PASS") ?: "WhoIsThere2024!"
-                keyAlias System.getenv("KEYSTORE_ALIAS") ?: "whoisthere"
-                keyPassword System.getenv("KEYSTORE_KEY_PASS") ?: "WhoIsThere2024!"
+                storePassword storePass
+                keyAlias keyAliasValue
+                keyPassword keyPass
             }
         }
     }
