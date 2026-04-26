@@ -34,7 +34,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   }
 
   Future<void> _loadImage() async {
-    final room = ref.read(currentRoomProvider).value;
+    final room = await ref.read(currentRoomProvider.future);
     if (room?.selectedImageId == null) return;
     final img =
         await ref.read(roomServiceProvider).getImage(room!.selectedImageId!);
@@ -242,6 +242,31 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
           backgroundColor: AppColors.background,
           appBar: AppBar(
             automaticallyImplyLeading: false,
+            leading: IconButton(
+              icon: const Icon(Icons.exit_to_app_rounded),
+              onPressed: () => showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  title: const Text('Leave Game?', style: TextStyle(fontWeight: FontWeight.w800)),
+                  content: const Text('You will lose your progress in this round.'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Stay')),
+                    ElevatedButton(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        if (currentUser != null) {
+                          await ref.read(roomServiceProvider).leaveRoom(widget.roomId, currentUser.id);
+                        }
+                        if (context.mounted) context.go('/home');
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+                      child: const Text('Leave'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             title: Text(
               isMyTurn ? '⭐ Your Turn!' : 'Watching...',
               style: TextStyle(
