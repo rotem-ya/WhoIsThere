@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main, claude/puzzle-game-design-CaQqV ]
+    branches: [ main, claude/puzzle-game-design-CaQqV, rotem/qa-fixes-step-1 ]
   workflow_dispatch:
 
 jobs:
@@ -42,23 +42,24 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_CONTENT" ]; then
             echo "$KEYSTORE_CONTENT" | base64 -d > android/app/keystore.jks
-            STOREPASS="${KEYSTORE_STORE_PASS:-WhoIsThere2024!}"
-            echo "Using release keystore"
+            echo "Using release keystore from GitHub Secrets"
           else
-            keytool -genkey -v \
-              -keystore android/app/keystore.jks \
-              -alias whoisthere \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass 'WhoIsThere2024!' -keypass 'WhoIsThere2024!' \
-              -dname "CN=WhoIsThere, O=WhoIsThere, C=IL" 2>/dev/null
-            STOREPASS="WhoIsThere2024!"
-            echo "No KEYSTORE_CONTENT secret - generated temporary keystore"
+            echo "KEYSTORE_CONTENT secret is missing. Release APK cannot be signed."
+            exit 1
           fi
-          echo "=== SHA-1 (add to Firebase Console) ==="
-          keytool -list -v -keystore android/app/keystore.jks -storepass "$STOREPASS" 2>/dev/null | grep "SHA1:" || true
+
+          if [ -z "$KEYSTORE_STORE_PASS" ] || [ -z "$KEYSTORE_ALIAS" ] || [ -z "$KEYSTORE_KEY_PASS" ]; then
+            echo "One or more signing secrets are missing: KEYSTORE_STORE_PASS, KEYSTORE_ALIAS, KEYSTORE_KEY_PASS."
+            exit 1
+          fi
+
+          echo "=== SHA-1 (Firebase Console) ==="
+          keytool -list -v -keystore android/app/keystore.jks -storepass "$KEYSTORE_STORE_PASS" 2>/dev/null | grep "SHA1:" || true
         env:
           KEYSTORE_CONTENT: ${{ secrets.KEYSTORE_CONTENT }}
           KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEYSTORE_KEY_PASS: ${{ secrets.KEYSTORE_KEY_PASS }}
 
       - name: Build APK release (split per ABI)
         run: flutter build apk --release --split-per-abi
@@ -70,13 +71,13 @@ jobs:
       - name: Upload arm64 APK (Samsung Galaxy)
         uses: actions/upload-artifact@v4
         with:
-          name: WhoIsThere-arm64
+          name: GuessThePlace-arm64
           path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           retention-days: 14
 
       - name: Upload all release APKs
         uses: actions/upload-artifact@v4
         with:
-          name: WhoIsThere-release-all
+          name: GuessThePlace-release-all
           path: build/app/outputs/flutter-apk/app-*-release.apk
           retention-days: 14
