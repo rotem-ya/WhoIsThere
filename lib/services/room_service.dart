@@ -11,6 +11,63 @@ class RoomService {
 
   CollectionReference get _rooms => _firestore.collection('rooms');
 
+  static const List<GameImageModel> _fallbackImages = [
+    GameImageModel(
+      id: 'local_eiffel_tower',
+      name: 'מגדל אייפל',
+      answer: 'מגדל אייפל',
+      acceptedAnswers: ['אייפל', 'eiffel tower', 'eiffel'],
+      category: ImageCategory.landmark,
+      imageUrl: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=1200',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=400',
+    ),
+    GameImageModel(
+      id: 'local_colosseum',
+      name: 'הקולוסיאום',
+      answer: 'הקולוסיאום',
+      acceptedAnswers: ['קולוסיאום', 'colosseum', 'rome'],
+      category: ImageCategory.landmark,
+      imageUrl: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=1200',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400',
+    ),
+    GameImageModel(
+      id: 'local_big_ben',
+      name: 'ביג בן',
+      answer: 'ביג בן',
+      acceptedAnswers: ['big ben', 'london'],
+      category: ImageCategory.landmark,
+      imageUrl: 'https://images.unsplash.com/photo-1529655683826-aba9b3e77383?w=1200',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1529655683826-aba9b3e77383?w=400',
+    ),
+    GameImageModel(
+      id: 'local_dead_sea',
+      name: 'ים המלח',
+      answer: 'ים המלח',
+      acceptedAnswers: ['dead sea'],
+      category: ImageCategory.israeliLandmark,
+      imageUrl: 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=1200',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=400',
+    ),
+    GameImageModel(
+      id: 'local_jerusalem',
+      name: 'ירושלים',
+      answer: 'ירושלים',
+      acceptedAnswers: ['jerusalem', 'הכותל', 'כותל'],
+      category: ImageCategory.israeliLandmark,
+      imageUrl: 'https://images.unsplash.com/photo-1542743408-218cc173cda0?w=1200',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1542743408-218cc173cda0?w=400',
+    ),
+    GameImageModel(
+      id: 'local_taj_mahal',
+      name: 'טאג׳ מאהל',
+      answer: 'טאג׳ מאהל',
+      acceptedAnswers: ['taj mahal', 'taj'],
+      category: ImageCategory.landmark,
+      imageUrl: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=1200',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=400',
+    ),
+  ];
+
   Future<RoomModel> createRoom({
     required String hostId,
     required String hostName,
@@ -107,7 +164,6 @@ class RoomService {
       'players.$userId': FieldValue.delete(),
     });
 
-    // Transfer host if needed
     if (room.hostId == userId) {
       final newHostId = room.players.keys.firstWhere((id) => id != userId);
       await _rooms.doc(roomId).update({
@@ -143,7 +199,6 @@ class RoomService {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
 
-    // Tally votes by category name
     final tally = <String, int>{};
     for (final entry in room.imageVotes.entries) {
       final weight = entry.key == hostId
@@ -160,33 +215,30 @@ class RoomService {
         .map((e) => e.key)
         .toList();
 
-    String winningCategory;
     final hostVotedCategory = room.imageVotes[hostId];
-    if (hostVotedCategory != null && winners.contains(hostVotedCategory)) {
-      winningCategory = hostVotedCategory;
-    } else {
-      winningCategory = winners[Random().nextInt(winners.length)];
-    }
+    final winningCategory = hostVotedCategory != null && winners.contains(hostVotedCategory)
+        ? hostVotedCategory
+        : winners[Random().nextInt(winners.length)];
 
-    // Pick a random public image from the winning category
+    String selectedImageId;
     var query = await _firestore
         .collection('images')
         .where('isPremium', isEqualTo: false)
         .where('category', isEqualTo: winningCategory)
         .get();
 
-    // Fallback: any public image
-    if (query.docs.isEmpty) {
-      query = await _firestore
-          .collection('images')
-          .where('isPremium', isEqualTo: false)
-          .get();
+    if (query.docs.isNotEmpty) {
+      selectedImageId = query.docs[Random().nextInt(query.docs.length)].id;
+    } else {
+      final localImages = _fallbackImages
+          .where((image) => image.category.name == winningCategory)
+          .toList();
+      final pool = localImages.isNotEmpty ? localImages : _fallbackImages;
+      selectedImageId = pool[Random().nextInt(pool.length)].id;
     }
-    if (query.docs.isEmpty) return;
 
-    final selectedDoc = query.docs[Random().nextInt(query.docs.length)];
     await _rooms.doc(roomId).update({
-      'selectedImageId': selectedDoc.id,
+      'selectedImageId': selectedImageId,
       'phase': GamePhase.votingDifficulty.name,
     });
   }
@@ -211,13 +263,10 @@ class RoomService {
         .map((e) => e.key)
         .toList();
 
-    int selectedPieces;
     final hostVotedPieces = room.difficultyVotes[hostId];
-    if (hostVotedPieces != null && winners.contains(hostVotedPieces)) {
-      selectedPieces = hostVotedPieces;
-    } else {
-      selectedPieces = winners[Random().nextInt(winners.length)];
-    }
+    final selectedPieces = hostVotedPieces != null && winners.contains(hostVotedPieces)
+        ? hostVotedPieces
+        : winners[Random().nextInt(winners.length)];
 
     final difficulty = Difficulty.values.firstWhere(
       (d) => d.pieces == selectedPieces,
@@ -227,8 +276,7 @@ class RoomService {
     await _startGame(roomId, room, difficulty);
   }
 
-  Future<void> _startGame(
-      String roomId, RoomModel room, Difficulty difficulty) async {
+  Future<void> _startGame(String roomId, RoomModel room, Difficulty difficulty) async {
     final playerIds = room.players.keys.toList()..shuffle();
     final startScore = difficulty.startingPoints;
 
@@ -269,9 +317,7 @@ class RoomService {
     });
   }
 
-  Future<void> skipPiecePlacement({
-    required String roomId,
-  }) async {
+  Future<void> skipPiecePlacement({required String roomId}) async {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
     await _rooms.doc(roomId).update({
@@ -292,8 +338,7 @@ class RoomService {
       await _rooms.doc(roomId).update({
         'phase': GamePhase.finished.name,
         'winnerId': userId,
-        'players.$userId.score':
-            FieldValue.increment(difficulty.winReward),
+        'players.$userId.score': FieldValue.increment(difficulty.winReward),
       });
     } else {
       final doc = await _rooms.doc(roomId).get();
@@ -331,21 +376,34 @@ class RoomService {
   }
 
   Future<List<GameImageModel>> getPublicImages() async {
-    final query = await _firestore
-        .collection('images')
-        .where('isPremium', isEqualTo: false)
-        .get();
-    return query.docs.map(GameImageModel.fromFirestore).toList();
+    try {
+      final query = await _firestore
+          .collection('images')
+          .where('isPremium', isEqualTo: false)
+          .get();
+      final images = query.docs.map(GameImageModel.fromFirestore).toList();
+      return images.isEmpty ? _fallbackImages : images;
+    } catch (_) {
+      return _fallbackImages;
+    }
   }
 
   Future<List<GameImageModel>> getAllImages() async {
-    final query = await _firestore.collection('images').get();
-    return query.docs.map(GameImageModel.fromFirestore).toList();
+    try {
+      final query = await _firestore.collection('images').get();
+      final images = query.docs.map(GameImageModel.fromFirestore).toList();
+      return images.isEmpty ? _fallbackImages : images;
+    } catch (_) {
+      return _fallbackImages;
+    }
   }
 
   Future<GameImageModel?> getImage(String imageId) async {
+    final localMatch = _fallbackImages.where((image) => image.id == imageId);
+    if (localMatch.isNotEmpty) return localMatch.first;
+
     final doc = await _firestore.collection('images').doc(imageId).get();
-    if (!doc.exists) return null;
+    if (!doc.exists) return _fallbackImages.first;
     return GameImageModel.fromFirestore(doc);
   }
 }
