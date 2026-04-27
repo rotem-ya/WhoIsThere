@@ -65,7 +65,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final roomAsync = ref.watch(currentRoomProvider);
+    final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
     final currentUser = ref.watch(currentUserProvider).value;
 
     return roomAsync.when(

@@ -64,13 +64,21 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(title: const Text('הצטרף לחדר')),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height -
+                  MediaQuery.of(context).padding.top -
+                  kToolbarHeight -
+                  48,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
               const Text(
                 '🚪',
                 style: TextStyle(fontSize: 72),
@@ -123,7 +131,8 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
                       gradient: AppColors.secondaryGradient,
                       onPressed: _joinRoom,
                     ).animate(delay: 500.ms).fadeIn(),
-            ],
+              ],
+            ),
           ),
         ),
       ),

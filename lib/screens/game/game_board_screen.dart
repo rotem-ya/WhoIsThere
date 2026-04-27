@@ -37,7 +37,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     if (_imageLoadStarted) return;
     _imageLoadStarted = true;
     try {
-      final room = await ref.read(currentRoomProvider.future);
+      final room = await ref.read(roomStreamProvider(widget.roomId).future);
       if (room?.selectedImageId == null) return;
       final img =
           await ref.read(roomServiceProvider).getImage(room!.selectedImageId!);
@@ -195,7 +195,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final roomAsync = ref.watch(currentRoomProvider);
+    final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
     final currentUser = ref.watch(currentUserProvider).value;
 
     return roomAsync.when(

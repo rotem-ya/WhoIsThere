@@ -10,14 +10,36 @@ import '../../models/player_model.dart';
 import '../../widgets/common/gradient_button.dart';
 import '../../widgets/common/player_avatar.dart';
 
-class LobbyScreen extends ConsumerWidget {
+class LobbyScreen extends ConsumerStatefulWidget {
   final String roomId;
 
   const LobbyScreen({super.key, required this.roomId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final roomAsync = ref.watch(currentRoomProvider);
+  ConsumerState<LobbyScreen> createState() => _LobbyScreenState();
+}
+
+class _LobbyScreenState extends ConsumerState<LobbyScreen> {
+  bool _isStarting = false;
+
+  Future<void> _startGame() async {
+    if (_isStarting) return;
+    setState(() => _isStarting = true);
+    try {
+      await ref.read(roomServiceProvider).startVotingImage(widget.roomId);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה בהתחלת משחק: $e')),
+        );
+        setState(() => _isStarting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
     final currentUser = ref.watch(currentUserProvider).value;
 
     return roomAsync.when(
@@ -31,7 +53,7 @@ class LobbyScreen extends ConsumerWidget {
 
         if (room.phase == GamePhase.votingImage) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/vote-image/$roomId');
+            context.go('/vote-image/${widget.roomId}');
           });
         }
 
@@ -47,7 +69,7 @@ class LobbyScreen extends ConsumerWidget {
                 if (currentUser != null) {
                   await ref
                       .read(roomServiceProvider)
-                      .leaveRoom(roomId, currentUser.id);
+                      .leaveRoom(widget.roomId, currentUser.id);
                 }
                 if (context.mounted) context.go('/home');
               },
@@ -149,13 +171,13 @@ class LobbyScreen extends ConsumerWidget {
 
                   if (isHost)
                     GradientButton(
-                      text: canStart ? 'התחל משחק' : 'ממתין לשחקנים...',
+                      text: _isStarting
+                          ? 'מתחיל...'
+                          : canStart
+                              ? 'התחל משחק'
+                              : 'ממתין לשחקנים...',
                       icon: Icons.play_arrow_rounded,
-                      onPressed: canStart
-                          ? () => ref
-                              .read(roomServiceProvider)
-                              .startVotingImage(roomId)
-                          : null,
+                      onPressed: (canStart && !_isStarting) ? _startGame : null,
                     ).animate(delay: 300.ms).fadeIn()
                   else
                     Container(

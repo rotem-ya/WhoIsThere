@@ -61,7 +61,7 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final roomAsync = ref.watch(currentRoomProvider);
+    final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
     final imagesAsync = ref.watch(publicImagesProvider);
 
     return roomAsync.when(
@@ -143,8 +143,11 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                   Expanded(
                     child: imagesAsync.when(
                       data: (images) {
-                        // Group by category — only show categories that have images
-                        final availableCategories = ImageCategory.values
+                        const _allowedCategories = {
+                          ImageCategory.landmark,
+                          ImageCategory.israeliLandmark,
+                        };
+                        final availableCategories = _allowedCategories
                             .where((cat) =>
                                 images.any((img) => img.category == cat))
                             .toList();

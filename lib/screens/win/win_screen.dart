@@ -36,7 +36,7 @@ class _WinScreenState extends ConsumerState<WinScreen> {
   }
 
   Future<void> _loadImage() async {
-    final room = ref.read(currentRoomProvider).value;
+    final room = await ref.read(roomStreamProvider(widget.roomId).future);
     if (room?.selectedImageId == null) return;
     final img =
         await ref.read(roomServiceProvider).getImage(room!.selectedImageId!);
@@ -44,7 +44,7 @@ class _WinScreenState extends ConsumerState<WinScreen> {
   }
 
   Future<void> _awardPoints() async {
-    final room = ref.read(currentRoomProvider).value;
+    final room = await ref.read(roomStreamProvider(widget.roomId).future);
     final currentUser = ref.read(currentUserProvider).value;
     if (room == null || currentUser == null) return;
 
@@ -64,7 +64,7 @@ class _WinScreenState extends ConsumerState<WinScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final roomAsync = ref.watch(currentRoomProvider);
+    final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
     final currentUser = ref.watch(currentUserProvider).value;
 
     return roomAsync.when(

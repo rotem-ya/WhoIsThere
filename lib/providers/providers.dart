@@ -28,6 +28,12 @@ final currentRoomProvider = StreamProvider<RoomModel?>((ref) {
   return ref.watch(roomServiceProvider).watchRoom(roomId);
 });
 
+// Per-room stream — screens watch this directly using their roomId param
+final roomStreamProvider =
+    StreamProvider.autoDispose.family<RoomModel?, String>((ref, roomId) {
+  return ref.watch(roomServiceProvider).watchRoom(roomId);
+});
+
 // Selected image for game
 final selectedGameImageProvider = StateProvider<GameImageModel?>((ref) => null);
 
