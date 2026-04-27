@@ -232,39 +232,49 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             isMyTurn && !_hasFlipped && !allRevealed && !_isActing;
 
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: const Color(0xFFF0F2FF),
           appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
             automaticallyImplyLeading: false,
             leading: IconButton(
-              icon: const Icon(Icons.exit_to_app_rounded),
+              icon: const Icon(Icons.exit_to_app_rounded,
+                  color: AppColors.darkBlue),
               onPressed: () => _confirmExit(context, currentUser.id),
             ),
-            title: isVirtualTurn
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('🎮 ',
-                          style: TextStyle(fontSize: 14)),
-                      Flexible(
-                        child: Text(
-                          'תור של ${currentPlayer?.name ?? '...'}',
-                          style: const TextStyle(
-                            color: AppColors.accent,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
+            title: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: isVirtualTurn
+                  ? Row(
+                      key: const ValueKey('virtual'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('🎮', style: TextStyle(fontSize: 16)),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'תור של ${currentPlayer?.name ?? '...'}',
+                            style: const TextStyle(
+                              color: AppColors.accent,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
+                      ],
+                    )
+                  : Text(
+                      key: ValueKey(isMyTurn),
+                      isMyTurn ? '⭐ התור שלך!' : 'ממתין לתור...',
+                      style: TextStyle(
+                        color: isMyTurn ? AppColors.primary : Colors.grey,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
                       ),
-                    ],
-                  )
-                : Text(
-                    isMyTurn ? '⭐ התור שלך!' : '...',
-                    style: TextStyle(
-                      color: isMyTurn ? AppColors.primary : Colors.grey,
-                      fontWeight: FontWeight.w800,
                     ),
-                  ),
+            ),
             actions: [
               if (myPlayer != null)
                 Padding(
@@ -590,10 +600,10 @@ class _PlayersBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 96,
+      height: 100,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
         children: room.sortedPlayers.map((player) {
           final isCurrentTurn = room.currentTurnUserId == player.id;
           return Padding(
@@ -675,35 +685,52 @@ class _PuzzleBoard extends StatelessWidget {
               Container(color: AppColors.boardBackground),
 
             // ── Cell overlay grid ──
+            // LayoutBuilder computes the exact cell aspect ratio so cells
+            // fill the full container height, preventing image bleed at bottom.
             Padding(
               padding: const EdgeInsets.all(3),
-              child: GridView.builder(
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: gridSize,
-                  crossAxisSpacing: 2,
-                  mainAxisSpacing: 2,
-                ),
-                itemCount: gridSize * gridSize,
-                itemBuilder: (context, index) {
-                  final isRevealed = room.placedPieces.containsKey(index);
-                  final letter = room.letterGrid[index];
-                  final canFlip = canFlipPiece && !isRevealed;
+              child: LayoutBuilder(
+                builder: (ctx, constraints) {
+                  const spacing = 2.0;
+                  final totalSpacingH = spacing * (gridSize - 1);
+                  final totalSpacingV = spacing * (gridSize - 1);
+                  final cellW =
+                      (constraints.maxWidth - totalSpacingH) / gridSize;
+                  final cellH =
+                      (constraints.maxHeight - totalSpacingV) / gridSize;
+                  final ratio = cellW / cellH;
 
-                  return AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 350),
-                    switchInCurve: Curves.easeOut,
-                    transitionBuilder: (child, anim) => ScaleTransition(
-                      scale: anim,
-                      child: FadeTransition(opacity: anim, child: child),
+                  return GridView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: gridSize,
+                      crossAxisSpacing: spacing,
+                      mainAxisSpacing: spacing,
+                      childAspectRatio: ratio,
                     ),
-                    child: isRevealed
-                        ? _buildRevealedCell(index, letter)
-                        : GestureDetector(
-                            key: ValueKey('h_$index'),
-                            onTap: canFlip ? () => onFlip?.call(index) : null,
-                            child: _HiddenCard(isFlippable: canFlip),
-                          ),
+                    itemCount: gridSize * gridSize,
+                    itemBuilder: (context, index) {
+                      final isRevealed = room.placedPieces.containsKey(index);
+                      final letter = room.letterGrid[index];
+                      final canFlip = canFlipPiece && !isRevealed;
+
+                      return AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 350),
+                        switchInCurve: Curves.easeOut,
+                        transitionBuilder: (child, anim) => ScaleTransition(
+                          scale: anim,
+                          child: FadeTransition(opacity: anim, child: child),
+                        ),
+                        child: isRevealed
+                            ? _buildRevealedCell(index, letter)
+                            : GestureDetector(
+                                key: ValueKey('h_$index'),
+                                onTap:
+                                    canFlip ? () => onFlip?.call(index) : null,
+                                child: _HiddenCard(isFlippable: canFlip),
+                              ),
+                      );
+                    },
                   );
                 },
               ),
