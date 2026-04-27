@@ -16,7 +16,6 @@ class RoomService {
       id: 'local_eiffel_tower',
       name: 'מגדל אייפל',
       answer: 'מגדל אייפל',
-      acceptedAnswers: ['אייפל', 'eiffel tower', 'eiffel'],
       category: ImageCategory.landmark,
       imageUrl: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=1200',
       thumbnailUrl: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=400',
@@ -25,7 +24,6 @@ class RoomService {
       id: 'local_colosseum',
       name: 'הקולוסיאום',
       answer: 'הקולוסיאום',
-      acceptedAnswers: ['קולוסיאום', 'colosseum', 'rome'],
       category: ImageCategory.landmark,
       imageUrl: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=1200',
       thumbnailUrl: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400',
@@ -34,7 +32,6 @@ class RoomService {
       id: 'local_big_ben',
       name: 'ביג בן',
       answer: 'ביג בן',
-      acceptedAnswers: ['big ben', 'london'],
       category: ImageCategory.landmark,
       imageUrl: 'https://images.unsplash.com/photo-1529655683826-aba9b3e77383?w=1200',
       thumbnailUrl: 'https://images.unsplash.com/photo-1529655683826-aba9b3e77383?w=400',
@@ -43,25 +40,22 @@ class RoomService {
       id: 'local_dead_sea',
       name: 'ים המלח',
       answer: 'ים המלח',
-      acceptedAnswers: ['dead sea'],
       category: ImageCategory.israeliLandmark,
       imageUrl: 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=1200',
       thumbnailUrl: 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=400',
     ),
     GameImageModel(
-      id: 'local_jerusalem',
-      name: 'ירושלים',
-      answer: 'ירושלים',
-      acceptedAnswers: ['jerusalem', 'הכותל', 'כותל'],
+      id: 'local_western_wall',
+      name: 'הכותל המערבי',
+      answer: 'הכותל המערבי',
       category: ImageCategory.israeliLandmark,
       imageUrl: 'https://images.unsplash.com/photo-1542743408-218cc173cda0?w=1200',
       thumbnailUrl: 'https://images.unsplash.com/photo-1542743408-218cc173cda0?w=400',
     ),
     GameImageModel(
       id: 'local_taj_mahal',
-      name: 'טאג׳ מאהל',
-      answer: 'טאג׳ מאהל',
-      acceptedAnswers: ['taj mahal', 'taj'],
+      name: 'טאג מאהל',
+      answer: 'טאג מאהל',
       category: ImageCategory.landmark,
       imageUrl: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=1200',
       thumbnailUrl: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=400',
@@ -295,7 +289,6 @@ class RoomService {
       'players': updatedPlayers.map((k, v) => MapEntry(k, v.toMap())),
       'placedPieces': {},
       'availablePieceIndices': allCells,
-      'solvedLetters': [],
     });
   }
 
@@ -326,7 +319,10 @@ class RoomService {
     });
   }
 
-  Future<bool> makeGuess({
+  /// Letter-bank answer submission.
+  /// Returns true if the answer is correct (room transitions to finished).
+  /// Wrong answer: applies penalty, may eliminate; turn does NOT advance.
+  Future<bool> submitAnswer({
     required String roomId,
     required String userId,
     required String guess,
@@ -341,88 +337,26 @@ class RoomService {
         'winnerId': userId,
         'players.$userId.score': FieldValue.increment(difficulty.winReward),
       });
-    } else {
-      final doc = await _rooms.doc(roomId).get();
-      final room = RoomModel.fromFirestore(doc);
-      final currentScore = room.players[userId]?.score ?? 0;
-      final newScore = currentScore - difficulty.wrongGuessPenalty;
-
-      if (newScore <= 0) {
-        await _rooms.doc(roomId).update({
-          'players.$userId.score': 0,
-          'players.$userId.isEliminated': true,
-        });
-        await _checkLastPlayerStanding(roomId);
-      } else {
-        await _rooms.doc(roomId).update({
-          'players.$userId.score': newScore,
-        });
-      }
+      return true;
     }
 
-    return isCorrect;
-  }
-
-  // Returns true if the letter is in the answer.
-  Future<bool> guessLetter({
-    required String roomId,
-    required String userId,
-    required String letter,
-    required GameImageModel image,
-    required Difficulty difficulty,
-  }) async {
-    final normalized = letter.toLowerCase();
-    final answerChars = image.answer.runes
-        .map(String.fromCharCode)
-        .where((c) => c != ' ')
-        .map((c) => c.toLowerCase())
-        .toSet();
-
-    if (!answerChars.contains(normalized)) {
-      // Wrong letter — apply penalty
-      final doc = await _rooms.doc(roomId).get();
-      final room = RoomModel.fromFirestore(doc);
-      final newScore = (room.players[userId]?.score ?? 0) - difficulty.wrongGuessPenalty;
-      if (newScore <= 0) {
-        await _rooms.doc(roomId).update({
-          'players.$userId.score': 0,
-          'players.$userId.isEliminated': true,
-        });
-        await _checkLastPlayerStanding(roomId);
-      } else {
-        await _rooms.doc(roomId).update({'players.$userId.score': newScore});
-      }
-      return false;
-    }
-
-    // Count occurrences for point reward
-    final occurrences = image.answer
-        .runes
-        .map(String.fromCharCode)
-        .where((c) => c.toLowerCase() == normalized)
-        .length;
-
-    await _rooms.doc(roomId).update({
-      'solvedLetters': FieldValue.arrayUnion([normalized]),
-      'players.$userId.score':
-          FieldValue.increment(occurrences * difficulty.placePiecePoints),
-    });
-
-    // Check if all unique letters are now solved
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
-    final solved = Set<String>.from(room.solvedLetters);
-    final allSolved = answerChars.every(solved.contains);
+    final currentScore = room.players[userId]?.score ?? 0;
+    final newScore = currentScore - difficulty.wrongGuessPenalty;
 
-    if (allSolved) {
+    if (newScore <= 0) {
       await _rooms.doc(roomId).update({
-        'phase': GamePhase.finished.name,
-        'winnerId': userId,
-        'players.$userId.score': FieldValue.increment(difficulty.winReward),
+        'players.$userId.score': 0,
+        'players.$userId.isEliminated': true,
+      });
+      await _checkLastPlayerStanding(roomId);
+    } else {
+      await _rooms.doc(roomId).update({
+        'players.$userId.score': newScore,
       });
     }
-
-    return true;
+    return false;
   }
 
   Future<void> _checkLastPlayerStanding(String roomId) async {
