@@ -5,6 +5,7 @@ import '../models/player_model.dart';
 import '../models/game_image_model.dart';
 import '../core/constants/game_constants.dart';
 import '../core/utils/room_code_generator.dart';
+import '../core/utils/letter_grid_builder.dart';
 
 class RoomService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -287,6 +288,15 @@ class RoomService {
     final totalCells = difficulty.gridSize * difficulty.gridSize;
     final allCells = List.generate(totalCells, (i) => i);
 
+    // Build letter grid from the selected image's answer
+    Map<String, String> letterGrid = {};
+    if (room.selectedImageId != null) {
+      final image = await getImage(room.selectedImageId!);
+      if (image != null) {
+        letterGrid = LetterGridBuilder.build(image.answer, difficulty.gridSize);
+      }
+    }
+
     await _rooms.doc(roomId).update({
       'phase': GamePhase.playing.name,
       'selectedDifficulty': difficulty.name,
@@ -295,6 +305,7 @@ class RoomService {
       'players': updatedPlayers.map((k, v) => MapEntry(k, v.toMap())),
       'placedPieces': {},
       'availablePieceIndices': allCells,
+      'letterGrid': letterGrid,
     });
   }
 

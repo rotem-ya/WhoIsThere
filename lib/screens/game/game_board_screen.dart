@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/game_constants.dart';
+import '../../core/utils/letter_grid_builder.dart';
 import '../../providers/providers.dart';
 import '../../models/room_model.dart';
 import '../../models/game_image_model.dart';
@@ -108,13 +109,22 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'ניחוש שגוי: -${difficulty.wrongGuessPenalty} נקודות',
-              style: const TextStyle(
-                color: AppColors.secondary,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'ניחוש שגוי: -${difficulty.wrongGuessPenalty} נקודות',
+                style: const TextStyle(
+                  color: AppColors.secondary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -220,7 +230,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         final allRevealed = room.availablePieceIndices.isEmpty;
         final canFlipPiece =
             isMyTurn && !_hasFlipped && !allRevealed && !_isActing;
-        final effectivelyFlipped = _hasFlipped || allRevealed;
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -272,9 +281,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               children: [
                 _PlayersBar(room: room, currentUserId: currentUser.id),
 
+                // Word progress bar — shows revealed letters
+                if (_gameImage != null)
+                  _WordProgressBar(
+                    answer: _gameImage!.answer,
+                    letterGrid: room.letterGrid,
+                    placedPieces: room.placedPieces,
+                    gridSize: gridSize,
+                  ).animate().fadeIn(duration: 400.ms),
+
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
                     child: _PuzzleBoard(
                       room: room,
                       gameImage: _gameImage,
@@ -289,7 +307,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   isMyTurn: isMyTurn,
                   isVirtualTurn: isVirtualTurn,
                   actingPlayerName: currentPlayer?.name,
-                  effectivelyFlipped: effectivelyFlipped,
+                  hasFlipped: _hasFlipped,
+                  allRevealed: allRevealed,
                   hasGuessed: _hasGuessed,
                   isActing: _isActing,
                   isEliminated: myPlayer?.isEliminated == true,
@@ -338,13 +357,125 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   }
 }
 
+// ─── Word Progress Bar ─────────────────────────────────────────
+
+class _WordProgressBar extends StatelessWidget {
+  final String answer;
+  final Map<int, String> letterGrid;
+  final Map<int, String> placedPieces;
+  final int gridSize;
+
+  const _WordProgressBar({
+    required this.answer,
+    required this.letterGrid,
+    required this.placedPieces,
+    required this.gridSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (letterGrid.isEmpty) return const SizedBox.shrink();
+
+    final chars = answer.runes.map(String.fromCharCode).toList();
+    final totalChars = chars.length;
+
+    return Container(
+      width: double.infinity,
+      color: AppColors.background,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(totalChars, (i) {
+            final char = chars[i];
+            final cellIndex =
+                LetterGridBuilder.cellForChar(i, totalChars, gridSize);
+            final isRevealed = placedPieces.containsKey(cellIndex);
+
+            // Spaces render as a visual gap, not a tile
+            if (char == ' ') {
+              return const SizedBox(width: 14);
+            }
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2.5),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeOut,
+                width: 34,
+                height: 38,
+                decoration: BoxDecoration(
+                  gradient: isRevealed ? AppColors.primaryGradient : null,
+                  color: isRevealed ? null : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isRevealed
+                        ? AppColors.primary
+                        : AppColors.pieceSlotEmpty,
+                    width: 1.5,
+                  ),
+                  boxShadow: isRevealed
+                      ? [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                ),
+                child: Center(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    transitionBuilder: (child, anim) =>
+                        ScaleTransition(scale: anim, child: child),
+                    child: isRevealed
+                        ? Text(
+                            char,
+                            key: const ValueKey('revealed'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18,
+                              height: 1,
+                            ),
+                          )
+                        : Text(
+                            '_',
+                            key: const ValueKey('hidden'),
+                            style: TextStyle(
+                              color: Colors.grey.shade400,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                              height: 1,
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Bottom Bar ───────────────────────────────────────────────
 
 class _BottomBar extends StatelessWidget {
   final bool isMyTurn;
   final bool isVirtualTurn;
   final String? actingPlayerName;
-  final bool effectivelyFlipped;
+  final bool hasFlipped;
+  final bool allRevealed;
   final bool hasGuessed;
   final bool isActing;
   final bool isEliminated;
@@ -355,7 +486,8 @@ class _BottomBar extends StatelessWidget {
     required this.isMyTurn,
     required this.isVirtualTurn,
     required this.actingPlayerName,
-    required this.effectivelyFlipped,
+    required this.hasFlipped,
+    required this.allRevealed,
     required this.hasGuessed,
     required this.isActing,
     required this.isEliminated,
@@ -367,17 +499,19 @@ class _BottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!isMyTurn) {
       return _infoBar(
-        '⏳ ${actingPlayerName ?? '...'} מהפך חתיכה...',
+        '⏳ ${actingPlayerName ?? '...'} חושף אות...',
         AppColors.primary.withOpacity(0.08),
         AppColors.primary,
       );
     }
 
-    if (!effectivelyFlipped) {
+    final needsFlip = !hasFlipped && !allRevealed;
+
+    if (needsFlip) {
       return _infoBar(
         isVirtualTurn
-            ? '👆 הפוך עבור ${actingPlayerName ?? 'שחקן'}'
-            : '👆 הפוך חתיכה על הלוח!',
+            ? '👆 הפוך משבצת עבור ${actingPlayerName ?? 'שחקן'}'
+            : '👆 הפוך משבצת לחשוף אות!',
         isVirtualTurn
             ? AppColors.accent.withOpacity(0.12)
             : AppColors.primary.withOpacity(0.1),
@@ -465,6 +599,7 @@ class _PlayersBar extends StatelessWidget {
           return Padding(
             padding: const EdgeInsets.only(right: 10),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 PlayerAvatar(
                   name: player.name,
@@ -473,7 +608,7 @@ class _PlayersBar extends StatelessWidget {
                   isCurrentTurn: isCurrentTurn,
                   isEliminated: player.isEliminated,
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 ScoreBadge(
                   score: player.score,
                   isCurrentTurn: isCurrentTurn,
@@ -489,7 +624,7 @@ class _PlayersBar extends StatelessWidget {
   }
 }
 
-// ─── Puzzle Board (image + card overlay) ─────────────────────
+// ─── Puzzle Board ─────────────────────────────────────────────
 
 class _PuzzleBoard extends StatelessWidget {
   final RoomModel room;
@@ -539,7 +674,7 @@ class _PuzzleBoard extends StatelessWidget {
             else
               Container(color: AppColors.boardBackground),
 
-            // ── Card overlay grid ──
+            // ── Cell overlay grid ──
             Padding(
               padding: const EdgeInsets.all(3),
               child: GridView.builder(
@@ -552,14 +687,18 @@ class _PuzzleBoard extends StatelessWidget {
                 itemCount: gridSize * gridSize,
                 itemBuilder: (context, index) {
                   final isRevealed = room.placedPieces.containsKey(index);
+                  final letter = room.letterGrid[index];
                   final canFlip = canFlipPiece && !isRevealed;
 
                   return AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 400),
-                    transitionBuilder: (child, anim) =>
-                        FadeTransition(opacity: anim, child: child),
+                    duration: const Duration(milliseconds: 350),
+                    switchInCurve: Curves.easeOut,
+                    transitionBuilder: (child, anim) => ScaleTransition(
+                      scale: anim,
+                      child: FadeTransition(opacity: anim, child: child),
+                    ),
                     child: isRevealed
-                        ? SizedBox.expand(key: ValueKey('r_$index'))
+                        ? _buildRevealedCell(index, letter)
                         : GestureDetector(
                             key: ValueKey('h_$index'),
                             onTap: canFlip ? () => onFlip?.call(index) : null,
@@ -574,9 +713,71 @@ class _PuzzleBoard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildRevealedCell(int index, String? letter) {
+    // Space chars or cells with no letter assignment → transparent (shows image)
+    if (letter == null || letter == ' ') {
+      return SizedBox.expand(key: ValueKey('empty_$index'));
+    }
+    // Letter cell → white card with the letter
+    return _LetterCell(key: ValueKey('letter_$index'), letter: letter);
+  }
 }
 
-// ─── Hidden Card ─────────────────────────────────────────────
+// ─── Letter Cell (revealed) ───────────────────────────────────
+
+class _LetterCell extends StatelessWidget {
+  final String letter;
+
+  const _LetterCell({super.key, required this.letter});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.90),
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.25),
+          width: 0.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.15),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Padding(
+            padding: const EdgeInsets.all(2),
+            child: Text(
+              letter,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: AppColors.darkBlue,
+                height: 1,
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
+        .animate()
+        .scale(
+          begin: const Offset(0.5, 0.5),
+          end: const Offset(1, 1),
+          duration: 300.ms,
+          curve: Curves.elasticOut,
+        );
+  }
+}
+
+// ─── Hidden Card (unrevealed) ─────────────────────────────────
 
 class _HiddenCard extends StatelessWidget {
   final bool isFlippable;
