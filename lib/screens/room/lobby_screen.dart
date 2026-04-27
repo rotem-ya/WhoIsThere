@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,15 @@ class LobbyScreen extends ConsumerStatefulWidget {
 
 class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   bool _isStarting = false;
+  bool _codeCopied = false;
+
+  Future<void> _copyCode(String code) async {
+    if (_codeCopied) return;
+    await Clipboard.setData(ClipboardData(text: code));
+    setState(() => _codeCopied = true);
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (mounted) setState(() => _codeCopied = false);
+  }
 
   Future<void> _startGame() async {
     if (_isStarting) return;
@@ -81,36 +91,61 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: AppColors.primaryGradient,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      children: [
-                        const Text(
-                          'קוד חדר',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontWeight: FontWeight.w600,
+                  GestureDetector(
+                    onTap: () => _copyCode(room.code),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: _codeCopied
+                            ? AppColors.accentGradient
+                            : AppColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                child: _codeCopied
+                                    ? const Icon(Icons.check_rounded,
+                                        key: ValueKey('check'),
+                                        color: Colors.white,
+                                        size: 16)
+                                    : const Icon(Icons.copy_rounded,
+                                        key: ValueKey('copy'),
+                                        color: Colors.white70,
+                                        size: 14),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _codeCopied ? 'הועתק!' : 'קוד חדר • לחץ להעתקה',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            room.code,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 40,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 8,
+                          const SizedBox(height: 4),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              room.code,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 40,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 8,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ).animate().fadeIn(),
 

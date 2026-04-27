@@ -265,11 +265,26 @@ class _PlayerCountPicker extends StatelessWidget {
   }
 }
 
-class _RoomCreatedCard extends StatelessWidget {
+class _RoomCreatedCard extends StatefulWidget {
   final String roomCode;
   final int playerCount;
 
   const _RoomCreatedCard({required this.roomCode, required this.playerCount});
+
+  @override
+  State<_RoomCreatedCard> createState() => _RoomCreatedCardState();
+}
+
+class _RoomCreatedCardState extends State<_RoomCreatedCard> {
+  bool _copied = false;
+
+  void _copyCode() async {
+    if (_copied) return;
+    await Clipboard.setData(ClipboardData(text: widget.roomCode));
+    setState(() => _copied = true);
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (mounted) setState(() => _copied = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -302,26 +317,25 @@ class _RoomCreatedCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '$playerCount שחקנים • שתף את הקוד עם החברים',
+            '${widget.playerCount} שחקנים • שתף את הקוד עם החברים',
             style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 20),
           GestureDetector(
-            onTap: () {
-              Clipboard.setData(ClipboardData(text: roomCode));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('הקוד הועתק!')),
-              );
-            },
-            child: Container(
+            onTap: _copyCode,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
+                gradient: _copied
+                    ? AppColors.accentGradient
+                    : AppColors.primaryGradient,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.4),
+                    color: (_copied ? AppColors.accent : AppColors.primary)
+                        .withOpacity(0.4),
                     blurRadius: 16,
                     offset: const Offset(0, 8),
                   ),
@@ -330,39 +344,52 @@ class _RoomCreatedCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: _copied
+                        ? const Icon(Icons.check_rounded,
+                            key: ValueKey('check'),
+                            color: Colors.white,
+                            size: 22)
+                        : const Icon(Icons.copy_rounded,
+                            key: ValueKey('copy'),
+                            color: Colors.white70,
+                            size: 20),
+                  ),
+                  const SizedBox(width: 10),
                   Flexible(
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
-                      child: Text(
-                        roomCode,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 6,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: Text(
+                          _copied ? 'הועתק!' : widget.roomCode,
+                          key: ValueKey(_copied),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 6,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  const Icon(Icons.copy_rounded, color: Colors.white70, size: 20),
                 ],
               ),
             ),
-          )
-              .animate(onPlay: (c) => c.repeat(reverse: true))
-              .scale(
-                begin: const Offset(1, 1),
-                end: const Offset(1.02, 1.02),
-                duration: 1200.ms,
-              ),
+          ),
           const SizedBox(height: 10),
-          const Text(
-            'לחץ להעתקה',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+          AnimatedOpacity(
+            opacity: _copied ? 0 : 1,
+            duration: const Duration(milliseconds: 200),
+            child: const Text(
+              'לחץ להעתקה',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
