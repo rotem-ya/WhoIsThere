@@ -13,11 +13,15 @@ class AuthService {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   Future<UserModel?> signInForQa() async {
-    final existingUser = _auth.currentUser;
-    if (existingUser != null) {
-      return _syncUser(existingUser, fallbackName: 'בודק');
+    try {
+      final existingUser = _auth.currentUser;
+      if (existingUser != null) {
+        return _syncUser(existingUser, fallbackName: 'בודק');
+      }
+      return signInAnonymously();
+    } catch (_) {
+      return null;
     }
-    return signInAnonymously();
   }
 
   Future<UserModel?> signInAnonymously() async {

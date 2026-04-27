@@ -143,53 +143,10 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                   Expanded(
                     child: imagesAsync.when(
                       data: (images) {
-                        const _allowedCategories = {
+                        const availableCategories = [
                           ImageCategory.landmark,
                           ImageCategory.israeliLandmark,
-                        };
-                        final availableCategories = _allowedCategories
-                            .where((cat) =>
-                                images.any((img) => img.category == cat))
-                            .toList();
-
-                        if (availableCategories.isEmpty) {
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text('😕',
-                                      style: TextStyle(fontSize: 48)),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'אין תמונות במאגר',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.darkBlue,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'יש להריץ את סקריפט הסידינג\nnode scripts/seed_images.js',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        color: Colors.grey,
-                                        fontFamily: 'monospace'),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  ElevatedButton.icon(
-                                    onPressed: () =>
-                                        ref.refresh(publicImagesProvider),
-                                    icon: const Icon(Icons.refresh_rounded),
-                                    label: const Text('נסה שוב'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
+                        ];
 
                         return GridView.builder(
                           gridDelegate:
@@ -197,7 +154,7 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                             crossAxisCount: 2,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            childAspectRatio: 1.1,
+                            childAspectRatio: 0.85,
                           ),
                           itemCount: availableCategories.length,
                           itemBuilder: (context, i) {
@@ -261,11 +218,13 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                           Icon(Icons.check_circle_rounded,
                               color: AppColors.accent),
                           SizedBox(width: 8),
-                          Text(
-                            'הצבעה נשלחה! עובר לשלב הבא...',
-                            style: TextStyle(
-                              color: AppColors.accent,
-                              fontWeight: FontWeight.w700,
+                          Flexible(
+                            child: Text(
+                              'הצבעה נשלחה! עובר לשלב הבא...',
+                              style: TextStyle(
+                                color: AppColors.accent,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ],

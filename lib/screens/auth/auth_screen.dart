@@ -24,12 +24,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       if (user != null && mounted) {
         context.go('/home');
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ההתחברות נכשלה: ${e.toString()}')),
-        );
-      }
+    } catch (_) {
+      // signInWithGoogle already falls back inside AuthService.
+      // If it still threw, try anonymous directly without showing an error.
+      try {
+        final user = await ref.read(authServiceProvider).signInAnonymously();
+        if (user != null && mounted) context.go('/home');
+      } catch (_) {}
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

@@ -456,10 +456,10 @@ class _PlayersBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 76,
+      height: 96,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         children: room.sortedPlayers.map((player) {
           final isCurrentTurn = room.currentTurnUserId == player.id;
           return Padding(

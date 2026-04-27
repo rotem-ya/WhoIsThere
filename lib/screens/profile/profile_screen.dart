@@ -194,6 +194,7 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
+            textDirection: TextDirection.ltr,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
@@ -227,16 +228,20 @@ class _PointInfo extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: AppColors.darkBlue,
-              fontSize: 13,
+          Flexible(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: AppColors.darkBlue,
+                fontSize: 13,
+              ),
             ),
           ),
+          const SizedBox(width: 8),
           Text(
             value,
+            textDirection: TextDirection.ltr,
             style: const TextStyle(
               fontWeight: FontWeight.w700,
               color: AppColors.primary,

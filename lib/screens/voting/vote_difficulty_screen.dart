@@ -308,14 +308,13 @@ class _DifficultyCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${difficulty.pieces} חתיכות  •  +${difficulty.placePiecePoints}נק׳/חתיכה  •  ניצחון: +${difficulty.winReward}נק׳',
+                      '${difficulty.pieces} חתיכות  •  +${difficulty.placePiecePoints}נק׳/חתיכה\nניצחון: +${difficulty.winReward}נק׳',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade500,
                         fontWeight: FontWeight.w600,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
                     ),
                   ],
                 ),

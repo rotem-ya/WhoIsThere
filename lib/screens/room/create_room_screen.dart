@@ -157,17 +157,15 @@ class _PlayerCountPicker extends StatelessWidget {
           Directionality(
             textDirection: TextDirection.ltr,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [2, 3, 4, 5].map((count) {
                 final isSelected = selected == count;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  child: GestureDetector(
+                return GestureDetector(
                     onTap: () => onChanged(count),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      width: 54,
-                      height: 54,
+                      width: 58,
+                      height: 58,
                       decoration: BoxDecoration(
                         gradient: isSelected ? AppColors.primaryGradient : null,
                         color: isSelected ? null : Colors.grey.shade100,
@@ -194,7 +192,6 @@ class _PlayerCountPicker extends StatelessWidget {
                         ),
                       ),
                     ),
-                  ),
                 );
               }).toList(),
             ),
