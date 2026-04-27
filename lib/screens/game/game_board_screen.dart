@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/game_constants.dart';
-import '../../core/utils/letter_grid_builder.dart';
 import '../../providers/providers.dart';
 import '../../models/room_model.dart';
 import '../../models/game_image_model.dart';
@@ -23,6 +22,7 @@ class GameBoardScreen extends ConsumerStatefulWidget {
 
 class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   bool _hasFlipped = false;
+  bool _hasGuessedLetter = false;
   bool _hasGuessed = false;
   bool _isActing = false;
   GameImageModel? _gameImage;
@@ -88,9 +88,116 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         setState(() {
           _isActing = false;
           _hasFlipped = false;
+          _hasGuessedLetter = false;
           _hasGuessed = false;
         });
       }
+    }
+  }
+
+  void _showLetterGuessDialog(RoomModel room) {
+    if (_hasGuessedLetter || _isActing) return;
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text(
+          '🔤 נחש אות!',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'אות שגויה: -${room.selectedDifficulty?.wrongGuessPenalty ?? 2} נקודות',
+                style: const TextStyle(
+                  color: AppColors.secondary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              maxLength: 1,
+              textCapitalization: TextCapitalization.characters,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 4,
+              ),
+              decoration: const InputDecoration(
+                hintText: '?',
+                counterText: '',
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (v) {
+                if (v.trim().isNotEmpty) {
+                  Navigator.pop(ctx);
+                  _submitLetterGuess(v.trim(), room);
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ביטול'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final letter = controller.text.trim();
+              if (letter.isNotEmpty) {
+                Navigator.pop(ctx);
+                _submitLetterGuess(letter, room);
+              }
+            },
+            child: const Text('נחש!'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submitLetterGuess(String letter, RoomModel room) async {
+    if (_gameImage == null) return;
+    setState(() {
+      _hasGuessedLetter = true;
+      _isActing = true;
+    });
+    try {
+      final isCorrect = await ref.read(roomServiceProvider).guessLetter(
+            roomId: widget.roomId,
+            userId: _actingUserId(room),
+            letter: letter,
+            image: _gameImage!,
+            difficulty: room.selectedDifficulty!,
+          );
+      if (mounted && !isCorrect) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                '❌ האות "$letter" לא במילה! -${room.selectedDifficulty!.wrongGuessPenalty} נקודות'),
+            backgroundColor: AppColors.secondary,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) setState(() => _hasGuessedLetter = false);
+    } finally {
+      if (mounted) setState(() => _isActing = false);
     }
   }
 
@@ -291,13 +398,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               children: [
                 _PlayersBar(room: room, currentUserId: currentUser.id),
 
-                // Word progress bar — shows revealed letters
+                // Word guess bar — interactive letter boxes
                 if (_gameImage != null)
-                  _WordProgressBar(
+                  _WordGuessBar(
                     answer: _gameImage!.answer,
-                    letterGrid: room.letterGrid,
-                    placedPieces: room.placedPieces,
-                    gridSize: gridSize,
+                    solvedLetters: room.solvedLetters,
+                    canGuess: isMyTurn && !_hasGuessedLetter && !_isActing &&
+                        !(room.players[currentUser.id]?.isEliminated ?? false),
+                    onTapGuess: () => _showLetterGuessDialog(room),
                   ).animate().fadeIn(duration: 400.ms),
 
                 Expanded(
@@ -320,8 +428,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   hasFlipped: _hasFlipped,
                   allRevealed: allRevealed,
                   hasGuessed: _hasGuessed,
+                  hasGuessedLetter: _hasGuessedLetter,
                   isActing: _isActing,
                   isEliminated: myPlayer?.isEliminated == true,
+                  onGuessLetter: () => _showLetterGuessDialog(room),
                   onGuess: () => _showGuessDialog(room),
                   onEndTurn: _endTurn,
                 ),
@@ -367,111 +477,108 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   }
 }
 
-// ─── Word Progress Bar ─────────────────────────────────────────
+// ─── Word Guess Bar ────────────────────────────────────────────
 
-class _WordProgressBar extends StatelessWidget {
+class _WordGuessBar extends StatelessWidget {
   final String answer;
-  final Map<int, String> letterGrid;
-  final Map<int, String> placedPieces;
-  final int gridSize;
+  final List<String> solvedLetters;
+  final bool canGuess;
+  final VoidCallback onTapGuess;
 
-  const _WordProgressBar({
+  const _WordGuessBar({
     required this.answer,
-    required this.letterGrid,
-    required this.placedPieces,
-    required this.gridSize,
+    required this.solvedLetters,
+    required this.canGuess,
+    required this.onTapGuess,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (letterGrid.isEmpty) return const SizedBox.shrink();
-
     final chars = answer.runes.map(String.fromCharCode).toList();
-    final totalChars = chars.length;
+    final solved = Set<String>.from(solvedLetters);
 
     return Container(
       width: double.infinity,
-      color: AppColors.background,
+      color: const Color(0xFFF0F2FF),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(totalChars, (i) {
-            final char = chars[i];
-            final cellIndex =
-                LetterGridBuilder.cellForChar(i, totalChars, gridSize);
-            final isRevealed = placedPieces.containsKey(cellIndex);
+          children: chars.map((char) {
+            if (char == ' ') return const SizedBox(width: 14);
 
-            // Spaces render as a visual gap, not a tile
-            if (char == ' ') {
-              return const SizedBox(width: 14);
-            }
+            final isRevealed = solved.contains(char.toLowerCase());
 
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2.5),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 350),
-                curve: Curves.easeOut,
-                width: 34,
-                height: 38,
-                decoration: BoxDecoration(
-                  gradient: isRevealed ? AppColors.primaryGradient : null,
-                  color: isRevealed ? null : Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
+              child: GestureDetector(
+                onTap: (!isRevealed && canGuess) ? onTapGuess : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                  width: 36,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    gradient: isRevealed ? AppColors.primaryGradient : null,
                     color: isRevealed
-                        ? AppColors.primary
-                        : AppColors.pieceSlotEmpty,
-                    width: 1.5,
+                        ? null
+                        : canGuess
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(
+                      color: isRevealed
+                          ? AppColors.primary
+                          : canGuess
+                              ? AppColors.primary.withOpacity(0.4)
+                              : AppColors.pieceSlotEmpty,
+                      width: canGuess && !isRevealed ? 1.8 : 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isRevealed
+                            ? AppColors.primary.withOpacity(0.35)
+                            : Colors.black.withOpacity(0.05),
+                        blurRadius: isRevealed ? 8 : 3,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  boxShadow: isRevealed
-                      ? [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.35),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ]
-                      : [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                ),
-                child: Center(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    transitionBuilder: (child, anim) =>
-                        ScaleTransition(scale: anim, child: child),
-                    child: isRevealed
-                        ? Text(
-                            char,
-                            key: const ValueKey('revealed'),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 18,
-                              height: 1,
+                  child: Center(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      transitionBuilder: (child, anim) =>
+                          ScaleTransition(scale: anim, child: child),
+                      child: isRevealed
+                          ? Text(
+                              char,
+                              key: ValueKey('r_$char'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18,
+                                height: 1,
+                              ),
+                            )
+                          : Text(
+                              canGuess ? '+' : '_',
+                              key: ValueKey('h_$canGuess'),
+                              style: TextStyle(
+                                color: canGuess
+                                    ? AppColors.primary
+                                    : Colors.grey.shade400,
+                                fontWeight: FontWeight.w700,
+                                fontSize: canGuess ? 20 : 16,
+                                height: 1,
+                              ),
                             ),
-                          )
-                        : Text(
-                            '_',
-                            key: const ValueKey('hidden'),
-                            style: TextStyle(
-                              color: Colors.grey.shade400,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                              height: 1,
-                            ),
-                          ),
+                    ),
                   ),
                 ),
               ),
             );
-          }),
+          }).toList(),
         ),
       ),
     );
@@ -487,8 +594,10 @@ class _BottomBar extends StatelessWidget {
   final bool hasFlipped;
   final bool allRevealed;
   final bool hasGuessed;
+  final bool hasGuessedLetter;
   final bool isActing;
   final bool isEliminated;
+  final VoidCallback onGuessLetter;
   final VoidCallback onGuess;
   final VoidCallback onEndTurn;
 
@@ -499,8 +608,10 @@ class _BottomBar extends StatelessWidget {
     required this.hasFlipped,
     required this.allRevealed,
     required this.hasGuessed,
+    required this.hasGuessedLetter,
     required this.isActing,
     required this.isEliminated,
+    required this.onGuessLetter,
     required this.onGuess,
     required this.onEndTurn,
   });
@@ -534,31 +645,45 @@ class _BottomBar extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            flex: 3,
             child: ElevatedButton.icon(
-              onPressed: (hasGuessed || isEliminated) ? null : onGuess,
-              icon: const Icon(Icons.psychology_rounded, size: 18),
-              label: Text(hasGuessed ? 'ניחשת' : 'נחש'),
+              onPressed: (hasGuessedLetter || isEliminated || isActing)
+                  ? null
+                  : onGuessLetter,
+              icon: const Icon(Icons.abc_rounded, size: 20),
+              label: Text(hasGuessedLetter ? 'ניחשת אות' : 'כתוב אות'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.secondary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 13),
                 textStyle: const TextStyle(
-                    fontWeight: FontWeight.w800, fontSize: 15),
+                    fontWeight: FontWeight.w800, fontSize: 14),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Expanded(
-            flex: 3,
+            child: ElevatedButton.icon(
+              onPressed: (hasGuessed || isEliminated || isActing) ? null : onGuess,
+              icon: const Icon(Icons.psychology_rounded, size: 18),
+              label: Text(hasGuessed ? 'ניחשת' : 'נחש מילה'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.secondary,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                textStyle: const TextStyle(
+                    fontWeight: FontWeight.w800, fontSize: 14),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
             child: ElevatedButton.icon(
               onPressed: isActing ? null : onEndTurn,
               icon: const Icon(Icons.skip_next_rounded, size: 18),
               label: const Text('סיים תור'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accent,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 13),
                 textStyle: const TextStyle(
-                    fontWeight: FontWeight.w800, fontSize: 15),
+                    fontWeight: FontWeight.w800, fontSize: 14),
               ),
             ),
           ),
@@ -711,7 +836,6 @@ class _PuzzleBoard extends StatelessWidget {
                     itemCount: gridSize * gridSize,
                     itemBuilder: (context, index) {
                       final isRevealed = room.placedPieces.containsKey(index);
-                      final letter = room.letterGrid[index];
                       final canFlip = canFlipPiece && !isRevealed;
 
                       return AnimatedSwitcher(
@@ -722,7 +846,7 @@ class _PuzzleBoard extends StatelessWidget {
                           child: FadeTransition(opacity: anim, child: child),
                         ),
                         child: isRevealed
-                            ? _buildRevealedCell(index, letter)
+                            ? _buildRevealedCell(index)
                             : GestureDetector(
                                 key: ValueKey('h_$index'),
                                 onTap:
@@ -741,66 +865,9 @@ class _PuzzleBoard extends StatelessWidget {
     );
   }
 
-  Widget _buildRevealedCell(int index, String? letter) {
-    // Space chars or cells with no letter assignment → transparent (shows image)
-    if (letter == null || letter == ' ') {
-      return SizedBox.expand(key: ValueKey('empty_$index'));
-    }
-    // Letter cell → white card with the letter
-    return _LetterCell(key: ValueKey('letter_$index'), letter: letter);
-  }
-}
-
-// ─── Letter Cell (revealed) ───────────────────────────────────
-
-class _LetterCell extends StatelessWidget {
-  final String letter;
-
-  const _LetterCell({super.key, required this.letter});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.90),
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.25),
-          width: 0.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.15),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Center(
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Padding(
-            padding: const EdgeInsets.all(2),
-            child: Text(
-              letter,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: AppColors.darkBlue,
-                height: 1,
-              ),
-            ),
-          ),
-        ),
-      ),
-    )
-        .animate()
-        .scale(
-          begin: const Offset(0.5, 0.5),
-          end: const Offset(1, 1),
-          duration: 300.ms,
-          curve: Curves.elasticOut,
-        );
+  Widget _buildRevealedCell(int index) {
+    // Revealed cells are transparent — the image beneath shows through
+    return SizedBox.expand(key: ValueKey('empty_$index'));
   }
 }
 

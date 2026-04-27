@@ -17,7 +17,7 @@ class RoomModel extends Equatable {
   final int currentTurnIndex;
   final Map<int, String> placedPieces; // pieceIndex -> userId
   final List<int> availablePieceIndices;
-  final Map<int, String> letterGrid;   // pieceIndex -> letter char
+  final List<String> solvedLetters;    // lowercase letters correctly guessed
   final String? winnerId;
   final DateTime createdAt;
 
@@ -35,7 +35,7 @@ class RoomModel extends Equatable {
     this.currentTurnIndex = 0,
     this.placedPieces = const {},
     this.availablePieceIndices = const [],
-    this.letterGrid = const {},
+    this.solvedLetters = const [],
     this.winnerId,
     required this.createdAt,
   });
@@ -70,11 +70,6 @@ class RoomModel extends Equatable {
       (k, v) => MapEntry(int.parse(k), v as String),
     );
 
-    final letterGridRaw = data['letterGrid'] as Map<String, dynamic>? ?? {};
-    final letterGrid = letterGridRaw.map(
-      (k, v) => MapEntry(int.parse(k), v as String),
-    );
-
     return RoomModel(
       id: doc.id,
       code: data['code'] ?? '',
@@ -97,7 +92,7 @@ class RoomModel extends Equatable {
       currentTurnIndex: data['currentTurnIndex'] ?? 0,
       placedPieces: placedPieces,
       availablePieceIndices: List<int>.from(data['availablePieceIndices'] ?? []),
-      letterGrid: letterGrid,
+      solvedLetters: List<String>.from(data['solvedLetters'] ?? []),
       winnerId: data['winnerId'],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
@@ -116,7 +111,7 @@ class RoomModel extends Equatable {
         'currentTurnIndex': currentTurnIndex,
         'placedPieces': placedPieces.map((k, v) => MapEntry(k.toString(), v)),
         'availablePieceIndices': availablePieceIndices,
-        'letterGrid': letterGrid.map((k, v) => MapEntry(k.toString(), v)),
+        'solvedLetters': solvedLetters,
         'winnerId': winnerId,
         'createdAt': Timestamp.fromDate(createdAt),
       };
@@ -132,7 +127,7 @@ class RoomModel extends Equatable {
     int? currentTurnIndex,
     Map<int, String>? placedPieces,
     List<int>? availablePieceIndices,
-    Map<int, String>? letterGrid,
+    List<String>? solvedLetters,
     String? winnerId,
   }) =>
       RoomModel(
@@ -149,7 +144,7 @@ class RoomModel extends Equatable {
         currentTurnIndex: currentTurnIndex ?? this.currentTurnIndex,
         placedPieces: placedPieces ?? this.placedPieces,
         availablePieceIndices: availablePieceIndices ?? this.availablePieceIndices,
-        letterGrid: letterGrid ?? this.letterGrid,
+        solvedLetters: solvedLetters ?? this.solvedLetters,
         winnerId: winnerId ?? this.winnerId,
         createdAt: createdAt,
       );

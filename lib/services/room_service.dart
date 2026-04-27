@@ -5,7 +5,6 @@ import '../models/player_model.dart';
 import '../models/game_image_model.dart';
 import '../core/constants/game_constants.dart';
 import '../core/utils/room_code_generator.dart';
-import '../core/utils/letter_grid_builder.dart';
 
 class RoomService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -288,15 +287,6 @@ class RoomService {
     final totalCells = difficulty.gridSize * difficulty.gridSize;
     final allCells = List.generate(totalCells, (i) => i);
 
-    // Build letter grid from the selected image's answer
-    Map<String, String> letterGrid = {};
-    if (room.selectedImageId != null) {
-      final image = await getImage(room.selectedImageId!);
-      if (image != null) {
-        letterGrid = LetterGridBuilder.build(image.answer, difficulty.gridSize);
-      }
-    }
-
     await _rooms.doc(roomId).update({
       'phase': GamePhase.playing.name,
       'selectedDifficulty': difficulty.name,
@@ -305,7 +295,7 @@ class RoomService {
       'players': updatedPlayers.map((k, v) => MapEntry(k, v.toMap())),
       'placedPieces': {},
       'availablePieceIndices': allCells,
-      'letterGrid': letterGrid,
+      'solvedLetters': [],
     });
   }
 
@@ -371,6 +361,68 @@ class RoomService {
     }
 
     return isCorrect;
+  }
+
+  // Returns true if the letter is in the answer.
+  Future<bool> guessLetter({
+    required String roomId,
+    required String userId,
+    required String letter,
+    required GameImageModel image,
+    required Difficulty difficulty,
+  }) async {
+    final normalized = letter.toLowerCase();
+    final answerChars = image.answer.runes
+        .map(String.fromCharCode)
+        .where((c) => c != ' ')
+        .map((c) => c.toLowerCase())
+        .toSet();
+
+    if (!answerChars.contains(normalized)) {
+      // Wrong letter — apply penalty
+      final doc = await _rooms.doc(roomId).get();
+      final room = RoomModel.fromFirestore(doc);
+      final newScore = (room.players[userId]?.score ?? 0) - difficulty.wrongGuessPenalty;
+      if (newScore <= 0) {
+        await _rooms.doc(roomId).update({
+          'players.$userId.score': 0,
+          'players.$userId.isEliminated': true,
+        });
+        await _checkLastPlayerStanding(roomId);
+      } else {
+        await _rooms.doc(roomId).update({'players.$userId.score': newScore});
+      }
+      return false;
+    }
+
+    // Count occurrences for point reward
+    final occurrences = image.answer
+        .runes
+        .map(String.fromCharCode)
+        .where((c) => c.toLowerCase() == normalized)
+        .length;
+
+    await _rooms.doc(roomId).update({
+      'solvedLetters': FieldValue.arrayUnion([normalized]),
+      'players.$userId.score':
+          FieldValue.increment(occurrences * difficulty.placePiecePoints),
+    });
+
+    // Check if all unique letters are now solved
+    final doc = await _rooms.doc(roomId).get();
+    final room = RoomModel.fromFirestore(doc);
+    final solved = Set<String>.from(room.solvedLetters);
+    final allSolved = answerChars.every(solved.contains);
+
+    if (allSolved) {
+      await _rooms.doc(roomId).update({
+        'phase': GamePhase.finished.name,
+        'winnerId': userId,
+        'players.$userId.score': FieldValue.increment(difficulty.winReward),
+      });
+    }
+
+    return true;
   }
 
   Future<void> _checkLastPlayerStanding(String roomId) async {
