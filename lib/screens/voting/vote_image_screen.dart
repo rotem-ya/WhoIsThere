@@ -62,7 +62,6 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
   @override
   Widget build(BuildContext context) {
     final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
-    final imagesAsync = ref.watch(publicImagesProvider);
 
     return roomAsync.when(
       data: (room) {
@@ -79,12 +78,27 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
         final isHost = currentUser.id == room.hostId;
         final myVote = room.imageVotes[currentUser.id];
 
+        const availableCategories = [
+          ImageCategory.israeliLandmark,
+          ImageCategory.landmark,
+        ];
+
         return Scaffold(
+          backgroundColor: const Color(0xFFF8F9FF),
           appBar: AppBar(
-            title: const Text('הצבע על נושא'),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
+            title: const Text(
+              'הצבע על נושא',
+              style: TextStyle(
+                color: AppColors.darkBlue,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
             automaticallyImplyLeading: false,
             leading: IconButton(
-              icon: const Icon(Icons.exit_to_app_rounded),
+              icon: const Icon(Icons.exit_to_app_rounded, color: AppColors.darkBlue),
               onPressed: () async {
                 await ref
                     .read(roomServiceProvider)
@@ -95,41 +109,55 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
           ),
           body: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: Column(
                 children: [
-                  // Vote counter + host badge
+                  // Header pill
                   Container(
+                    width: double.infinity,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                        horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.08),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.07),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
+                        const Text(
+                          '🗳️',
+                          style: TextStyle(fontSize: 20),
+                        ),
+                        const SizedBox(width: 10),
                         const Expanded(
                           child: Text(
-                            '🗳️ בחרו נושא לפאזל',
+                            'בחרו נושא לפאזל',
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               color: AppColors.darkBlue,
+                              fontSize: 15,
                             ),
                           ),
                         ),
                         if (isHost)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                                horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
                               color: AppColors.warning.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Text(
                               '👑 ×2',
                               style: TextStyle(
                                 color: AppColors.warning,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w800,
                                 fontSize: 13,
                               ),
                             ),
@@ -138,58 +166,49 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                     ),
                   ).animate().fadeIn(),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
+                  // Category cards — Row+Expanded avoids aspect ratio overflow
                   Expanded(
-                    child: imagesAsync.when(
-                      data: (images) {
-                        const availableCategories = [
-                          ImageCategory.landmark,
-                          ImageCategory.israeliLandmark,
-                        ];
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: availableCategories
+                          .asMap()
+                          .entries
+                          .expand<Widget>((entry) {
+                        final i = entry.key;
+                        final cat = entry.value;
+                        final isSelected = _selectedCategory == cat.name;
+                        final voteCount = room.imageVotes.values
+                            .where((v) => v == cat.name)
+                            .length;
 
-                        return GridView.builder(
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: 0.85,
-                          ),
-                          itemCount: availableCategories.length,
-                          itemBuilder: (context, i) {
-                            final cat = availableCategories[i];
-                            final isSelected =
-                                _selectedCategory == cat.name;
-                            final voteCount = room.imageVotes.values
-                                .where((v) => v == cat.name)
-                                .length;
-
-                            return GestureDetector(
+                        return [
+                          Expanded(
+                            child: GestureDetector(
                               onTap: myVote == null
                                   ? () => setState(
                                       () => _selectedCategory = cat.name)
                                   : null,
                               child: _CategoryCard(
                                 category: cat,
-                                imageCount: images
-                                    .where((img) => img.category == cat)
-                                    .length,
                                 isSelected: isSelected,
                                 voteCount: voteCount,
                                 isLocked: myVote != null,
                               ),
                             )
                                 .animate(delay: (i * 80).ms)
-                                .fadeIn()
-                                .scale(curve: Curves.elasticOut);
-                          },
-                        );
-                      },
-                      loading: () => const Center(
-                          child: CircularProgressIndicator()),
-                      error: (e, _) =>
-                          Center(child: Text('שגיאה: $e')),
+                                .fadeIn(duration: 350.ms)
+                                .scale(
+                                  begin: const Offset(0.92, 0.92),
+                                  curve: Curves.easeOutBack,
+                                  duration: 400.ms,
+                                ),
+                          ),
+                          if (i < availableCategories.length - 1)
+                            const SizedBox(width: 12),
+                        ];
+                      }).toList(),
                     ),
                   ),
 
@@ -200,10 +219,10 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                       text: _selectedCategory != null
                           ? 'אשר בחירה'
                           : 'בחר נושא תחילה',
-                      onPressed: _selectedCategory != null
+                      onPressed: _selectedCategory != null && !_hasVoted
                           ? () => _confirmVote(room)
                           : null,
-                    ).animate(delay: 300.ms).fadeIn()
+                    ).animate(delay: 200.ms).fadeIn()
                   else
                     Container(
                       width: double.infinity,
@@ -211,6 +230,9 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.accent.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: AppColors.accent.withOpacity(0.3),
+                        ),
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -245,37 +267,47 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
 
 class _CategoryCard extends StatelessWidget {
   final ImageCategory category;
-  final int imageCount;
   final bool isSelected;
   final int voteCount;
   final bool isLocked;
 
   const _CategoryCard({
     required this.category,
-    required this.imageCount,
     required this.isSelected,
     required this.voteCount,
     required this.isLocked,
   });
 
+  LinearGradient get _gradient {
+    if (category == ImageCategory.israeliLandmark) {
+      return const LinearGradient(
+        colors: [Color(0xFF0057B7), Color(0xFF003580)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    }
+    return AppColors.primaryGradient;
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 250),
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        gradient: isSelected ? _gradient : null,
+        color: isSelected ? null : Colors.white,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isSelected ? AppColors.primary : Colors.transparent,
-          width: 2.5,
+          color: isSelected ? Colors.transparent : Colors.grey.shade200,
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
             color: isSelected
-                ? AppColors.primary.withOpacity(0.25)
+                ? _gradient.colors.first.withOpacity(0.35)
                 : Colors.black.withOpacity(0.06),
-            blurRadius: isSelected ? 16 : 8,
-            offset: const Offset(0, 4),
+            blurRadius: isSelected ? 20 : 8,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -283,67 +315,82 @@ class _CategoryCard extends StatelessWidget {
         children: [
           Center(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    category.emoji,
-                    style: const TextStyle(fontSize: 44),
+                  // Emoji container
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? Colors.white.withOpacity(0.18)
+                          : AppColors.primary.withOpacity(0.07),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        category.emoji,
+                        style: const TextStyle(fontSize: 42),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 14),
                   Text(
                     category.label,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: isSelected
-                          ? AppColors.primary
-                          : AppColors.darkBlue,
+                      color: isSelected ? Colors.white : AppColors.darkBlue,
+                      height: 1.3,
                     ),
                     textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$imageCount תמונות',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade500,
-                      fontWeight: FontWeight.w600,
+                  if (voteCount > 0) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? Colors.white.withOpacity(0.25)
+                            : AppColors.secondary.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '🗳️  $voteCount',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.secondary,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
           ),
           if (isSelected)
-            const Positioned(
-              top: 8,
-              right: 8,
-              child: CircleAvatar(
-                radius: 12,
-                backgroundColor: AppColors.primary,
-                child: Icon(Icons.check, color: Colors.white, size: 14),
-              ),
-            ),
-          if (voteCount > 0)
             Positioned(
-              top: 8,
-              left: 8,
+              top: 12,
+              right: 12,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
-                  color: AppColors.secondary,
-                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.white.withOpacity(0.25),
+                  shape: BoxShape.circle,
                 ),
-                child: Text(
-                  '🗳️ $voteCount',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                  ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  color: Colors.white,
+                  size: 18,
                 ),
               ),
             ),
