@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/constants/app_colors.dart';
 import '../../providers/providers.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -12,11 +11,19 @@ class SplashScreen extends ConsumerStatefulWidget {
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+
+    Future.delayed(const Duration(milliseconds: 2400), () {
       if (!mounted) return;
       final authState = ref.read(firebaseUserProvider);
       authState.whenData((user) {
@@ -30,76 +37,205 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Text(
-                    '🧩',
-                    style: TextStyle(fontSize: 64),
-                  ),
-                ),
-              )
-                  .animate()
-                  .scale(
-                    duration: 600.ms,
-                    curve: Curves.elasticOut,
-                  )
-                  .fadeIn(),
-              const SizedBox(height: 24),
-              const Text(
-                'מי שם?',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1,
-                ),
-              )
-                  .animate(delay: 300.ms)
-                  .slideY(begin: 0.5, end: 0)
-                  .fadeIn(),
-              const SizedBox(height: 8),
-              const Text(
-                'פתור את הפאזל ומצא את התשובה!',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              )
-                  .animate(delay: 500.ms)
-                  .fadeIn(),
-              const SizedBox(height: 48),
-              const CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 3,
-              )
-                  .animate(delay: 800.ms)
-                  .fadeIn(),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFF0F0C29),
+              Color(0xFF302B63),
+              Color(0xFF24243E),
             ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
         ),
+        child: Stack(
+          children: [
+            // Decorative background circles
+            Positioned(
+              top: -80,
+              right: -80,
+              child: Container(
+                width: 280,
+                height: 280,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF6C63FF).withOpacity(0.12),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -100,
+              left: -60,
+              child: Container(
+                width: 320,
+                height: 320,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF9B59B6).withOpacity(0.10),
+                ),
+              ),
+            ),
+
+            // Main content
+            SafeArea(
+              child: Column(
+                children: [
+                  const Spacer(flex: 3),
+
+                  // Icon with glow
+                  AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, child) {
+                      return Container(
+                        width: 130,
+                        height: 130,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(36),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF6C63FF).withOpacity(
+                                  0.3 + 0.2 * _pulseController.value),
+                              blurRadius: 40 + 20 * _pulseController.value,
+                              spreadRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: child,
+                      );
+                    },
+                    child: Container(
+                      width: 130,
+                      height: 130,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.10),
+                        borderRadius: BorderRadius.circular(36),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: const Center(
+                        child: Text('🗺️', style: TextStyle(fontSize: 68)),
+                      ),
+                    ),
+                  )
+                      .animate()
+                      .scale(
+                        begin: const Offset(0.6, 0.6),
+                        duration: 700.ms,
+                        curve: Curves.easeOutBack,
+                      )
+                      .fadeIn(duration: 500.ms),
+
+                  const SizedBox(height: 36),
+
+                  // App name
+                  const Text(
+                    'Guess the Place',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 34,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                    ),
+                  )
+                      .animate(delay: 300.ms)
+                      .fadeIn(duration: 500.ms)
+                      .slideY(begin: 0.3, end: 0),
+
+                  const SizedBox(height: 10),
+
+                  // Hebrew tagline
+                  Text(
+                    'זהה מקומות מסביב לעולם',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.6),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                  )
+                      .animate(delay: 500.ms)
+                      .fadeIn(duration: 500.ms),
+
+                  const Spacer(flex: 3),
+
+                  // Loading dots
+                  _LoadingDots().animate(delay: 900.ms).fadeIn(),
+
+                  const SizedBox(height: 56),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _LoadingDots extends StatefulWidget {
+  @override
+  State<_LoadingDots> createState() => _LoadingDotsState();
+}
+
+class _LoadingDotsState extends State<_LoadingDots>
+    with TickerProviderStateMixin {
+  late List<AnimationController> _controllers;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = List.generate(3, (i) {
+      final c = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 600),
+      );
+      Future.delayed(Duration(milliseconds: i * 180), () {
+        if (mounted) c.repeat(reverse: true);
+      });
+      return c;
+    });
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(3, (i) {
+        return AnimatedBuilder(
+          animation: _controllers[i],
+          builder: (context, _) {
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 5),
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(
+                    0.3 + 0.7 * _controllers[i].value),
+              ),
+            );
+          },
+        );
+      }),
     );
   }
 }
