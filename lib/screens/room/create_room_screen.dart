@@ -52,10 +52,13 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FF),
       appBar: AppBar(
-        title: const Text('צור חדר'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.darkBlue),
           onPressed: () {
             if (_roomId != null) {
               final userId = ref.read(currentUserProvider).value?.id;
@@ -66,10 +69,18 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
             context.pop();
           },
         ),
+        title: const Text(
+          'צור חדר',
+          style: TextStyle(
+            color: AppColors.darkBlue,
+            fontWeight: FontWeight.w800,
+            fontSize: 20,
+          ),
+        ),
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           child: Column(
             children: [
               Expanded(
@@ -94,7 +105,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                   icon: Icons.meeting_room_rounded,
                   onPressed: () => context.go('/lobby/$_roomId'),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
               ] else ...[
                 const SizedBox(height: 12),
                 GradientButton(
@@ -102,7 +113,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
                   icon: Icons.add_rounded,
                   onPressed: _createRoom,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
               ],
             ],
           ),
@@ -118,11 +129,18 @@ class _PlayerCountPicker extends StatelessWidget {
 
   const _PlayerCountPicker({required this.selected, required this.onChanged});
 
+  static const _descriptions = {
+    2: 'משחק אחד על אחד — תחרות ישירה!',
+    3: 'שלושה שחקנים — אף אחד לא בטוח!',
+    4: 'ארבעה שחקנים — המשחק הקלאסי!',
+    5: 'חמישה שחקנים — כאוס מלא!',
+  };
+
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
@@ -137,8 +155,25 @@ class _PlayerCountPicker extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('👥', style: TextStyle(fontSize: 48)),
-          const SizedBox(height: 12),
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryGradient,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.35),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Text('👥', style: TextStyle(fontSize: 36)),
+            ),
+          ),
+          const SizedBox(height: 16),
           const Text(
             'כמה שחקנים?',
             style: TextStyle(
@@ -150,50 +185,78 @@ class _PlayerCountPicker extends StatelessWidget {
           const SizedBox(height: 6),
           const Text(
             'השחקנים הנוספים יצטרפו בהמשך',
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: Colors.grey,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 24),
-          // LTR direction so numbers read 2→5 left to right
+          // Expanded children — never overflow regardless of screen width
           Directionality(
             textDirection: TextDirection.ltr,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [2, 3, 4, 5].map((count) {
+              children: [2, 3, 4, 5].expand<Widget>((count) {
                 final isSelected = selected == count;
-                return GestureDetector(
-                    onTap: () => onChanged(count),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 58,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        gradient: isSelected ? AppColors.primaryGradient : null,
-                        color: isSelected ? null : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: AppColors.primary.withOpacity(0.4),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                )
-                              ]
-                            : null,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$count',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color:
-                                isSelected ? Colors.white : AppColors.darkBlue,
+                return [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => onChanged(count),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: 58,
+                        decoration: BoxDecoration(
+                          gradient: isSelected ? AppColors.primaryGradient : null,
+                          color: isSelected ? null : const Color(0xFFF0F1FF),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.primary.withOpacity(0.4),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  )
+                                ]
+                              : null,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$count',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: isSelected ? Colors.white : AppColors.darkBlue,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                );
+                  ),
+                  if (count != 5) const SizedBox(width: 10),
+                ];
               }).toList(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: Container(
+              key: ValueKey(selected),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                _descriptions[selected] ?? '',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ),
         ],
@@ -251,7 +314,8 @@ class _RoomCreatedCard extends StatelessWidget {
               );
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
                 gradient: AppColors.primaryGradient,
                 borderRadius: BorderRadius.circular(20),
@@ -264,7 +328,6 @@ class _RoomCreatedCard extends StatelessWidget {
                 ],
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Flexible(
@@ -297,7 +360,10 @@ class _RoomCreatedCard extends StatelessWidget {
           const Text(
             'לחץ להעתקה',
             style: TextStyle(
-                color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w600),
+              color: Colors.grey,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
