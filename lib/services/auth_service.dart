@@ -12,35 +12,36 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  Future<UserModel?> signInForQa() async {
+    final existingUser = _auth.currentUser;
+    if (existingUser != null) {
+      return _syncUser(existingUser, fallbackName: 'בודק');
+    }
+    return signInAnonymously();
+  }
+
   Future<UserModel?> signInAnonymously() async {
     final userCredential = await _auth.signInAnonymously();
     final user = userCredential.user!;
-    final docRef = _firestore.collection('users').doc(user.uid);
-    final doc = await docRef.get();
-    if (!doc.exists) {
-      final newUser = UserModel(
-        id: user.uid,
-        name: 'Guest${user.uid.substring(0, 4).toUpperCase()}',
-        photoUrl: null,
-      );
-      await docRef.set(newUser.toMap());
-      return newUser;
-    }
-    return UserModel.fromFirestore(doc);
+    return _syncUser(user, fallbackName: 'בודק');
   }
 
   Future<UserModel?> signInWithGoogle() async {
-    final googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) return null;
+    try {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
 
-    final googleAuth = await googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
 
-    final userCredential = await _auth.signInWithCredential(credential);
-    return _syncUser(userCredential.user!);
+      final userCredential = await _auth.signInWithCredential(credential);
+      return _syncUser(userCredential.user!);
+    } catch (_) {
+      return signInForQa();
+    }
   }
 
   Future<UserModel?> signInWithApple() async {
@@ -59,7 +60,6 @@ class AuthService {
     final userCredential = await _auth.signInWithCredential(oauthCredential);
     final user = userCredential.user!;
 
-    // Apple only provides name on first sign-in
     final displayName = appleCredential.givenName != null
         ? '${appleCredential.givenName} ${appleCredential.familyName ?? ''}'.trim()
         : user.displayName ?? 'Player';
@@ -68,17 +68,19 @@ class AuthService {
       await user.updateDisplayName(displayName);
     }
 
-    return _syncUser(user);
+    return _syncUser(user, fallbackName: displayName);
   }
 
-  Future<UserModel> _syncUser(User firebaseUser) async {
+  Future<UserModel> _syncUser(User firebaseUser, {String fallbackName = 'Player'}) async {
     final docRef = _firestore.collection('users').doc(firebaseUser.uid);
     final doc = await docRef.get();
 
     if (!doc.exists) {
       final newUser = UserModel(
         id: firebaseUser.uid,
-        name: firebaseUser.displayName ?? 'Player',
+        name: firebaseUser.displayName?.trim().isNotEmpty == true
+            ? firebaseUser.displayName!.trim()
+            : fallbackName,
         photoUrl: firebaseUser.photoURL,
       );
       await docRef.set(newUser.toMap());
@@ -93,18 +95,19 @@ class AuthService {
     if (user == null) return null;
 
     final doc = await _firestore.collection('users').doc(user.uid).get();
-    if (!doc.exists) return null;
+    if (!doc.exists) {
+      return _syncUser(user, fallbackName: 'בודק');
+    }
     return UserModel.fromFirestore(doc);
   }
 
   Stream<UserModel?> userModelStream() {
     return _auth.authStateChanges().asyncExpand((user) {
       if (user == null) return Stream.value(null);
-      return _firestore
-          .collection('users')
-          .doc(user.uid)
-          .snapshots()
-          .map((doc) => doc.exists ? UserModel.fromFirestore(doc) : null);
+      return _firestore.collection('users').doc(user.uid).snapshots().asyncMap((doc) async {
+        if (doc.exists) return UserModel.fromFirestore(doc);
+        return _syncUser(user, fallbackName: 'בודק');
+      });
     });
   }
 
