@@ -292,11 +292,16 @@ class _LetterBank extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (ctx, constraints) {
-        // Fit 11 letters per row (2 rows for 22 letters), backspace inline at end.
+        // Fit 11 letters per row when space allows, then shrink within constraints.
         const perRow = 11;
-        const spacing = 4.0;
+        const spacing = 6.0;
+        const minButtonSize = 26.0;
+        const maxButtonSize = 38.0;
         final available = constraints.maxWidth - (spacing * (perRow - 1)) - 8;
-        final btnW = (available / perRow).clamp(26.0, 38.0);
+        final constrainedButtonSize = available / perRow;
+        final btnW = constrainedButtonSize >= minButtonSize
+            ? constrainedButtonSize.clamp(minButtonSize, maxButtonSize)
+            : constrainedButtonSize.clamp(20.0, minButtonSize);
         final btnH = btnW + 6;
 
         return Padding(
