@@ -137,6 +137,20 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             isMyTurn && !_hasFlipped && !allRevealed && !_isActing;
         final isEliminated = myPlayer?.isEliminated == true;
         final canSubmitAnswer = isMyTurn && !isEliminated && !_isActing;
+        final media = MediaQuery.of(context);
+        const playersBarHeight = 76.0;
+        const actionRowHeight = 52.0;
+        const verticalChrome = playersBarHeight + actionRowHeight + 16.0;
+        const minLetterBankHeight = 150.0;
+        final bodyHeight =
+            media.size.height - media.padding.vertical - kToolbarHeight;
+        final maxPuzzleWidth = math.max(80.0, media.size.width - 24.0);
+        final maxPuzzleHeight =
+            math.max(80.0, bodyHeight - verticalChrome - minLetterBankHeight);
+        final puzzleSize = math.min(
+          maxPuzzleWidth,
+          math.min(260.0, maxPuzzleHeight),
+        );
 
         return Scaffold(
           backgroundColor: const Color(0xFFF0F2FF),
@@ -180,79 +194,58 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _PlayersBar(room: room, currentUserId: currentUser.id),
-                Expanded(
+                SizedBox(
+                  height: puzzleSize,
                   child: Padding(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    child: LayoutBuilder(
-                      builder: (ctx, constraints) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: LayoutBuilder(
-                                builder: (ctx, boardConstraints) {
-                                  final puzzleSize = math.min(
-                                    boardConstraints.maxWidth,
-                                    boardConstraints.maxHeight,
-                                  );
-
-                                  return Center(
-                                    child: SizedBox.square(
-                                      dimension: puzzleSize,
-                                      child: _PuzzleBoard(
-                                        room: room,
-                                        gameImage: _gameImage,
-                                        gridSize: gridSize,
-                                        canFlipPiece: canFlipPiece,
-                                        onFlip: (index) =>
-                                            _flipPiece(index, room),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            if (_gameImage != null)
-                              Flexible(
-                                fit: FlexFit.loose,
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.topCenter,
-                                  child: SizedBox(
-                                    width: constraints.maxWidth,
-                                    child: LetterBankInput(
-                                      key: ValueKey('lbi_${_gameImage!.id}'),
-                                      answer: _gameImage!.answer,
-                                      enabled: canSubmitAnswer,
-                                      onComplete: (filled) =>
-                                          _onAnswerComplete(room, filled),
-                                    ),
-                                  ),
-                                ),
-                              )
-                            else
-                              const SizedBox(
-                                height: 44,
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                      color: AppColors.primary),
-                                ),
-                              ),
-                            const SizedBox(height: 4),
-                            _ActionRow(
-                              isMyTurn: isMyTurn,
-                              isVirtualTurn: isVirtualTurn,
-                              actingPlayerName: currentPlayer?.name,
-                              isActing: _isActing,
-                              isEliminated: isEliminated,
-                              onSkipTurn: _endTurn,
-                            ),
-                            const SizedBox(height: 4),
-                          ],
-                        );
-                      },
+                    child: Center(
+                      child: SizedBox.square(
+                        dimension: puzzleSize,
+                        child: _PuzzleBoard(
+                          room: room,
+                          gameImage: _gameImage,
+                          gridSize: gridSize,
+                          canFlipPiece: canFlipPiece,
+                          onFlip: (index) => _flipPiece(index, room),
+                        ),
+                      ),
                     ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: _gameImage != null
+                        ? FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.topCenter,
+                            child: SizedBox(
+                              width: maxPuzzleWidth,
+                              child: LetterBankInput(
+                                key: ValueKey('lbi_${_gameImage!.id}'),
+                                answer: _gameImage!.answer,
+                                enabled: canSubmitAnswer,
+                                onComplete: (filled) =>
+                                    _onAnswerComplete(room, filled),
+                              ),
+                            ),
+                          )
+                        : const Center(
+                            child: CircularProgressIndicator(
+                                color: AppColors.primary),
+                          ),
+                  ),
+                ),
+                SizedBox(
+                  height: actionRowHeight,
+                  child: _ActionRow(
+                    isMyTurn: isMyTurn,
+                    isVirtualTurn: isVirtualTurn,
+                    actingPlayerName: currentPlayer?.name,
+                    isActing: _isActing,
+                    isEliminated: isEliminated,
+                    onSkipTurn: _endTurn,
                   ),
                 ),
               ],
@@ -376,29 +369,43 @@ class _PlayersBar extends StatelessWidget {
           children: room.sortedPlayers.map((player) {
             final isCurrentTurn = room.currentTurnUserId == player.id;
             return Expanded(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      PlayerAvatar(
-                        name: player.name,
-                        photoUrl: player.photoUrl,
-                        radius: 17,
-                        isCurrentTurn: isCurrentTurn,
-                        isEliminated: player.isEliminated,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    PlayerAvatar(
+                      name: player.name,
+                      photoUrl: player.photoUrl,
+                      radius: 15,
+                      isCurrentTurn: isCurrentTurn,
+                      isEliminated: player.isEliminated,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      player.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isCurrentTurn
+                            ? AppColors.primary
+                            : AppColors.darkBlue,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 10,
                       ),
-                      const SizedBox(height: 3),
-                      ScoreBadge(
+                    ),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: ScoreBadge(
                         score: player.score,
                         isCurrentTurn: isCurrentTurn,
                         isEliminated: player.isEliminated,
                         isHost: player.isHost,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             );
