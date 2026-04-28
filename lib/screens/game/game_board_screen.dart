@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -174,73 +176,86 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             ],
           ),
           body: SafeArea(
-            child: LayoutBuilder(
-              builder: (ctx, constraints) {
-                final puzzleSide = constraints.maxHeight * 0.38;
-                final puzzleSize =
-                    puzzleSide.clamp(160.0, constraints.maxWidth - 24);
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _PlayersBar(room: room, currentUserId: currentUser.id),
+                Expanded(
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: LayoutBuilder(
+                      builder: (ctx, constraints) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: LayoutBuilder(
+                                builder: (ctx, boardConstraints) {
+                                  final puzzleSize = math.min(
+                                    boardConstraints.maxWidth,
+                                    boardConstraints.maxHeight,
+                                  );
 
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: ConstrainedBox(
-                    constraints:
-                        BoxConstraints(minHeight: constraints.maxHeight),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _PlayersBar(room: room, currentUserId: currentUser.id),
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            child: SizedBox(
-                              width: puzzleSize,
-                              height: puzzleSize,
-                              child: _PuzzleBoard(
-                                room: room,
-                                gameImage: _gameImage,
-                                gridSize: gridSize,
-                                canFlipPiece: canFlipPiece,
-                                onFlip: (index) => _flipPiece(index, room),
+                                  return Center(
+                                    child: SizedBox.square(
+                                      dimension: puzzleSize,
+                                      child: _PuzzleBoard(
+                                        room: room,
+                                        gameImage: _gameImage,
+                                        gridSize: gridSize,
+                                        canFlipPiece: canFlipPiece,
+                                        onFlip: (index) =>
+                                            _flipPiece(index, room),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
-                          ),
-                        ),
-                        if (_gameImage != null)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            child: LetterBankInput(
-                              key: ValueKey('lbi_${_gameImage!.id}'),
-                              answer: _gameImage!.answer,
-                              enabled: canSubmitAnswer,
-                              onComplete: (filled) =>
-                                  _onAnswerComplete(room, filled),
+                            if (_gameImage != null)
+                              Flexible(
+                                fit: FlexFit.loose,
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.topCenter,
+                                  child: SizedBox(
+                                    width: constraints.maxWidth,
+                                    child: LetterBankInput(
+                                      key: ValueKey('lbi_${_gameImage!.id}'),
+                                      answer: _gameImage!.answer,
+                                      enabled: canSubmitAnswer,
+                                      onComplete: (filled) =>
+                                          _onAnswerComplete(room, filled),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              const SizedBox(
+                                height: 44,
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                      color: AppColors.primary),
+                                ),
+                              ),
+                            const SizedBox(height: 4),
+                            _ActionRow(
+                              isMyTurn: isMyTurn,
+                              isVirtualTurn: isVirtualTurn,
+                              actingPlayerName: currentPlayer?.name,
+                              isActing: _isActing,
+                              isEliminated: isEliminated,
+                              onSkipTurn: _endTurn,
                             ),
-                          )
-                        else
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 24),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                  color: AppColors.primary),
-                            ),
-                          ),
-                        const SizedBox(height: 6),
-                        _ActionRow(
-                          isMyTurn: isMyTurn,
-                          isVirtualTurn: isVirtualTurn,
-                          actingPlayerName: currentPlayer?.name,
-                          isActing: _isActing,
-                          isEliminated: isEliminated,
-                          onSkipTurn: _endTurn,
-                        ),
-                        const SizedBox(height: 8),
-                      ],
+                            const SizedBox(height: 4),
+                          ],
+                        );
+                      },
                     ),
                   ),
-                );
-              },
+                ),
+              ],
             ),
           ),
         );
@@ -354,35 +369,41 @@ class _PlayersBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 88,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-        children: room.sortedPlayers.map((player) {
-          final isCurrentTurn = room.currentTurnUserId == player.id;
-          return Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                PlayerAvatar(
-                  name: player.name,
-                  photoUrl: player.photoUrl,
-                  radius: 18,
-                  isCurrentTurn: isCurrentTurn,
-                  isEliminated: player.isEliminated,
+      height: 76,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        child: Row(
+          children: room.sortedPlayers.map((player) {
+            final isCurrentTurn = room.currentTurnUserId == player.id;
+            return Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      PlayerAvatar(
+                        name: player.name,
+                        photoUrl: player.photoUrl,
+                        radius: 17,
+                        isCurrentTurn: isCurrentTurn,
+                        isEliminated: player.isEliminated,
+                      ),
+                      const SizedBox(height: 3),
+                      ScoreBadge(
+                        score: player.score,
+                        isCurrentTurn: isCurrentTurn,
+                        isEliminated: player.isEliminated,
+                        isHost: player.isHost,
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 4),
-                ScoreBadge(
-                  score: player.score,
-                  isCurrentTurn: isCurrentTurn,
-                  isEliminated: player.isEliminated,
-                  isHost: player.isHost,
-                ),
-              ],
-            ),
-          );
-        }).toList(),
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -436,45 +457,29 @@ class _PuzzleBoard extends StatelessWidget {
               )
             else
               Container(color: AppColors.boardBackground),
-            Padding(
-              padding: const EdgeInsets.all(3),
-              child: LayoutBuilder(
-                builder: (ctx, constraints) {
-                  const spacing = 2.0;
-                  final totalSpacingH = spacing * (gridSize - 1);
-                  final totalSpacingV = spacing * (gridSize - 1);
-                  final cellW =
-                      (constraints.maxWidth - totalSpacingH) / gridSize;
-                  final cellH =
-                      (constraints.maxHeight - totalSpacingV) / gridSize;
-                  final ratio = cellW / cellH;
-
-                  return GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: gridSize,
-                      crossAxisSpacing: spacing,
-                      mainAxisSpacing: spacing,
-                      childAspectRatio: ratio,
-                    ),
-                    itemCount: gridSize * gridSize,
-                    itemBuilder: (context, index) {
+            Column(
+              children: List.generate(gridSize, (row) {
+                return Expanded(
+                  child: Row(
+                    children: List.generate(gridSize, (column) {
+                      final index = row * gridSize + column;
                       final isRevealed = room.placedPieces.containsKey(index);
                       final canFlip = canFlipPiece && !isRevealed;
 
-                      if (isRevealed) {
-                        return SizedBox.expand(
-                            key: ValueKey('empty_$index'));
-                      }
-                      return GestureDetector(
-                        key: ValueKey('h_$index'),
-                        onTap: canFlip ? () => onFlip?.call(index) : null,
-                        child: _HiddenCard(isFlippable: canFlip),
+                      return Expanded(
+                        child: isRevealed
+                            ? SizedBox.expand(key: ValueKey('empty_$index'))
+                            : GestureDetector(
+                                key: ValueKey('h_$index'),
+                                onTap:
+                                    canFlip ? () => onFlip?.call(index) : null,
+                                child: _HiddenCard(isFlippable: canFlip),
+                              ),
                       );
-                    },
-                  );
-                },
-              ),
+                    }),
+                  ),
+                );
+              }),
             ),
           ],
         ),
