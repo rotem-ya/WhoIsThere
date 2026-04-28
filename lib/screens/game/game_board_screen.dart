@@ -137,21 +137,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             isMyTurn && !_hasFlipped && !allRevealed && !_isActing;
         final isEliminated = myPlayer?.isEliminated == true;
         final canSubmitAnswer = isMyTurn && !isEliminated && !_isActing;
-        final media = MediaQuery.of(context);
-        const playersBarHeight = 76.0;
-        const actionRowHeight = 52.0;
-        const verticalChrome = playersBarHeight + actionRowHeight + 16.0;
-        const minLetterBankHeight = 150.0;
-        final bodyHeight =
-            media.size.height - media.padding.vertical - kToolbarHeight;
-        final maxPuzzleWidth = math.max(80.0, media.size.width - 24.0);
-        final maxPuzzleHeight =
-            math.max(80.0, bodyHeight - verticalChrome - minLetterBankHeight);
-        final puzzleSize = math.min(
-          maxPuzzleWidth,
-          math.min(260.0, maxPuzzleHeight),
-        );
-
         return Scaffold(
           backgroundColor: const Color(0xFFF0F2FF),
           appBar: AppBar(
@@ -190,65 +175,79 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             ],
           ),
           body: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _PlayersBar(room: room, currentUserId: currentUser.id),
-                SizedBox(
-                  height: puzzleSize,
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    child: Center(
-                      child: SizedBox.square(
-                        dimension: puzzleSize,
-                        child: _PuzzleBoard(
-                          room: room,
-                          gameImage: _gameImage,
-                          gridSize: gridSize,
-                          canFlipPiece: canFlipPiece,
-                          onFlip: (index) => _flipPiece(index, room),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final height = constraints.maxHeight;
+                const headerHeight = 76.0;
+                const actionsHeight = 80.0;
+                final puzzleHeight = height * 0.38;
+                final remainingHeight =
+                    height - puzzleHeight - actionsHeight - headerHeight;
+                final puzzleWidth = math.max(80.0, constraints.maxWidth - 24);
+                final puzzleSize = math.min(puzzleWidth, puzzleHeight);
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _PlayersBar(room: room, currentUserId: currentUser.id),
+                    SizedBox(
+                      height: puzzleHeight,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        child: Center(
+                          child: SizedBox.square(
+                            dimension: puzzleSize,
+                            child: _PuzzleBoard(
+                              room: room,
+                              gameImage: _gameImage,
+                              gridSize: gridSize,
+                              canFlipPiece: canFlipPiece,
+                              onFlip: (index) => _flipPiece(index, room),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: _gameImage != null
-                        ? FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.topCenter,
-                            child: SizedBox(
-                              width: maxPuzzleWidth,
-                              child: LetterBankInput(
-                                key: ValueKey('lbi_${_gameImage!.id}'),
-                                answer: _gameImage!.answer,
-                                enabled: canSubmitAnswer,
-                                onComplete: (filled) =>
-                                    _onAnswerComplete(room, filled),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: _gameImage != null
+                            ? FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.topCenter,
+                                child: SizedBox(
+                                  width: puzzleWidth,
+                                  height: math.max(80.0, remainingHeight),
+                                  child: LetterBankInput(
+                                    key: ValueKey('lbi_${_gameImage!.id}'),
+                                    answer: _gameImage!.answer,
+                                    enabled: canSubmitAnswer,
+                                    onComplete: (filled) =>
+                                        _onAnswerComplete(room, filled),
+                                  ),
+                                ),
+                              )
+                            : const Center(
+                                child: CircularProgressIndicator(
+                                    color: AppColors.primary),
                               ),
-                            ),
-                          )
-                        : const Center(
-                            child: CircularProgressIndicator(
-                                color: AppColors.primary),
-                          ),
-                  ),
-                ),
-                SizedBox(
-                  height: actionRowHeight,
-                  child: _ActionRow(
-                    isMyTurn: isMyTurn,
-                    isVirtualTurn: isVirtualTurn,
-                    actingPlayerName: currentPlayer?.name,
-                    isActing: _isActing,
-                    isEliminated: isEliminated,
-                    onSkipTurn: _endTurn,
-                  ),
-                ),
-              ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: actionsHeight,
+                      child: _ActionRow(
+                        isMyTurn: isMyTurn,
+                        isVirtualTurn: isVirtualTurn,
+                        actingPlayerName: currentPlayer?.name,
+                        isActing: _isActing,
+                        isEliminated: isEliminated,
+                        onSkipTurn: _endTurn,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         );
