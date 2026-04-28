@@ -6,6 +6,7 @@ import '../../core/constants/app_colors.dart';
 import '../../providers/providers.dart';
 import '../../widgets/common/gradient_button.dart';
 import '../../widgets/common/player_avatar.dart';
+import '../../widgets/common/premium_scaffold.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -14,30 +15,35 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('פרופיל'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () async {
-              await ref.read(authServiceProvider).signOut();
-              if (context.mounted) context.go('/auth');
-            },
-          ),
-        ],
-      ),
-      body: userAsync.when(
+    return PremiumScaffold(
+      showBeams: true,
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+      child: userAsync.when(
         data: (user) {
           if (user == null) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.accent),
+            );
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
             child: Column(
               children: [
-                Center(
+                PremiumScreenHeader(
+                  eyebrow: 'PLAYER CARD',
+                  title: user.name,
+                  subtitle: 'הפרופיל, הנקודות וההתקדמות שלך',
+                  icon: Icons.person_rounded,
+                  trailing: IconButton(
+                    icon: const Icon(Icons.logout_rounded, color: Colors.white),
+                    onPressed: () async {
+                      await ref.read(authServiceProvider).signOut();
+                      if (context.mounted) context.go('/auth');
+                    },
+                  ),
+                ),
+                const SizedBox(height: 18),
+                PremiumGlassCard(
                   child: Column(
                     children: [
                       PlayerAvatar(
@@ -51,15 +57,13 @@ class ProfileScreen extends ConsumerWidget {
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.darkBlue,
+                          color: Colors.white,
                         ),
                       ).animate(delay: 200.ms).fadeIn(),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 28),
-
+                const SizedBox(height: 18),
                 Row(
                   children: [
                     Expanded(
@@ -81,9 +85,7 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ],
                 ).animate(delay: 300.ms).fadeIn().slideY(begin: 0.2),
-
                 const SizedBox(height: 12),
-
                 Row(
                   children: [
                     Expanded(
@@ -107,19 +109,10 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ],
                 ).animate(delay: 400.ms).fadeIn().slideY(begin: 0.2),
-
-                const SizedBox(height: 28),
-
-                Container(
+                const SizedBox(height: 20),
+                PremiumGlassCard(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.07),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: AppColors.primary.withOpacity(0.2),
-                    ),
-                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -128,7 +121,7 @@ class ProfileScreen extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.darkBlue,
+                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -139,9 +132,7 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ),
                 ).animate(delay: 500.ms).fadeIn(),
-
-                const SizedBox(height: 24),
-
+                const SizedBox(height: 18),
                 GradientButton(
                   text: 'עבור לחנות',
                   icon: Icons.store_rounded,
@@ -152,8 +143,11 @@ class ProfileScreen extends ConsumerWidget {
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('שגיאה: $e')),
+        loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.accent)),
+        error: (e, _) => Center(
+          child: Text('שגיאה: $e', style: const TextStyle(color: Colors.white)),
+        ),
       ),
     );
   }
@@ -233,7 +227,7 @@ class _PointInfo extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
-                color: AppColors.darkBlue,
+                color: Colors.white,
                 fontSize: 13,
               ),
             ),
@@ -244,7 +238,7 @@ class _PointInfo extends StatelessWidget {
             textDirection: TextDirection.ltr,
             style: const TextStyle(
               fontWeight: FontWeight.w700,
-              color: AppColors.primary,
+              color: AppColors.accent,
               fontSize: 13,
             ),
           ),

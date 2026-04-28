@@ -8,6 +8,7 @@ import '../../core/constants/game_constants.dart';
 import '../../providers/providers.dart';
 import '../../models/room_model.dart';
 import '../../widgets/common/gradient_button.dart';
+import '../../widgets/common/premium_scaffold.dart';
 
 class VoteDifficultyScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -83,154 +84,129 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
         final allVoted = room.difficultyVotes.length >= room.players.length;
         final myVote = room.difficultyVotes[currentUser.id];
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('בחר רמת קושי'),
-            automaticallyImplyLeading: false,
-            leading: IconButton(
-              icon: const Icon(Icons.exit_to_app_rounded),
-              onPressed: () async {
-                await ref
-                    .read(roomServiceProvider)
-                    .leaveRoom(widget.roomId, currentUser.id);
-                if (context.mounted) context.go('/home');
-              },
-            ),
-          ),
-          body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.secondary.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          '🎯 כמה קשה יהיה?',
+        return PremiumScaffold(
+          showBeams: true,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+            child: Column(
+              children: [
+                ArcadeHeader(
+                  eyebrow: 'שלב 2 מתוך 2',
+                  title: 'בחרו קושי',
+                  subtitle: 'יותר קשה = יותר נקודות',
+                  trailing: IconButton(
+                    icon: const Icon(Icons.exit_to_app_rounded,
+                        color: Colors.white),
+                    onPressed: () async {
+                      await ref
+                          .read(roomServiceProvider)
+                          .leaveRoom(widget.roomId, currentUser.id);
+                      if (context.mounted) context.go('/home');
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                PremiumGlassCard(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  radius: 22,
+                  child: Row(
+                    children: [
+                      const Text('🎯', style: TextStyle(fontSize: 24)),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'כמה חתיכות יסתירו את התמונה?',
                           style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.darkBlue,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            fontSize: 15,
                           ),
                         ),
+                      ),
+                      StatusPill(
+                        text:
+                            '${room.difficultyVotes.length}/${room.players.length}',
+                        icon: Icons.how_to_vote_rounded,
+                        color: AppColors.secondary,
+                      ),
+                    ],
+                  ),
+                ).animate().fadeIn(),
+                if (isHost) ...[
+                  const SizedBox(height: 10),
+                  const Align(
+                    alignment: Alignment.centerRight,
+                    child: StatusPill(
+                      text: 'הצבעת מארח ×2',
+                      icon: Icons.workspace_premium_rounded,
+                      color: AppColors.warning,
+                    ),
+                  ).animate(delay: 100.ms).fadeIn(),
+                ],
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView(
+                    children: Difficulty.values
+                        .asMap()
+                        .entries
+                        .map(
+                          (entry) => _DifficultyCard(
+                            difficulty: entry.value,
+                            isSelected: _selected == entry.value,
+                            isLocked: myVote != null,
+                            voteCount: room.difficultyVotes.values
+                                .where((v) => v == entry.value.pieces)
+                                .length,
+                            onTap: myVote == null
+                                ? () => setState(() => _selected = entry.value)
+                                : null,
+                          )
+                              .animate(delay: (entry.key * 80).ms)
+                              .fadeIn()
+                              .slideX(begin: 0.2),
+                        )
+                        .toList(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (myVote == null)
+                  GradientButton(
+                    text:
+                        _selected != null ? 'נעול קושי' : 'בחר רמת קושי תחילה',
+                    gradient: AppColors.secondaryGradient,
+                    onPressed:
+                        _selected != null ? () => _confirmVote(room) : null,
+                  ).animate(delay: 400.ms).fadeIn()
+                else if (isHost && allVoted)
+                  GradientButton(
+                    text: 'התחל את הפאזל!',
+                    icon: Icons.play_arrow_rounded,
+                    onPressed: () => ref
+                        .read(roomServiceProvider)
+                        .resolveDifficultyVote(widget.roomId, currentUser.id),
+                  ).animate().fadeIn()
+                else
+                  const PremiumGlassCard(
+                    padding: EdgeInsets.all(16),
+                    radius: 20,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle_rounded,
+                            color: AppColors.accent),
+                        SizedBox(width: 8),
                         Text(
-                          '${room.difficultyVotes.length}/${room.players.length}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.secondary,
-                            fontSize: 16,
+                          'הצבעה נשלחה. מחכים לכולם...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
                       ],
                     ),
                   ).animate().fadeIn(),
-
-                  if (isHost) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.warning.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('👑', style: TextStyle(fontSize: 14)),
-                          SizedBox(width: 6),
-                          Text(
-                            'הצבעתך שווה 2!',
-                            style: TextStyle(
-                              color: AppColors.warning,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ).animate(delay: 100.ms).fadeIn(),
-                  ],
-
-                  const SizedBox(height: 20),
-
-                  Expanded(
-                    child: ListView(
-                      children: Difficulty.values
-                          .asMap()
-                          .entries
-                          .map(
-                            (entry) => _DifficultyCard(
-                              difficulty: entry.value,
-                              isSelected: _selected == entry.value,
-                              isLocked: myVote != null,
-                              voteCount: room.difficultyVotes.values
-                                  .where((v) => v == entry.value.pieces)
-                                  .length,
-                              onTap: myVote == null
-                                  ? () => setState(
-                                      () => _selected = entry.value)
-                                  : null,
-                            )
-                                .animate(
-                                    delay: (entry.key * 100).ms)
-                                .fadeIn()
-                                .slideX(begin: 0.2),
-                          )
-                          .toList(),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  if (myVote == null)
-                    GradientButton(
-                      text: _selected != null
-                          ? 'אשר רמת קושי'
-                          : 'בחר רמת קושי תחילה',
-                      gradient: AppColors.secondaryGradient,
-                      onPressed: _selected != null ? () => _confirmVote(room) : null,
-                    ).animate(delay: 400.ms).fadeIn()
-                  else if (isHost && allVoted)
-                    GradientButton(
-                      text: 'התחל את הפאזל!',
-                      icon: Icons.play_arrow_rounded,
-                      onPressed: () => ref
-                          .read(roomServiceProvider)
-                          .resolveDifficultyVote(
-                              widget.roomId, currentUser!.id),
-                    ).animate().fadeIn()
-                  else
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.check_circle_rounded,
-                              color: AppColors.accent),
-                          SizedBox(width: 8),
-                          Text(
-                            'הצבעה נשלחה! ממתין...',
-                            style: TextStyle(
-                              color: AppColors.accent,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ).animate().fadeIn(),
-                ],
-              ),
+              ],
             ),
           ),
         );
@@ -267,9 +243,8 @@ class _DifficultyCard extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.primary.withOpacity(0.08)
-                : Colors.white,
+            color:
+                isSelected ? AppColors.primary.withOpacity(0.08) : Colors.white,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: isSelected ? AppColors.primary : Colors.transparent,
@@ -301,9 +276,8 @@ class _DifficultyCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
-                        color: isSelected
-                            ? AppColors.primary
-                            : AppColors.darkBlue,
+                        color:
+                            isSelected ? AppColors.primary : AppColors.darkBlue,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -321,8 +295,8 @@ class _DifficultyCard extends StatelessWidget {
               ),
               if (voteCount > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.secondary.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(10),

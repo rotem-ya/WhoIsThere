@@ -10,6 +10,7 @@ import '../../providers/providers.dart';
 import '../../models/room_model.dart';
 import '../../models/game_image_model.dart';
 import '../../widgets/common/player_avatar.dart';
+import '../../widgets/common/premium_scaffold.dart';
 import '../../widgets/common/score_badge.dart';
 import '../../widgets/game/letter_bank_input.dart';
 
@@ -138,128 +139,123 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         final isEliminated = myPlayer?.isEliminated == true;
         final canSubmitAnswer = isMyTurn && !isEliminated && !_isActing;
 
-        return Scaffold(
-          backgroundColor: const Color(0xFFF1F3FF),
-          appBar: PreferredSize(
-            preferredSize: const Size.fromHeight(58),
-            child: AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              surfaceTintColor: Colors.transparent,
-              automaticallyImplyLeading: false,
-              leading: IconButton(
-                icon: const Icon(Icons.exit_to_app_rounded,
-                    color: AppColors.darkBlue),
-                onPressed: () => _confirmExit(context, currentUser.id),
-              ),
-              title: Text(
-                isVirtualTurn
-                    ? 'תור של ${currentPlayer?.name ?? '...'}'
+        return PremiumScaffold(
+          showBeams: true,
+          child: Column(
+            children: [
+              ArcadeHeader(
+                eyebrow: difficulty.label,
+                title: isVirtualTurn
+                    ? '${currentPlayer?.name ?? '...'} משחק'
                     : isMyTurn
                         ? 'התור שלך'
-                        : 'ממתין לתור',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: isMyTurn ? AppColors.primary : AppColors.darkBlue,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 22,
-                  height: 1,
+                        : 'ממתינים',
+                subtitle: '${room.availablePieceIndices.length} חלקים מוסתרים',
+                leading: IconButton(
+                  icon: const Icon(Icons.exit_to_app_rounded,
+                      color: Colors.white),
+                  onPressed: () => _confirmExit(context, currentUser.id),
                 ),
-              ),
-              actions: [
-                if (myPlayer != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: Center(
-                      child: ScoreBadge(
-                        score: myPlayer.score,
-                        isCurrentTurn: isMyTurn && !isVirtualTurn,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          body: SafeArea(
-            top: false,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final height = constraints.maxHeight;
-                final width = constraints.maxWidth;
-                final playersHeight = room.players.length > 3 ? 72.0 : 88.0;
-                final actionsHeight = 72.0;
-                final verticalGaps = 14.0;
-                final availableForPuzzleAndInput =
-                    height - playersHeight - actionsHeight - verticalGaps;
-                final puzzleSize = math
-                    .min(width - 40, availableForPuzzleAndInput * 0.54)
-                    .clamp(188.0, 318.0)
-                    .toDouble();
-                final inputHeight = math.max(
-                  150.0,
-                  availableForPuzzleAndInput - puzzleSize,
-                );
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(
-                      height: playersHeight,
-                      child: _PlayersBar(
-                        room: room,
-                        currentUserId: currentUser.id,
-                      ),
-                    ),
-                    SizedBox(
-                      height: puzzleSize,
-                      child: Center(
-                        child: SizedBox.square(
-                          dimension: puzzleSize,
-                          child: _PuzzleBoard(
-                            room: room,
-                            gameImage: _gameImage,
-                            gridSize: gridSize,
-                            canFlipPiece: canFlipPiece,
-                            onFlip: (index) => _flipPiece(index, room),
+                trailing: myPlayer == null
+                    ? null
+                    : Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.14),
+                          borderRadius: BorderRadius.circular(16),
+                          border:
+                              Border.all(color: Colors.white.withOpacity(0.16)),
+                        ),
+                        child: Text(
+                          '${myPlayer.score} נק׳',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
                       ),
-                    ),
-                    SizedBox(
-                      height: inputHeight,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-                        child: _gameImage != null
-                            ? LetterBankInput(
-                                key: ValueKey('lbi_${_gameImage!.id}'),
-                                answer: _gameImage!.answer,
-                                enabled: canSubmitAnswer,
-                                onComplete: (filled) =>
-                                    _onAnswerComplete(room, filled),
-                              )
-                            : const Center(
-                                child: CircularProgressIndicator(
-                                  color: AppColors.primary,
-                                ),
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final height = constraints.maxHeight;
+                    final width = constraints.maxWidth;
+                    final playersHeight = room.players.length > 3 ? 72.0 : 88.0;
+                    final actionsHeight = 78.0;
+                    final verticalGaps = 18.0;
+                    final availableForPuzzleAndInput =
+                        height - playersHeight - actionsHeight - verticalGaps;
+                    final puzzleSize = math
+                        .min(width - 24, availableForPuzzleAndInput * 0.56)
+                        .clamp(188.0, 318.0)
+                        .toDouble();
+                    final inputHeight = math.max(
+                      150.0,
+                      availableForPuzzleAndInput - puzzleSize,
+                    );
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(
+                          height: playersHeight,
+                          child: _PlayersBar(
+                            room: room,
+                            currentUserId: currentUser.id,
+                          ),
+                        ),
+                        SizedBox(
+                          height: puzzleSize,
+                          child: Center(
+                            child: SizedBox.square(
+                              dimension: puzzleSize,
+                              child: _PuzzleBoard(
+                                room: room,
+                                gameImage: _gameImage,
+                                gridSize: gridSize,
+                                canFlipPiece: canFlipPiece,
+                                onFlip: (index) => _flipPiece(index, room),
                               ),
-                      ),
-                    ),
-                    SizedBox(
-                      height: actionsHeight,
-                      child: _ActionRow(
-                        isMyTurn: isMyTurn,
-                        isVirtualTurn: isVirtualTurn,
-                        actingPlayerName: currentPlayer?.name,
-                        isActing: _isActing,
-                        isEliminated: isEliminated,
-                        onSkipTurn: _endTurn,
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          height: inputHeight,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                            child: _gameImage != null
+                                ? LetterBankInput(
+                                    key: ValueKey('lbi_${_gameImage!.id}'),
+                                    answer: _gameImage!.answer,
+                                    enabled: canSubmitAnswer,
+                                    onComplete: (filled) =>
+                                        _onAnswerComplete(room, filled),
+                                  )
+                                : const Center(
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        SizedBox(
+                          height: actionsHeight,
+                          child: _ActionRow(
+                            isMyTurn: isMyTurn,
+                            isVirtualTurn: isVirtualTurn,
+                            actingPlayerName: currentPlayer?.name,
+                            isActing: _isActing,
+                            isEliminated: isEliminated,
+                            onSkipTurn: _endTurn,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -292,7 +288,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   .leaveRoom(widget.roomId, userId);
               if (context.mounted) context.go('/home');
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
             child: const Text('צא'),
           ),
         ],
@@ -326,15 +323,15 @@ class _ActionRow extends StatelessWidget {
         child: Container(
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.10),
+            color: Colors.white.withOpacity(0.12),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AppColors.primary.withOpacity(0.14)),
+            border: Border.all(color: Colors.white.withOpacity(0.16)),
           ),
           child: Text(
             '${actingPlayerName ?? 'שחקן'} משחק עכשיו',
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: AppColors.primary,
+              color: Colors.white,
               fontWeight: FontWeight.w900,
               fontSize: 15,
               height: 1,
@@ -404,9 +401,10 @@ class _PlayersBar extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                 decoration: BoxDecoration(
                   color: isCurrentTurn
-                      ? AppColors.primary.withOpacity(0.10)
-                      : Colors.transparent,
+                      ? Colors.white.withOpacity(0.16)
+                      : Colors.white.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.white.withOpacity(0.10)),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -425,9 +423,7 @@ class _PlayersBar extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: isCurrentTurn
-                            ? AppColors.primary
-                            : AppColors.darkBlue,
+                        color: Colors.white,
                         fontWeight: FontWeight.w900,
                         fontSize: 11,
                         height: 1,
@@ -476,12 +472,12 @@ class _PuzzleBoard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.boardBackground,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white, width: 3),
+        border: Border.all(color: Colors.white.withOpacity(0.30), width: 3),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.16),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: AppColors.accent.withOpacity(0.24),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
           ),
         ],
       ),

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/providers.dart';
 import '../../widgets/common/gradient_button.dart';
+import '../../widgets/common/premium_scaffold.dart';
 
 class JoinRoomScreen extends ConsumerStatefulWidget {
   const JoinRoomScreen({super.key});
@@ -63,76 +64,88 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(title: const Text('הצטרף לחדר')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height -
-                  MediaQuery.of(context).padding.top -
-                  kToolbarHeight -
-                  48,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-              const Text(
-                '🚪',
-                style: TextStyle(fontSize: 72),
-              ).animate().scale(curve: Curves.elasticOut, duration: 600.ms),
-              const SizedBox(height: 24),
-              const Text(
-                'הכנס קוד חדר',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.darkBlue,
+    return PremiumScaffold(
+      showBeams: true,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height -
+                MediaQuery.of(context).padding.vertical -
+                40,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              PremiumHeader(
+                eyebrow: 'כניסה מהירה',
+                title: 'יש לך קוד?',
+                subtitle: 'הזן את קוד החדר והצטרף ישירות ללובי.',
+                icon: Icons.login_rounded,
+                onBack: () => context.pop(),
+              ).animate().fadeIn().slideY(begin: -0.12),
+              const SizedBox(height: 28),
+              PremiumGlassCard(
+                padding: const EdgeInsets.all(22),
+                child: Column(
+                  children: [
+                    const HeroPuzzleMark(size: 106),
+                    const SizedBox(height: 18),
+                    TextField(
+                      controller: _codeController,
+                      textAlign: TextAlign.center,
+                      textCapitalization: TextCapitalization.characters,
+                      maxLength: 6,
+                      style: const TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 8,
+                        color: Colors.white,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'XXXXXX',
+                        hintStyle: TextStyle(
+                          letterSpacing: 8,
+                          color: Colors.white.withOpacity(0.26),
+                          fontSize: 34,
+                          fontWeight: FontWeight.w900,
+                        ),
+                        filled: true,
+                        fillColor: Colors.white.withOpacity(0.10),
+                        counterText: '',
+                        errorText: _errorMessage,
+                        errorStyle: const TextStyle(
+                          color: AppColors.warning,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      onSubmitted: (_) => _joinRoom(),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      'טיפ: הקוד בן 6 תווים ונמצא אצל המארח',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.64),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
-              ).animate(delay: 200.ms).fadeIn(),
-              const SizedBox(height: 8),
-              const Text(
-                'בקש מהחבר שלך את הקוד בן 6 הספרות',
-                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
-              ).animate(delay: 300.ms).fadeIn(),
-              const SizedBox(height: 32),
-              TextField(
-                controller: _codeController,
-                textAlign: TextAlign.center,
-                textCapitalization: TextCapitalization.characters,
-                maxLength: 6,
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 8,
-                  color: AppColors.darkBlue,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'XXXXXX',
-                  hintStyle: TextStyle(
-                    letterSpacing: 8,
-                    color: Colors.grey.shade300,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
+              ).animate(delay: 140.ms).fadeIn().scale(
+                    begin: const Offset(0.96, 0.96),
+                    curve: Curves.easeOutBack,
                   ),
-                  counterText: '',
-                  errorText: _errorMessage,
-                ),
-                onSubmitted: (_) => _joinRoom(),
-              ).animate(delay: 400.ms).fadeIn().slideY(begin: 0.3),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
               _isLoading
-                  ? const CircularProgressIndicator(color: AppColors.primary)
+                  ? const CircularProgressIndicator(color: AppColors.accent)
                   : GradientButton(
                       text: 'הצטרף למשחק',
                       icon: Icons.login_rounded,
                       gradient: AppColors.secondaryGradient,
                       onPressed: _joinRoom,
-                    ).animate(delay: 500.ms).fadeIn(),
-              ],
-            ),
+                    ).animate(delay: 260.ms).fadeIn().slideY(begin: 0.16),
+            ],
           ),
         ),
       ),
