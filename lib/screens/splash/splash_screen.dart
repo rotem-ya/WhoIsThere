@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/providers.dart';
+import '../../widgets/common/premium_scaffold.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -44,140 +45,91 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF0F0C29),
-              Color(0xFF302B63),
-              Color(0xFF24243E),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Decorative background circles
-            Positioned(
-              top: -80,
-              right: -80,
-              child: Container(
-                width: 280,
-                height: 280,
+    return PremiumScaffold(
+      child: Column(
+        children: [
+          const Spacer(flex: 3),
+          AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, child) {
+              return Container(
+                width: 130,
+                height: 130,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF6C63FF).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(36),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF6C63FF)
+                          .withOpacity(0.3 + 0.2 * _pulseController.value),
+                      blurRadius: 40 + 20 * _pulseController.value,
+                      spreadRadius: 4,
+                    ),
+                  ],
+                ),
+                child: child,
+              );
+            },
+            child: Container(
+              width: 130,
+              height: 130,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white.withOpacity(0.30),
+                    Colors.white.withOpacity(0.08),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(36),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.28),
+                  width: 1.5,
                 ),
               ),
-            ),
-            Positioned(
-              bottom: -100,
-              left: -60,
-              child: Container(
-                width: 320,
-                height: 320,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF9B59B6).withOpacity(0.10),
-                ),
-              ),
-            ),
-
-            // Main content
-            SafeArea(
-              child: Column(
+              child: const Stack(
+                alignment: Alignment.center,
                 children: [
-                  const Spacer(flex: 3),
-
-                  // Icon with glow
-                  AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (context, child) {
-                      return Container(
-                        width: 130,
-                        height: 130,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(36),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF6C63FF).withOpacity(
-                                  0.3 + 0.2 * _pulseController.value),
-                              blurRadius: 40 + 20 * _pulseController.value,
-                              spreadRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: child,
-                      );
-                    },
-                    child: Container(
-                      width: 130,
-                      height: 130,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.10),
-                        borderRadius: BorderRadius.circular(36),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: const Center(
-                        child: Text('🗺️', style: TextStyle(fontSize: 68)),
-                      ),
-                    ),
-                  )
-                      .animate()
-                      .scale(
-                        begin: const Offset(0.6, 0.6),
-                        duration: 700.ms,
-                        curve: Curves.easeOutBack,
-                      )
-                      .fadeIn(duration: 500.ms),
-
-                  const SizedBox(height: 36),
-
-                  // App name
-                  const Text(
-                    'Guess the Place',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 34,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.5,
-                    ),
-                  )
-                      .animate(delay: 300.ms)
-                      .fadeIn(duration: 500.ms)
-                      .slideY(begin: 0.3, end: 0),
-
-                  const SizedBox(height: 10),
-
-                  // Hebrew tagline
-                  Text(
-                    'זהה מקומות מסביב לעולם',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.3,
-                    ),
-                  )
-                      .animate(delay: 500.ms)
-                      .fadeIn(duration: 500.ms),
-
-                  const Spacer(flex: 3),
-
-                  // Loading dots
-                  _LoadingDots().animate(delay: 900.ms).fadeIn(),
-
-                  const SizedBox(height: 56),
+                  PremiumPuzzlePreview(size: 88),
+                  Text('🗺️', style: TextStyle(fontSize: 54)),
                 ],
               ),
             ),
-          ],
-        ),
+          )
+              .animate()
+              .scale(
+                begin: const Offset(0.6, 0.6),
+                duration: 700.ms,
+                curve: Curves.easeOutBack,
+              )
+              .fadeIn(duration: 500.ms),
+          const SizedBox(height: 36),
+          const Text(
+            'Guess the Place',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 34,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+            ),
+          )
+              .animate(delay: 300.ms)
+              .fadeIn(duration: 500.ms)
+              .slideY(begin: 0.3, end: 0),
+          const SizedBox(height: 10),
+          Text(
+            'זהה מקומות מסביב לעולם',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+            ),
+          ).animate(delay: 500.ms).fadeIn(duration: 500.ms),
+          const Spacer(flex: 3),
+          _LoadingDots().animate(delay: 900.ms).fadeIn(),
+          const SizedBox(height: 56),
+        ],
       ),
     );
   }
@@ -229,8 +181,8 @@ class _LoadingDotsState extends State<_LoadingDots>
               height: 8,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(
-                    0.3 + 0.7 * _controllers[i].value),
+                color:
+                    Colors.white.withOpacity(0.3 + 0.7 * _controllers[i].value),
               ),
             );
           },

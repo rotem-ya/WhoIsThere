@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/providers.dart';
+import '../../widgets/common/app_feedback.dart';
+import '../../widgets/common/premium_scaffold.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -76,126 +78,104 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Widget build(BuildContext context) {
     final isIOS = Platform.isIOS;
 
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              children: [
-                const Spacer(),
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
+    return PremiumScaffold(
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            children: [
+              const SizedBox(height: 36),
+              const HeroPuzzleMark(size: 118)
+                  .animate()
+                  .scale(duration: 620.ms, curve: Curves.elasticOut),
+              const SizedBox(height: 22),
+              const Text(
+                'Guess the Place',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.4,
+                ),
+              ).animate(delay: 200.ms).fadeIn().slideY(begin: 0.25),
+              const SizedBox(height: 8),
+              Text(
+                'חשוף רמזים, זהה מקומות, ונצח את כולם.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.72),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ).animate(delay: 360.ms).fadeIn(),
+              const SizedBox(height: 34),
+              PremiumGlassCard(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    const Text(
+                      'כניסה למשחק',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
                       ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Text('🗺️', style: TextStyle(fontSize: 52)),
-                  ),
-                )
-                    .animate()
-                    .scale(duration: 600.ms, curve: Curves.elasticOut),
-                const SizedBox(height: 24),
-                const Text(
-                  'Guess the Place',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ).animate(delay: 200.ms).fadeIn().slideY(begin: 0.3),
-                const SizedBox(height: 8),
-                const Text(
-                  'חשוף את הפאזל. זהה את המקום.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ).animate(delay: 400.ms).fadeIn(),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.all(28),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'בחר דרך התחברות והיכנס לחדר תוך רגע',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.66),
+                        fontWeight: FontWeight.w700,
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'התחבר כדי לשחק',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.darkBlue,
-                        ),
+                    ),
+                    const SizedBox(height: 22),
+                    if (_isLoading)
+                      const CircularProgressIndicator(color: AppColors.accent)
+                    else ...[
+                      _SocialSignInButton(
+                        onPressed: _signInWithGoogle,
+                        icon: '🌐',
+                        label: 'המשך עם Google',
+                        color: Colors.white,
+                        textColor: AppColors.darkBlue,
+                        borderColor: Colors.white,
                       ),
-                      const SizedBox(height: 24),
-                      if (_isLoading)
-                        const CircularProgressIndicator(
-                            color: AppColors.primary)
-                      else ...[
-                        _SocialSignInButton(
-                          onPressed: _signInWithGoogle,
-                          icon: '🌐',
-                          label: 'המשך עם Google',
-                          color: Colors.white,
-                          textColor: AppColors.darkBlue,
-                          borderColor: AppColors.pieceSlotEmpty,
-                        ),
-                        if (isIOS) ...[
-                          const SizedBox(height: 12),
-                          _SocialSignInButton(
-                            onPressed: _signInWithApple,
-                            icon: '🍎',
-                            label: 'המשך עם Apple',
-                            color: Colors.black,
-                            textColor: Colors.white,
-                          ),
-                        ],
+                      if (isIOS) ...[
                         const SizedBox(height: 12),
                         _SocialSignInButton(
-                          onPressed: _signInAnonymously,
-                          icon: '👤',
-                          label: 'המשך כאורח',
-                          color: Colors.grey.shade100,
-                          textColor: Colors.grey.shade700,
-                          borderColor: Colors.grey.shade300,
+                          onPressed: _signInWithApple,
+                          icon: '🍎',
+                          label: 'המשך עם Apple',
+                          color: Colors.black,
+                          textColor: Colors.white,
                         ),
                       ],
-                      const SizedBox(height: 16),
-                      Text(
-                        'בהתחברות אתה מסכים לתנאי השימוש',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade500,
-                        ),
+                      const SizedBox(height: 12),
+                      _SocialSignInButton(
+                        onPressed: _signInAnonymously,
+                        icon: '👤',
+                        label: 'המשך כאורח',
+                        color: Colors.white.withOpacity(0.12),
+                        textColor: Colors.white,
+                        borderColor: Colors.white.withOpacity(0.24),
                       ),
                     ],
-                  ),
-                ).animate(delay: 600.ms).fadeIn().slideY(begin: 0.4),
-                const SizedBox(height: 24),
-              ],
-            ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'כולל הדגמות, בוטים ומשחק מהיר',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.58),
+                      ),
+                    ),
+                  ],
+                ),
+              ).animate(delay: 560.ms).fadeIn().slideY(begin: 0.28),
+            ],
           ),
         ),
       ),
@@ -226,7 +206,10 @@ class _SocialSignInButton extends StatelessWidget {
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: onPressed,
+        onPressed: () {
+          AppFeedback.selection();
+          onPressed();
+        },
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: textColor,
