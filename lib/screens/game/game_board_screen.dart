@@ -178,18 +178,24 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final height = constraints.maxHeight;
-                const headerHeight = 76.0;
                 const actionsHeight = 80.0;
-                final puzzleHeight = height * 0.38;
+                final puzzleHeight =
+                    (height * 0.38).clamp(160.0, 320.0).toDouble();
                 final remainingHeight =
-                    height - puzzleHeight - actionsHeight - headerHeight;
+                    math.max(80.0, height - puzzleHeight - actionsHeight);
                 final puzzleWidth = math.max(80.0, constraints.maxWidth - 24);
                 final puzzleSize = math.min(puzzleWidth, puzzleHeight);
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _PlayersBar(room: room, currentUserId: currentUser.id),
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: _PlayersBar(
+                        room: room,
+                        currentUserId: currentUser.id,
+                      ),
+                    ),
                     SizedBox(
                       height: puzzleHeight,
                       child: Padding(
@@ -360,56 +366,53 @@ class _PlayersBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 76,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        child: Row(
-          children: room.sortedPlayers.map((player) {
-            final isCurrentTurn = room.currentTurnUserId == player.id;
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    PlayerAvatar(
-                      name: player.name,
-                      photoUrl: player.photoUrl,
-                      radius: 15,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      child: Row(
+        children: room.sortedPlayers.map((player) {
+          final isCurrentTurn = room.currentTurnUserId == player.id;
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  PlayerAvatar(
+                    name: player.name,
+                    photoUrl: player.photoUrl,
+                    radius: 15,
+                    isCurrentTurn: isCurrentTurn,
+                    isEliminated: player.isEliminated,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    player.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: isCurrentTurn
+                          ? AppColors.primary
+                          : AppColors.darkBlue,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 10,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: ScoreBadge(
+                      score: player.score,
                       isCurrentTurn: isCurrentTurn,
                       isEliminated: player.isEliminated,
+                      isHost: player.isHost,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      player.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: isCurrentTurn
-                            ? AppColors.primary
-                            : AppColors.darkBlue,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 10,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: ScoreBadge(
-                        score: player.score,
-                        isCurrentTurn: isCurrentTurn,
-                        isEliminated: player.isEliminated,
-                        isHost: player.isHost,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            );
-          }).toList(),
-        ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
