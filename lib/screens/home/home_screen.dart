@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/providers.dart';
+import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/gradient_button.dart';
 import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/premium_scaffold.dart';
@@ -95,7 +96,10 @@ class HomeScreen extends ConsumerWidget {
                         ),
                         const SizedBox(width: 8),
                         GestureDetector(
-                          onTap: () => context.push('/profile'),
+                          onTap: () {
+                            AppFeedback.selection();
+                            context.push('/profile');
+                          },
                           child: userAsync.when(
                             data: (user) => PlayerAvatar(
                               name: user?.name ?? 'P',
@@ -132,7 +136,17 @@ class HomeScreen extends ConsumerWidget {
                                   ],
                                 ),
                               ),
-                              const _PuzzlePreview(),
+                              const _PuzzlePreview()
+                                  .animate(
+                                    onPlay: (controller) =>
+                                        controller.repeat(reverse: true),
+                                  )
+                                  .scaleXY(
+                                    begin: 0.94,
+                                    end: 1.05,
+                                    duration: 1400.ms,
+                                    curve: Curves.easeInOut,
+                                  ),
                               const Positioned(
                                 bottom: 10,
                                 child: Text(
@@ -146,7 +160,15 @@ class HomeScreen extends ConsumerWidget {
                                 ),
                               ),
                             ],
-                          ),
+                          )
+                              .animate(
+                                onPlay: (controller) =>
+                                    controller.repeat(reverse: true),
+                              )
+                              .shimmer(
+                                duration: 2200.ms,
+                                color: Colors.white.withOpacity(0.20),
+                              ),
                         ),
                       ),
                     )

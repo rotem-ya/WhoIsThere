@@ -6,6 +6,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/game_constants.dart';
 import '../../providers/providers.dart';
 import '../../models/game_image_model.dart';
+import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/premium_scaffold.dart';
 
 class StoreScreen extends ConsumerWidget {
@@ -194,6 +195,7 @@ class StoreScreen extends ConsumerWidget {
     GameImageModel image,
     int userPoints,
   ) async {
+    AppFeedback.success();
     if (userPoints < image.cost) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('אין מספיק נקודות!')),

@@ -194,109 +194,144 @@ class _CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      decoration: BoxDecoration(
-        gradient: isSelected ? _gradient : null,
-        color: isSelected ? null : Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isSelected ? Colors.transparent : Colors.grey.shade200,
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
+    return AnimatedScale(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutBack,
+      scale: isSelected ? 1.03 : 1,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        decoration: BoxDecoration(
+          gradient: isSelected ? _gradient : null,
+          color: isSelected ? null : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
             color: isSelected
-                ? _gradient.colors.first.withOpacity(0.35)
-                : Colors.black.withOpacity(0.06),
-            blurRadius: isSelected ? 20 : 8,
-            offset: const Offset(0, 6),
+                ? Colors.white.withOpacity(0.32)
+                : Colors.grey.shade200,
+            width: isSelected ? 2.4 : 1.5,
           ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Emoji container
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Colors.white.withOpacity(0.18)
-                          : AppColors.primary.withOpacity(0.07),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        category.emoji,
-                        style: const TextStyle(fontSize: 42),
-                      ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected
+                  ? _gradient.colors.first.withOpacity(0.48)
+                  : Colors.black.withOpacity(0.06),
+              blurRadius: isSelected ? 28 : 8,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            if (isSelected)
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.18),
+                        Colors.transparent,
+                      ],
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  Text(
-                    category.label,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: isSelected ? Colors.white : AppColors.darkBlue,
-                      height: 1.3,
+                )
+                    .animate(
+                        onPlay: (controller) =>
+                            controller.repeat(reverse: true))
+                    .fade(
+                      begin: 0.25,
+                      end: 0.8,
+                      duration: 900.ms,
                     ),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (voteCount > 0) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? Colors.white.withOpacity(0.25)
-                            : AppColors.secondary.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '🗳️  $voteCount',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color:
-                              isSelected ? Colors.white : AppColors.secondary,
+              ),
+            Center(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedScale(
+                      duration: const Duration(milliseconds: 240),
+                      scale: isSelected ? 1.12 : 1,
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Colors.white.withOpacity(0.18)
+                              : AppColors.primary.withOpacity(0.07),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            category.emoji,
+                            style: const TextStyle(fontSize: 42),
+                          ),
                         ),
                       ),
                     ),
+                    const SizedBox(height: 14),
+                    Text(
+                      category.label,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: isSelected ? Colors.white : AppColors.darkBlue,
+                        height: 1.3,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (voteCount > 0) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Colors.white.withOpacity(0.25)
+                              : AppColors.secondary.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '🗳️  $voteCount',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color:
+                                isSelected ? Colors.white : AppColors.secondary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-              ),
-            ),
-          ),
-          if (isSelected)
-            Positioned(
-              top: 12,
-              right: 12,
-              child: Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_rounded,
-                  color: Colors.white,
-                  size: 18,
                 ),
               ),
             ),
-        ],
+            if (isSelected)
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.25),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/providers.dart';
 import '../../widgets/common/gradient_button.dart';
+import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/premium_scaffold.dart';
 
 class JoinRoomScreen extends ConsumerStatefulWidget {
@@ -22,9 +23,12 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
   Future<void> _joinRoom() async {
     final code = _codeController.text.trim().toUpperCase();
     if (code.length != 6) {
+      AppFeedback.error();
       setState(() => _errorMessage = 'נא להזין קוד בן 6 תווים');
       return;
     }
+
+    AppFeedback.confirm();
 
     setState(() {
       _isLoading = true;
@@ -43,6 +47,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
           );
 
       if (room == null) {
+        AppFeedback.error();
         setState(() => _errorMessage = 'החדר לא נמצא או כבר התחיל');
         return;
       }

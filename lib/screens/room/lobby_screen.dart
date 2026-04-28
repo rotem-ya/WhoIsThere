@@ -7,6 +7,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/game_constants.dart';
 import '../../providers/providers.dart';
 import '../../models/player_model.dart';
+import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/gradient_button.dart';
 import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/premium_scaffold.dart';
@@ -26,6 +27,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
   Future<void> _copyCode(String code) async {
     if (_codeCopied) return;
+    AppFeedback.success();
     await Clipboard.setData(ClipboardData(text: code));
     setState(() => _codeCopied = true);
     await Future.delayed(const Duration(milliseconds: 1500));
@@ -34,6 +36,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
   Future<void> _startGame() async {
     if (_isStarting) return;
+    AppFeedback.success();
     setState(() => _isStarting = true);
     try {
       await ref.read(roomServiceProvider).startVotingImage(widget.roomId);

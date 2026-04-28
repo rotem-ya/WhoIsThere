@@ -9,6 +9,7 @@ import '../../core/constants/game_constants.dart';
 import '../../providers/providers.dart';
 import '../../models/room_model.dart';
 import '../../models/game_image_model.dart';
+import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/premium_scaffold.dart';
 import '../../widgets/common/score_badge.dart';
@@ -57,6 +58,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   Future<void> _flipPiece(int pieceIndex, RoomModel room) async {
     if (_hasFlipped || _isActing) return;
     final difficulty = room.selectedDifficulty!;
+    AppFeedback.reveal();
     setState(() => _isActing = true);
 
     try {
@@ -79,6 +81,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
 
   Future<void> _endTurn() async {
     if (_isActing) return;
+    AppFeedback.warning();
     setState(() => _isActing = true);
     try {
       await ref
@@ -97,14 +100,21 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   Future<bool> _onAnswerComplete(RoomModel room, String filled) async {
     if (_gameImage == null) return false;
     try {
-      return await ref.read(roomServiceProvider).submitAnswer(
+      final ok = await ref.read(roomServiceProvider).submitAnswer(
             roomId: widget.roomId,
             userId: _actingUserId(room),
             guess: filled,
             image: _gameImage!,
             difficulty: room.selectedDifficulty!,
           );
+      if (ok) {
+        AppFeedback.success();
+      } else {
+        AppFeedback.error();
+      }
+      return ok;
     } catch (_) {
+      AppFeedback.error();
       return false;
     }
   }

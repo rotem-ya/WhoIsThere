@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/providers.dart';
+import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/gradient_button.dart';
 import '../../widgets/common/premium_scaffold.dart';
 
@@ -22,6 +23,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   int _playerCount = 2;
 
   Future<void> _createRoom() async {
+    AppFeedback.confirm();
     setState(() => _isLoading = true);
     try {
       final user = await ref.read(currentUserProvider.future);
@@ -245,6 +247,7 @@ class _RoomCreatedCardState extends State<_RoomCreatedCard> {
 
   void _copyCode() async {
     if (_copied) return;
+    AppFeedback.success();
     await Clipboard.setData(ClipboardData(text: widget.roomCode));
     setState(() => _copied = true);
     await Future.delayed(const Duration(milliseconds: 1500));

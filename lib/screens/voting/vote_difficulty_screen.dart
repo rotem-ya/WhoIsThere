@@ -240,7 +240,8 @@ class _DifficultyCard extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutBack,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color:
@@ -262,9 +263,14 @@ class _DifficultyCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Text(
-                difficulty.emoji,
-                style: const TextStyle(fontSize: 28),
+              AnimatedScale(
+                scale: isSelected ? 1.18 : 1,
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutBack,
+                child: Text(
+                  difficulty.emoji,
+                  style: const TextStyle(fontSize: 28),
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
