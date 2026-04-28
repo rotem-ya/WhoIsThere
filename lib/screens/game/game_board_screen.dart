@@ -448,48 +448,47 @@ class _PuzzleBoard extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (gameImage != null)
-              CachedNetworkImage(
-                imageUrl: gameImage!.imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (_, __) =>
-                    Container(color: AppColors.boardBackground),
-                errorWidget: (_, __, ___) =>
-                    Container(color: AppColors.boardBackground),
-              )
-            else
-              Container(color: AppColors.boardBackground),
-            Column(
-              children: List.generate(gridSize, (row) {
-                return Expanded(
-                  child: Row(
-                    children: List.generate(gridSize, (column) {
-                      final index = row * gridSize + column;
-                      final isRevealed = room.placedPieces.containsKey(index);
-                      final canFlip = canFlipPiece && !isRevealed;
-
-                      return Expanded(
-                        child: isRevealed
-                            ? SizedBox.expand(key: ValueKey('empty_$index'))
-                            : GestureDetector(
-                                key: ValueKey('h_$index'),
-                                onTap:
-                                    canFlip ? () => onFlip?.call(index) : null,
-                                child: _HiddenCard(isFlippable: canFlip),
-                              ),
-                      );
-                    }),
-                  ),
-                );
-              }),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (gameImage != null)
+            CachedNetworkImage(
+              imageUrl: gameImage!.imageUrl,
+              fit: BoxFit.cover,
+              placeholder: (_, __) =>
+                  Container(color: AppColors.boardBackground),
+              errorWidget: (_, __, ___) =>
+                  Container(color: AppColors.boardBackground),
+            )
+          else
+            Container(color: AppColors.boardBackground),
+          GridView.builder(
+            padding: EdgeInsets.zero,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: gridSize,
+              mainAxisSpacing: 0,
+              crossAxisSpacing: 0,
             ),
-          ],
-        ),
+            itemCount: gridSize * gridSize,
+            itemBuilder: (context, index) {
+              final isRevealed = room.placedPieces.containsKey(index);
+              final canFlip = canFlipPiece && !isRevealed;
+
+              if (isRevealed) {
+                return SizedBox.expand(key: ValueKey('empty_$index'));
+              }
+
+              return SizedBox.expand(
+                child: GestureDetector(
+                  key: ValueKey('h_$index'),
+                  onTap: canFlip ? () => onFlip?.call(index) : null,
+                  child: _HiddenCard(isFlippable: canFlip),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -505,7 +504,6 @@ class _HiddenCard extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
         gradient: isFlippable
             ? AppColors.primaryGradient
             : const LinearGradient(
