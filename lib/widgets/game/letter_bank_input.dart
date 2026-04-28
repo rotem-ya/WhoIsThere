@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 
@@ -15,12 +17,32 @@ String normalizeHebrewFinals(String s) {
 
 /// Hebrew alphabet without final letters, ordered א → ת.
 const List<String> _hebrewAlphabet = [
-  'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'כ',
-  'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ', 'ק', 'ר', 'ש', 'ת',
+  'א',
+  'ב',
+  'ג',
+  'ד',
+  'ה',
+  'ו',
+  'ז',
+  'ח',
+  'ט',
+  'י',
+  'כ',
+  'ל',
+  'מ',
+  'נ',
+  'ס',
+  'ע',
+  'פ',
+  'צ',
+  'ק',
+  'ר',
+  'ש',
+  'ת',
 ];
 
-/// Letter-bank answer input for "Guess the Place".
-/// Local UI state only — never persists partial input.
+/// Compact responsive answer input for the game board.
+/// The widget is intentionally height-aware, so it never causes screen overflow.
 class LetterBankInput extends StatefulWidget {
   final String answer;
   final bool enabled;
@@ -50,9 +72,9 @@ class _LetterBankInputState extends State<LetterBankInput> {
   }
 
   @override
-  void didUpdateWidget(covariant LetterBankInput old) {
-    super.didUpdateWidget(old);
-    if (old.answer != widget.answer) {
+  void didUpdateWidget(covariant LetterBankInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.answer != widget.answer) {
       _initSlots();
     }
   }
@@ -61,6 +83,8 @@ class _LetterBankInputState extends State<LetterBankInput> {
     _answerChars = widget.answer.runes.map(String.fromCharCode).toList();
     final letterCount = _answerChars.where((c) => c != ' ').length;
     _filled = List<String?>.filled(letterCount, null);
+    _showError = false;
+    _isSubmitting = false;
   }
 
   void _resetFilled() {
@@ -86,24 +110,20 @@ class _LetterBankInputState extends State<LetterBankInput> {
 
   void _onBackspace() {
     if (!widget.enabled || _isSubmitting) return;
-    int lastIdx = -1;
     for (int i = _filled.length - 1; i >= 0; i--) {
       if (_filled[i] != null) {
-        lastIdx = i;
-        break;
+        setState(() {
+          _filled[i] = null;
+          _showError = false;
+        });
+        return;
       }
     }
-    if (lastIdx == -1) return;
-    setState(() {
-      _filled[lastIdx] = null;
-      _showError = false;
-    });
   }
 
   Future<void> _submit() async {
     setState(() => _isSubmitting = true);
 
-    // Rebuild candidate string preserving spaces in original positions
     final buf = StringBuffer();
     int letterIdx = 0;
     for (final c in _answerChars) {
@@ -124,14 +144,13 @@ class _LetterBankInputState extends State<LetterBankInput> {
     if (!mounted) return;
     if (ok) {
       setState(() => _isSubmitting = false);
-      // Parent navigates on success — keep boxes filled.
     } else {
       setState(() {
         _isSubmitting = false;
         _showError = true;
       });
       _resetFilled();
-      Future.delayed(const Duration(milliseconds: 1400), () {
+      Future.delayed(const Duration(milliseconds: 1200), () {
         if (mounted) setState(() => _showError = false);
       });
     }
@@ -139,40 +158,54 @@ class _LetterBankInputState extends State<LetterBankInput> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _AnswerBoard(
-          answerChars: _answerChars,
-          filled: _filled,
-          enabled: widget.enabled && !_isSubmitting,
-        ),
-        const SizedBox(height: 6),
-        SizedBox(
-          height: 18,
-          child: Center(
-            child: AnimatedOpacity(
-              opacity: _showError ? 1 : 0,
-              duration: const Duration(milliseconds: 150),
-              child: const Text(
-                'תשובה שגויה — נסה שוב',
-                style: TextStyle(
-                  color: AppColors.secondary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxHeight = math.max(120.0, constraints.maxHeight);
+        final answerHeight = _filled.length > 8 ? 96.0 : 56.0;
+        final errorHeight = 22.0;
+        final keyboardHeight = math.max(78.0, maxHeight - answerHeight - errorHeight);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: answerHeight,
+              child: _AnswerBoard(
+                answerChars: _answerChars,
+                filled: _filled,
+                enabled: widget.enabled && !_isSubmitting,
+                onBackspace: _onBackspace,
+              ),
+            ),
+            SizedBox(
+              height: errorHeight,
+              child: Center(
+                child: AnimatedOpacity(
+                  opacity: _showError ? 1 : 0,
+                  duration: const Duration(milliseconds: 150),
+                  child: const Text(
+                    'לא נכון, נסה שוב',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.secondary,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                      height: 1,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        _LetterBank(
-          enabled: widget.enabled && !_isSubmitting,
-          onTap: _onTapLetter,
-          onBackspace: _onBackspace,
-        ),
-      ],
+            SizedBox(
+              height: keyboardHeight,
+              child: _LetterKeyboard(
+                enabled: widget.enabled && !_isSubmitting,
+                onTap: _onTapLetter,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -181,20 +214,21 @@ class _AnswerBoard extends StatelessWidget {
   final List<String> answerChars;
   final List<String?> filled;
   final bool enabled;
+  final VoidCallback onBackspace;
 
   const _AnswerBoard({
     required this.answerChars,
     required this.filled,
     required this.enabled,
+    required this.onBackspace,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Group chars into words, render each word as a non-breaking Row,
-    // then wrap words in a Wrap so multi-word answers wrap at word boundaries.
-    final words = <List<int>>[]; // list of letter-index lists per word
+    final words = <List<int>>[];
     final currentWord = <int>[];
     int letterIdx = 0;
+
     for (final c in answerChars) {
       if (c == ' ') {
         if (currentWord.isNotEmpty) {
@@ -207,29 +241,53 @@ class _AnswerBoard extends StatelessWidget {
     }
     if (currentWord.isNotEmpty) words.add(currentWord);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Wrap(
-        textDirection: TextDirection.rtl,
-        alignment: WrapAlignment.center,
-        spacing: 14, // gap between words
-        runSpacing: 6,
-        children: words.map((wordIndices) {
-          return Row(
-            textDirection: TextDirection.rtl,
-            mainAxisSize: MainAxisSize.min,
-            children: wordIndices.map((idx) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: _LetterSlot(
-                  letter: filled[idx],
-                  enabled: enabled,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxLettersInWord = words.isEmpty
+            ? 1
+            : words.map((w) => w.length).reduce(math.max);
+        final slotWidth = ((constraints.maxWidth - 64) / maxLettersInWord)
+            .clamp(30.0, 42.0)
+            .toDouble();
+        final slotHeight = (slotWidth + 8).clamp(38.0, 48.0).toDouble();
+
+        return Row(
+          children: [
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Wrap(
+                    textDirection: TextDirection.rtl,
+                    alignment: WrapAlignment.center,
+                    spacing: 10,
+                    runSpacing: 6,
+                    children: words.map((wordIndices) {
+                      return Row(
+                        textDirection: TextDirection.rtl,
+                        mainAxisSize: MainAxisSize.min,
+                        children: wordIndices.map((idx) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: _LetterSlot(
+                              letter: filled[idx],
+                              enabled: enabled,
+                              width: slotWidth,
+                              height: slotHeight,
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    }).toList(),
+                  ),
                 ),
-              );
-            }).toList(),
-          );
-        }).toList(),
-      ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            _DeleteButton(enabled: enabled, onTap: onBackspace),
+          ],
+        );
+      },
     );
   }
 }
@@ -237,37 +295,50 @@ class _AnswerBoard extends StatelessWidget {
 class _LetterSlot extends StatelessWidget {
   final String? letter;
   final bool enabled;
+  final double width;
+  final double height;
 
-  const _LetterSlot({required this.letter, required this.enabled});
+  const _LetterSlot({
+    required this.letter,
+    required this.enabled,
+    required this.width,
+    required this.height,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final filled = letter != null;
-    return Container(
-      width: 34,
-      height: 40,
+    final isFilled = letter != null;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
+      width: width,
+      height: height,
       decoration: BoxDecoration(
-        color: filled
-            ? AppColors.primary.withOpacity(0.10)
-            : enabled
-                ? Colors.white
-                : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
+        color: isFilled ? const Color(0xFFEDEBFF) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: filled
+          color: isFilled
               ? AppColors.primary
               : enabled
-                  ? AppColors.primary.withOpacity(0.35)
+                  ? const Color(0xFFD7D4FF)
                   : Colors.grey.shade300,
-          width: filled ? 1.8 : 1.4,
+          width: isFilled ? 2.2 : 1.5,
         ),
+        boxShadow: isFilled
+            ? [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.16),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
       ),
       child: Center(
         child: Text(
           letter ?? '',
           style: const TextStyle(
             color: AppColors.darkBlue,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w900,
             fontSize: 20,
             height: 1,
           ),
@@ -277,76 +348,78 @@ class _LetterSlot extends StatelessWidget {
   }
 }
 
-class _LetterBank extends StatelessWidget {
+class _DeleteButton extends StatelessWidget {
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _DeleteButton({required this.enabled, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: enabled ? const Color(0xFFFFEEF2) : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: enabled
+                  ? AppColors.secondary.withOpacity(0.35)
+                  : Colors.grey.shade300,
+              width: 1.5,
+            ),
+          ),
+          child: Icon(
+            Icons.backspace_outlined,
+            color: enabled ? AppColors.secondary : Colors.grey.shade500,
+            size: 20,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LetterKeyboard extends StatelessWidget {
   final bool enabled;
   final ValueChanged<String> onTap;
-  final VoidCallback onBackspace;
 
-  const _LetterBank({
-    required this.enabled,
-    required this.onTap,
-    required this.onBackspace,
-  });
+  const _LetterKeyboard({required this.enabled, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-      builder: (ctx, constraints) {
-        // Prefer two rows, then fall back to three rows before shrinking keys.
-        const twoRowLetters = 11;
-        const threeRowLetters = 8;
-        const spacing = 6.0;
-        const preferredMinButtonSize = 26.0;
-        const minShrinkButtonSize = 20.0;
-        const maxButtonSize = 38.0;
-        const horizontalPadding = 8.0;
-        double buttonSizeFor(int lettersPerRow) {
-          final available = constraints.maxWidth -
-              horizontalPadding -
-              (spacing * (lettersPerRow - 1));
-          return available / lettersPerRow;
-        }
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
+        final columns = width < 350 ? 6 : 7;
+        final rows = (_hebrewAlphabet.length / columns).ceil();
+        const gap = 8.0;
+        final keyWidth = (width - gap * (columns - 1)) / columns;
+        final keyHeight = (height - gap * (rows - 1)) / rows;
+        final keySize = math.min(keyWidth, keyHeight).clamp(34.0, 54.0);
+        final fontSize = (keySize * 0.48).clamp(18.0, 26.0).toDouble();
 
-        final twoRowButtonSize = buttonSizeFor(twoRowLetters);
-        final lettersPerRow = twoRowButtonSize >= preferredMinButtonSize
-            ? twoRowLetters
-            : threeRowLetters;
-        final rawButtonSize = buttonSizeFor(lettersPerRow);
-        final btnW = rawButtonSize.clamp(minShrinkButtonSize, maxButtonSize);
-        final btnH = btnW + 6;
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Wrap(
-                textDirection: TextDirection.rtl,
-                spacing: spacing,
-                runSpacing: spacing,
-                alignment: WrapAlignment.center,
-                children: _hebrewAlphabet.map((letter) {
-                  return _BankKey(
-                    label: letter,
-                    width: btnW,
-                    height: btnH,
-                    enabled: enabled,
-                    onTap: () => onTap(letter),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: Center(
-                  child: _BackspaceKey(
-                    enabled: enabled,
-                    onTap: onBackspace,
-                    height: btnH,
-                  ),
-                ),
-              ),
-            ],
+        return Center(
+          child: Wrap(
+            textDirection: TextDirection.rtl,
+            alignment: WrapAlignment.center,
+            spacing: gap,
+            runSpacing: gap,
+            children: _hebrewAlphabet.map((letter) {
+              return _KeyboardKey(
+                label: letter,
+                size: keySize,
+                fontSize: fontSize,
+                enabled: enabled,
+                onTap: () => onTap(letter),
+              );
+            }).toList(),
           ),
         );
       },
@@ -354,17 +427,17 @@ class _LetterBank extends StatelessWidget {
   }
 }
 
-class _BankKey extends StatelessWidget {
+class _KeyboardKey extends StatelessWidget {
   final String label;
-  final double width;
-  final double height;
+  final double size;
+  final double fontSize;
   final bool enabled;
   final VoidCallback onTap;
 
-  const _BankKey({
+  const _KeyboardKey({
     required this.label,
-    required this.width,
-    required this.height,
+    required this.size,
+    required this.fontSize,
     required this.enabled,
     required this.onTap,
   });
@@ -375,25 +448,23 @@ class _BankKey extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(15),
         child: Ink(
-          width: width,
-          height: height,
+          width: size,
+          height: size,
           decoration: BoxDecoration(
             color: enabled ? Colors.white : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(15),
             border: Border.all(
-              color: enabled
-                  ? AppColors.primary.withOpacity(0.55)
-                  : Colors.grey.shade300,
-              width: 1.4,
+              color: enabled ? const Color(0xFFC9C4FF) : Colors.grey.shade300,
+              width: 1.6,
             ),
             boxShadow: enabled
                 ? [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+                      color: AppColors.primary.withOpacity(0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
                   ]
                 : null,
@@ -403,69 +474,11 @@ class _BankKey extends StatelessWidget {
               label,
               style: TextStyle(
                 color: enabled ? AppColors.darkBlue : Colors.grey.shade500,
-                fontWeight: FontWeight.w800,
-                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                fontSize: fontSize,
                 height: 1,
               ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BackspaceKey extends StatelessWidget {
-  final bool enabled;
-  final VoidCallback onTap;
-  final double height;
-
-  const _BackspaceKey({
-    required this.enabled,
-    required this.onTap,
-    required this.height,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(10),
-        child: Ink(
-          height: height,
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          decoration: BoxDecoration(
-            color: enabled
-                ? AppColors.secondary.withOpacity(0.10)
-                : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: enabled
-                  ? AppColors.secondary.withOpacity(0.55)
-                  : Colors.grey.shade300,
-              width: 1.4,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.backspace_outlined,
-                size: 18,
-                color: enabled ? AppColors.secondary : Colors.grey.shade500,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'מחק',
-                style: TextStyle(
-                  color: enabled ? AppColors.secondary : Colors.grey.shade500,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
-                ),
-              ),
-            ],
           ),
         ),
       ),
