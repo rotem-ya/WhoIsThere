@@ -13,8 +13,15 @@ class AppColors {
   static const surface = Color(0xFFFFFFFF);
   static const error = Color(0xFFE53E3E);
 
+  static const backgroundTop = Color(0xFF11183B);
+  static const backgroundBottom = Color(0xFF24145F);
+  static const cardColor = Color(0xFFFFFBFF);
+  static const primaryAction = primary;
+  static const success = Color(0xFF22C55E);
+  static const danger = Color(0xFFEF4444);
+
   static const pageBackground = LinearGradient(
-    colors: [Color(0xFF11183B), Color(0xFF26358C), Color(0xFF6D42F5)],
+    colors: [backgroundTop, Color(0xFF26358C), backgroundBottom],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );

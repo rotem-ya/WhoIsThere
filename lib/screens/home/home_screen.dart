@@ -18,66 +18,92 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserProvider);
 
-    return AppScaffold(
-      backgroundGradient: AppColors.pageBackground,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  userAsync.when(
-                    data: (user) => _HomeTopBar(
-                      name: user?.name ?? 'שחקן',
-                      photoUrl: user?.photoUrl,
-                      points: user?.totalPoints ?? 0,
-                      onProfile: () => context.push('/profile'),
-                    ),
-                    loading: () => const SizedBox(height: 52),
-                    error: (_, __) => const SizedBox(height: 52),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  const _HomeHero(),
-                  const SizedBox(height: AppSpacing.xl),
-                  AppButton(
-                    label: 'צור חדר',
-                    icon: Icons.add_rounded,
-                    onPressed: () => context.push('/create-room'),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  _SecondaryAction(
-                    label: 'הצטרף לחדר',
-                    icon: Icons.login_rounded,
-                    onPressed: () => context.push('/join-room'),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _MiniAction(
-                          label: 'חנות',
-                          icon: Icons.store_rounded,
-                          onPressed: () => context.push('/store'),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: _MiniAction(
-                          label: 'פרופיל',
-                          icon: Icons.person_rounded,
-                          onPressed: () => context.push('/profile'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        final shouldExit = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('לצאת מהאפליקציה?'),
+            content: const Text('האם אתה בטוח שברצונך לצאת?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('ביטול'),
               ),
-            ),
-          );
-        },
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('יציאה'),
+              ),
+            ],
+          ),
+        );
+        if (shouldExit == true && context.mounted) {
+          Navigator.of(context).maybePop();
+        }
+      },
+      child: AppScaffold(
+        backgroundGradient: AppColors.pageBackground,
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    userAsync.when(
+                      data: (user) => _HomeTopBar(
+                        name: user?.name ?? 'שחקן',
+                        photoUrl: user?.photoUrl,
+                        points: user?.totalPoints ?? 0,
+                        onProfile: () => context.push('/profile'),
+                      ),
+                      loading: () => const SizedBox(height: 52),
+                      error: (_, __) => const SizedBox(height: 52),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    const _HomeHero(),
+                    const SizedBox(height: AppSpacing.xl),
+                    AppButton(
+                      label: 'צור חדר',
+                      icon: Icons.add_rounded,
+                      onPressed: () => context.push('/create-room'),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _SecondaryAction(
+                      label: 'הצטרף לחדר',
+                      icon: Icons.login_rounded,
+                      onPressed: () => context.push('/join-room'),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _MiniAction(
+                            label: 'חנות',
+                            icon: Icons.store_rounded,
+                            onPressed: () => context.push('/store'),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: _MiniAction(
+                            label: 'פרופיל',
+                            icon: Icons.person_rounded,
+                            onPressed: () => context.push('/profile'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

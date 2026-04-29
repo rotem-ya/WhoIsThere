@@ -20,13 +20,6 @@ class StoreScreen extends ConsumerWidget {
     final userAsync = ref.watch(currentUserProvider);
     final imagesAsync = ref.watch(allImagesProvider);
 
-    void showComingSoon() {
-      AppFeedback.selection();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('הרמזים יופעלו בשלב המשחק הבא')),
-      );
-    }
-
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -50,6 +43,12 @@ class StoreScreen extends ConsumerWidget {
                 final freeImages = images.where((i) => !i.isPremium).toList();
                 final premiumImages = images.where((i) => i.isPremium).toList();
                 final user = userAsync.value;
+                void showComingSoon() {
+                  AppFeedback.selection();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('הרמזים יופעלו בשלב הבא')),
+                  );
+                }
 
                 return SingleChildScrollView(
                   child: Column(
@@ -104,32 +103,37 @@ class StoreScreen extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.lg),
                         Text('חבילות פרמיום', style: AppTextStyles.titleLight),
                         const SizedBox(height: AppSpacing.sm),
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: AppSpacing.md,
-                            mainAxisSpacing: AppSpacing.md,
-                            childAspectRatio: 0.76,
-                          ),
-                          itemCount: premiumImages.length,
-                          itemBuilder: (context, index) {
-                            final image = premiumImages[index];
-                            final owned =
-                                user?.purchasedImageIds.contains(image.id) ??
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final columns = constraints.maxWidth < 360 ? 1 : 2;
+                            return GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: columns,
+                                crossAxisSpacing: AppSpacing.md,
+                                mainAxisSpacing: AppSpacing.md,
+                                childAspectRatio: columns == 1 ? 1.35 : 0.78,
+                              ),
+                              itemCount: premiumImages.length,
+                              itemBuilder: (context, index) {
+                                final image = premiumImages[index];
+                                final owned = user?.purchasedImageIds
+                                        .contains(image.id) ??
                                     false;
-                            final canAfford =
-                                (user?.totalPoints ?? 0) >= image.cost;
-                            return _ImagePackCard(
-                              image: image,
-                              isOwned: owned,
-                              canAfford: canAfford,
-                              onBuy: owned
-                                  ? null
-                                  : () => _purchaseImage(context, ref, image,
-                                      user?.totalPoints ?? 0),
+                                final canAfford =
+                                    (user?.totalPoints ?? 0) >= image.cost;
+                                return _ImagePackCard(
+                                  image: image,
+                                  isOwned: owned,
+                                  canAfford: canAfford,
+                                  onBuy: owned
+                                      ? null
+                                      : () => _purchaseImage(context, ref,
+                                          image, user?.totalPoints ?? 0),
+                                );
+                              },
                             );
                           },
                         ),
