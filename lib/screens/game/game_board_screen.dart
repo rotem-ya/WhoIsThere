@@ -148,7 +148,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                       Navigator.pop(context);
                       _endTurn();
                     },
-              child: const Text('סיים תור בלי ניחוש'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.darkBlue.withOpacity(0.42),
+                textStyle: AppTextStyles.body.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              child: const Text('דלג על ניחוש'),
             ),
           ],
         ),
@@ -215,19 +222,22 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final headerHeight = math.min(52.0, constraints.maxHeight * 0.08);
-              final playersHeight =
-                  math.min(78.0, constraints.maxHeight * 0.12);
+              final compactPlayers = room.players.length > 5;
+              final headerHeight =
+                  math.min(48.0, constraints.maxHeight * 0.075);
+              final playersHeight = compactPlayers
+                  ? math.min(52.0, constraints.maxHeight * 0.08)
+                  : math.min(68.0, constraints.maxHeight * 0.10);
               final guessHeight = canGuess ? 64.0 : 0.0;
               final reservedHeight =
-                  headerHeight + playersHeight + guessHeight + AppSpacing.md;
+                  headerHeight + playersHeight + guessHeight + AppSpacing.sm;
               final boardHeight = math.max(
                 240.0,
                 constraints.maxHeight - reservedHeight,
               );
               final boardWidth = constraints.maxWidth;
-              final boardSide = math.min(boardWidth, boardHeight * 0.82);
-              final imageScale = (1.0 - ratio * 0.10).clamp(0.90, 1.0);
+              final boardSide = math.min(boardWidth, boardHeight * 0.96);
+              final imageScale = (1.0 - ratio * 0.07).clamp(0.93, 1.0);
 
               return Stack(
                 children: [
@@ -260,6 +270,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                         child: _PlayersStrip(
                           room: room,
                           currentUserId: currentUser.id,
+                          compact: compactPlayers,
                         ),
                       ),
                       Expanded(
@@ -295,7 +306,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 padding:
                                     const EdgeInsets.only(top: AppSpacing.sm),
                                 child: AppButton(
-                                  label: 'Guess',
+                                  label: 'נחש',
                                   icon: Icons.psychology_alt_rounded,
                                   onPressed: () =>
                                       _openGuessSheet(room, canSubmitAnswer),
@@ -404,8 +415,13 @@ class _ScorePill extends StatelessWidget {
 class _PlayersStrip extends StatelessWidget {
   final RoomModel room;
   final String? currentUserId;
+  final bool compact;
 
-  const _PlayersStrip({required this.room, this.currentUserId});
+  const _PlayersStrip({
+    required this.room,
+    this.currentUserId,
+    required this.compact,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -417,16 +433,18 @@ class _PlayersStrip extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             margin: const EdgeInsets.symmetric(horizontal: 2),
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            padding:
+                EdgeInsets.symmetric(vertical: compact ? 2 : AppSpacing.xs),
             decoration: BoxDecoration(
               color: isCurrentTurn
-                  ? Colors.white.withOpacity(0.18)
+                  ? AppColors.accent.withOpacity(compact ? 0.30 : 0.24)
                   : Colors.white.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(compact ? 999 : 18),
               border: Border.all(
                 color: isCurrentTurn
-                    ? AppColors.accent.withOpacity(0.7)
+                    ? Colors.white.withOpacity(0.82)
                     : Colors.white.withOpacity(0.10),
+                width: isCurrentTurn ? 2 : 1,
               ),
             ),
             child: Column(
@@ -435,22 +453,24 @@ class _PlayersStrip extends StatelessWidget {
                 PlayerAvatar(
                   name: player.name,
                   photoUrl: player.photoUrl,
-                  radius: 12,
+                  radius: compact ? 11 : 12,
                   isCurrentTurn: isCurrentTurn,
                   isEliminated: player.isEliminated,
                 ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  player.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.body.copyWith(
-                    color: Colors.white,
-                    fontSize: 10,
-                    height: 1,
+                if (!compact) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    player.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.body.copyWith(
+                      color: Colors.white,
+                      fontSize: 10,
+                      height: 1,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
