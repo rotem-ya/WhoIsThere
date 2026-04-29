@@ -104,9 +104,18 @@ class _HomeTopBar extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('שלום, ${name.split(' ').first}',
-                  style: AppTextStyles.titleLight),
-              Text('מוכן לחשוף מקום חדש?', style: AppTextStyles.subtitleLight),
+              Text(
+                'שלום, ${name.split(' ').first}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.titleLight,
+              ),
+              Text(
+                'מוכן לחשוף מקום חדש?',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.subtitleLight,
+              ),
             ],
           ),
         ),
@@ -155,7 +164,10 @@ class _HomeHero extends StatelessWidget {
                 const Center(child: Text('🧩', style: TextStyle(fontSize: 76))),
           ),
           const SizedBox(height: AppSpacing.lg),
-          Text('Guess the Place', style: AppTextStyles.titleDark),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text('Guess the Place', style: AppTextStyles.titleDark),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'פתח חדר, חשוף חלקים, ונחש את המקום לפני כולם.',

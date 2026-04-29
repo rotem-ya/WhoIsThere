@@ -210,6 +210,8 @@ class _CategoryCard extends StatelessWidget {
             Text(
               category.label,
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: (selected
                   ? AppTextStyles.titleLight
                   : AppTextStyles.titleDark),

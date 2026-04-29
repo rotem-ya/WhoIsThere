@@ -56,74 +56,98 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Widget build(BuildContext context) {
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
-      child: Column(
-        children: [
-          const Spacer(flex: 2),
-          AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, child) {
-              final value = _pulseController.value;
-              return Transform.scale(
-                scale: 0.96 + value * 0.05,
-                child: Container(
-                  width: 170,
-                  height: 170,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(46),
-                    border: Border.all(color: Colors.white.withOpacity(0.18)),
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            AppColors.accent.withOpacity(0.22 + value * 0.18),
-                        blurRadius: 30 + value * 22,
-                        spreadRadius: 2 + value * 4,
-                      ),
-                    ],
-                  ),
-                  child: child,
-                ),
-              );
-            },
-            child: const _SplashMark(),
-          ).animate().fadeIn(duration: 450.ms).scale(curve: Curves.easeOutBack),
-          const SizedBox(height: AppSpacing.xl),
-          Text('Guess the Place',
-              style: AppTextStyles.titleLight.copyWith(fontSize: 32)),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'חשוף את המקום לפני כולם',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.subtitleLight,
-          ),
-          const Spacer(flex: 2),
-          AnimatedBuilder(
-            animation: _dotController,
-            builder: (context, _) {
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(3, (index) {
-                  final phase = (_dotController.value + index / 3) % 1.0;
-                  return Container(
-                    width: 8 + phase * 5,
-                    height: 8,
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.35 + phase * 0.5),
-                      borderRadius: BorderRadius.circular(999),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                children: [
+                  const SizedBox(height: AppSpacing.xl),
+                  AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, child) {
+                      final value = _pulseController.value;
+                      return Transform.scale(
+                        scale: 0.96 + value * 0.05,
+                        child: Container(
+                          width: 170,
+                          height: 170,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(46),
+                            border: Border.all(
+                                color: Colors.white.withOpacity(0.18)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.accent
+                                    .withOpacity(0.22 + value * 0.18),
+                                blurRadius: 30 + value * 22,
+                                spreadRadius: 2 + value * 4,
+                              ),
+                            ],
+                          ),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: const _SplashMark(),
+                  )
+                      .animate()
+                      .fadeIn(duration: 450.ms)
+                      .scale(curve: Curves.easeOutBack),
+                  const SizedBox(height: AppSpacing.xl),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                      'Guess the Place',
+                      style: AppTextStyles.titleLight.copyWith(fontSize: 32),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  );
-                }),
-              );
-            },
-          ),
-          const SizedBox(height: AppSpacing.xl),
-        ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'חשוף את המקום לפני כולם',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.subtitleLight,
+                  ),
+                  SizedBox(height: mathMax(40, constraints.maxHeight * 0.16)),
+                  AnimatedBuilder(
+                    animation: _dotController,
+                    builder: (context, _) {
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(3, (index) {
+                          final phase =
+                              (_dotController.value + index / 3) % 1.0;
+                          return Container(
+                            width: 8 + phase * 5,
+                            height: 8,
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.xs),
+                            decoration: BoxDecoration(
+                              color:
+                                  Colors.white.withOpacity(0.35 + phase * 0.5),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          );
+                        }),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 }
+
+double mathMax(double a, double b) => a > b ? a : b;
 
 class _SplashMark extends StatelessWidget {
   const _SplashMark();

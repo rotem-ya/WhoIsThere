@@ -33,7 +33,7 @@ class AppHeader extends StatelessWidget {
             ),
           ),
           SizedBox(
-            width: 48,
+            width: 72,
             child: Align(
               alignment: Alignment.centerLeft,
               child: trailing ?? const SizedBox.shrink(),

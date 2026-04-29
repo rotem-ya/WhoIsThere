@@ -163,7 +163,10 @@ class _IdentityHero extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        Text('Guess the Place', style: AppTextStyles.titleLight),
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Text('Guess the Place', style: AppTextStyles.titleLight),
+        ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           'משחק ניחוש מקומות מרובה משתתפים',

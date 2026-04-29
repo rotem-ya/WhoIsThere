@@ -129,11 +129,15 @@ class _WinScreenState extends ConsumerState<WinScreen> {
                                   Text(
                                     _gameImage!.answer,
                                     textAlign: TextAlign.center,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
                                     style: AppTextStyles.titleDark,
                                   ),
                                   const SizedBox(height: AppSpacing.xs),
                                   Text(
                                     _gameImage!.category.label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: AppTextStyles.subtitleDark,
                                   ),
                                 ],

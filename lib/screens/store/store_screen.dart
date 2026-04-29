@@ -20,6 +20,13 @@ class StoreScreen extends ConsumerWidget {
     final userAsync = ref.watch(currentUserProvider);
     final imagesAsync = ref.watch(allImagesProvider);
 
+    void showComingSoon() {
+      AppFeedback.selection();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('הרמזים יופעלו בשלב המשחק הבא')),
+      );
+    }
+
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -76,7 +83,7 @@ class StoreScreen extends ConsumerWidget {
                               cost: GameConstants.hintCost,
                               canAfford: (user?.totalPoints ?? 0) >=
                                   GameConstants.hintCost,
-                              onBuy: () {},
+                              onBuy: showComingSoon,
                             ),
                           ),
                           const SizedBox(width: AppSpacing.md),
@@ -88,7 +95,7 @@ class StoreScreen extends ConsumerWidget {
                               cost: GameConstants.categoryHintCost,
                               canAfford: (user?.totalPoints ?? 0) >=
                                   GameConstants.categoryHintCost,
-                              onBuy: () {},
+                              onBuy: showComingSoon,
                             ),
                           ),
                         ],
@@ -250,8 +257,12 @@ class _HintCard extends StatelessWidget {
         children: [
           Icon(icon, color: AppColors.primary, size: 30),
           const SizedBox(height: AppSpacing.sm),
-          Text(title,
-              style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w900)),
+          Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w900),
+          ),
           const SizedBox(height: AppSpacing.xs),
           Text(description,
               maxLines: 2,

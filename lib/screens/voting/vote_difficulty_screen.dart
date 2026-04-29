@@ -108,6 +108,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
               ),
               Text(
                 isHost ? 'הצבעת המארח שווה פי 2' : 'בחרו כמה צפוף יהיה הגריד',
+                textAlign: TextAlign.center,
                 style: AppTextStyles.subtitleLight,
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -225,6 +226,8 @@ class _DifficultyCard extends StatelessWidget {
                 children: [
                   Text(
                     difficulty.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: selected
                         ? AppTextStyles.titleLight
                         : AppTextStyles.titleDark,
@@ -232,6 +235,8 @@ class _DifficultyCard extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     '$gridSize×$gridSize • ${difficulty.startingPoints} נקודות פתיחה',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: selected
                         ? AppTextStyles.subtitleLight
                         : AppTextStyles.subtitleDark,
@@ -239,6 +244,8 @@ class _DifficultyCard extends StatelessWidget {
                   if (votes > 0)
                     Text(
                       '$votes הצבעות',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: selected
                           ? AppTextStyles.subtitleLight
                           : AppTextStyles.subtitleDark,

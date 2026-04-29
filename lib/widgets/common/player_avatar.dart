@@ -42,9 +42,8 @@ class PlayerAvatar extends StatelessWidget {
           CircleAvatar(
             radius: radius,
             backgroundColor: AppColors.primary.withOpacity(0.2),
-            backgroundImage: photoUrl != null
-                ? CachedNetworkImageProvider(photoUrl!)
-                : null,
+            backgroundImage:
+                photoUrl != null ? CachedNetworkImageProvider(photoUrl!) : null,
             child: photoUrl == null
                 ? Text(
                     name.isNotEmpty ? name[0].toUpperCase() : '?',
