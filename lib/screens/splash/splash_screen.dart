@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/ui/app_scaffold.dart';
+import '../../core/ui/app_spacing.dart';
+import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
-import '../../widgets/common/premium_scaffold.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -13,16 +16,21 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
+    with TickerProviderStateMixin {
+  late final AnimationController _pulseController;
+  late final AnimationController _dotController;
 
   @override
   void initState() {
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
+    _dotController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
 
     Future.delayed(const Duration(milliseconds: 2400), () {
       if (!mounted) return;
@@ -40,154 +48,121 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void dispose() {
     _pulseController.dispose();
+    _dotController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return PremiumScaffold(
+    return AppScaffold(
+      backgroundGradient: AppColors.pageBackground,
       child: Column(
         children: [
-          const Spacer(flex: 3),
+          const Spacer(flex: 2),
           AnimatedBuilder(
             animation: _pulseController,
             builder: (context, child) {
-              return Container(
-                width: 130,
-                height: 130,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(36),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF6C63FF)
-                          .withOpacity(0.3 + 0.2 * _pulseController.value),
-                      blurRadius: 40 + 20 * _pulseController.value,
-                      spreadRadius: 4,
-                    ),
-                  ],
+              final value = _pulseController.value;
+              return Transform.scale(
+                scale: 0.96 + value * 0.05,
+                child: Container(
+                  width: 170,
+                  height: 170,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(46),
+                    border: Border.all(color: Colors.white.withOpacity(0.18)),
+                    boxShadow: [
+                      BoxShadow(
+                        color:
+                            AppColors.accent.withOpacity(0.22 + value * 0.18),
+                        blurRadius: 30 + value * 22,
+                        spreadRadius: 2 + value * 4,
+                      ),
+                    ],
+                  ),
+                  child: child,
                 ),
-                child: child,
               );
             },
-            child: Container(
-              width: 130,
-              height: 130,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.white.withOpacity(0.30),
-                    Colors.white.withOpacity(0.08),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(36),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.28),
-                  width: 1.5,
-                ),
-              ),
-              child: const Stack(
-                alignment: Alignment.center,
-                children: [
-                  PremiumPuzzlePreview(size: 88),
-                  Text('🗺️', style: TextStyle(fontSize: 54)),
-                ],
-              ),
-            ),
-          )
-              .animate()
-              .scale(
-                begin: const Offset(0.6, 0.6),
-                duration: 700.ms,
-                curve: Curves.easeOutBack,
-              )
-              .fadeIn(duration: 500.ms),
-          const SizedBox(height: 36),
-          const Text(
-            'Guess the Place',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 34,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.5,
-            ),
-          )
-              .animate(delay: 300.ms)
-              .fadeIn(duration: 500.ms)
-              .slideY(begin: 0.3, end: 0),
-          const SizedBox(height: 10),
+            child: const _SplashMark(),
+          ).animate().fadeIn(duration: 450.ms).scale(curve: Curves.easeOutBack),
+          const SizedBox(height: AppSpacing.xl),
+          Text('Guess the Place',
+              style: AppTextStyles.titleLight.copyWith(fontSize: 32)),
+          const SizedBox(height: AppSpacing.sm),
           Text(
-            'זהה מקומות מסביב לעולם',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.3,
-            ),
-          ).animate(delay: 500.ms).fadeIn(duration: 500.ms),
-          const Spacer(flex: 3),
-          _LoadingDots().animate(delay: 900.ms).fadeIn(),
-          const SizedBox(height: 56),
+            'חשוף את המקום לפני כולם',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.subtitleLight,
+          ),
+          const Spacer(flex: 2),
+          AnimatedBuilder(
+            animation: _dotController,
+            builder: (context, _) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(3, (index) {
+                  final phase = (_dotController.value + index / 3) % 1.0;
+                  return Container(
+                    width: 8 + phase * 5,
+                    height: 8,
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.35 + phase * 0.5),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  );
+                }),
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.xl),
         ],
       ),
     );
   }
 }
 
-class _LoadingDots extends StatefulWidget {
-  @override
-  State<_LoadingDots> createState() => _LoadingDotsState();
-}
-
-class _LoadingDotsState extends State<_LoadingDots>
-    with TickerProviderStateMixin {
-  late List<AnimationController> _controllers;
-
-  @override
-  void initState() {
-    super.initState();
-    _controllers = List.generate(3, (i) {
-      final c = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 600),
-      );
-      Future.delayed(Duration(milliseconds: i * 180), () {
-        if (mounted) c.repeat(reverse: true);
-      });
-      return c;
-    });
-  }
-
-  @override
-  void dispose() {
-    for (final c in _controllers) {
-      c.dispose();
-    }
-    super.dispose();
-  }
+class _SplashMark extends StatelessWidget {
+  const _SplashMark();
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(3, (i) {
-        return AnimatedBuilder(
-          animation: _controllers[i],
-          builder: (context, _) {
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 5),
-              width: 8,
-              height: 8,
+    return Center(
+      child: SizedBox(
+        width: 104,
+        height: 104,
+        child: GridView.builder(
+          padding: EdgeInsets.zero,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 6,
+            crossAxisSpacing: 6,
+          ),
+          itemCount: 9,
+          itemBuilder: (context, index) {
+            final revealed = index == 1 || index == 4 || index == 6;
+            return DecoratedBox(
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color:
-                    Colors.white.withOpacity(0.3 + 0.7 * _controllers[i].value),
+                color: revealed ? Colors.white : Colors.white.withOpacity(0.22),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text(
+                  revealed ? '📍' : '?',
+                  style: TextStyle(
+                    color: revealed ? AppColors.primary : Colors.white70,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
               ),
             );
           },
-        );
-      }),
+        ),
+      ),
     );
   }
 }
