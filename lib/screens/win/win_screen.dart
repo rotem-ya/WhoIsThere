@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:confetti/confetti.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/game_constants.dart';
+import '../../core/ui/app_scaffold.dart';
+import '../../core/ui/app_spacing.dart';
+import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
-import '../../widgets/common/gradient_button.dart';
+import '../../widgets/common/app_button.dart';
+import '../../widgets/common/app_card.dart';
 import '../../widgets/common/player_avatar.dart';
-import '../../widgets/common/premium_scaffold.dart';
 
 class WinScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -79,33 +81,40 @@ class _WinScreenState extends ConsumerState<WinScreen> {
 
         return Stack(
           children: [
-            PremiumScaffold(
-              showBeams: true,
+            AppScaffold(
+              backgroundGradient: isWinner
+                  ? AppColors.primaryGradient
+                  : AppColors.pageBackground,
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    PremiumScreenHeader(
-                      eyebrow: isWinner ? 'VICTORY' : 'GAME OVER',
-                      title: isWinner ? 'ניצחת בענק' : 'המשחק נגמר',
-                      subtitle: winner == null
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      isWinner ? 'ניצחת!' : 'המשחק נגמר',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.titleLight.copyWith(fontSize: 34),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      winner == null
                           ? 'הנה התוצאות'
                           : isWinner
                               ? 'זיהית את המקום לפני כולם'
-                              : '${winner.name} לקח/ה את הסיבוב',
-                      icon: isWinner
-                          ? Icons.emoji_events_rounded
-                          : Icons.flag_rounded,
-                    ).animate().fadeIn().slideY(begin: -0.08),
-                    const SizedBox(height: 18),
+                              : '${winner.name} ניצח/ה בסיבוב',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.subtitleLight,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
                     if (_gameImage != null)
-                      PremiumGlassCard(
-                        padding: const EdgeInsets.all(12),
-                        radius: 30,
+                      AppCard(
+                        padding: EdgeInsets.zero,
                         child: Column(
                           children: [
                             ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(24)),
                               child: CachedNetworkImage(
                                 imageUrl: _gameImage!.imageUrl,
                                 height: 220,
@@ -113,44 +122,32 @@ class _WinScreenState extends ConsumerState<WinScreen> {
                                 fit: BoxFit.cover,
                               ),
                             ),
-                            const SizedBox(height: 14),
-                            Text(
-                              _gameImage!.answer,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            Text(
-                              _gameImage!.category.label,
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.62),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
+                            Padding(
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    _gameImage!.answer,
+                                    textAlign: TextAlign.center,
+                                    style: AppTextStyles.titleDark,
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(
+                                    _gameImage!.category.label,
+                                    style: AppTextStyles.subtitleDark,
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
-                      ).animate(delay: 180.ms).fadeIn().scale(
-                            begin: const Offset(0.96, 0.96),
-                            curve: Curves.easeOutBack,
-                          ),
-                    const SizedBox(height: 18),
-                    PremiumGlassCard(
-                      padding: const EdgeInsets.all(18),
+                      ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AppCard(
                       child: Column(
                         children: [
-                          const Text(
-                            'לוח תוצאות',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
+                          Text('תוצאות', style: AppTextStyles.titleDark),
+                          const SizedBox(height: AppSpacing.md),
                           ...sortedPlayers.asMap().entries.map(
                                 (entry) => _ScoreRow(
                                   rank: entry.key + 1,
@@ -162,14 +159,11 @@ class _WinScreenState extends ConsumerState<WinScreen> {
                               ),
                         ],
                       ),
-                    ).animate(delay: 300.ms).fadeIn().slideY(begin: 0.12),
-                    const SizedBox(height: 18),
-                    GradientButton(
-                      text: 'חזור לבית',
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AppButton(
+                      label: 'חזור לבית',
                       icon: Icons.home_rounded,
-                      gradient: isWinner
-                          ? AppColors.accentGradient
-                          : AppColors.primaryGradient,
                       onPressed: () {
                         ref.read(currentRoomIdProvider.notifier).state = null;
                         context.go('/home');
@@ -227,37 +221,30 @@ class _ScoreRow extends StatelessWidget {
                 : '$rank.';
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         children: [
-          Text(
-            medal,
-            style: const TextStyle(fontSize: 20),
-          ),
-          const SizedBox(width: 12),
+          Text(medal, style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: AppSpacing.sm),
           PlayerAvatar(
-            name: player.name,
-            photoUrl: player.photoUrl,
-            radius: 16,
-          ),
-          const SizedBox(width: 10),
+              name: player.name, photoUrl: player.photoUrl, radius: 16),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               player.name + (isCurrentUser ? ' (את/ה)' : ''),
-              style: TextStyle(
-                color: isCurrentUser ? AppColors.warning : Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.body.copyWith(
+                color: isWinner ? AppColors.primary : AppColors.darkBlue,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ),
-          if (isWinner) const Text('👑 ', style: TextStyle(fontSize: 14)),
           Text(
             '${player.score} נק׳',
-            style: TextStyle(
-              color: isWinner ? AppColors.warning : Colors.white70,
-              fontWeight: FontWeight.w800,
-              fontSize: 15,
+            style: AppTextStyles.body.copyWith(
+              color: isWinner ? AppColors.primary : AppColors.darkBlue,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ],

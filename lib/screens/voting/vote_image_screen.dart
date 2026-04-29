@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/game_constants.dart';
+import '../../core/ui/app_scaffold.dart';
+import '../../core/ui/app_spacing.dart';
+import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/room_model.dart';
-import '../../widgets/common/gradient_button.dart';
-import '../../widgets/common/premium_scaffold.dart';
+import '../../widgets/common/app_button.dart';
+import '../../widgets/common/app_card.dart';
+import '../../widgets/common/app_header.dart';
 
 class VoteImageScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -79,22 +82,18 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
         final isHost = currentUser.id == room.hostId;
         final myVote = room.imageVotes[currentUser.id];
 
-        const availableCategories = [
+        const categories = [
           ImageCategory.israeliLandmark,
           ImageCategory.landmark,
         ];
 
-        return PremiumScaffold(
-          showBeams: true,
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
+        return AppScaffold(
+          backgroundGradient: AppColors.pageBackground,
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              PremiumScreenHeader(
-                eyebrow: 'שלב 1 מתוך 2',
-                title: 'איזה עולם נחשוף?',
-                subtitle:
-                    isHost ? 'הצבעת המארח שווה פי 2' : 'בחר קטגוריה לפאזל הבא',
+              AppHeader(
+                title: 'בחירת עולם',
                 leading: IconButton(
                   icon: const Icon(Icons.exit_to_app_rounded,
                       color: Colors.white),
@@ -105,58 +104,58 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                     if (context.mounted) context.go('/home');
                   },
                 ),
-              ).animate().fadeIn().slideY(begin: -0.12),
-              const SizedBox(height: 18),
+              ),
+              Text(
+                isHost
+                    ? 'הצבעת המארח שווה פי 2'
+                    : 'בחרו איזו תמונה תופיע בפאזל',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.subtitleLight,
+              ),
+              const SizedBox(height: AppSpacing.lg),
               Expanded(
                 child: Column(
-                  children: availableCategories.asMap().entries.map((entry) {
-                    final i = entry.key;
-                    final cat = entry.value;
-                    final isSelected = _selectedCategory == cat.name;
-                    final voteCount = room.imageVotes.values
-                        .where((v) => v == cat.name)
+                  children: categories.map((category) {
+                    final selected = _selectedCategory == category.name;
+                    final votes = room.imageVotes.values
+                        .where((v) => v == category.name)
                         .length;
                     return Expanded(
                       child: Padding(
-                        padding: EdgeInsets.only(
-                          bottom: i == availableCategories.length - 1 ? 0 : 12,
-                        ),
-                        child: GestureDetector(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                        child: _CategoryCard(
+                          category: category,
+                          selected: selected,
+                          votes: votes,
+                          locked: myVote != null,
                           onTap: myVote == null
-                              ? () =>
-                                  setState(() => _selectedCategory = cat.name)
+                              ? () => setState(
+                                  () => _selectedCategory = category.name)
                               : null,
-                          child: _CategoryCard(
-                            category: cat,
-                            isSelected: isSelected,
-                            voteCount: voteCount,
-                            isLocked: myVote != null,
-                          ),
-                        )
-                            .animate(delay: (i * 90).ms)
-                            .fadeIn(duration: 350.ms)
-                            .slideX(begin: 0.16),
+                        ),
                       ),
                     );
                   }).toList(),
                 ),
               ),
-              const SizedBox(height: 16),
               if (myVote == null)
-                GradientButton(
-                  text: _selectedCategory != null
-                      ? 'נעול על הבחירה'
-                      : 'בחר קטגוריה',
+                AppButton(
+                  label:
+                      _selectedCategory == null ? 'בחר קטגוריה' : 'אשר בחירה',
                   icon: Icons.how_to_vote_rounded,
                   onPressed: _selectedCategory != null && !_hasVoted
                       ? () => _confirmVote(room)
                       : null,
-                ).animate(delay: 200.ms).fadeIn()
+                )
               else
-                const PremiumStatusPill(
-                  icon: Icons.check_circle_rounded,
-                  text: 'הצבעה נשלחה! מכינים את השלב הבא...',
-                ).animate().fadeIn(),
+                AppCard(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Text(
+                    'הצבעה נשלחה. עוברים לשלב הבא...',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.body,
+                  ),
+                ),
             ],
           ),
         );
@@ -170,166 +169,60 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
 
 class _CategoryCard extends StatelessWidget {
   final ImageCategory category;
-  final bool isSelected;
-  final int voteCount;
-  final bool isLocked;
+  final bool selected;
+  final int votes;
+  final bool locked;
+  final VoidCallback? onTap;
 
   const _CategoryCard({
     required this.category,
-    required this.isSelected,
-    required this.voteCount,
-    required this.isLocked,
+    required this.selected,
+    required this.votes,
+    required this.locked,
+    required this.onTap,
   });
-
-  LinearGradient get _gradient {
-    if (category == ImageCategory.israeliLandmark) {
-      return const LinearGradient(
-        colors: [Color(0xFF0057B7), Color(0xFF003580)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-    }
-    return AppColors.primaryGradient;
-  }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedScale(
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOutBack,
-      scale: isSelected ? 1.03 : 1,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(28),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
+        duration: const Duration(milliseconds: 180),
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          gradient: isSelected ? _gradient : null,
-          color: isSelected ? null : Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: isSelected
-                ? Colors.white.withOpacity(0.32)
-                : Colors.grey.shade200,
-            width: isSelected ? 2.4 : 1.5,
-          ),
+          color: selected ? AppColors.primary : AppColors.surface,
+          borderRadius: BorderRadius.circular(28),
           boxShadow: [
             BoxShadow(
-              color: isSelected
-                  ? _gradient.colors.first.withOpacity(0.48)
-                  : Colors.black.withOpacity(0.06),
-              blurRadius: isSelected ? 28 : 8,
-              offset: const Offset(0, 10),
+              color: Colors.black.withOpacity(selected ? 0.24 : 0.14),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
-        child: Stack(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (isSelected)
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.white.withOpacity(0.18),
-                        Colors.transparent,
-                      ],
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                    ),
-                  ),
-                )
-                    .animate(
-                        onPlay: (controller) =>
-                            controller.repeat(reverse: true))
-                    .fade(
-                      begin: 0.25,
-                      end: 0.8,
-                      duration: 900.ms,
-                    ),
-              ),
-            Center(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AnimatedScale(
-                      duration: const Duration(milliseconds: 240),
-                      scale: isSelected ? 1.12 : 1,
-                      child: Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? Colors.white.withOpacity(0.18)
-                              : AppColors.primary.withOpacity(0.07),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            category.emoji,
-                            style: const TextStyle(fontSize: 42),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      category.label,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: isSelected ? Colors.white : AppColors.darkBlue,
-                        height: 1.3,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (voteCount > 0) ...[
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? Colors.white.withOpacity(0.25)
-                              : AppColors.secondary.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '🗳️  $voteCount',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color:
-                                isSelected ? Colors.white : AppColors.secondary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+            Text(category.emoji, style: const TextStyle(fontSize: 56)),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              category.label,
+              textAlign: TextAlign.center,
+              style: (selected
+                  ? AppTextStyles.titleLight
+                  : AppTextStyles.titleDark),
             ),
-            if (isSelected)
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check_rounded,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
+            if (votes > 0) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                '$votes הצבעות',
+                style: selected
+                    ? AppTextStyles.subtitleLight
+                    : AppTextStyles.subtitleDark,
               ),
+            ],
           ],
         ),
       ),
