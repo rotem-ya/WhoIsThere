@@ -124,38 +124,81 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     }
   }
 
-  Future<void> _openGuessSheet(RoomModel room, bool canSubmitAnswer) async {
-    if (_gameImage == null || !canSubmitAnswer) return;
+  Future<void> _openGuessSheet(RoomModel room) async {
+    if (_gameImage == null) return;
     AppFeedback.primary();
+
+    final penalty = room.selectedDifficulty?.wrongGuessPenalty ?? 0;
+
     await AppBottomSheet.show<void>(
       context: context,
       child: SizedBox(
-        height: math.min(MediaQuery.of(context).size.height * 0.48, 360),
+        // Use up to 52 % of screen height; cap at 400 to leave room on large
+        // screens. The bottom sheet is isScrollControlled so it can grow.
+        height: math.min(MediaQuery.of(context).size.height * 0.52, 400),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Wrong-guess cost warning – clearly visible before submitting
+            Container(
+              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.warning.withOpacity(0.5),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.warning_amber_rounded,
+                      color: AppColors.warning, size: 16),
+                  const SizedBox(width: AppSpacing.xs),
+                  Flexible(
+                    child: Text(
+                      'ניחוש שגוי יעלה $penalty מטבעות',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.body.copyWith(
+                        color: const Color(0xFF7A4F00),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Expanded(
               child: LetterBankInput(
                 key: ValueKey('lbi_sheet_${_gameImage!.id}'),
                 answer: _gameImage!.answer,
-                enabled: canSubmitAnswer,
+                enabled: true,
                 onComplete: (filled) => _onAnswerComplete(room, filled),
               ),
             ),
-            TextButton(
+            // Skip button: high contrast so it's never missed
+            TextButton.icon(
               onPressed: _isActing
                   ? null
                   : () {
                       Navigator.pop(context);
                       _endTurn();
                     },
+              icon: const Icon(Icons.skip_next_rounded, size: 18),
+              label: const Text('דלג על הניחוש'),
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.darkBlue.withOpacity(0.42),
+                foregroundColor: AppColors.secondary,
                 textStyle: AppTextStyles.body.copyWith(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              child: const Text('דלג על ניחוש'),
             ),
           ],
         ),
@@ -208,9 +251,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         final canFlipPiece =
             isMyTurn && !_hasFlipped && !allRevealed && !_isActing;
         final isEliminated = myPlayer?.isEliminated == true;
+        // Guessing is optional and always available when it's your turn –
+        // the player is never forced to guess after flipping.
         final canSubmitAnswer = isMyTurn && !isEliminated && !_isActing;
-        final canGuess = _hasFlipped && canSubmitAnswer;
         final ratio = _revealedRatio(room, gridSize);
+        final imageScale = (1.0 - ratio * 0.07).clamp(0.93, 1.0);
 
         return AppScaffold(
           backgroundGradient: AppColors.pageBackground,
@@ -220,66 +265,50 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             AppSpacing.md,
             AppSpacing.md,
           ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final compactPlayers = room.players.length > 5;
-              final headerHeight =
-                  math.min(48.0, constraints.maxHeight * 0.075);
-              final playersHeight = compactPlayers
-                  ? math.min(52.0, constraints.maxHeight * 0.08)
-                  : math.min(68.0, constraints.maxHeight * 0.10);
-              final guessHeight = canGuess ? 64.0 : 0.0;
-              final reservedHeight =
-                  headerHeight + playersHeight + guessHeight + AppSpacing.sm;
-              final boardHeight = math.max(
-                240.0,
-                constraints.maxHeight - reservedHeight,
-              );
-              final boardWidth = constraints.maxWidth;
-              final boardSide = math.min(boardWidth, boardHeight * 0.96);
-              final imageScale = (1.0 - ratio * 0.07).clamp(0.93, 1.0);
-
-              return Stack(
+          child: Stack(
+            children: [
+              // Animated background that shifts as pieces are revealed
+              Positioned.fill(
+                child: _GameBackground(revealedRatio: ratio),
+              ),
+              Column(
                 children: [
-                  Positioned.fill(
-                    child: _GameBackground(revealedRatio: ratio),
+                  // Header – fixed intrinsic height (48 px from AppHeader)
+                  AppHeader(
+                    title: isVirtualTurn
+                        ? '${currentPlayer?.name ?? '...'} משחק'
+                        : isMyTurn
+                            ? 'התור שלך'
+                            : 'ממתינים',
+                    leading: IconButton(
+                      icon: const Icon(
+                        Icons.exit_to_app_rounded,
+                        color: Colors.white,
+                      ),
+                      onPressed: () =>
+                          _confirmExit(context, currentUser.id),
+                    ),
+                    trailing: _ScorePill(score: myPlayer?.score ?? 0),
                   ),
-                  Column(
-                    children: [
-                      SizedBox(
-                        height: headerHeight,
-                        child: AppHeader(
-                          title: isVirtualTurn
-                              ? '${currentPlayer?.name ?? '...'} משחק'
-                              : isMyTurn
-                                  ? 'התור שלך'
-                                  : 'ממתינים',
-                          leading: IconButton(
-                            icon: const Icon(
-                              Icons.exit_to_app_rounded,
-                              color: Colors.white,
-                            ),
-                            onPressed: () =>
-                                _confirmExit(context, currentUser.id),
-                          ),
-                          trailing: _ScorePill(score: myPlayer?.score ?? 0),
-                        ),
-                      ),
-                      SizedBox(
-                        height: playersHeight,
-                        child: _PlayersStrip(
-                          room: room,
-                          currentUserId: currentUser.id,
-                          compact: compactPlayers,
-                        ),
-                      ),
-                      Expanded(
-                        child: Center(
-                          child: SizedBox(
-                            width: boardSide,
-                            height: boardSide,
-                            child: Transform.scale(
-                              scale: imageScale,
+                  // Players strip – sizes itself from its own content
+                  _PlayersStrip(
+                    room: room,
+                    currentUserId: currentUser.id,
+                    compact: room.players.length > 5,
+                  ),
+                  // Board – fills all remaining vertical space,
+                  // board square is computed inside to never overflow.
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, bc) {
+                        final side =
+                            math.min(bc.maxWidth, bc.maxHeight).toDouble();
+                        return Center(
+                          child: Transform.scale(
+                            scale: imageScale,
+                            child: SizedBox(
+                              width: side,
+                              height: side,
                               child: AppCard(
                                 padding: EdgeInsets.zero,
                                 radius: 30,
@@ -290,37 +319,44 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                     gameImage: _gameImage,
                                     gridSize: gridSize,
                                     canFlipPiece: canFlipPiece,
-                                    onFlip: (index) => _flipPiece(index, room),
+                                    onFlip: (index) =>
+                                        _flipPiece(index, room),
                                   ),
                                 ),
                               ),
                             ),
                           ),
+                        );
+                      },
+                    ),
+                  ),
+                  // Action buttons – shown only on the active player's turn
+                  if (canSubmitAnswer) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    AppButton(
+                      label: 'נחש',
+                      icon: Icons.psychology_alt_rounded,
+                      onPressed: () => _openGuessSheet(room),
+                    ),
+                    // After flipping a piece the player can skip guessing –
+                    // this button is prominent so it is never missed.
+                    if (_hasFlipped)
+                      TextButton.icon(
+                        onPressed: _isActing ? null : _endTurn,
+                        icon: const Icon(Icons.skip_next_rounded, size: 18),
+                        label: const Text('דלג על הניחוש'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.secondary,
+                          textStyle: AppTextStyles.body.copyWith(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 220),
-                        child: canGuess
-                            ? Padding(
-                                key: const ValueKey('guess_button'),
-                                padding:
-                                    const EdgeInsets.only(top: AppSpacing.sm),
-                                child: AppButton(
-                                  label: 'נחש',
-                                  icon: Icons.psychology_alt_rounded,
-                                  onPressed: () =>
-                                      _openGuessSheet(room, canSubmitAnswer),
-                                ),
-                              )
-                            : const SizedBox.shrink(
-                                key: ValueKey('no_controls'),
-                              ),
-                      ),
-                    ],
-                  ),
+                  ],
                 ],
-              );
-            },
+              ),
+            ],
           ),
         );
       },
@@ -426,56 +462,60 @@ class _PlayersStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final players = room.sortedPlayers.take(10).toList();
-    return Row(
-      children: players.map((player) {
-        final isCurrentTurn = room.currentTurnUserId == player.id;
-        return Expanded(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            padding:
-                EdgeInsets.symmetric(vertical: compact ? 2 : AppSpacing.xs),
-            decoration: BoxDecoration(
-              color: isCurrentTurn
-                  ? AppColors.accent.withOpacity(compact ? 0.30 : 0.24)
-                  : Colors.white.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(compact ? 999 : 18),
-              border: Border.all(
+    return IntrinsicHeight(
+      child: Row(
+        children: players.map((player) {
+          final isCurrentTurn = room.currentTurnUserId == player.id;
+          return Expanded(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              padding: EdgeInsets.symmetric(
+                vertical: compact ? 2 : AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
                 color: isCurrentTurn
-                    ? Colors.white.withOpacity(0.82)
-                    : Colors.white.withOpacity(0.10),
-                width: isCurrentTurn ? 2 : 1,
+                    ? AppColors.accent.withOpacity(compact ? 0.30 : 0.24)
+                    : Colors.white.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(compact ? 999 : 18),
+                border: Border.all(
+                  color: isCurrentTurn
+                      ? Colors.white.withOpacity(0.82)
+                      : Colors.white.withOpacity(0.10),
+                  width: isCurrentTurn ? 2 : 1,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  PlayerAvatar(
+                    name: player.name,
+                    photoUrl: player.photoUrl,
+                    radius: compact ? 11 : 12,
+                    isCurrentTurn: isCurrentTurn,
+                    isEliminated: player.isEliminated,
+                  ),
+                  if (!compact) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      player.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.body.copyWith(
+                        color: Colors.white,
+                        fontSize: 10,
+                        height: 1,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                PlayerAvatar(
-                  name: player.name,
-                  photoUrl: player.photoUrl,
-                  radius: compact ? 11 : 12,
-                  isCurrentTurn: isCurrentTurn,
-                  isEliminated: player.isEliminated,
-                ),
-                if (!compact) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    player.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.body.copyWith(
-                      color: Colors.white,
-                      fontSize: 10,
-                      height: 1,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      }).toList(),
+          );
+        }).toList(),
+      ),
     );
   }
 }

@@ -198,67 +198,88 @@ class _DifficultyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(28),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.surface,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardHeight = constraints.maxHeight;
+        // Reduce emoji and padding on compact cards so 3 cards fit on small screens.
+        final isCompact = cardHeight < 110;
+        final emojiSize = isCompact ? 28.0 : 42.0;
+        final EdgeInsets padding = isCompact
+            ? const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md, vertical: AppSpacing.sm)
+            : const EdgeInsets.all(AppSpacing.lg);
+        final gap = isCompact ? AppSpacing.sm : AppSpacing.lg;
+
+        return InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(selected ? 0.24 : 0.14),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: double.infinity,
+            height: cardHeight,
+            padding: padding,
+            decoration: BoxDecoration(
+              color: selected ? AppColors.primary : AppColors.surface,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      Colors.black.withOpacity(selected ? 0.24 : 0.14),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Text(difficulty.emoji, style: const TextStyle(fontSize: 42)),
-            const SizedBox(width: AppSpacing.lg),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    difficulty.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: selected
-                        ? AppTextStyles.titleLight
-                        : AppTextStyles.titleDark,
+            child: Row(
+              children: [
+                Text(difficulty.emoji,
+                    style: TextStyle(fontSize: emojiSize)),
+                SizedBox(width: gap),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        difficulty.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: selected
+                            ? AppTextStyles.titleLight
+                            : AppTextStyles.titleDark,
+                      ),
+                      if (!isCompact) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          '$gridSize×$gridSize • ${difficulty.startingPoints} נקודות פתיחה',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: selected
+                              ? AppTextStyles.subtitleLight
+                              : AppTextStyles.subtitleDark,
+                        ),
+                      ],
+                      if (votes > 0 && !isCompact)
+                        Text(
+                          '$votes הצבעות',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: selected
+                              ? AppTextStyles.subtitleLight
+                              : AppTextStyles.subtitleDark,
+                        ),
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    '$gridSize×$gridSize • ${difficulty.startingPoints} נקודות פתיחה',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: selected
-                        ? AppTextStyles.subtitleLight
-                        : AppTextStyles.subtitleDark,
-                  ),
-                  if (votes > 0)
-                    Text(
-                      '$votes הצבעות',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: selected
-                          ? AppTextStyles.subtitleLight
-                          : AppTextStyles.subtitleDark,
-                    ),
-                ],
-              ),
+                ),
+                if (selected)
+                  const Icon(Icons.check_circle_rounded,
+                      color: Colors.white, size: 28),
+              ],
             ),
-            if (selected)
-              const Icon(Icons.check_circle_rounded,
-                  color: Colors.white, size: 28),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

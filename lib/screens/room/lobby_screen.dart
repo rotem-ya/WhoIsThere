@@ -96,21 +96,31 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                 ),
               ),
               AppCard(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
                 child: InkWell(
                   onTap: () => _copyCode(room.code),
                   borderRadius: BorderRadius.circular(24),
                   child: Column(
                     children: [
-                      Text(_codeCopied ? 'הקוד הועתק' : 'קוד חדר',
-                          style: AppTextStyles.subtitleDark),
-                      const SizedBox(height: AppSpacing.sm),
                       Text(
-                        room.code,
-                        textDirection: TextDirection.ltr,
-                        style: AppTextStyles.titleDark.copyWith(
-                          fontSize: 36,
-                          letterSpacing: 8,
+                        _codeCopied ? 'הקוד הועתק ✓' : 'קוד חדר – לחץ להעתקה',
+                        style: AppTextStyles.subtitleDark,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      // FittedBox prevents the code from wrapping on narrow screens
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          room.code,
+                          textDirection: TextDirection.ltr,
+                          maxLines: 1,
+                          style: AppTextStyles.titleDark.copyWith(
+                            fontSize: 36,
+                            letterSpacing: 8,
+                          ),
                         ),
                       ),
                     ],
@@ -127,23 +137,34 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
               ),
               const SizedBox(height: AppSpacing.sm),
               Expanded(
-                child: GridView.builder(
-                  itemCount: room.players.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: AppSpacing.sm,
-                    crossAxisSpacing: AppSpacing.sm,
-                    childAspectRatio: 3.2,
-                  ),
-                  itemBuilder: (context, index) {
-                    final player = room.players.values.elementAt(index);
-                    return _PlayerTile(
-                      player: player,
-                      isCurrentUser: player.id == currentUser?.id,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // mainAxisExtent gives each tile a fixed height so names
+                    // are never clipped regardless of screen width.
+                    final tileHeight =
+                        (constraints.maxHeight / 4).clamp(44.0, 60.0);
+                    return GridView.builder(
+                      itemCount: room.players.length,
+                      gridDelegate:
+                          SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: AppSpacing.sm,
+                        crossAxisSpacing: AppSpacing.sm,
+                        mainAxisExtent: tileHeight,
+                      ),
+                      itemBuilder: (context, index) {
+                        final player =
+                            room.players.values.elementAt(index);
+                        return _PlayerTile(
+                          player: player,
+                          isCurrentUser: player.id == currentUser?.id,
+                        );
+                      },
                     );
                   },
                 ),
               ),
+              const SizedBox(height: AppSpacing.sm),
               if (isHost)
                 AppButton(
                   label: _isStarting
@@ -190,8 +211,12 @@ class _PlayerTile extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // Radius 16 (was 18) fits comfortably inside the adaptive tile height
           PlayerAvatar(
-              name: player.name, photoUrl: player.photoUrl, radius: 18),
+            name: player.name,
+            photoUrl: player.photoUrl,
+            radius: 16,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
@@ -199,11 +224,12 @@ class _PlayerTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.body.copyWith(
+                fontSize: 13,
                 color: isCurrentUser ? Colors.white : AppColors.darkBlue,
               ),
             ),
           ),
-          if (player.isHost) const Text('👑'),
+          if (player.isHost) const Text('👑', style: TextStyle(fontSize: 14)),
         ],
       ),
     );

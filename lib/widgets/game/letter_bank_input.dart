@@ -162,8 +162,9 @@ class _LetterBankInputState extends State<LetterBankInput> {
       builder: (context, constraints) {
         final maxHeight = math.max(120.0, constraints.maxHeight);
         final answerHeight = _filled.length > 8 ? 96.0 : 56.0;
-        final errorHeight = 22.0;
-        final keyboardHeight = math.max(78.0, maxHeight - answerHeight - errorHeight);
+        const errorHeight = 22.0;
+        final keyboardHeight =
+            math.max(80.0, maxHeight - answerHeight - errorHeight);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -243,43 +244,46 @@ class _AnswerBoard extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Width available after the delete button (46 px) and its gap (6 px).
+        final contentWidth = constraints.maxWidth - 52.0;
         final maxLettersInWord = words.isEmpty
             ? 1
             : words.map((w) => w.length).reduce(math.max);
-        final slotWidth = ((constraints.maxWidth - 64) / maxLettersInWord)
-            .clamp(30.0, 42.0)
-            .toDouble();
-        final slotHeight = (slotWidth + 8).clamp(38.0, 48.0).toDouble();
+
+        // Slot width scales down with long words so they never overflow the row.
+        final slotWidth =
+            (contentWidth / maxLettersInWord).clamp(18.0, 42.0).toDouble();
+        final slotHeight = (slotWidth + 6).clamp(30.0, 48.0).toDouble();
+        // Font scales with slot so small slots stay legible.
+        final slotFontSize = (slotWidth * 0.55).clamp(11.0, 20.0).toDouble();
 
         return Row(
           children: [
             Expanded(
               child: Center(
-                child: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: Wrap(
-                    textDirection: TextDirection.rtl,
-                    alignment: WrapAlignment.center,
-                    spacing: 10,
-                    runSpacing: 6,
-                    children: words.map((wordIndices) {
-                      return Row(
-                        textDirection: TextDirection.rtl,
-                        mainAxisSize: MainAxisSize.min,
-                        children: wordIndices.map((idx) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2),
-                            child: _LetterSlot(
-                              letter: filled[idx],
-                              enabled: enabled,
-                              width: slotWidth,
-                              height: slotHeight,
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    }).toList(),
-                  ),
+                child: Wrap(
+                  textDirection: TextDirection.rtl,
+                  alignment: WrapAlignment.center,
+                  spacing: 10,
+                  runSpacing: 6,
+                  children: words.map((wordIndices) {
+                    return Row(
+                      textDirection: TextDirection.rtl,
+                      mainAxisSize: MainAxisSize.min,
+                      children: wordIndices.map((idx) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: _LetterSlot(
+                            letter: filled[idx],
+                            enabled: enabled,
+                            width: slotWidth,
+                            height: slotHeight,
+                            fontSize: slotFontSize,
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  }).toList(),
                 ),
               ),
             ),
@@ -297,12 +301,14 @@ class _LetterSlot extends StatelessWidget {
   final bool enabled;
   final double width;
   final double height;
+  final double fontSize;
 
   const _LetterSlot({
     required this.letter,
     required this.enabled,
     required this.width,
     required this.height,
+    required this.fontSize,
   });
 
   @override
@@ -336,10 +342,10 @@ class _LetterSlot extends StatelessWidget {
       child: Center(
         child: Text(
           letter ?? '',
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.darkBlue,
             fontWeight: FontWeight.w900,
-            fontSize: 20,
+            fontSize: fontSize,
             height: 1,
           ),
         ),
@@ -397,13 +403,18 @@ class _LetterKeyboard extends StatelessWidget {
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final height = constraints.maxHeight;
-        final columns = width < 350 ? 6 : 7;
+
+        // More columns on wider screens; fewer on narrow to keep keys tappable.
+        final columns = width < 260 ? 5 : width < 340 ? 6 : 7;
         final rows = (_hebrewAlphabet.length / columns).ceil();
-        const gap = 8.0;
+        const gap = 7.0;
+
         final keyWidth = (width - gap * (columns - 1)) / columns;
         final keyHeight = (height - gap * (rows - 1)) / rows;
-        final keySize = math.min(keyWidth, keyHeight).clamp(34.0, 54.0);
-        final fontSize = (keySize * 0.48).clamp(18.0, 26.0).toDouble();
+
+        // Minimum 24 px so keys are always visible; no hard overflow from clamp.
+        final keySize = math.min(keyWidth, keyHeight).clamp(24.0, 48.0);
+        final fontSize = (keySize * 0.48).clamp(13.0, 24.0).toDouble();
 
         return Center(
           child: Wrap(
@@ -456,7 +467,8 @@ class _KeyboardKey extends StatelessWidget {
             color: enabled ? Colors.white : Colors.grey.shade100,
             borderRadius: BorderRadius.circular(15),
             border: Border.all(
-              color: enabled ? const Color(0xFFC9C4FF) : Colors.grey.shade300,
+              color:
+                  enabled ? const Color(0xFFC9C4FF) : Colors.grey.shade300,
               width: 1.6,
             ),
             boxShadow: enabled
