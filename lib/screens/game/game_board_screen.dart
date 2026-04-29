@@ -6,13 +6,18 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/game_constants.dart';
+import '../../core/ui/app_scaffold.dart';
+import '../../core/ui/app_spacing.dart';
+import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/room_model.dart';
 import '../../models/game_image_model.dart';
+import '../../widgets/common/app_bottom_sheet.dart';
+import '../../widgets/common/app_button.dart';
+import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_feedback.dart';
+import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
-import '../../widgets/common/premium_scaffold.dart';
-import '../../widgets/common/score_badge.dart';
 import '../../widgets/game/letter_bank_input.dart';
 
 class GameBoardScreen extends ConsumerStatefulWidget {
@@ -119,6 +124,55 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     }
   }
 
+  Future<void> _openGuessSheet(RoomModel room, bool canSubmitAnswer) async {
+    if (_gameImage == null || !canSubmitAnswer) return;
+    AppFeedback.primary();
+    await AppBottomSheet.show<void>(
+      context: context,
+      child: SizedBox(
+        height: math.min(MediaQuery.of(context).size.height * 0.48, 360),
+        child: Column(
+          children: [
+            Expanded(
+              child: LetterBankInput(
+                key: ValueKey('lbi_sheet_${_gameImage!.id}'),
+                answer: _gameImage!.answer,
+                enabled: canSubmitAnswer,
+                onComplete: (filled) => _onAnswerComplete(room, filled),
+              ),
+            ),
+            TextButton(
+              onPressed: _isActing
+                  ? null
+                  : () {
+                      Navigator.pop(context);
+                      _endTurn();
+                    },
+              child: const Text('סיים תור בלי ניחוש'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _gridSizeFor(Difficulty difficulty) {
+    switch (difficulty) {
+      case Difficulty.veryEasy:
+      case Difficulty.easy:
+        return 5;
+      case Difficulty.medium:
+        return 7;
+      case Difficulty.hard:
+        return 9;
+    }
+  }
+
+  double _revealedRatio(RoomModel room, int gridSize) {
+    final total = math.max(1, gridSize * gridSize);
+    return (room.placedPieces.length / total).clamp(0.0, 1.0);
+  }
+
   @override
   Widget build(BuildContext context) {
     final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
@@ -137,7 +191,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         if (currentUser == null) return const SizedBox();
 
         final difficulty = room.selectedDifficulty ?? Difficulty.easy;
-        final gridSize = difficulty.gridSize;
+        final gridSize = _gridSizeFor(difficulty);
         final currentPlayer = room.players[room.currentTurnUserId];
         final isVirtualTurn = currentPlayer?.isBot == true;
         final isMyTurn =
@@ -148,124 +202,114 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             isMyTurn && !_hasFlipped && !allRevealed && !_isActing;
         final isEliminated = myPlayer?.isEliminated == true;
         final canSubmitAnswer = isMyTurn && !isEliminated && !_isActing;
+        final canGuess = _hasFlipped && canSubmitAnswer;
+        final ratio = _revealedRatio(room, gridSize);
 
-        return PremiumScaffold(
-          showBeams: true,
-          child: Column(
-            children: [
-              ArcadeHeader(
-                eyebrow: difficulty.label,
-                title: isVirtualTurn
-                    ? '${currentPlayer?.name ?? '...'} משחק'
-                    : isMyTurn
-                        ? 'התור שלך'
-                        : 'ממתינים',
-                subtitle: '${room.availablePieceIndices.length} חלקים מוסתרים',
-                leading: IconButton(
-                  icon: const Icon(Icons.exit_to_app_rounded,
-                      color: Colors.white),
-                  onPressed: () => _confirmExit(context, currentUser.id),
-                ),
-                trailing: myPlayer == null
-                    ? null
-                    : Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.14),
-                          borderRadius: BorderRadius.circular(16),
-                          border:
-                              Border.all(color: Colors.white.withOpacity(0.16)),
-                        ),
-                        child: Text(
-                          '${myPlayer.score} נק׳',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
+        return AppScaffold(
+          backgroundGradient: AppColors.pageBackground,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            AppSpacing.md,
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final headerHeight = math.min(52.0, constraints.maxHeight * 0.08);
+              final playersHeight =
+                  math.min(78.0, constraints.maxHeight * 0.12);
+              final guessHeight = canGuess ? 64.0 : 0.0;
+              final reservedHeight =
+                  headerHeight + playersHeight + guessHeight + AppSpacing.md;
+              final boardHeight = math.max(
+                240.0,
+                constraints.maxHeight - reservedHeight,
+              );
+              final boardWidth = constraints.maxWidth;
+              final boardSide = math.min(boardWidth, boardHeight * 0.82);
+              final imageScale = (1.0 - ratio * 0.10).clamp(0.90, 1.0);
+
+              return Stack(
+                children: [
+                  Positioned.fill(
+                    child: _GameBackground(revealedRatio: ratio),
+                  ),
+                  Column(
+                    children: [
+                      SizedBox(
+                        height: headerHeight,
+                        child: AppHeader(
+                          title: isVirtualTurn
+                              ? '${currentPlayer?.name ?? '...'} משחק'
+                              : isMyTurn
+                                  ? 'התור שלך'
+                                  : 'ממתינים',
+                          leading: IconButton(
+                            icon: const Icon(
+                              Icons.exit_to_app_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: () =>
+                                _confirmExit(context, currentUser.id),
                           ),
+                          trailing: _ScorePill(score: myPlayer?.score ?? 0),
                         ),
                       ),
-              ),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final height = constraints.maxHeight;
-                    final width = constraints.maxWidth;
-                    final playersHeight = room.players.length > 3 ? 72.0 : 88.0;
-                    final actionsHeight = 78.0;
-                    final verticalGaps = 18.0;
-                    final availableForPuzzleAndInput =
-                        height - playersHeight - actionsHeight - verticalGaps;
-                    final puzzleSize = math
-                        .min(width - 24, availableForPuzzleAndInput * 0.56)
-                        .clamp(188.0, 318.0)
-                        .toDouble();
-                    final inputHeight = math.max(
-                      150.0,
-                      availableForPuzzleAndInput - puzzleSize,
-                    );
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SizedBox(
-                          height: playersHeight,
-                          child: _PlayersBar(
-                            room: room,
-                            currentUserId: currentUser.id,
-                          ),
+                      SizedBox(
+                        height: playersHeight,
+                        child: _PlayersStrip(
+                          room: room,
+                          currentUserId: currentUser.id,
                         ),
-                        SizedBox(
-                          height: puzzleSize,
-                          child: Center(
-                            child: SizedBox.square(
-                              dimension: puzzleSize,
-                              child: _PuzzleBoard(
-                                room: room,
-                                gameImage: _gameImage,
-                                gridSize: gridSize,
-                                canFlipPiece: canFlipPiece,
-                                onFlip: (index) => _flipPiece(index, room),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: SizedBox(
+                            width: boardSide,
+                            height: boardSide,
+                            child: Transform.scale(
+                              scale: imageScale,
+                              child: AppCard(
+                                padding: EdgeInsets.zero,
+                                radius: 30,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(30),
+                                  child: _ImageRevealBoard(
+                                    room: room,
+                                    gameImage: _gameImage,
+                                    gridSize: gridSize,
+                                    canFlipPiece: canFlipPiece,
+                                    onFlip: (index) => _flipPiece(index, room),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                        SizedBox(
-                          height: inputHeight,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-                            child: _gameImage != null
-                                ? LetterBankInput(
-                                    key: ValueKey('lbi_${_gameImage!.id}'),
-                                    answer: _gameImage!.answer,
-                                    enabled: canSubmitAnswer,
-                                    onComplete: (filled) =>
-                                        _onAnswerComplete(room, filled),
-                                  )
-                                : const Center(
-                                    child: CircularProgressIndicator(
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        SizedBox(
-                          height: actionsHeight,
-                          child: _ActionRow(
-                            isMyTurn: isMyTurn,
-                            isVirtualTurn: isVirtualTurn,
-                            actingPlayerName: currentPlayer?.name,
-                            isActing: _isActing,
-                            isEliminated: isEliminated,
-                            onSkipTurn: _endTurn,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
+                      ),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        child: canGuess
+                            ? Padding(
+                                key: const ValueKey('guess_button'),
+                                padding:
+                                    const EdgeInsets.only(top: AppSpacing.sm),
+                                child: AppButton(
+                                  label: 'Guess',
+                                  icon: Icons.psychology_alt_rounded,
+                                  onPressed: () =>
+                                      _openGuessSheet(room, canSubmitAnswer),
+                                ),
+                              )
+                            : const SizedBox.shrink(
+                                key: ValueKey('no_controls'),
+                              ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
         );
       },
@@ -308,168 +352,124 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   }
 }
 
-class _ActionRow extends StatelessWidget {
-  final bool isMyTurn;
-  final bool isVirtualTurn;
-  final String? actingPlayerName;
-  final bool isActing;
-  final bool isEliminated;
-  final VoidCallback onSkipTurn;
+class _GameBackground extends StatelessWidget {
+  final double revealedRatio;
 
-  const _ActionRow({
-    required this.isMyTurn,
-    required this.isVirtualTurn,
-    required this.actingPlayerName,
-    required this.isActing,
-    required this.isEliminated,
-    required this.onSkipTurn,
-  });
+  const _GameBackground({required this.revealedRatio});
 
   @override
   Widget build(BuildContext context) {
-    if (!isMyTurn) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
-        child: Container(
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withOpacity(0.16)),
-          ),
-          child: Text(
-            '${actingPlayerName ?? 'שחקן'} משחק עכשיו',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-              fontSize: 15,
-              height: 1,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: AppColors.accentGradient,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.accent.withOpacity(0.22),
-              blurRadius: 14,
-              offset: const Offset(0, 8),
-            ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment(0, -0.25 + revealedRatio * 0.25),
+          radius: 1.05,
+          colors: const [
+            Color(0xFF26358C),
+            Color(0xFF11183B),
+            Color(0xFF070B20),
           ],
-        ),
-        child: ElevatedButton.icon(
-          onPressed: (isActing || isEliminated) ? null : onSkipTurn,
-          icon: const Icon(Icons.skip_next_rounded, size: 18),
-          label: Text(isVirtualTurn ? 'דלג עבור הבוט' : 'סיים תור'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            disabledBackgroundColor: Colors.grey.shade300,
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(22),
-            ),
-            textStyle: const TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 18,
-              height: 1,
-            ),
-          ),
         ),
       ),
     );
   }
 }
 
-class _PlayersBar extends StatelessWidget {
+class _ScorePill extends StatelessWidget {
+  final int score;
+
+  const _ScorePill({required this.score});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
+      ),
+      child: Text(
+        '$score',
+        style: AppTextStyles.body.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _PlayersStrip extends StatelessWidget {
   final RoomModel room;
   final String? currentUserId;
 
-  const _PlayersBar({required this.room, this.currentUserId});
+  const _PlayersStrip({required this.room, this.currentUserId});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 0, 10, 4),
-      child: Row(
-        children: room.sortedPlayers.map((player) {
-          final isCurrentTurn = room.currentTurnUserId == player.id;
-          return Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isCurrentTurn
-                      ? Colors.white.withOpacity(0.16)
-                      : Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.white.withOpacity(0.10)),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    PlayerAvatar(
-                      name: player.name,
-                      photoUrl: player.photoUrl,
-                      radius: 13,
-                      isCurrentTurn: isCurrentTurn,
-                      isEliminated: player.isEliminated,
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      player.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 11,
-                        height: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: ScoreBadge(
-                        score: player.score,
-                        isCurrentTurn: isCurrentTurn,
-                        isEliminated: player.isEliminated,
-                        isHost: player.isHost,
-                      ),
-                    ),
-                  ],
-                ),
+    final players = room.sortedPlayers.take(10).toList();
+    return Row(
+      children: players.map((player) {
+        final isCurrentTurn = room.currentTurnUserId == player.id;
+        return Expanded(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            decoration: BoxDecoration(
+              color: isCurrentTurn
+                  ? Colors.white.withOpacity(0.18)
+                  : Colors.white.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isCurrentTurn
+                    ? AppColors.accent.withOpacity(0.7)
+                    : Colors.white.withOpacity(0.10),
               ),
             ),
-          );
-        }).toList(),
-      ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                PlayerAvatar(
+                  name: player.name,
+                  photoUrl: player.photoUrl,
+                  radius: 12,
+                  isCurrentTurn: isCurrentTurn,
+                  isEliminated: player.isEliminated,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  player.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.body.copyWith(
+                    color: Colors.white,
+                    fontSize: 10,
+                    height: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
 
-class _PuzzleBoard extends StatelessWidget {
+class _ImageRevealBoard extends StatelessWidget {
   final RoomModel room;
   final GameImageModel? gameImage;
   final int gridSize;
   final bool canFlipPiece;
   final void Function(int)? onFlip;
 
-  const _PuzzleBoard({
+  const _ImageRevealBoard({
     required this.room,
-    this.gameImage,
+    required this.gameImage,
     required this.gridSize,
     required this.canFlipPiece,
     this.onFlip,
@@ -477,92 +477,78 @@ class _PuzzleBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: AppColors.boardBackground,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.30), width: 3),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accent.withOpacity(0.24),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (gameImage != null)
+          CachedNetworkImage(
+            imageUrl: gameImage!.imageUrl,
+            fit: BoxFit.cover,
+            placeholder: (_, __) => Container(color: AppColors.boardBackground),
+            errorWidget: (_, __, ___) =>
+                Container(color: AppColors.boardBackground),
+          )
+        else
+          Container(color: AppColors.boardBackground),
+        GridView.builder(
+          padding: EdgeInsets.zero,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: gridSize,
+            mainAxisSpacing: 0,
+            crossAxisSpacing: 0,
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(21),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (gameImage != null)
-              CachedNetworkImage(
-                imageUrl: gameImage!.imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (_, __) =>
-                    Container(color: AppColors.boardBackground),
-                errorWidget: (_, __, ___) =>
-                    Container(color: AppColors.boardBackground),
-              )
-            else
-              Container(color: AppColors.boardBackground),
-            GridView.builder(
-              padding: EdgeInsets.zero,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: gridSize,
-                mainAxisSpacing: 1,
-                crossAxisSpacing: 1,
-              ),
-              itemCount: gridSize * gridSize,
-              itemBuilder: (context, index) {
-                final isRevealed = room.placedPieces.containsKey(index);
-                final canFlip = canFlipPiece && !isRevealed;
+          itemCount: gridSize * gridSize,
+          itemBuilder: (context, index) {
+            final isRevealed = room.placedPieces.containsKey(index);
+            final canFlip = canFlipPiece && !isRevealed;
 
-                if (isRevealed) {
-                  return SizedBox.expand(key: ValueKey('empty_$index'));
-                }
+            if (isRevealed) {
+              return const SizedBox.expand();
+            }
 
-                return GestureDetector(
-                  key: ValueKey('h_$index'),
-                  onTap: canFlip ? () => onFlip?.call(index) : null,
-                  child: _HiddenCard(isFlippable: canFlip),
-                );
-              },
-            ),
-          ],
+            return GestureDetector(
+              key: ValueKey('hidden_$index'),
+              onTap: canFlip ? () => onFlip?.call(index) : null,
+              child: _AnimatedHiddenTile(enabled: canFlip),
+            );
+          },
         ),
-      ),
+      ],
     );
   }
 }
 
-class _HiddenCard extends StatelessWidget {
-  final bool isFlippable;
+class _AnimatedHiddenTile extends StatelessWidget {
+  final bool enabled;
 
-  const _HiddenCard({required this.isFlippable});
+  const _AnimatedHiddenTile({required this.enabled});
 
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
-        gradient: isFlippable
-            ? AppColors.primaryGradient
-            : const LinearGradient(
-                colors: [Color(0xFF26315F), Color(0xFF1D2652)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+        color: enabled
+            ? AppColors.primary.withOpacity(0.86)
+            : const Color(0xFF11183B).withOpacity(0.88),
+        border: Border.all(
+          color: Colors.white.withOpacity(enabled ? 0.18 : 0.08),
+          width: 0.5,
+        ),
       ),
       child: Center(
-        child: Text(
-          isFlippable ? '?' : '?',
-          style: TextStyle(
-            fontSize: isFlippable ? 20 : 16,
-            color: Colors.white.withOpacity(isFlippable ? 0.72 : 0.22),
-            fontWeight: FontWeight.w900,
+        child: AnimatedOpacity(
+          opacity: enabled ? 0.85 : 0.25,
+          duration: const Duration(milliseconds: 160),
+          child: const Text(
+            '?',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+            ),
           ),
         ),
       ),
