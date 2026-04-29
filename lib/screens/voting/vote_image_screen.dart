@@ -184,50 +184,78 @@ class _CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(28),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        width: double.infinity,
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.surface,
+    // LayoutBuilder gives us the actual height so we can adapt content.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardHeight = constraints.maxHeight;
+        final isCompact = cardHeight < 150;
+        // Scale emoji down on small screens to leave room for the title.
+        final emojiSize = isCompact ? 34.0 : 52.0;
+        final EdgeInsets padding = isCompact
+            ? const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.sm)
+            : const EdgeInsets.all(AppSpacing.lg);
+
+        return InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(selected ? 0.24 : 0.14),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: double.infinity,
+            // Explicit height so the card fills the Expanded slot and the
+            // inner Center/FittedBox can compute available space.
+            height: cardHeight,
+            padding: padding,
+            decoration: BoxDecoration(
+              color: selected ? AppColors.primary : AppColors.surface,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      Colors.black.withOpacity(selected ? 0.24 : 0.14),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(category.emoji, style: const TextStyle(fontSize: 56)),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              category.label,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: (selected
-                  ? AppTextStyles.titleLight
-                  : AppTextStyles.titleDark),
-            ),
-            if (votes > 0) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                '$votes הצבעות',
-                style: selected
-                    ? AppTextStyles.subtitleLight
-                    : AppTextStyles.subtitleDark,
+            child: Center(
+              // FittedBox scales the whole content block down uniformly if it
+              // does not fit, so no overflow can occur on any screen size.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      category.emoji,
+                      style: TextStyle(fontSize: emojiSize),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      category.label,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: selected
+                          ? AppTextStyles.titleLight
+                          : AppTextStyles.titleDark,
+                    ),
+                    if (votes > 0) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        '$votes הצבעות',
+                        style: selected
+                            ? AppTextStyles.subtitleLight
+                            : AppTextStyles.subtitleDark,
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ],
-          ],
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
