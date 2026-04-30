@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main, claude/puzzle-game-design-CaQqV, rotem/qa-fixes-step-1, claude/letter-bank-puzzle-game-9MzGR ]
+    branches: [ main, claude/puzzle-game-design-CaQqV, rotem/qa-fixes-step-1, claude/letter-bank-puzzle-game-9MzGR, claude/add-tile-images-aILCm ]
   workflow_dispatch:
 
 jobs:
@@ -34,6 +34,11 @@ jobs:
 
       - name: Write google-services.json
         run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
+
+      - name: Clean Flutter and pub cache
+        run: |
+          flutter clean
+          rm -rf ~/.pub-cache
 
       - name: Flutter pub get
         run: flutter pub get
