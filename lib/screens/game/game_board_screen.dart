@@ -335,6 +335,41 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   // Action buttons – shown only on the active player's turn
                   if (canSubmitAnswer) ...[
                     const SizedBox(height: AppSpacing.sm),
+                    // Warning about wrong guess cost
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.warning.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            size: 16,
+                            color: AppColors.warning,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'ניחוש שגוי יעלה מטבעות',
+                            style: AppTextStyles.body.copyWith(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.warning,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
                     AppButton(
                       label: 'נחש',
                       icon: Icons.psychology_alt_rounded,
@@ -343,15 +378,47 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     // After flipping a piece the player can skip guessing –
                     // this button is prominent so it is never missed.
                     if (_hasFlipped)
-                      TextButton.icon(
-                        onPressed: _isActing ? null : _endTurn,
-                        icon: const Icon(Icons.skip_next_rounded, size: 18),
-                        label: const Text('דלג על הניחוש'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.secondary,
-                          textStyle: AppTextStyles.body.copyWith(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: AppColors.secondary.withOpacity(0.4),
+                              width: 2,
+                            ),
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _isActing ? null : _endTurn,
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 14,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.skip_next_rounded,
+                                      size: 20,
+                                      color: AppColors.secondary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'דלג על הניחוש',
+                                      style: AppTextStyles.body.copyWith(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.secondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -593,24 +660,58 @@ class _AnimatedHiddenTile extends StatelessWidget {
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
-        color: enabled
-            ? AppColors.primary.withOpacity(0.97)
-            : const Color(0xFF11183B).withOpacity(0.96),
+        gradient: enabled
+            ? LinearGradient(
+                colors: [
+                  AppColors.primary.withOpacity(0.98),
+                  AppColors.primaryDark.withOpacity(0.96),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : LinearGradient(
+                colors: [
+                  const Color(0xFF11183B).withOpacity(0.97),
+                  const Color(0xFF0A0F28).withOpacity(0.95),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(
-          color: Colors.white.withOpacity(enabled ? 0.18 : 0.08),
-          width: 0.5,
+          color: enabled
+              ? Colors.white.withOpacity(0.25)
+              : Colors.white.withOpacity(0.10),
+          width: enabled ? 1.5 : 0.5,
         ),
+        boxShadow: enabled
+            ? [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
       ),
       child: Center(
         child: AnimatedOpacity(
-          opacity: enabled ? 0.85 : 0.25,
+          opacity: enabled ? 0.9 : 0.3,
           duration: const Duration(milliseconds: 160),
-          child: const Text(
+          child: Text(
             '?',
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w900,
               fontSize: 16,
+              shadows: enabled
+                  ? [
+                      Shadow(
+                        color: AppColors.accent.withOpacity(0.5),
+                        blurRadius: 4,
+                      ),
+                    ]
+                  : null,
             ),
           ),
         ),
