@@ -292,6 +292,12 @@ class RoomService {
     });
   }
 
+  Future<void> revealCell(String roomId, int index) async {
+    await _rooms.doc(roomId).update({
+      'placedPieces.${index.toString()}': 'revealed',
+    });
+  }
+
   Future<void> revealPiece({
     required String roomId,
     required String userId,

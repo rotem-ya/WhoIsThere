@@ -48,6 +48,10 @@ class RoomModel extends Equatable {
     return activePlayers[currentTurnIndex % activePlayers.length];
   }
 
+  String get imageId => selectedImageId ?? '';
+  List<int> get revealedCells => placedPieces.keys.toList();
+  int get gridSize => selectedDifficulty?.gridSize ?? 5;
+
   List<PlayerModel> get activePlayers =>
       players.values.where((p) => !p.isEliminated).toList();
 
