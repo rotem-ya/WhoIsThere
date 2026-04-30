@@ -290,12 +290,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     ),
                     trailing: _ScorePill(score: myPlayer?.score ?? 0),
                   ),
+                  const SizedBox(height: 4),
                   // Players strip – sizes itself from its own content
                   _PlayersStrip(
                     room: room,
                     currentUserId: currentUser.id,
                     compact: room.players.length > 5,
                   ),
+                  const SizedBox(height: 6),
                   // Board – fills all remaining vertical space,
                   // board square is computed inside to never overflow.
                   Expanded(
@@ -471,18 +473,19 @@ class _PlayersStrip extends StatelessWidget {
               duration: const Duration(milliseconds: 180),
               margin: const EdgeInsets.symmetric(horizontal: 2),
               padding: EdgeInsets.symmetric(
-                vertical: compact ? 2 : AppSpacing.xs,
+                vertical: compact ? 1 : 2,
+                horizontal: compact ? 1 : 2,
               ),
               decoration: BoxDecoration(
                 color: isCurrentTurn
                     ? AppColors.accent.withOpacity(compact ? 0.30 : 0.24)
                     : Colors.white.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(compact ? 999 : 18),
+                borderRadius: BorderRadius.circular(compact ? 999 : 12),
                 border: Border.all(
                   color: isCurrentTurn
                       ? Colors.white.withOpacity(0.82)
                       : Colors.white.withOpacity(0.10),
-                  width: isCurrentTurn ? 2 : 1,
+                  width: isCurrentTurn ? 1.5 : 0.5,
                 ),
               ),
               child: Column(
@@ -492,12 +495,12 @@ class _PlayersStrip extends StatelessWidget {
                   PlayerAvatar(
                     name: player.name,
                     photoUrl: player.photoUrl,
-                    radius: compact ? 11 : 12,
+                    radius: compact ? 8 : 10,
                     isCurrentTurn: isCurrentTurn,
                     isEliminated: player.isEliminated,
                   ),
                   if (!compact) ...[
-                    const SizedBox(height: AppSpacing.xs),
+                    const SizedBox(height: 2),
                     Text(
                       player.name,
                       maxLines: 1,
@@ -505,7 +508,7 @@ class _PlayersStrip extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: AppTextStyles.body.copyWith(
                         color: Colors.white,
-                        fontSize: 10,
+                        fontSize: 9,
                         height: 1,
                       ),
                     ),
@@ -591,8 +594,8 @@ class _AnimatedHiddenTile extends StatelessWidget {
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
         color: enabled
-            ? AppColors.primary.withOpacity(0.86)
-            : const Color(0xFF11183B).withOpacity(0.88),
+            ? AppColors.primary.withOpacity(0.97)
+            : const Color(0xFF11183B).withOpacity(0.96),
         border: Border.all(
           color: Colors.white.withOpacity(enabled ? 0.18 : 0.08),
           width: 0.5,
