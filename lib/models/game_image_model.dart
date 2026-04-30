@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/game_constants.dart';
+import '../widgets/game/letter_bank_input.dart' show normalizeHebrewFinals;
 
 class GameImageModel extends Equatable {
   final String id;
@@ -54,13 +55,10 @@ class GameImageModel extends Equatable {
         'thumbnailUrl': thumbnailUrl,
       };
 
-  bool isCorrectAnswer(String guess) {
-    final normalizedGuess = guess.trim().toLowerCase();
-    final allAnswers = [answer, ...acceptedAnswers]
-        .map((a) => a.trim().toLowerCase())
-        .toList();
-    return allAnswers.any((a) => a == normalizedGuess || a.contains(normalizedGuess) || normalizedGuess.contains(a));
-  }
+  // Strict equality after Hebrew final-letter normalization and space stripping.
+  // acceptedAnswers is intentionally ignored under the new mechanic.
+  bool isCorrectAnswer(String guess) =>
+      normalizeHebrewFinals(guess) == normalizeHebrewFinals(answer);
 
   @override
   List<Object?> get props => [id, name, answer, category, isPremium, cost];

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/game_constants.dart';
+import '../../core/ui/app_scaffold.dart';
+import '../../core/ui/app_spacing.dart';
+import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/room_model.dart';
-import '../../widgets/common/gradient_button.dart';
+import '../../widgets/common/app_button.dart';
+import '../../widgets/common/app_card.dart';
+import '../../widgets/common/app_header.dart';
 
 class VoteImageScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -61,8 +65,7 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final roomAsync = ref.watch(currentRoomProvider);
-    final imagesAsync = ref.watch(publicImagesProvider);
+    final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
 
     return roomAsync.when(
       data: (room) {
@@ -79,198 +82,81 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
         final isHost = currentUser.id == room.hostId;
         final myVote = room.imageVotes[currentUser.id];
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('הצבע על נושא'),
-            automaticallyImplyLeading: false,
-            leading: IconButton(
-              icon: const Icon(Icons.exit_to_app_rounded),
-              onPressed: () async {
-                await ref
-                    .read(roomServiceProvider)
-                    .leaveRoom(widget.roomId, currentUser.id);
-                if (context.mounted) context.go('/home');
-              },
-            ),
-          ),
-          body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // Vote counter + host badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            '🗳️ בחרו נושא לפאזל',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.darkBlue,
-                            ),
-                          ),
-                        ),
-                        if (isHost)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.warning.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              '👑 ×2',
-                              style: TextStyle(
-                                color: AppColors.warning,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ).animate().fadeIn(),
+        const categories = [
+          ImageCategory.israeliLandmark,
+          ImageCategory.landmark,
+        ];
 
-                  const SizedBox(height: 20),
-
-                  Expanded(
-                    child: imagesAsync.when(
-                      data: (images) {
-                        // Group by category — only show categories that have images
-                        final availableCategories = ImageCategory.values
-                            .where((cat) =>
-                                images.any((img) => img.category == cat))
-                            .toList();
-
-                        if (availableCategories.isEmpty) {
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text('😕',
-                                      style: TextStyle(fontSize: 48)),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'אין תמונות במאגר',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.darkBlue,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'יש להריץ את סקריפט הסידינג\nnode scripts/seed_images.js',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        color: Colors.grey,
-                                        fontFamily: 'monospace'),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  ElevatedButton.icon(
-                                    onPressed: () =>
-                                        ref.refresh(publicImagesProvider),
-                                    icon: const Icon(Icons.refresh_rounded),
-                                    label: const Text('נסה שוב'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-
-                        return GridView.builder(
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: 1.1,
-                          ),
-                          itemCount: availableCategories.length,
-                          itemBuilder: (context, i) {
-                            final cat = availableCategories[i];
-                            final isSelected =
-                                _selectedCategory == cat.name;
-                            final voteCount = room.imageVotes.values
-                                .where((v) => v == cat.name)
-                                .length;
-
-                            return GestureDetector(
-                              onTap: myVote == null
-                                  ? () => setState(
-                                      () => _selectedCategory = cat.name)
-                                  : null,
-                              child: _CategoryCard(
-                                category: cat,
-                                imageCount: images
-                                    .where((img) => img.category == cat)
-                                    .length,
-                                isSelected: isSelected,
-                                voteCount: voteCount,
-                                isLocked: myVote != null,
-                              ),
-                            )
-                                .animate(delay: (i * 80).ms)
-                                .fadeIn()
-                                .scale(curve: Curves.elasticOut);
-                          },
-                        );
-                      },
-                      loading: () => const Center(
-                          child: CircularProgressIndicator()),
-                      error: (e, _) =>
-                          Center(child: Text('שגיאה: $e')),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  if (myVote == null)
-                    GradientButton(
-                      text: _selectedCategory != null
-                          ? 'אשר בחירה'
-                          : 'בחר נושא תחילה',
-                      onPressed: _selectedCategory != null
-                          ? () => _confirmVote(room)
-                          : null,
-                    ).animate(delay: 300.ms).fadeIn()
-                  else
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.check_circle_rounded,
-                              color: AppColors.accent),
-                          SizedBox(width: 8),
-                          Text(
-                            'הצבעה נשלחה! עובר לשלב הבא...',
-                            style: TextStyle(
-                              color: AppColors.accent,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ).animate().fadeIn(),
-                ],
+        return AppScaffold(
+          backgroundGradient: AppColors.pageBackground,
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            children: [
+              AppHeader(
+                title: 'בחירת עולם',
+                leading: IconButton(
+                  icon: const Icon(Icons.exit_to_app_rounded,
+                      color: Colors.white),
+                  onPressed: () async {
+                    await ref
+                        .read(roomServiceProvider)
+                        .leaveRoom(widget.roomId, currentUser.id);
+                    if (context.mounted) context.go('/home');
+                  },
+                ),
               ),
-            ),
+              Text(
+                isHost
+                    ? 'הצבעת המארח שווה פי 2'
+                    : 'בחרו איזו תמונה תופיע בפאזל',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.subtitleLight,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Expanded(
+                child: Column(
+                  children: categories.map((category) {
+                    final selected = _selectedCategory == category.name;
+                    final votes = room.imageVotes.values
+                        .where((v) => v == category.name)
+                        .length;
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                        child: _CategoryCard(
+                          category: category,
+                          selected: selected,
+                          votes: votes,
+                          locked: myVote != null,
+                          onTap: myVote == null
+                              ? () => setState(
+                                  () => _selectedCategory = category.name)
+                              : null,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              if (myVote == null)
+                AppButton(
+                  label:
+                      _selectedCategory == null ? 'בחר קטגוריה' : 'אשר בחירה',
+                  icon: Icons.how_to_vote_rounded,
+                  onPressed: _selectedCategory != null && !_hasVoted
+                      ? () => _confirmVote(room)
+                      : null,
+                )
+              else
+                AppCard(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Text(
+                    'הצבעה נשלחה. עוברים לשלב הבא...',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.body,
+                  ),
+                ),
+            ],
           ),
         );
       },
@@ -283,110 +169,93 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
 
 class _CategoryCard extends StatelessWidget {
   final ImageCategory category;
-  final int imageCount;
-  final bool isSelected;
-  final int voteCount;
-  final bool isLocked;
+  final bool selected;
+  final int votes;
+  final bool locked;
+  final VoidCallback? onTap;
 
   const _CategoryCard({
     required this.category,
-    required this.imageCount,
-    required this.isSelected,
-    required this.voteCount,
-    required this.isLocked,
+    required this.selected,
+    required this.votes,
+    required this.locked,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isSelected ? AppColors.primary : Colors.transparent,
-          width: 2.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isSelected
-                ? AppColors.primary.withOpacity(0.25)
-                : Colors.black.withOpacity(0.06),
-            blurRadius: isSelected ? 16 : 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    category.emoji,
-                    style: const TextStyle(fontSize: 44),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    category.label,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: isSelected
-                          ? AppColors.primary
-                          : AppColors.darkBlue,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$imageCount תמונות',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade500,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (isSelected)
-            const Positioned(
-              top: 8,
-              right: 8,
-              child: CircleAvatar(
-                radius: 12,
-                backgroundColor: AppColors.primary,
-                child: Icon(Icons.check, color: Colors.white, size: 14),
-              ),
-            ),
-          if (voteCount > 0)
-            Positioned(
-              top: 8,
-              left: 8,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.secondary,
-                  borderRadius: BorderRadius.circular(10),
+    // LayoutBuilder gives us the actual height so we can adapt content.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardHeight = constraints.maxHeight;
+        final isCompact = cardHeight < 150;
+        // Scale emoji down on small screens to leave room for the title.
+        final emojiSize = isCompact ? 34.0 : 52.0;
+        final EdgeInsets padding = isCompact
+            ? const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.sm)
+            : const EdgeInsets.all(AppSpacing.lg);
+
+        return InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(28),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: double.infinity,
+            // Explicit height so the card fills the Expanded slot and the
+            // inner Center/FittedBox can compute available space.
+            height: cardHeight,
+            padding: padding,
+            decoration: BoxDecoration(
+              color: selected ? AppColors.primary : AppColors.surface,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      Colors.black.withOpacity(selected ? 0.24 : 0.14),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
                 ),
-                child: Text(
-                  '🗳️ $voteCount',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                  ),
+              ],
+            ),
+            child: Center(
+              // FittedBox scales the whole content block down uniformly if it
+              // does not fit, so no overflow can occur on any screen size.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      category.emoji,
+                      style: TextStyle(fontSize: emojiSize),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      category.label,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: selected
+                          ? AppTextStyles.titleLight
+                          : AppTextStyles.titleDark,
+                    ),
+                    if (votes > 0) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        '$votes הצבעות',
+                        style: selected
+                            ? AppTextStyles.subtitleLight
+                            : AppTextStyles.subtitleDark,
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 }

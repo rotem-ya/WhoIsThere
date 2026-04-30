@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'core/theme/app_theme.dart';
@@ -39,7 +40,7 @@ void main() async {
     return;
   }
 
-  runApp(const ProviderScope(child: WhoIsThereApp()));
+  runApp(const ProviderScope(child: GuessThePlaceApp()));
 }
 
 class _ErrorApp extends StatelessWidget {
@@ -49,6 +50,13 @@ class _ErrorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('he'), Locale('en')],
       home: Scaffold(
         backgroundColor: const Color(0xFF2D3561),
         body: SafeArea(
@@ -92,24 +100,31 @@ class _ErrorApp extends StatelessWidget {
   }
 }
 
-class WhoIsThereApp extends ConsumerWidget {
-  const WhoIsThereApp({super.key});
+class GuessThePlaceApp extends ConsumerWidget {
+  const GuessThePlaceApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
-      title: 'מי שם?',
+      title: 'Guess the Place',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: router,
       locale: const Locale('he'),
       supportedLocales: const [Locale('he'), Locale('en')],
-      builder: (context, child) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: child!,
-      ),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      builder: (context, child) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

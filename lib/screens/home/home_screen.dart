@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/ui/app_scaffold.dart';
+import '../../core/ui/app_spacing.dart';
+import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
-import '../../widgets/common/gradient_button.dart';
+import '../../widgets/common/app_button.dart';
+import '../../widgets/common/app_card.dart';
+import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/player_avatar.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -14,190 +18,233 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserProvider);
 
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFF8F9FF), Color(0xFFEEF0FF)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        final shouldExit = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('לצאת מהאפליקציה?'),
+            content: const Text('האם אתה בטוח שברצונך לצאת?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('ביטול'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('יציאה'),
+              ),
+            ],
           ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
+        );
+        if (shouldExit == true && context.mounted) {
+          Navigator.of(context).maybePop();
+        }
+      },
+      child: AppScaffold(
+        backgroundGradient: AppColors.pageBackground,
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Flexible(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          userAsync.when(
-                            data: (user) => Text(
-                              'היי, ${user?.name.split(' ').first ?? 'שחקן'}! 👋',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.darkBlue,
-                              ),
-                            ),
-                            loading: () => const SizedBox(height: 28),
-                            error: (_, __) => const Text('ברוך הבא!'),
-                          ),
-                          const Text(
-                            'מוכן לשחק?',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+                    userAsync.when(
+                      data: (user) => _HomeTopBar(
+                        name: user?.name ?? 'שחקן',
+                        photoUrl: user?.photoUrl,
+                        points: user?.totalPoints ?? 0,
+                        onProfile: () => context.push('/profile'),
                       ),
+                      loading: () => const SizedBox(height: 52),
+                      error: (_, __) => const SizedBox(height: 52),
                     ),
+                    const SizedBox(height: AppSpacing.xl),
+                    const _HomeHero(),
+                    const SizedBox(height: AppSpacing.xl),
+                    AppButton(
+                      label: 'צור חדר',
+                      icon: Icons.add_rounded,
+                      onPressed: () => context.push('/create-room'),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _SecondaryAction(
+                      label: 'הצטרף לחדר',
+                      icon: Icons.login_rounded,
+                      onPressed: () => context.push('/join-room'),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
                     Row(
                       children: [
-                        userAsync.when(
-                          data: (user) => Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: AppColors.warning.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.star_rounded,
-                                    color: AppColors.warning, size: 18),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${user?.totalPoints ?? 0}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.darkBlue,
-                                  ),
-                                ),
-                              ],
-                            ),
+                        Expanded(
+                          child: _MiniAction(
+                            label: 'חנות',
+                            icon: Icons.store_rounded,
+                            onPressed: () => context.push('/store'),
                           ),
-                          loading: () => const SizedBox(),
-                          error: (_, __) => const SizedBox(),
                         ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () => context.push('/profile'),
-                          child: userAsync.when(
-                            data: (user) => PlayerAvatar(
-                              name: user?.name ?? 'P',
-                              photoUrl: user?.photoUrl,
-                              radius: 22,
-                            ),
-                            loading: () => const CircleAvatar(radius: 22),
-                            error: (_, __) => const CircleAvatar(radius: 22),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: _MiniAction(
+                            label: 'פרופיל',
+                            icon: Icons.person_rounded,
+                            onPressed: () => context.push('/profile'),
                           ),
                         ),
                       ],
                     ),
                   ],
-                ).animate().fadeIn(duration: 400.ms),
-
-                const SizedBox(height: 32),
-
-                Center(
-                  child: Container(
-                    width: 180,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      gradient: AppColors.primaryGradient,
-                      borderRadius: BorderRadius.circular(40),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withOpacity(0.4),
-                          blurRadius: 30,
-                          offset: const Offset(0, 15),
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Text('🧩', style: TextStyle(fontSize: 90)),
-                    ),
-                  ),
-                )
-                    .animate(delay: 200.ms)
-                    .scale(curve: Curves.elasticOut, duration: 700.ms)
-                    .fadeIn(),
-
-                const SizedBox(height: 16),
-
-                const Center(
-                  child: Text(
-                    'מי שם?',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.darkBlue,
-                    ),
-                  ),
-                ).animate(delay: 400.ms).fadeIn(),
-
-                const Spacer(),
-
-                GradientButton(
-                  text: 'צור חדר',
-                  icon: Icons.add_rounded,
-                  gradient: AppColors.primaryGradient,
-                  onPressed: () => context.push('/create-room'),
-                ).animate(delay: 500.ms).fadeIn().slideY(begin: 0.3),
-
-                const SizedBox(height: 12),
-
-                GradientButton(
-                  text: 'הצטרף לחדר',
-                  icon: Icons.login_rounded,
-                  gradient: AppColors.secondaryGradient,
-                  onPressed: () => context.push('/join-room'),
-                ).animate(delay: 600.ms).fadeIn().slideY(begin: 0.3),
-
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => context.push('/store'),
-                        icon: const Icon(Icons.store_rounded),
-                        label: const Text('חנות'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => context.push('/profile'),
-                        icon: const Icon(Icons.person_rounded),
-                        label: const Text('פרופיל'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                      ),
-                    ),
-                  ],
-                ).animate(delay: 700.ms).fadeIn(),
-
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
+                ),
+              ),
+            );
+          },
         ),
       ),
+    );
+  }
+}
+
+class _HomeTopBar extends StatelessWidget {
+  final String name;
+  final String? photoUrl;
+  final int points;
+  final VoidCallback onProfile;
+
+  const _HomeTopBar({
+    required this.name,
+    required this.photoUrl,
+    required this.points,
+    required this.onProfile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'שלום, ${name.split(' ').first}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.titleLight,
+              ),
+              Text(
+                'מוכן לחשוף מקום חדש?',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.subtitleLight,
+              ),
+            ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.14),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text('⭐ $points',
+              style: AppTextStyles.body.copyWith(color: Colors.white)),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        GestureDetector(
+          onTap: () {
+            AppFeedback.selection();
+            onProfile();
+          },
+          child: PlayerAvatar(name: name, photoUrl: photoUrl, radius: 22),
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeHero extends StatelessWidget {
+  const _HomeHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        children: [
+          Container(
+            width: 168,
+            height: 168,
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryGradient,
+              borderRadius: BorderRadius.circular(40),
+            ),
+            child:
+                const Center(child: Text('🧩', style: TextStyle(fontSize: 76))),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text('Guess the Place', style: AppTextStyles.titleDark),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'פתח חדר, חשוף חלקים, ונחש את המקום לפני כולם.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.subtitleDark,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SecondaryAction extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _SecondaryAction(
+      {required this.label, required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(54),
+        foregroundColor: Colors.white,
+        side: BorderSide(color: Colors.white.withOpacity(0.28)),
+        textStyle: AppTextStyles.button,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    );
+  }
+}
+
+class _MiniAction extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _MiniAction(
+      {required this.label, required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, color: Colors.white70),
+      label: Text(label, style: AppTextStyles.subtitleLight),
     );
   }
 }

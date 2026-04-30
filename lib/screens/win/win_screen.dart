@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:confetti/confetti.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/game_constants.dart';
+import '../../core/ui/app_scaffold.dart';
+import '../../core/ui/app_spacing.dart';
+import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
-import '../../widgets/common/gradient_button.dart';
+import '../../widgets/common/app_button.dart';
+import '../../widgets/common/app_card.dart';
 import '../../widgets/common/player_avatar.dart';
 
 class WinScreen extends ConsumerStatefulWidget {
@@ -36,7 +39,7 @@ class _WinScreenState extends ConsumerState<WinScreen> {
   }
 
   Future<void> _loadImage() async {
-    final room = ref.read(currentRoomProvider).value;
+    final room = await ref.read(roomStreamProvider(widget.roomId).future);
     if (room?.selectedImageId == null) return;
     final img =
         await ref.read(roomServiceProvider).getImage(room!.selectedImageId!);
@@ -44,7 +47,7 @@ class _WinScreenState extends ConsumerState<WinScreen> {
   }
 
   Future<void> _awardPoints() async {
-    final room = ref.read(currentRoomProvider).value;
+    final room = await ref.read(roomStreamProvider(widget.roomId).future);
     final currentUser = ref.read(currentUserProvider).value;
     if (room == null || currentUser == null) return;
 
@@ -64,88 +67,54 @@ class _WinScreenState extends ConsumerState<WinScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final roomAsync = ref.watch(currentRoomProvider);
+    final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
     final currentUser = ref.watch(currentUserProvider).value;
 
     return roomAsync.when(
       data: (room) {
         if (room == null) return const SizedBox();
 
-        final winner = room.winnerId != null ? room.players[room.winnerId] : null;
+        final winner =
+            room.winnerId != null ? room.players[room.winnerId] : null;
         final isWinner = currentUser?.id == room.winnerId;
         final sortedPlayers = room.sortedPlayers;
 
-        return Scaffold(
-          body: Stack(
-            children: [
-              Align(
-                alignment: Alignment.topCenter,
-                child: ConfettiWidget(
-                  confettiController: _confettiController,
-                  blastDirectionality: BlastDirectionality.explosive,
-                  numberOfParticles: 30,
-                  colors: const [
-                    AppColors.primary,
-                    AppColors.secondary,
-                    AppColors.accent,
-                    AppColors.warning,
-                  ],
-                ),
-              ),
-
-              Container(
-                decoration: BoxDecoration(
-                  gradient: isWinner
-                      ? AppColors.primaryGradient
-                      : const LinearGradient(
-                          colors: [Color(0xFF2D3561), Color(0xFF1A1F3A)]),
-                ),
-                child: SafeArea(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 16),
-
-                        Text(
-                          isWinner ? '🏆 ניצחת!' : '🎉 המשחק נגמר!',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 36,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ).animate().scale(curve: Curves.elasticOut),
-
-                        const SizedBox(height: 8),
-
-                        if (winner != null)
-                          Text(
-                            isWinner
-                                ? 'מדהים! זיהית אותו!'
-                                : '${winner.name} צדק/ה!',
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ).animate(delay: 200.ms).fadeIn(),
-
-                        const SizedBox(height: 24),
-
-                        if (_gameImage != null) ...[
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.3),
-                                  blurRadius: 24,
-                                  offset: const Offset(0, 12),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
+        return Stack(
+          children: [
+            AppScaffold(
+              backgroundGradient: isWinner
+                  ? AppColors.primaryGradient
+                  : AppColors.pageBackground,
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      isWinner ? 'ניצחת!' : 'המשחק נגמר',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.titleLight.copyWith(fontSize: 34),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      winner == null
+                          ? 'הנה התוצאות'
+                          : isWinner
+                              ? 'זיהית את המקום לפני כולם'
+                              : '${winner.name} ניצח/ה בסיבוב',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.subtitleLight,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    if (_gameImage != null)
+                      AppCard(
+                        padding: EdgeInsets.zero,
+                        child: Column(
+                          children: [
+                            ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(24)),
                               child: CachedNetworkImage(
                                 imageUrl: _gameImage!.imageUrl,
                                 height: 220,
@@ -153,90 +122,76 @@ class _WinScreenState extends ConsumerState<WinScreen> {
                                 fit: BoxFit.cover,
                               ),
                             ),
-                          )
-                              .animate(delay: 400.ms)
-                              .fadeIn()
-                              .scale(curve: Curves.elasticOut),
-                          const SizedBox(height: 12),
-                          Text(
-                            _gameImage!.answer,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
+                            Padding(
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    _gameImage!.answer,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.titleDark,
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(
+                                    _gameImage!.category.label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.subtitleDark,
+                                  ),
+                                ],
+                              ),
                             ),
-                          ).animate(delay: 600.ms).fadeIn(),
-                          Text(
-                            _gameImage!.category.label,
-                            style: const TextStyle(
-                              color: Colors.white60,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ).animate(delay: 700.ms).fadeIn(),
-                        ],
-
-                        const SizedBox(height: 28),
-
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                                color: Colors.white.withOpacity(0.2)),
-                          ),
-                          child: Column(
-                            children: [
-                              const Text(
-                                'ניקוד סופי',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AppCard(
+                      child: Column(
+                        children: [
+                          Text('תוצאות', style: AppTextStyles.titleDark),
+                          const SizedBox(height: AppSpacing.md),
+                          ...sortedPlayers.asMap().entries.map(
+                                (entry) => _ScoreRow(
+                                  rank: entry.key + 1,
+                                  player: entry.value,
+                                  isWinner: entry.value.id == room.winnerId,
+                                  isCurrentUser:
+                                      entry.value.id == currentUser?.id,
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                              ...sortedPlayers
-                                  .asMap()
-                                  .entries
-                                  .map((entry) => _ScoreRow(
-                                        rank: entry.key + 1,
-                                        player: entry.value,
-                                        isWinner: entry.value.id ==
-                                            room.winnerId,
-                                        isCurrentUser: entry.value.id ==
-                                            currentUser?.id,
-                                      ))
-                                  .toList(),
-                            ],
-                          ),
-                        ).animate(delay: 800.ms).fadeIn().slideY(begin: 0.3),
-
-                        const SizedBox(height: 24),
-
-                        GradientButton(
-                          text: 'חזור לבית',
-                          icon: Icons.home_rounded,
-                          gradient: isWinner
-                              ? AppColors.accentGradient
-                              : AppColors.primaryGradient,
-                          onPressed: () {
-                            ref.read(currentRoomIdProvider.notifier).state =
-                                null;
-                            context.go('/home');
-                          },
-                        ).animate(delay: 900.ms).fadeIn(),
-
-                        const SizedBox(height: 16),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AppButton(
+                      label: 'חזור לבית',
+                      icon: Icons.home_rounded,
+                      onPressed: () {
+                        ref.read(currentRoomIdProvider.notifier).state = null;
+                        context.go('/home');
+                      },
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                numberOfParticles: 30,
+                colors: const [
+                  AppColors.primary,
+                  AppColors.secondary,
+                  AppColors.accent,
+                  AppColors.warning,
+                ],
+              ),
+            ),
+          ],
         );
       },
       loading: () =>
@@ -270,38 +225,30 @@ class _ScoreRow extends StatelessWidget {
                 : '$rank.';
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         children: [
-          Text(
-            medal,
-            style: const TextStyle(fontSize: 20),
-          ),
-          const SizedBox(width: 12),
+          Text(medal, style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: AppSpacing.sm),
           PlayerAvatar(
-            name: player.name,
-            photoUrl: player.photoUrl,
-            radius: 16,
-          ),
-          const SizedBox(width: 10),
+              name: player.name, photoUrl: player.photoUrl, radius: 16),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               player.name + (isCurrentUser ? ' (את/ה)' : ''),
-              style: TextStyle(
-                color: isCurrentUser ? AppColors.warning : Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.body.copyWith(
+                color: isWinner ? AppColors.primary : AppColors.darkBlue,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ),
-          if (isWinner)
-            const Text('👑 ', style: TextStyle(fontSize: 14)),
           Text(
             '${player.score} נק׳',
-            style: TextStyle(
-              color: isWinner ? AppColors.warning : Colors.white70,
-              fontWeight: FontWeight.w800,
-              fontSize: 15,
+            style: AppTextStyles.body.copyWith(
+              color: isWinner ? AppColors.primary : AppColors.darkBlue,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ],

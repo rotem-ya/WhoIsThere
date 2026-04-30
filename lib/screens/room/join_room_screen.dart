@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/ui/app_scaffold.dart';
+import '../../core/ui/app_spacing.dart';
+import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
-import '../../widgets/common/gradient_button.dart';
+import '../../widgets/common/app_button.dart';
+import '../../widgets/common/app_card.dart';
+import '../../widgets/common/app_feedback.dart';
+import '../../widgets/common/app_header.dart';
 
 class JoinRoomScreen extends ConsumerStatefulWidget {
   const JoinRoomScreen({super.key});
@@ -21,10 +26,12 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
   Future<void> _joinRoom() async {
     final code = _codeController.text.trim().toUpperCase();
     if (code.length != 6) {
+      AppFeedback.error();
       setState(() => _errorMessage = 'נא להזין קוד בן 6 תווים');
       return;
     }
 
+    AppFeedback.confirm();
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -42,6 +49,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
           );
 
       if (room == null) {
+        AppFeedback.error();
         setState(() => _errorMessage = 'החדר לא נמצא או כבר התחיל');
         return;
       }
@@ -63,69 +71,59 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('הצטרף לחדר')),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                '🚪',
-                style: TextStyle(fontSize: 72),
-              ).animate().scale(curve: Curves.elasticOut, duration: 600.ms),
-              const SizedBox(height: 24),
-              const Text(
-                'הכנס קוד חדר',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.darkBlue,
-                ),
-              ).animate(delay: 200.ms).fadeIn(),
-              const SizedBox(height: 8),
-              const Text(
-                'בקש מהחבר שלך את הקוד בן 6 הספרות',
-                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
-              ).animate(delay: 300.ms).fadeIn(),
-              const SizedBox(height: 32),
-              TextField(
-                controller: _codeController,
-                textAlign: TextAlign.center,
-                textCapitalization: TextCapitalization.characters,
-                maxLength: 6,
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 8,
-                  color: AppColors.darkBlue,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'XXXXXX',
-                  hintStyle: TextStyle(
-                    letterSpacing: 8,
-                    color: Colors.grey.shade300,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                  ),
-                  counterText: '',
-                  errorText: _errorMessage,
-                ),
-                onSubmitted: (_) => _joinRoom(),
-              ).animate(delay: 400.ms).fadeIn().slideY(begin: 0.3),
-              const SizedBox(height: 32),
-              _isLoading
-                  ? const CircularProgressIndicator(color: AppColors.primary)
-                  : GradientButton(
-                      text: 'הצטרף למשחק',
-                      icon: Icons.login_rounded,
-                      gradient: AppColors.secondaryGradient,
-                      onPressed: _joinRoom,
-                    ).animate(delay: 500.ms).fadeIn(),
-            ],
+    return AppScaffold(
+      backgroundGradient: AppColors.pageBackground,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        children: [
+          AppHeader(
+            title: 'הצטרפות',
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: () => context.pop(),
+            ),
           ),
-        ),
+          Expanded(
+            child: Center(
+              child: AppCard(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('הכנס קוד חדר', style: AppTextStyles.titleDark),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text('קוד בן 6 תווים מהמארח',
+                        style: AppTextStyles.subtitleDark),
+                    const SizedBox(height: AppSpacing.lg),
+                    TextField(
+                      controller: _codeController,
+                      textAlign: TextAlign.center,
+                      textCapitalization: TextCapitalization.characters,
+                      maxLength: 6,
+                      style: AppTextStyles.titleDark.copyWith(
+                        fontSize: 34,
+                        letterSpacing: 8,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'XXXXXX',
+                        counterText: '',
+                        errorText: _errorMessage,
+                      ),
+                      onSubmitted: (_) => _joinRoom(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          _isLoading
+              ? const CircularProgressIndicator(color: AppColors.accent)
+              : AppButton(
+                  label: 'הצטרף למשחק',
+                  icon: Icons.login_rounded,
+                  onPressed: _joinRoom,
+                ),
+        ],
       ),
     );
   }

@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/ui/app_scaffold.dart';
+import '../../core/ui/app_spacing.dart';
+import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
-import '../../widgets/common/gradient_button.dart';
+import '../../widgets/common/app_button.dart';
+import '../../widgets/common/app_card.dart';
+import '../../widgets/common/app_feedback.dart';
+import '../../widgets/common/app_header.dart';
 
 class CreateRoomScreen extends ConsumerStatefulWidget {
   const CreateRoomScreen({super.key});
@@ -21,6 +26,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   int _playerCount = 2;
 
   Future<void> _createRoom() async {
+    AppFeedback.confirm();
     setState(() => _isLoading = true);
     try {
       final user = await ref.read(currentUserProvider.future);
@@ -49,155 +55,95 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
     }
   }
 
+  void _leaveDraftAndPop() {
+    if (_roomId != null) {
+      final userId = ref.read(currentUserProvider).value?.id;
+      if (userId != null) {
+        ref.read(roomServiceProvider).leaveRoom(_roomId!, userId);
+      }
+    }
+    context.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('צור חדר'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () {
-            if (_roomId != null) {
-              final userId = ref.read(currentUserProvider).value?.id;
-              if (userId != null) {
-                ref.read(roomServiceProvider).leaveRoom(_roomId!, userId);
-              }
-            }
-            context.pop();
-          },
-        ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            children: [
-              Expanded(
-                child: Center(
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: AppColors.primary)
-                      : _roomCode != null
-                          ? _RoomCreatedCard(
-                              roomCode: _roomCode!,
-                              playerCount: _playerCount,
-                            ).animate().scale(curve: Curves.elasticOut)
-                          : _PlayerCountPicker(
-                              selected: _playerCount,
-                              onChanged: (v) => setState(() => _playerCount = v),
-                            ).animate().fadeIn(),
-                ),
-              ),
-              if (_roomCode != null) ...[
-                const SizedBox(height: 12),
-                GradientButton(
-                  text: 'עבור ללובי',
-                  icon: Icons.meeting_room_rounded,
-                  onPressed: () => context.go('/lobby/$_roomId'),
-                ),
-                const SizedBox(height: 8),
-              ] else ...[
-                const SizedBox(height: 12),
-                GradientButton(
-                  text: 'צור חדר',
-                  icon: Icons.add_rounded,
-                  onPressed: _createRoom,
-                ),
-                const SizedBox(height: 8),
-              ],
-            ],
+    return AppScaffold(
+      backgroundGradient: AppColors.pageBackground,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        children: [
+          AppHeader(
+            title: _roomCode == null ? 'חדר חדש' : 'החדר מוכן',
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: _leaveDraftAndPop,
+            ),
           ),
-        ),
+          Expanded(
+            child: Center(
+              child: _isLoading
+                  ? const CircularProgressIndicator(color: AppColors.accent)
+                  : _roomCode == null
+                      ? _PlayerCountCard(
+                          selected: _playerCount,
+                          onChanged: (value) =>
+                              setState(() => _playerCount = value),
+                        )
+                      : _RoomCodeCard(
+                          roomCode: _roomCode!,
+                          playerCount: _playerCount,
+                        ),
+            ),
+          ),
+          AppButton(
+            label: _roomCode == null ? 'צור חדר' : 'כניסה ללובי',
+            icon: _roomCode == null
+                ? Icons.add_rounded
+                : Icons.meeting_room_rounded,
+            onPressed: _roomCode == null
+                ? _createRoom
+                : () => context.go('/lobby/$_roomId'),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _PlayerCountPicker extends StatelessWidget {
+class _PlayerCountCard extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onChanged;
 
-  const _PlayerCountPicker({required this.selected, required this.onChanged});
+  const _PlayerCountCard({required this.selected, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.1),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('👥', style: TextStyle(fontSize: 48)),
-          const SizedBox(height: 12),
-          const Text(
-            'כמה שחקנים?',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppColors.darkBlue,
-            ),
+          Text('כמה שחקנים?', style: AppTextStyles.titleDark),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'בחרו כמה משתתפים יהיו סביב הלוח.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.subtitleDark,
           ),
-          const SizedBox(height: 6),
-          const Text(
-            'השחקנים הנוספים יצטרפו בהמשך',
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 24),
-          // LTR direction so numbers read 2→5 left to right
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [2, 3, 4, 5].map((count) {
-                final isSelected = selected == count;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  child: GestureDetector(
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              for (final count in [2, 3, 4, 5]) ...[
+                Expanded(
+                  child: _CountButton(
+                    count: count,
+                    selected: selected == count,
                     onTap: () => onChanged(count),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        gradient: isSelected ? AppColors.primaryGradient : null,
-                        color: isSelected ? null : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: AppColors.primary.withOpacity(0.4),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                )
-                              ]
-                            : null,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$count',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color:
-                                isSelected ? Colors.white : AppColors.darkBlue,
-                          ),
-                        ),
-                      ),
-                    ),
                   ),
-                );
-              }).toList(),
-            ),
+                ),
+                if (count != 5) const SizedBox(width: AppSpacing.sm),
+              ],
+            ],
           ),
         ],
       ),
@@ -205,102 +151,96 @@ class _PlayerCountPicker extends StatelessWidget {
   }
 }
 
-class _RoomCreatedCard extends StatelessWidget {
-  final String roomCode;
-  final int playerCount;
+class _CountButton extends StatelessWidget {
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
 
-  const _RoomCreatedCard({required this.roomCode, required this.playerCount});
+  const _CountButton(
+      {required this.count, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.1),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 62,
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.primary
+              : AppColors.primary.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Center(
+          child: Text(
+            '$count',
+            style: AppTextStyles.titleDark.copyWith(
+              color: selected ? Colors.white : AppColors.primary,
+            ),
           ),
-        ],
+        ),
       ),
+    );
+  }
+}
+
+class _RoomCodeCard extends StatefulWidget {
+  final String roomCode;
+  final int playerCount;
+
+  const _RoomCodeCard({required this.roomCode, required this.playerCount});
+
+  @override
+  State<_RoomCodeCard> createState() => _RoomCodeCardState();
+}
+
+class _RoomCodeCardState extends State<_RoomCodeCard> {
+  bool _copied = false;
+
+  Future<void> _copyCode() async {
+    if (_copied) return;
+    AppFeedback.success();
+    await Clipboard.setData(ClipboardData(text: widget.roomCode));
+    setState(() => _copied = true);
+    await Future.delayed(const Duration(milliseconds: 1400));
+    if (mounted) setState(() => _copied = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🎉', style: TextStyle(fontSize: 48)),
-          const SizedBox(height: 12),
-          const Text(
-            'החדר נוצר!',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppColors.darkBlue,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '$playerCount שחקנים • שתף את הקוד עם החברים',
-            style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 20),
-          GestureDetector(
-            onTap: () {
-              Clipboard.setData(ClipboardData(text: roomCode));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('הקוד הועתק!')),
-              );
-            },
+          Text('שתפו את הקוד', style: AppTextStyles.titleDark),
+          const SizedBox(height: AppSpacing.sm),
+          Text('${widget.playerCount} שחקנים בחדר',
+              style: AppTextStyles.subtitleDark),
+          const SizedBox(height: AppSpacing.lg),
+          InkWell(
+            onTap: _copyCode,
+            borderRadius: BorderRadius.circular(24),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.4),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(24),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        roomCode,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 6,
-                        ),
-                      ),
-                    ),
+              child: Center(
+                child: Text(
+                  _copied ? 'הועתק' : widget.roomCode,
+                  textDirection: TextDirection.ltr,
+                  style: AppTextStyles.titleLight.copyWith(
+                    fontSize: 34,
+                    letterSpacing: _copied ? 0 : 7,
                   ),
-                  const SizedBox(width: 10),
-                  const Icon(Icons.copy_rounded, color: Colors.white70, size: 20),
-                ],
+                ),
               ),
             ),
-          )
-              .animate(onPlay: (c) => c.repeat(reverse: true))
-              .scale(
-                begin: const Offset(1, 1),
-                end: const Offset(1.02, 1.02),
-                duration: 1200.ms,
-              ),
-          const SizedBox(height: 10),
-          const Text(
-            'לחץ להעתקה',
-            style: TextStyle(
-                color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ],
       ),

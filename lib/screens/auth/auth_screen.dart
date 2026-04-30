@@ -1,11 +1,16 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:io' show Platform;
 import '../../core/constants/app_colors.dart';
+import '../../core/ui/app_scaffold.dart';
+import '../../core/ui/app_spacing.dart';
+import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
-import '../../widgets/common/gradient_button.dart';
+import '../../widgets/common/app_button.dart';
+import '../../widgets/common/app_card.dart';
+import '../../widgets/common/app_feedback.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -21,15 +26,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     setState(() => _isLoading = true);
     try {
       final user = await ref.read(authServiceProvider).signInWithGoogle();
-      if (user != null && mounted) {
-        context.go('/home');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ההתחברות נכשלה: ${e.toString()}')),
-        );
-      }
+      if (user != null && mounted) context.go('/home');
+    } catch (_) {
+      try {
+        final user = await ref.read(authServiceProvider).signInAnonymously();
+        if (user != null && mounted) context.go('/home');
+      } catch (_) {}
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -39,9 +41,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     setState(() => _isLoading = true);
     try {
       final user = await ref.read(authServiceProvider).signInAnonymously();
-      if (user != null && mounted) {
-        context.go('/home');
-      }
+      if (user != null && mounted) context.go('/home');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -57,9 +57,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     setState(() => _isLoading = true);
     try {
       final user = await ref.read(authServiceProvider).signInWithApple();
-      if (user != null && mounted) {
-        context.go('/home');
-      }
+      if (user != null && mounted) context.go('/home');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -75,183 +73,137 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Widget build(BuildContext context) {
     final isIOS = Platform.isIOS;
 
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              children: [
-                const Spacer(),
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Text('🧩', style: TextStyle(fontSize: 52)),
-                  ),
-                )
-                    .animate()
-                    .scale(duration: 600.ms, curve: Curves.elasticOut),
-                const SizedBox(height: 24),
-                const Text(
-                  'מי שם?',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ).animate(delay: 200.ms).fadeIn().slideY(begin: 0.3),
-                const SizedBox(height: 8),
-                const Text(
-                  'בנה את הפאזל. נחש מי זה!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ).animate(delay: 400.ms).fadeIn(),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.all(28),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'התחבר כדי לשחק',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.darkBlue,
+    return AppScaffold(
+      backgroundGradient: AppColors.pageBackground,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SizedBox(height: AppSpacing.md),
+                  const _IdentityHero(),
+                  AppCard(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'כניסה למשחק',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.titleDark,
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      if (_isLoading)
-                        const CircularProgressIndicator(
-                            color: AppColors.primary)
-                      else ...[
-                        _SocialSignInButton(
-                          onPressed: _signInWithGoogle,
-                          icon: '🌐',
-                          label: 'המשך עם Google',
-                          color: Colors.white,
-                          textColor: AppColors.darkBlue,
-                          borderColor: AppColors.pieceSlotEmpty,
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'התחברו, צרו חדר, והתחילו לחשוף את התמונה.',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.subtitleDark,
                         ),
-                        if (isIOS) ...[
-                          const SizedBox(height: 12),
-                          _SocialSignInButton(
-                            onPressed: _signInWithApple,
-                            icon: '🍎',
-                            label: 'המשך עם Apple',
-                            color: Colors.black,
-                            textColor: Colors.white,
+                        const SizedBox(height: AppSpacing.lg),
+                        if (_isLoading)
+                          const Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary,
+                            ),
+                          )
+                        else ...[
+                          AppButton(
+                            label: 'המשך עם Google',
+                            icon: Icons.public_rounded,
+                            onPressed: _signInWithGoogle,
+                          ),
+                          if (isIOS) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            _SecondaryAuthButton(
+                              label: 'המשך עם Apple',
+                              icon: Icons.apple_rounded,
+                              onPressed: _signInWithApple,
+                            ),
+                          ],
+                          const SizedBox(height: AppSpacing.sm),
+                          _SecondaryAuthButton(
+                            label: 'המשך כאורח',
+                            icon: Icons.person_outline_rounded,
+                            onPressed: _signInAnonymously,
                           ),
                         ],
-                        const SizedBox(height: 12),
-                        _SocialSignInButton(
-                          onPressed: _signInAnonymously,
-                          icon: '👤',
-                          label: 'המשך כאורח',
-                          color: Colors.grey.shade100,
-                          textColor: Colors.grey.shade700,
-                          borderColor: Colors.grey.shade300,
-                        ),
                       ],
-                      const SizedBox(height: 16),
-                      Text(
-                        'בהתחברות אתה מסכים לתנאי השימוש',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade500,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ).animate(delay: 600.ms).fadeIn().slideY(begin: 0.4),
-                const SizedBox(height: 24),
-              ],
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 }
 
-class _SocialSignInButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  final String icon;
-  final String label;
-  final Color color;
-  final Color textColor;
-  final Color? borderColor;
+class _IdentityHero extends StatelessWidget {
+  const _IdentityHero();
 
-  const _SocialSignInButton({
-    required this.onPressed,
-    required this.icon,
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 156,
+          height: 156,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(42),
+            border: Border.all(color: Colors.white.withOpacity(0.18)),
+          ),
+          child: const Center(
+            child: Text('🗺️', style: TextStyle(fontSize: 76)),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Text('Guess the Place', style: AppTextStyles.titleLight),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'משחק ניחוש מקומות מרובה משתתפים',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.subtitleLight,
+        ),
+      ],
+    );
+  }
+}
+
+class _SecondaryAuthButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _SecondaryAuthButton({
     required this.label,
-    required this.color,
-    required this.textColor,
-    this.borderColor,
+    required this.icon,
+    required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: textColor,
-          elevation: borderColor != null ? 0 : 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: borderColor != null
-                ? BorderSide(color: borderColor!, width: 1.5)
-                : BorderSide.none,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(icon, style: const TextStyle(fontSize: 20)),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
+    return OutlinedButton.icon(
+      onPressed: () {
+        AppFeedback.selection();
+        onPressed();
+      },
+      icon: Icon(icon),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(AppSpacing.xl + AppSpacing.lg),
+        foregroundColor: AppColors.primary,
+        textStyle: AppTextStyles.button.copyWith(color: AppColors.primary),
+        side: BorderSide(color: AppColors.primary.withOpacity(0.24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
   }

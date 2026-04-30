@@ -17,6 +17,7 @@ class RoomModel extends Equatable {
   final int currentTurnIndex;
   final Map<int, String> placedPieces; // pieceIndex -> userId
   final List<int> availablePieceIndices;
+  final List<String> solvedLetters;    // lowercase letters correctly guessed
   final String? winnerId;
   final DateTime createdAt;
 
@@ -34,6 +35,7 @@ class RoomModel extends Equatable {
     this.currentTurnIndex = 0,
     this.placedPieces = const {},
     this.availablePieceIndices = const [],
+    this.solvedLetters = const [],
     this.winnerId,
     required this.createdAt,
   });
@@ -89,8 +91,8 @@ class RoomModel extends Equatable {
       turnOrder: List<String>.from(data['turnOrder'] ?? []),
       currentTurnIndex: data['currentTurnIndex'] ?? 0,
       placedPieces: placedPieces,
-      availablePieceIndices:
-          List<int>.from(data['availablePieceIndices'] ?? []),
+      availablePieceIndices: List<int>.from(data['availablePieceIndices'] ?? []),
+      solvedLetters: List<String>.from(data['solvedLetters'] ?? []),
       winnerId: data['winnerId'],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
@@ -109,6 +111,7 @@ class RoomModel extends Equatable {
         'currentTurnIndex': currentTurnIndex,
         'placedPieces': placedPieces.map((k, v) => MapEntry(k.toString(), v)),
         'availablePieceIndices': availablePieceIndices,
+        'solvedLetters': solvedLetters,
         'winnerId': winnerId,
         'createdAt': Timestamp.fromDate(createdAt),
       };
@@ -124,6 +127,7 @@ class RoomModel extends Equatable {
     int? currentTurnIndex,
     Map<int, String>? placedPieces,
     List<int>? availablePieceIndices,
+    List<String>? solvedLetters,
     String? winnerId,
   }) =>
       RoomModel(
@@ -140,6 +144,7 @@ class RoomModel extends Equatable {
         currentTurnIndex: currentTurnIndex ?? this.currentTurnIndex,
         placedPieces: placedPieces ?? this.placedPieces,
         availablePieceIndices: availablePieceIndices ?? this.availablePieceIndices,
+        solvedLetters: solvedLetters ?? this.solvedLetters,
         winnerId: winnerId ?? this.winnerId,
         createdAt: createdAt,
       );
