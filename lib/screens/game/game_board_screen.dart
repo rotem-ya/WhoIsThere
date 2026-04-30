@@ -1,15 +1,24 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/game_constants.dart';
+import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
-import '../../models/room_model.dart';
 import '../../providers/providers.dart';
-import '../../services/room_service.dart';
+import '../../models/room_model.dart';
+import '../../models/game_image_model.dart';
+import '../../widgets/common/app_bottom_sheet.dart';
 import '../../widgets/common/app_button.dart';
+import '../../widgets/common/app_card.dart';
+import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
+import '../../widgets/game/letter_bank_input.dart';
 
 class GameBoardScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -21,186 +30,341 @@ class GameBoardScreen extends ConsumerStatefulWidget {
 }
 
 class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
-  bool _isActing = false;
   bool _hasFlipped = false;
+  bool _isActing = false;
+  GameImageModel? _gameImage;
+  bool _imageLoadStarted = false;
 
   @override
-  Widget build(BuildContext context) {
-    final roomAsync = ref.watch(roomProvider(widget.roomId));
-    final authState = ref.watch(firebaseUserProvider);
-
-    return authState.when(
-      data: (user) {
-        if (user == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/auth');
-          });
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-        return roomAsync.when(
-          data: (room) => _buildGameScreen(context, room, user.uid),
-          loading: () => const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          ),
-          error: (e, _) => Scaffold(
-            body: Center(child: Text('שגיאה: $e')),
-          ),
-        );
-      },
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text('שגיאה: $e'))),
-    );
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadImage());
   }
 
-  Widget _buildGameScreen(BuildContext context, RoomModel room, String userId) {
-    if (room.state != RoomState.active) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (room.state == RoomState.lobby) {
-          context.go('/room/${room.id}');
-        } else if (room.state == RoomState.finished) {
-          context.go('/win/${room.id}');
-        }
-      });
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+  Future<void> _loadImage() async {
+    if (_imageLoadStarted) return;
+    _imageLoadStarted = true;
+    try {
+      final room = await ref.read(roomStreamProvider(widget.roomId).future);
+      if (room?.selectedImageId == null) return;
+      final img =
+          await ref.read(roomServiceProvider).getImage(room!.selectedImageId!);
+      if (mounted) setState(() => _gameImage = img);
+    } catch (e) {
+      debugPrint('Failed to load game image: $e');
     }
+  }
 
-    final currentUserId = room.currentTurnUserId;
-    final isMyTurn = currentUserId == userId;
-    final canSubmitAnswer = isMyTurn && !_isActing;
+  String _actingUserId(RoomModel room) {
+    final user = ref.read(currentUserProvider).value;
+    return room.currentTurnUserId ?? user?.id ?? '';
+  }
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
+  Future<void> _flipPiece(int pieceIndex, RoomModel room) async {
+    if (_hasFlipped || _isActing) return;
+    final difficulty = room.selectedDifficulty!;
+    AppFeedback.reveal();
+    setState(() => _isActing = true);
+
+    try {
+      await ref.read(roomServiceProvider).revealPiece(
+            roomId: widget.roomId,
+            userId: _actingUserId(room),
+            pieceIndex: pieceIndex,
+            difficulty: difficulty,
+          );
+      if (mounted) {
+        setState(() {
+          _hasFlipped = true;
+          _isActing = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isActing = false);
+    }
+  }
+
+  Future<void> _endTurn() async {
+    if (_isActing) return;
+    AppFeedback.warning();
+    setState(() => _isActing = true);
+    try {
+      await ref
+          .read(roomServiceProvider)
+          .skipPiecePlacement(roomId: widget.roomId);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isActing = false;
+          _hasFlipped = false;
+        });
+      }
+    }
+  }
+
+  Future<bool> _onAnswerComplete(RoomModel room, String filled) async {
+    if (_gameImage == null) return false;
+    try {
+      final ok = await ref.read(roomServiceProvider).submitAnswer(
+            roomId: widget.roomId,
+            userId: _actingUserId(room),
+            guess: filled,
+            image: _gameImage!,
+            difficulty: room.selectedDifficulty!,
+          );
+      if (ok) {
+        AppFeedback.success();
+      } else {
+        AppFeedback.error();
+      }
+      return ok;
+    } catch (_) {
+      AppFeedback.error();
+      return false;
+    }
+  }
+
+  Future<void> _openGuessSheet(RoomModel room) async {
+    if (_gameImage == null) return;
+    AppFeedback.primary();
+
+    final penalty = room.selectedDifficulty?.wrongGuessPenalty ?? 0;
+
+    await AppBottomSheet.show<void>(
+      context: context,
+      child: SizedBox(
+        // Use up to 52 % of screen height; cap at 400 to leave room on large
+        // screens. The bottom sheet is isScrollControlled so it can grow.
+        height: math.min(MediaQuery.of(context).size.height * 0.52, 400),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AppHeader(
-              title: room.name,
-              onBack: () => _confirmExit(context, userId),
-              trailing: IconButton(
-                icon: const Icon(Icons.exit_to_app_rounded, color: Colors.white),
-                onPressed: () => _confirmExit(context, userId),
+            // Wrong-guess cost warning – clearly visible before submitting
+            Container(
+              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
               ),
-            ),
-            const SizedBox(height: 4),
-            _PlayersStrip(
-              room: room,
-              compact: MediaQuery.of(context).size.height < 700,
-            ),
-            const SizedBox(height: 6),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          return _ImageRevealBoard(
-                            imageUrl: room.currentImageUrl,
-                            revealedCells: room.revealedCells,
-                            onCellTap: isMyTurn && !_hasFlipped
-                                ? (index) => _flipCell(room, index)
-                                : null,
-                          );
-                        },
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.warning.withOpacity(0.5),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.warning_amber_rounded,
+                      color: AppColors.warning, size: 16),
+                  const SizedBox(width: AppSpacing.xs),
+                  Flexible(
+                    child: Text(
+                      'ניחוש שגוי יעלה $penalty מטבעות',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.body.copyWith(
+                        color: const Color(0xFF7A4F00),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    if (canSubmitAnswer) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.warning.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.warning.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.info_outline_rounded,
-                              size: 16,
-                              color: AppColors.warning,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'ניחוש שגוי יעלה מטבעות',
-                              style: AppTextStyles.body.copyWith(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.warning,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      AppButton(
-                        label: 'נחש',
-                        icon: Icons.psychology_alt_rounded,
-                        onPressed: () => _openGuessSheet(room),
-                      ),
-                      if (_hasFlipped)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: AppColors.secondary.withOpacity(0.4),
-                                width: 2,
-                              ),
-                            ),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: _isActing ? null : _endTurn,
-                                borderRadius: BorderRadius.circular(20),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 14,
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.skip_next_rounded,
-                                        size: 20,
-                                        color: AppColors.secondary,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'דלג על הניחוש',
-                                        style: AppTextStyles.body.copyWith(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppColors.secondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: LetterBankInput(
+                key: ValueKey('lbi_sheet_${_gameImage!.id}'),
+                answer: _gameImage!.answer,
+                enabled: true,
+                onComplete: (filled) => _onAnswerComplete(room, filled),
+              ),
+            ),
+            // Skip button: high contrast so it's never missed
+            TextButton.icon(
+              onPressed: _isActing
+                  ? null
+                  : () {
+                      Navigator.pop(context);
+                      _endTurn();
+                    },
+              icon: const Icon(Icons.skip_next_rounded, size: 18),
+              label: const Text('דלג על הניחוש'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.secondary,
+                textStyle: AppTextStyles.body.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  int _gridSizeFor(Difficulty difficulty) {
+    switch (difficulty) {
+      case Difficulty.veryEasy:
+      case Difficulty.easy:
+        return 5;
+      case Difficulty.medium:
+        return 7;
+      case Difficulty.hard:
+        return 9;
+    }
+  }
+
+  double _revealedRatio(RoomModel room, int gridSize) {
+    final total = math.max(1, gridSize * gridSize);
+    return (room.placedPieces.length / total).clamp(0.0, 1.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
+    final currentUser = ref.watch(currentUserProvider).value;
+
+    return roomAsync.when(
+      data: (room) {
+        if (room == null) return const SizedBox();
+
+        if (room.phase == GamePhase.finished) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.go('/win/${widget.roomId}');
+          });
+        }
+
+        if (currentUser == null) return const SizedBox();
+
+        final difficulty = room.selectedDifficulty ?? Difficulty.easy;
+        final gridSize = _gridSizeFor(difficulty);
+        final currentPlayer = room.players[room.currentTurnUserId];
+        final isVirtualTurn = currentPlayer?.isBot == true;
+        final isMyTurn =
+            room.currentTurnUserId == currentUser.id || isVirtualTurn;
+        final myPlayer = room.players[currentUser.id];
+        final allRevealed = room.availablePieceIndices.isEmpty;
+        final canFlipPiece =
+            isMyTurn && !_hasFlipped && !allRevealed && !_isActing;
+        final isEliminated = myPlayer?.isEliminated == true;
+        // Guessing is optional and always available when it's your turn –
+        // the player is never forced to guess after flipping.
+        final canSubmitAnswer = isMyTurn && !isEliminated && !_isActing;
+        final ratio = _revealedRatio(room, gridSize);
+        final imageScale = (1.0 - ratio * 0.07).clamp(0.93, 1.0);
+
+        return AppScaffold(
+          backgroundGradient: AppColors.pageBackground,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            AppSpacing.md,
+          ),
+          child: Stack(
+            children: [
+              // Animated background that shifts as pieces are revealed
+              Positioned.fill(
+                child: _GameBackground(revealedRatio: ratio),
+              ),
+              Column(
+                children: [
+                  // Header – fixed intrinsic height (48 px from AppHeader)
+                  AppHeader(
+                    title: isVirtualTurn
+                        ? '${currentPlayer?.name ?? '...'} משחק'
+                        : isMyTurn
+                            ? 'התור שלך'
+                            : 'ממתינים',
+                    leading: IconButton(
+                      icon: const Icon(
+                        Icons.exit_to_app_rounded,
+                        color: Colors.white,
+                      ),
+                      onPressed: () =>
+                          _confirmExit(context, currentUser.id),
+                    ),
+                    trailing: _ScorePill(score: myPlayer?.score ?? 0),
+                  ),
+                  const SizedBox(height: 4),
+                  // Players strip – sizes itself from its own content
+                  _PlayersStrip(
+                    room: room,
+                    currentUserId: currentUser.id,
+                    compact: room.players.length > 5,
+                  ),
+                  const SizedBox(height: 6),
+                  // Board – fills all remaining vertical space,
+                  // board square is computed inside to never overflow.
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, bc) {
+                        final side =
+                            math.min(bc.maxWidth, bc.maxHeight).toDouble();
+                        return Center(
+                          child: Transform.scale(
+                            scale: imageScale,
+                            child: SizedBox(
+                              width: side,
+                              height: side,
+                              child: AppCard(
+                                padding: EdgeInsets.zero,
+                                radius: 30,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(30),
+                                  child: _ImageRevealBoard(
+                                    room: room,
+                                    gameImage: _gameImage,
+                                    gridSize: gridSize,
+                                    canFlipPiece: canFlipPiece,
+                                    onFlip: (index) =>
+                                        _flipPiece(index, room),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  // Action buttons – shown only on the active player's turn
+                  if (canSubmitAnswer) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    AppButton(
+                      label: 'נחש',
+                      icon: Icons.psychology_alt_rounded,
+                      onPressed: () => _openGuessSheet(room),
+                    ),
+                    // After flipping a piece the player can skip guessing –
+                    // this button is prominent so it is never missed.
+                    if (_hasFlipped)
+                      TextButton.icon(
+                        onPressed: _isActing ? null : _endTurn,
+                        icon: const Icon(Icons.skip_next_rounded, size: 18),
+                        label: const Text('דלג על הניחוש'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.secondary,
+                          textStyle: AppTextStyles.body.copyWith(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, _) => Scaffold(body: Center(child: Text('שגיאה: $e'))),
     );
   }
 
@@ -217,53 +381,85 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('ביטול'),
+            child: const Text('הישאר'),
           ),
-          TextButton(
-            onPressed: () {
+          ElevatedButton(
+            onPressed: () async {
               Navigator.pop(ctx);
-              ref.read(roomServiceProvider).leaveRoom(widget.roomId, userId);
-              context.go('/home');
+              await ref
+                  .read(roomServiceProvider)
+                  .leaveRoom(widget.roomId, userId);
+              if (context.mounted) context.go('/home');
             },
-            child: const Text('עזוב', style: TextStyle(color: AppColors.error)),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+            child: const Text('צא'),
           ),
         ],
       ),
     );
   }
+}
 
-  Future<void> _flipCell(RoomModel room, int cellIndex) async {
-    if (_isActing) return;
-    setState(() => _isActing = true);
-    try {
-      await ref.read(roomServiceProvider).revealCell(room.id, cellIndex);
-      if (mounted) setState(() => _hasFlipped = true);
-    } finally {
-      if (mounted) setState(() => _isActing = false);
-    }
+class _GameBackground extends StatelessWidget {
+  final double revealedRatio;
+
+  const _GameBackground({required this.revealedRatio});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment(0, -0.25 + revealedRatio * 0.25),
+          radius: 1.05,
+          colors: const [
+            Color(0xFF26358C),
+            Color(0xFF11183B),
+            Color(0xFF070B20),
+          ],
+        ),
+      ),
+    );
   }
+}
 
-  void _openGuessSheet(RoomModel room) {
-    // existing logic
-  }
+class _ScorePill extends StatelessWidget {
+  final int score;
 
-  Future<void> _endTurn() async {
-    if (_isActing) return;
-    setState(() => _isActing = true);
-    try {
-      await ref.read(roomServiceProvider).endTurn(widget.roomId);
-      if (mounted) setState(() => _hasFlipped = false);
-    } finally {
-      if (mounted) setState(() => _isActing = false);
-    }
+  const _ScorePill({required this.score});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
+      ),
+      child: Text(
+        '$score',
+        style: AppTextStyles.body.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
   }
 }
 
 class _PlayersStrip extends StatelessWidget {
   final RoomModel room;
+  final String? currentUserId;
   final bool compact;
 
-  const _PlayersStrip({required this.room, required this.compact});
+  const _PlayersStrip({
+    required this.room,
+    this.currentUserId,
+    required this.compact,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -328,80 +524,80 @@ class _PlayersStrip extends StatelessWidget {
 }
 
 class _ImageRevealBoard extends StatelessWidget {
-  final String imageUrl;
-  final Set<int> revealedCells;
-  final void Function(int)? onCellTap;
+  final RoomModel room;
+  final GameImageModel? gameImage;
+  final int gridSize;
+  final bool canFlipPiece;
+  final void Function(int)? onFlip;
 
   const _ImageRevealBoard({
-    required this.imageUrl,
-    required this.revealedCells,
-    this.onCellTap,
+    required this.room,
+    required this.gameImage,
+    required this.gridSize,
+    required this.canFlipPiece,
+    this.onFlip,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 1,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final size = constraints.maxWidth;
-          return Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.network(
-                  imageUrl,
-                  width: size,
-                  height: size,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: AppColors.darkBlue,
-                    child: const Center(
-                      child: Icon(Icons.image_not_supported, color: Colors.white54),
-                    ),
-                  ),
-                ),
-              ),
-              GridView.builder(
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 5,
-                  mainAxisSpacing: 6,
-                  crossAxisSpacing: 6,
-                ),
-                itemCount: 25,
-                itemBuilder: (context, index) {
-                  final isRevealed = revealedCells.contains(index);
-                  final canTap = onCellTap != null && !isRevealed;
-                  
-                  String assetPath;
-                  if (isRevealed) {
-                    assetPath = 'assets/images/tile_open.png';
-                  } else if (canTap) {
-                    assetPath = 'assets/images/tile_closed.png';
-                  } else {
-                    assetPath = 'assets/images/tile_closed_empty.png';
-                  }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (gameImage != null)
+          CachedNetworkImage(
+            imageUrl: gameImage!.imageUrl,
+            fit: BoxFit.cover,
+            placeholder: (_, __) => Container(color: AppColors.boardBackground),
+            errorWidget: (_, __, ___) =>
+                Container(color: AppColors.boardBackground),
+          )
+        else
+          Container(color: AppColors.boardBackground),
+        GridView.builder(
+          padding: EdgeInsets.zero,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: gridSize,
+            mainAxisSpacing: 6,
+            crossAxisSpacing: 6,
+          ),
+          itemCount: gridSize * gridSize,
+          itemBuilder: (context, index) {
+            final isRevealed = room.placedPieces.containsKey(index);
+            final canFlip = canFlipPiece && !isRevealed;
 
-                  return GestureDetector(
-                    onTap: canTap ? () => onCellTap!(index) : null,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: Image.asset(
-                          assetPath,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          );
-        },
+            if (isRevealed) {
+              return const SizedBox.expand();
+            }
+
+            return GestureDetector(
+              key: ValueKey('hidden_$index'),
+              onTap: canFlip ? () => onFlip?.call(index) : null,
+              child: _AnimatedHiddenTile(enabled: canFlip),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _AnimatedHiddenTile extends StatelessWidget {
+  final bool enabled;
+
+  const _AnimatedHiddenTile({required this.enabled});
+
+  @override
+  Widget build(BuildContext context) {
+    final assetPath = enabled
+        ? 'assets/images/tile_closed.png'
+        : 'assets/images/tile_closed_empty.png';
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: Image.asset(
+        assetPath,
+        fit: BoxFit.cover,
       ),
     );
   }
