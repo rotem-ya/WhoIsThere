@@ -540,76 +540,108 @@ class _ImageRevealBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (gameImage != null)
-          CachedNetworkImage(
-            imageUrl: gameImage!.imageUrl,
-            fit: BoxFit.cover,
-            placeholder: (_, __) => Container(color: AppColors.boardBackground),
-            errorWidget: (_, __, ___) =>
-                Container(color: AppColors.boardBackground),
-          )
-        else
-          Container(color: AppColors.boardBackground),
-        GridView.builder(
-          padding: EdgeInsets.zero,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: gridSize,
-            mainAxisSpacing: 6,
-            crossAxisSpacing: 6,
-          ),
-          itemCount: gridSize * gridSize,
-          itemBuilder: (context, index) {
-            final isRevealed = room.placedPieces.containsKey(index);
-            final canFlip = canFlipPiece && !isRevealed;
+    return GridView.builder(
+      padding: EdgeInsets.zero,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: gridSize,
+        mainAxisSpacing: 6,
+        crossAxisSpacing: 6,
+      ),
+      itemCount: gridSize * gridSize,
+      itemBuilder: (context, index) {
+        final isRevealed = room.placedPieces.containsKey(index);
+        final canFlip = canFlipPiece && !isRevealed;
 
-            if (isRevealed) {
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: Image.asset(
-                    'assets/images/tiles/tile_open.png',
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              );
-            }
+        if (isRevealed) {
+          return _OpenTile(
+            gameImage: gameImage,
+            index: index,
+            gridSize: gridSize,
+          );
+        }
 
-            return GestureDetector(
-              key: ValueKey('hidden_$index'),
-              onTap: canFlip ? () => onFlip?.call(index) : null,
-              child: _AnimatedHiddenTile(enabled: canFlip),
-            );
-          },
-        ),
-      ],
+        return GestureDetector(
+          key: ValueKey('hidden_$index'),
+          onTap: canFlip ? () => onFlip?.call(index) : null,
+          child: const _ClosedTile(),
+        );
+      },
     );
   }
 }
 
-class _AnimatedHiddenTile extends StatelessWidget {
-  final bool enabled;
+// Revealed tile: clips only its own slice of the game image, then overlays
+// tile_open.png (transparent-center frame) on top.
+class _OpenTile extends StatelessWidget {
+  final GameImageModel? gameImage;
+  final int index;
+  final int gridSize;
 
-  const _AnimatedHiddenTile({required this.enabled});
+  const _OpenTile({
+    required this.gameImage,
+    required this.index,
+    required this.gridSize,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final assetPath = enabled
-        ? 'assets/images/tiles/tile_active.png'
-        : 'assets/images/tiles/tile_closed_empty.png';
+    final row = index ~/ gridSize;
+    final col = index % gridSize;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
-      child: AspectRatio(
-        aspectRatio: 1,
-        child: Image.asset(
-          assetPath,
-          fit: BoxFit.cover,
-        ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (gameImage != null)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final tileSize = constraints.maxWidth;
+                final fullSize = tileSize * gridSize;
+                return ClipRect(
+                  child: OverflowBox(
+                    alignment: Alignment.topLeft,
+                    minWidth: fullSize,
+                    maxWidth: fullSize,
+                    minHeight: fullSize,
+                    maxHeight: fullSize,
+                    child: Transform.translate(
+                      offset: Offset(-col * tileSize, -row * tileSize),
+                      child: CachedNetworkImage(
+                        imageUrl: gameImage!.imageUrl,
+                        width: fullSize,
+                        height: fullSize,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            )
+          else
+            ColoredBox(color: AppColors.boardBackground),
+          Image.asset(
+            'assets/images/tiles/tile_open.png',
+            fit: BoxFit.cover,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Hidden tile: always shows tile_closed.png regardless of whose turn it is.
+class _ClosedTile extends StatelessWidget {
+  const _ClosedTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Image.asset(
+        'assets/images/tiles/tile_closed.png',
+        fit: BoxFit.cover,
       ),
     );
   }
