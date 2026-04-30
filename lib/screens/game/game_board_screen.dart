@@ -567,7 +567,16 @@ class _ImageRevealBoard extends StatelessWidget {
             final canFlip = canFlipPiece && !isRevealed;
 
             if (isRevealed) {
-              return const SizedBox.expand();
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: Image.asset(
+                    'assets/images/tiles/tile_open.png',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              );
             }
 
             return GestureDetector(
@@ -590,14 +599,17 @@ class _AnimatedHiddenTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final assetPath = enabled
-        ? 'assets/images/tile_closed.png'
-        : 'assets/images/tile_closed_empty.png';
+        ? 'assets/images/tiles/tile_active.png'
+        : 'assets/images/tiles/tile_closed_empty.png';
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: Image.asset(
-        assetPath,
-        fit: BoxFit.cover,
+      borderRadius: BorderRadius.circular(16),
+      child: AspectRatio(
+        aspectRatio: 1,
+        child: Image.asset(
+          assetPath,
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }
