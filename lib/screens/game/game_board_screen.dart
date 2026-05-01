@@ -10,6 +10,7 @@ import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
 import '../../models/room_model.dart';
 import '../../providers/providers.dart';
+import '../../widgets/game/letter_bank_input.dart';
 
 const _kTileClosed = 'assets/images/tiles/tile_closed.png';
 const _kTileEmpty = 'assets/images/tiles/tile_closed_empty.png';
@@ -99,70 +100,85 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     });
   }
 
-  Future<void> _openGuessDialog(RoomModel room, String userId) async {
+  Future<bool> _submitGuess(RoomModel room, String userId, String value) async {
     final image = _image;
-    if (image == null) return;
-
-    _guessController.clear();
-
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          backgroundColor: const Color(0xFF171B3D),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text(
-            'מה המקום?',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
-          ),
-          content: TextField(
-            controller: _guessController,
-            autofocus: true,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontSize: 22),
-            decoration: InputDecoration(
-              hintText: 'כתוב תשובה',
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.35)),
-              filled: true,
-              fillColor: Colors.white.withOpacity(0.08),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            onSubmitted: (value) => Navigator.pop(context, value),
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('ביטול'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, _guessController.text),
-              child: const Text('נחש'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    final guess = result?.trim() ?? '';
-    if (guess.isEmpty) return;
+    if (image == null || value.trim().isEmpty) return false;
 
     final correct = await ref.read(roomServiceProvider).submitAnswer(
           roomId: room.id,
           userId: userId,
-          guess: guess,
+          guess: value.trim(),
           image: image,
           difficulty: room.selectedDifficulty ?? Difficulty.easy,
         );
 
-    if (!mounted) return;
+    if (!mounted) return correct;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(correct ? 'נכון!' : 'לא נכון, נסה שוב')),
+    );
+    return correct;
+  }
+
+  Future<void> _openGuessDialog(RoomModel room, String userId) async {
+    final image = _image;
+    if (image == null) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 24),
+          child: Container(
+            height: 470,
+            padding: const EdgeInsets.fromLTRB(14, 18, 14, 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF171B3D),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: Colors.white.withOpacity(0.08)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                    ),
+                    const Expanded(
+                      child: Text(
+                        'מה המקום?',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 48),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: LetterBankInput(
+                    answer: image.answer,
+                    enabled: true,
+                    onComplete: (filled) async {
+                      final correct = await _submitGuess(room, userId, filled);
+                      if (correct && dialogContext.mounted) {
+                        Navigator.pop(dialogContext);
+                      }
+                      return correct;
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
