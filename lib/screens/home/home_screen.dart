@@ -77,43 +77,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
+                padding: const EdgeInsets.symmetric(horizontal: 30),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Spacer(flex: 3),
-                    const Center(
-                      child: Text('🧩', style: TextStyle(fontSize: 88)),
-                    ),
-                    const SizedBox(height: 32),
-                    const Text(
-                      'מה בתמונה?',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 34,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                        height: 1.1,
+                    const Spacer(flex: 7),
+                    const _EntryHeroMark(),
+                    const SizedBox(height: 46),
+                    const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'מה בתמונה?',
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 56,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1.4,
+                          height: 1,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 18),
                     const Text(
                       'חשוף חלקים ונחש את המקום',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white70,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w500,
-                        height: 1.4,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                        height: 1.25,
                       ),
                     ),
-                    const Spacer(flex: 3),
-                    _CreateButton(
+                    const Spacer(flex: 9),
+                    _PrimaryEntryButton(
+                      label: 'צור משחק',
                       isLoading: _isCreating,
                       onPressed: _isCreating ? null : _createAndJoin,
                     ),
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 42),
                   ],
                 ),
               ),
@@ -125,52 +128,147 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _CreateButton extends StatelessWidget {
+class _EntryHeroMark extends StatelessWidget {
+  const _EntryHeroMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 220,
+        height: 220,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(62),
+          gradient: LinearGradient(
+            colors: [
+              Colors.white.withOpacity(0.16),
+              Colors.white.withOpacity(0.07),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(color: Colors.white.withOpacity(0.20), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF29E6FF).withOpacity(0.22),
+              blurRadius: 54,
+              spreadRadius: 4,
+            ),
+          ],
+        ),
+        child: Center(
+          child: SizedBox(
+            width: 118,
+            height: 118,
+            child: GridView.builder(
+              padding: EdgeInsets.zero,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+              ),
+              itemCount: 9,
+              itemBuilder: (context, index) {
+                final revealed = index == 1 || index == 4 || index == 8;
+                return DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: revealed
+                        ? const Color(0xFF35D9D0)
+                        : Colors.white.withOpacity(0.16),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: revealed
+                          ? const Color(0xFF78FFF2)
+                          : Colors.white.withOpacity(0.22),
+                      width: 2,
+                    ),
+                    boxShadow: revealed
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF35D9D0).withOpacity(0.42),
+                              blurRadius: 18,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      revealed ? '✦' : '?',
+                      style: TextStyle(
+                        color: revealed ? const Color(0xFFFFD740) : Colors.white70,
+                        fontSize: revealed ? 26 : 25,
+                        fontWeight: FontWeight.w900,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PrimaryEntryButton extends StatelessWidget {
+  final String label;
   final bool isLoading;
   final VoidCallback? onPressed;
 
-  const _CreateButton({required this.isLoading, required this.onPressed});
+  const _PrimaryEntryButton({
+    required this.label,
+    required this.isLoading,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onPressed,
-      child: Container(
-        height: 60,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF9B7EFF), Color(0xFF5B3DF5)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.45),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 160),
+        opacity: onPressed == null ? 0.72 : 1,
+        child: Container(
+          height: 70,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF35D9FF), Color(0xFF6A43FF), Color(0xFFFF4EB8)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
             ),
-          ],
-        ),
-        child: Center(
-          child: isLoading
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2.5,
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF6A43FF).withOpacity(0.46),
+                blurRadius: 30,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Center(
+            child: isLoading
+                ? const SizedBox(
+                    width: 26,
+                    height: 26,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.6,
+                    ),
+                  )
+                : Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      height: 1,
+                    ),
                   ),
-                )
-              : const Text(
-                  'צור משחק',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
-                  ),
-                ),
+          ),
         ),
       ),
     );
