@@ -1,3 +1,4 @@
+import 'dart:math' show min;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -38,73 +39,136 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Grid fills the body
-            roomAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator(color: Colors.white)),
-              error: (e, _) => Center(
-                child: Text('Error: $e',
-                    style: const TextStyle(color: Colors.white)),
-              ),
-              data: (room) {
-                if (room == null) {
-                  return const Center(
-                    child: Text('Room not found',
-                        style: TextStyle(color: Colors.white)),
-                  );
-                }
-                return _GameGrid(
-                  room: room,
-                  imageUrl: _imageUrl,
-                  onReveal: (index) => ref
-                      .read(roomServiceProvider)
-                      .revealCell(widget.roomId, index),
-                );
-              },
+      backgroundColor: const Color(0xFF0A0A1E),
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF0A0A1E), Color(0xFF150A2E), Color(0xFF0D1624)],
+            stops: [0.0, 0.55, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: roomAsync.when(
+            loading: () => const Center(
+              child: CircularProgressIndicator(
+                  color: Color(0xFF8B6FFF), strokeWidth: 2),
             ),
-            // Minimal back button — does not occupy any layout space
-            Positioned(
-              top: 4,
-              left: 4,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => context.go('/home'),
-              ),
+            error: (e, _) => Center(
+              child: Text('שגיאה: $e',
+                  style: const TextStyle(color: Colors.white38)),
             ),
-          ],
+            data: (room) {
+              if (room == null) {
+                WidgetsBinding.instance
+                    .addPostFrameCallback((_) => context.go('/home'));
+                return const SizedBox();
+              }
+              return _GameLayout(
+                room: room,
+                imageUrl: _imageUrl,
+                onReveal: (i) =>
+                    ref.read(roomServiceProvider).revealCell(widget.roomId, i),
+                onBack: () => context.go('/home'),
+              );
+            },
+          ),
         ),
       ),
     );
   }
 }
 
-class _GameGrid extends StatelessWidget {
+// ─── Layout ──────────────────────────────────────────────────────────────────
+
+class _GameLayout extends StatelessWidget {
   final RoomModel room;
   final String? imageUrl;
   final void Function(int) onReveal;
+  final VoidCallback onBack;
 
-  const _GameGrid({
+  const _GameLayout({
     required this.room,
+    required this.imageUrl,
+    required this.onReveal,
+    required this.onBack,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _TopBar(code: room.code, onBack: onBack),
+        Expanded(
+          child: _GameBoard(
+            revealedCells: room.revealedCells,
+            imageUrl: imageUrl,
+            onReveal: onReveal,
+          ),
+        ),
+        const _BottomBar(),
+      ],
+    );
+  }
+}
+
+// ─── Top bar ─────────────────────────────────────────────────────────────────
+
+class _TopBar extends StatelessWidget {
+  final String code;
+  final VoidCallback onBack;
+
+  const _TopBar({required this.code, required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 20, 4),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white60, size: 18),
+            onPressed: onBack,
+          ),
+          const Spacer(),
+          Text(
+            code,
+            style: const TextStyle(
+              color: Colors.white24,
+              fontSize: 11,
+              letterSpacing: 4,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Board ───────────────────────────────────────────────────────────────────
+
+class _GameBoard extends StatelessWidget {
+  final List<int> revealedCells;
+  final String? imageUrl;
+  final void Function(int) onReveal;
+
+  static const int _gridSize = 5;
+
+  const _GameBoard({
+    required this.revealedCells,
     required this.imageUrl,
     required this.onReveal,
   });
 
-  static const int _gridSize = 5;
-
   @override
   Widget build(BuildContext context) {
-    final revealedCells = room.revealedCells;
-
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Use as much of the screen as possible while keeping tiles square
-        final side = constraints.maxWidth < constraints.maxHeight
-            ? constraints.maxWidth
-            : constraints.maxHeight;
+        final side = min(constraints.maxWidth, constraints.maxHeight);
+        final tileSize = side / _gridSize;
 
         return Center(
           child: SizedBox.square(
@@ -119,18 +183,15 @@ class _GameGrid extends StatelessWidget {
               ),
               itemCount: _gridSize * _gridSize,
               itemBuilder: (context, index) {
-                final isRevealed = revealedCells.contains(index);
-
-                if (isRevealed) {
+                if (revealedCells.contains(index)) {
                   return _OpenTile(
                     index: index,
                     gridSize: _gridSize,
+                    tileSize: tileSize,
                     imageUrl: imageUrl,
                   );
                 }
-
                 return GestureDetector(
-                  key: ValueKey('tile_$index'),
                   onTap: () => onReveal(index),
                   child: Image.asset(
                     'assets/images/tiles/tile_closed.png',
@@ -146,16 +207,18 @@ class _GameGrid extends StatelessWidget {
   }
 }
 
-// Revealed tile: crops only its (row,col) slice of the game image,
-// with tile_open.png frame at reduced opacity so the image is clearly visible.
+// ─── Tiles ───────────────────────────────────────────────────────────────────
+
 class _OpenTile extends StatelessWidget {
   final int index;
   final int gridSize;
+  final double tileSize;
   final String? imageUrl;
 
   const _OpenTile({
     required this.index,
     required this.gridSize,
+    required this.tileSize,
     required this.imageUrl,
   });
 
@@ -163,36 +226,30 @@ class _OpenTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final row = index ~/ gridSize;
     final col = index % gridSize;
+    // Map (row, col) to Alignment(-1..1, -1..1)
+    final xAlign = (col / (gridSize - 1)) * 2.0 - 1.0;
+    final yAlign = (row / (gridSize - 1)) * 2.0 - 1.0;
+    final fullSize = tileSize * gridSize;
 
     return Stack(
       fit: StackFit.expand,
       children: [
         if (imageUrl != null)
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final tileSize = constraints.maxWidth;
-              final fullSize = tileSize * gridSize;
-              return ClipRect(
-                child: OverflowBox(
-                  alignment: Alignment.topLeft,
-                  minWidth: fullSize,
-                  maxWidth: fullSize,
-                  minHeight: fullSize,
-                  maxHeight: fullSize,
-                  child: Transform.translate(
-                    offset: Offset(-col * tileSize, -row * tileSize),
-                    child: CachedNetworkImage(
-                      imageUrl: imageUrl!,
-                      width: fullSize,
-                      height: fullSize,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              );
-            },
+          ClipRect(
+            child: OverflowBox(
+              alignment: Alignment(xAlign, yAlign),
+              minWidth: fullSize,
+              maxWidth: fullSize,
+              minHeight: fullSize,
+              maxHeight: fullSize,
+              child: CachedNetworkImage(
+                imageUrl: imageUrl!,
+                width: fullSize,
+                height: fullSize,
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
-        // Frame overlay at 50% opacity so the image slice is clearly visible
         Opacity(
           opacity: 0.5,
           child: Image.asset(
@@ -201,6 +258,93 @@ class _OpenTile extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─── Bottom bar ──────────────────────────────────────────────────────────────
+
+class _BottomBar extends StatelessWidget {
+  const _BottomBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+      child: Row(
+        children: [
+          const Expanded(child: _GuessButton()),
+          const SizedBox(width: 12),
+          const _SkipButton(),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuessButton extends StatelessWidget {
+  const _GuessButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF9B7EFF), Color(0xFF6B44F8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF7B5FFF).withOpacity(0.45),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: Text(
+            'ניחוש',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SkipButton extends StatelessWidget {
+  const _SkipButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 54,
+      width: 72,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.10)),
+      ),
+      child: Center(
+        child: Text(
+          'דלג',
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.4),
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }
