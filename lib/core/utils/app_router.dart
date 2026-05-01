@@ -28,7 +28,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final onAuth = state.matchedLocation == '/auth';
       final onSplash = state.matchedLocation == '/splash';
 
-      if (onSplash) return null;
+      if (onSplash) return isLoggedIn ? '/home' : '/auth';
       if (!isLoggedIn && !onAuth) return '/auth';
       if (isLoggedIn && onAuth) return '/home';
       return null;
