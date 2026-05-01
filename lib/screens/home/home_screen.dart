@@ -11,11 +11,42 @@ import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/player_avatar.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  bool _isCreating = false;
+
+  Future<void> _createAndJoin() async {
+    if (_isCreating) return;
+    setState(() => _isCreating = true);
+    try {
+      final user = await ref.read(currentUserProvider.future);
+      if (user == null) return;
+      final room = await ref.read(roomServiceProvider).createRoom(
+            hostId: user.id,
+            hostName: user.name,
+            hostPhotoUrl: user.photoUrl,
+          );
+      ref.read(currentRoomIdProvider.notifier).state = room.id;
+      if (mounted) context.push('/lobby/${room.id}');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('יצירת המשחק נכשלה: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCreating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
 
     return PopScope(
@@ -68,13 +99,13 @@ class HomeScreen extends ConsumerWidget {
                     const _HomeHero(),
                     const SizedBox(height: AppSpacing.xl),
                     AppButton(
-                      label: 'צור חדר',
+                      label: _isCreating ? 'יוצר משחק...' : 'צור משחק',
                       icon: Icons.add_rounded,
-                      onPressed: () => context.push('/create-room'),
+                      onPressed: _isCreating ? null : _createAndJoin,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     _SecondaryAction(
-                      label: 'הצטרף לחדר',
+                      label: 'הצטרף למשחק',
                       icon: Icons.login_rounded,
                       onPressed: () => context.push('/join-room'),
                     ),

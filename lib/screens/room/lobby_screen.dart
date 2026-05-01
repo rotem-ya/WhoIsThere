@@ -42,7 +42,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     AppFeedback.success();
     setState(() => _isStarting = true);
     try {
-      await ref.read(roomServiceProvider).startVotingImage(widget.roomId);
+      await ref.read(roomServiceProvider).startGameDirectly(widget.roomId);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -67,9 +67,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           return const SizedBox();
         }
 
-        if (room.phase == GamePhase.votingImage) {
+        if (room.phase == GamePhase.playing) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/vote-image/${widget.roomId}');
+            context.go('/game/${widget.roomId}');
           });
         }
 

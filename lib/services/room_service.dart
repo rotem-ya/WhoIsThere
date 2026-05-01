@@ -171,6 +171,14 @@ class RoomService {
     await _rooms.doc(roomId).update({'phase': GamePhase.votingImage.name});
   }
 
+  Future<void> startGameDirectly(String roomId) async {
+    final doc = await _rooms.doc(roomId).get();
+    final room = RoomModel.fromFirestore(doc);
+    final image = _fallbackImages[Random().nextInt(_fallbackImages.length)];
+    await _rooms.doc(roomId).update({'selectedImageId': image.id});
+    await _startGame(roomId, room, Difficulty.easy);
+  }
+
   Future<void> castImageVote({
     required String roomId,
     required String userId,
