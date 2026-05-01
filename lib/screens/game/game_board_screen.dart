@@ -6,6 +6,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/providers.dart';
 import '../../models/room_model.dart';
 
+const _kTileClosed = 'assets/images/tiles/tile_closed.png';
+const _kTileEmpty  = 'assets/images/tiles/tile_closed_empty.png';
+const _kTileOpen   = 'assets/images/tiles/tile_open.png';
+const _kTileActive = 'assets/images/tiles/tile_active.png';
+const _kSpacing    = 6.0;
+const _kRadius     = BorderRadius.all(Radius.circular(16));
+
 class GameBoardScreen extends ConsumerStatefulWidget {
   final String roomId;
   const GameBoardScreen({super.key, required this.roomId});
@@ -16,6 +23,7 @@ class GameBoardScreen extends ConsumerStatefulWidget {
 
 class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   String? _imageUrl;
+  int?    _selectedIndex;
 
   @override
   void initState() {
@@ -32,6 +40,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     } catch (e) {
       debugPrint('Failed to load image: $e');
     }
+  }
+
+  void _onTileTap(int index) {
+    setState(() => _selectedIndex = index);
+    ref.read(roomServiceProvider).revealCell(widget.roomId, index);
+    Future.delayed(const Duration(milliseconds: 220), () {
+      if (mounted) setState(() => _selectedIndex = null);
+    });
   }
 
   @override
@@ -68,8 +84,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               return _GameLayout(
                 room: room,
                 imageUrl: _imageUrl,
-                onReveal: (i) =>
-                    ref.read(roomServiceProvider).revealCell(widget.roomId, i),
+                selectedIndex: _selectedIndex,
+                onTileTap: _onTileTap,
                 onBack: () => context.go('/home'),
               );
             },
@@ -84,14 +100,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
 
 class _GameLayout extends StatelessWidget {
   final RoomModel room;
-  final String? imageUrl;
-  final void Function(int) onReveal;
+  final String?   imageUrl;
+  final int?      selectedIndex;
+  final void Function(int) onTileTap;
   final VoidCallback onBack;
 
   const _GameLayout({
     required this.room,
     required this.imageUrl,
-    required this.onReveal,
+    required this.selectedIndex,
+    required this.onTileTap,
     required this.onBack,
   });
 
@@ -104,7 +122,8 @@ class _GameLayout extends StatelessWidget {
           child: _GameBoard(
             revealedCells: room.revealedCells,
             imageUrl: imageUrl,
-            onReveal: onReveal,
+            selectedIndex: selectedIndex,
+            onTileTap: onTileTap,
           ),
         ),
         const _BottomBar(),
@@ -151,16 +170,18 @@ class _TopBar extends StatelessWidget {
 // ─── Board ───────────────────────────────────────────────────────────────────
 
 class _GameBoard extends StatelessWidget {
-  final List<int> revealedCells;
-  final String? imageUrl;
-  final void Function(int) onReveal;
+  final List<int>      revealedCells;
+  final String?        imageUrl;
+  final int?           selectedIndex;
+  final void Function(int) onTileTap;
 
   static const int _gridSize = 5;
 
   const _GameBoard({
     required this.revealedCells,
     required this.imageUrl,
-    required this.onReveal,
+    required this.selectedIndex,
+    required this.onTileTap,
   });
 
   @override
@@ -168,7 +189,6 @@ class _GameBoard extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final side = min(constraints.maxWidth, constraints.maxHeight);
-        final tileSize = side / _gridSize;
 
         return Center(
           child: SizedBox.square(
@@ -178,24 +198,40 @@ class _GameBoard extends StatelessWidget {
               padding: EdgeInsets.zero,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: _gridSize,
-                mainAxisSpacing: 0,
-                crossAxisSpacing: 0,
+                mainAxisSpacing: _kSpacing,
+                crossAxisSpacing: _kSpacing,
               ),
               itemCount: _gridSize * _gridSize,
               itemBuilder: (context, index) {
+                // Revealed tile — shows image slice
                 if (revealedCells.contains(index)) {
                   return _OpenTile(
                     index: index,
                     gridSize: _gridSize,
-                    tileSize: tileSize,
                     imageUrl: imageUrl,
                   );
                 }
+
+                // Active tile — briefly highlighted when tapped
+                if (selectedIndex == index) {
+                  return ClipRRect(
+                    borderRadius: _kRadius,
+                    child: AspectRatio(
+                      aspectRatio: 1,
+                      child: Image.asset(_kTileActive, fit: BoxFit.cover),
+                    ),
+                  );
+                }
+
+                // Closed tile — tappable
                 return GestureDetector(
-                  onTap: () => onReveal(index),
-                  child: Image.asset(
-                    'assets/images/tiles/tile_closed.png',
-                    fit: BoxFit.cover,
+                  onTap: () => onTileTap(index),
+                  child: ClipRRect(
+                    borderRadius: _kRadius,
+                    child: AspectRatio(
+                      aspectRatio: 1,
+                      child: Image.asset(_kTileClosed, fit: BoxFit.cover),
+                    ),
                   ),
                 );
               },
@@ -210,54 +246,69 @@ class _GameBoard extends StatelessWidget {
 // ─── Tiles ───────────────────────────────────────────────────────────────────
 
 class _OpenTile extends StatelessWidget {
-  final int index;
-  final int gridSize;
-  final double tileSize;
+  final int     index;
+  final int     gridSize;
   final String? imageUrl;
 
   const _OpenTile({
     required this.index,
     required this.gridSize,
-    required this.tileSize,
     required this.imageUrl,
   });
 
   @override
   Widget build(BuildContext context) {
-    final row = index ~/ gridSize;
-    final col = index % gridSize;
-    // Map (row, col) to Alignment(-1..1, -1..1)
+    // No image loaded yet — show empty frame
+    if (imageUrl == null) {
+      return ClipRRect(
+        borderRadius: _kRadius,
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: Image.asset(_kTileEmpty, fit: BoxFit.cover),
+        ),
+      );
+    }
+
+    final row    = index ~/ gridSize;
+    final col    = index % gridSize;
     final xAlign = (col / (gridSize - 1)) * 2.0 - 1.0;
     final yAlign = (row / (gridSize - 1)) * 2.0 - 1.0;
-    final fullSize = tileSize * gridSize;
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (imageUrl != null)
-          ClipRect(
-            child: OverflowBox(
-              alignment: Alignment(xAlign, yAlign),
-              minWidth: fullSize,
-              maxWidth: fullSize,
-              minHeight: fullSize,
-              maxHeight: fullSize,
-              child: CachedNetworkImage(
-                imageUrl: imageUrl!,
-                width: fullSize,
-                height: fullSize,
-                fit: BoxFit.cover,
-              ),
+    return ClipRRect(
+      borderRadius: _kRadius,
+      child: AspectRatio(
+        aspectRatio: 1,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final tileSize = constraints.maxWidth;
+                final fullSize = tileSize * gridSize;
+                return ClipRect(
+                  child: OverflowBox(
+                    alignment: Alignment(xAlign, yAlign),
+                    minWidth: fullSize,
+                    maxWidth: fullSize,
+                    minHeight: fullSize,
+                    maxHeight: fullSize,
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl!,
+                      width: fullSize,
+                      height: fullSize,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                );
+              },
             ),
-          ),
-        Opacity(
-          opacity: 0.5,
-          child: Image.asset(
-            'assets/images/tiles/tile_open.png',
-            fit: BoxFit.cover,
-          ),
+            Opacity(
+              opacity: 0.5,
+              child: Image.asset(_kTileOpen, fit: BoxFit.cover),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -272,10 +323,10 @@ class _BottomBar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
       child: Row(
-        children: [
-          const Expanded(child: _GuessButton()),
-          const SizedBox(width: 12),
-          const _SkipButton(),
+        children: const [
+          Expanded(child: _GuessButton()),
+          SizedBox(width: 12),
+          _SkipButton(),
         ],
       ),
     );
