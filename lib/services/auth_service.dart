@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -108,10 +109,21 @@ class AuthService {
   Stream<UserModel?> userModelStream() {
     return _auth.authStateChanges().asyncExpand((user) {
       if (user == null) return Stream.value(null);
-      return _firestore.collection('users').doc(user.uid).snapshots().asyncMap((doc) async {
-        if (doc.exists) return UserModel.fromFirestore(doc);
-        return _syncUser(user, fallbackName: 'בודק');
-      });
+      return _firestore
+          .collection('users')
+          .doc(user.uid)
+          .snapshots()
+          .asyncMap((doc) async {
+            if (doc.exists) return UserModel.fromFirestore(doc);
+            return _syncUser(user, fallbackName: 'בודק');
+          })
+          .handleError((e) {
+            debugPrint('userModelStream inner error: $e');
+          });
+    }).handleError((e) {
+      // Catches PigeonUserDetails type errors from google_sign_in
+      // and other auth stream errors — prevents app crash
+      debugPrint('userModelStream error: $e');
     });
   }
 

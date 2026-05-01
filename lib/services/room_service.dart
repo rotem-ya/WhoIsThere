@@ -49,8 +49,8 @@ class RoomService {
       name: 'הכותל המערבי',
       answer: 'הכותל המערבי',
       category: ImageCategory.israeliLandmark,
-      imageUrl: 'https://images.unsplash.com/photo-1542743408-218cc173cda0?w=1200',
-      thumbnailUrl: 'https://images.unsplash.com/photo-1542743408-218cc173cda0?w=400',
+      imageUrl: 'assets/images/places/western_wall.jpg',
+      thumbnailUrl: 'assets/images/places/western_wall.jpg',
     ),
     GameImageModel(
       id: 'local_taj_mahal',
@@ -174,7 +174,15 @@ class RoomService {
   Future<void> startGameDirectly(String roomId) async {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
-    final image = _fallbackImages[Random().nextInt(_fallbackImages.length)];
+    // Israel-only images that have local assets
+    final pool = _fallbackImages
+        .where((img) =>
+            img.category == ImageCategory.israeliLandmark &&
+            img.imageUrl.startsWith('assets/'))
+        .toList();
+    final image = pool.isNotEmpty
+        ? pool[Random().nextInt(pool.length)]
+        : _fallbackImages.first;
     await _rooms.doc(roomId).update({'selectedImageId': image.id});
     await _startGame(roomId, room, Difficulty.easy);
   }

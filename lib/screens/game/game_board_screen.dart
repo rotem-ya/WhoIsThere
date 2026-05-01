@@ -8,7 +8,6 @@ import '../../models/room_model.dart';
 
 const _kTileClosed = 'assets/images/tiles/tile_closed.png';
 const _kTileEmpty  = 'assets/images/tiles/tile_closed_empty.png';
-const _kSpacing    = 0.0;
 
 class GameBoardScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -20,18 +19,20 @@ class GameBoardScreen extends ConsumerStatefulWidget {
 
 class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   String? _imageUrl;
+  String  _loadedImageId = '';
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadImage());
-  }
-
-  Future<void> _loadImage() async {
+  // Called reactively from build when imageId becomes available or changes.
+  Future<void> _loadImage(String imageId) async {
+    if (imageId.isEmpty || imageId == _loadedImageId) return;
+    _loadedImageId = imageId;
     try {
-      final room = await ref.read(roomStreamProvider(widget.roomId).future);
-      if (room == null || room.imageId.isEmpty) return;
-      final img = await ref.read(roomServiceProvider).getImage(room.imageId);
+      if (imageId.startsWith('local_')) {
+        // Map local_<name> → assets/images/places/<name>.jpg
+        final name = imageId.replaceFirst('local_', '');
+        if (mounted) setState(() => _imageUrl = 'assets/images/places/$name.jpg');
+        return;
+      }
+      final img = await ref.read(roomServiceProvider).getImage(imageId);
       if (mounted && img != null) setState(() => _imageUrl = img.imageUrl);
     } catch (e) {
       debugPrint('Failed to load image: $e');
@@ -68,6 +69,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 WidgetsBinding.instance
                     .addPostFrameCallback((_) => context.go('/home'));
                 return const SizedBox();
+              }
+              // Trigger image load whenever imageId is available / changes
+              if (room.imageId.isNotEmpty) {
+                WidgetsBinding.instance
+                    .addPostFrameCallback((_) => _loadImage(room.imageId));
               }
               return _GameLayout(
                 room: room,
@@ -181,8 +187,8 @@ class _GameBoard extends StatelessWidget {
               padding: EdgeInsets.zero,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: _gridSize,
-                mainAxisSpacing: _kSpacing,
-                crossAxisSpacing: _kSpacing,
+                mainAxisSpacing: 0,
+                crossAxisSpacing: 0,
               ),
               itemCount: _gridSize * _gridSize,
               itemBuilder: (context, index) {
@@ -206,7 +212,7 @@ class _GameBoard extends StatelessWidget {
   }
 }
 
-// ─── Tiles ───────────────────────────────────────────────────────────────────
+// ─── Open tile (image slice) ─────────────────────────────────────────────────
 
 class _OpenTile extends StatelessWidget {
   final int     index;
@@ -227,6 +233,7 @@ class _OpenTile extends StatelessWidget {
 
     final row    = index ~/ gridSize;
     final col    = index % gridSize;
+    // Map (row, col) to Alignment in [-1, 1] range
     final xAlign = (col / (gridSize - 1)) * 2.0 - 1.0;
     final yAlign = (row / (gridSize - 1)) * 2.0 - 1.0;
 
@@ -234,6 +241,21 @@ class _OpenTile extends StatelessWidget {
       builder: (context, constraints) {
         final tileSize = constraints.maxWidth;
         final fullSize = tileSize * gridSize;
+
+        final child = imageUrl!.startsWith('assets/')
+            ? Image.asset(
+                imageUrl!,
+                width: fullSize,
+                height: fullSize,
+                fit: BoxFit.cover,
+              )
+            : CachedNetworkImage(
+                imageUrl: imageUrl!,
+                width: fullSize,
+                height: fullSize,
+                fit: BoxFit.cover,
+              );
+
         return ClipRect(
           child: OverflowBox(
             alignment: Alignment(xAlign, yAlign),
@@ -241,12 +263,7 @@ class _OpenTile extends StatelessWidget {
             maxWidth: fullSize,
             minHeight: fullSize,
             maxHeight: fullSize,
-            child: CachedNetworkImage(
-              imageUrl: imageUrl!,
-              width: fullSize,
-              height: fullSize,
-              fit: BoxFit.cover,
-            ),
+            child: child,
           ),
         );
       },
