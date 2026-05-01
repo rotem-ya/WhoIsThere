@@ -129,53 +129,65 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         textDirection: TextDirection.rtl,
         child: Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 24),
-          child: Container(
-            height: 470,
-            padding: const EdgeInsets.fromLTRB(14, 18, 14, 14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF171B3D),
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(dialogContext),
-                      icon: const Icon(Icons.close_rounded, color: Colors.white54),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        'מה המקום?',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
-                          fontWeight: FontWeight.w900,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 18),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Center(
+                child: Container(
+                  width: min(420, constraints.maxWidth),
+                  height: min(420, constraints.maxHeight),
+                  padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF171B3D),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  ),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: 62,
+                        child: Stack(
+                          children: [
+                            const Center(
+                              child: Text(
+                                'מה המקום?',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1,
+                                ),
+                              ),
+                            ),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: IconButton(
+                                onPressed: () => Navigator.pop(dialogContext),
+                                icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 48),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: LetterBankInput(
-                    answer: image.answer,
-                    enabled: true,
-                    onComplete: (filled) async {
-                      final correct = await _submitGuess(room, userId, filled);
-                      if (correct && dialogContext.mounted) {
-                        Navigator.pop(dialogContext);
-                      }
-                      return correct;
-                    },
+                      Expanded(
+                        child: LetterBankInput(
+                          answer: image.answer,
+                          enabled: true,
+                          onComplete: (filled) async {
+                            final correct = await _submitGuess(room, userId, filled);
+                            if (correct && dialogContext.mounted) {
+                              Navigator.pop(dialogContext);
+                            }
+                            return correct;
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -432,70 +444,39 @@ class _GameBoard extends StatelessWidget {
           dimension: side,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
-            child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: gridSize,
-                mainAxisSpacing: 0,
-                crossAxisSpacing: 0,
-              ),
-              itemCount: gridSize * gridSize,
-              itemBuilder: (context, index) {
-                final isRevealed = revealedCells.contains(index);
-                if (isRevealed) {
-                  return _OpenTile(index: index, gridSize: gridSize, imageUrl: imageUrl);
-                }
-
-                final canReveal = enabled && availableCells.contains(index) && onReveal != null;
-                return GestureDetector(
-                  onTap: canReveal ? () => onReveal!(index) : null,
-                  child: Opacity(
-                    opacity: enabled ? 1 : 0.82,
-                    child: Image.asset(_kTileClosed, fit: BoxFit.cover),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (imageUrl == null)
+                  Image.asset(_kTileEmpty, fit: BoxFit.cover)
+                else if (imageUrl!.startsWith('assets/'))
+                  Image.asset(imageUrl!, fit: BoxFit.cover)
+                else
+                  CachedNetworkImage(imageUrl: imageUrl!, fit: BoxFit.cover),
+                GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: gridSize,
+                    mainAxisSpacing: 0,
+                    crossAxisSpacing: 0,
                   ),
-                );
-              },
+                  itemCount: gridSize * gridSize,
+                  itemBuilder: (context, index) {
+                    final isRevealed = revealedCells.contains(index);
+                    if (isRevealed) return const SizedBox.expand();
+                    final canReveal = enabled && availableCells.contains(index) && onReveal != null;
+                    return GestureDetector(
+                      onTap: canReveal ? () => onReveal!(index) : null,
+                      child: Opacity(
+                        opacity: enabled ? 1 : 0.82,
+                        child: Image.asset(_kTileClosed, fit: BoxFit.cover),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _OpenTile extends StatelessWidget {
-  final int index;
-  final int gridSize;
-  final String? imageUrl;
-
-  const _OpenTile({required this.index, required this.gridSize, required this.imageUrl});
-
-  @override
-  Widget build(BuildContext context) {
-    if (imageUrl == null) return Image.asset(_kTileEmpty, fit: BoxFit.cover);
-
-    final row = index ~/ gridSize;
-    final col = index % gridSize;
-    final xAlign = (col / (gridSize - 1)) * 2.0 - 1.0;
-    final yAlign = (row / (gridSize - 1)) * 2.0 - 1.0;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final tileSize = constraints.maxWidth;
-        final fullSize = tileSize * gridSize;
-        final child = imageUrl!.startsWith('assets/')
-            ? Image.asset(imageUrl!, width: fullSize, height: fullSize, fit: BoxFit.cover)
-            : CachedNetworkImage(imageUrl: imageUrl!, width: fullSize, height: fullSize, fit: BoxFit.cover);
-
-        return ClipRect(
-          child: OverflowBox(
-            alignment: Alignment(xAlign, yAlign),
-            minWidth: fullSize,
-            maxWidth: fullSize,
-            minHeight: fullSize,
-            maxHeight: fullSize,
-            child: child,
           ),
         );
       },
