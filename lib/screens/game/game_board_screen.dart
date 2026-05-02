@@ -441,8 +441,10 @@ class _GameBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final side = min(constraints.maxWidth, constraints.maxHeight) * 0.96;
-        final tile = side / gridSize;
+        // Floor tile to a whole logical pixel so tile * gridSize == side exactly,
+        // eliminating sub-pixel gaps between Positioned tiles.
+        final tile = (min(constraints.maxWidth, constraints.maxHeight) * 0.96 / gridSize).floorToDouble();
+        final side = tile * gridSize;
 
         return SizedBox.square(
           dimension: side,
