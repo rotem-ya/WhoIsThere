@@ -42,6 +42,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   // Turn-reveal tracking for human guess gate
   bool _hasRevealedThisTurn = false;
   int _revealedAtTurnIndex = -1;
+  bool _hasGuessedThisTurn = false;
 
   // Guess-event banner
   int _lastShownGuessCount = -1;
@@ -235,6 +236,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     final image = _image;
     if (image == null || value.trim().isEmpty) return false;
 
+    // Lock out further guesses for this turn immediately.
+    setState(() => _hasGuessedThisTurn = true);
+
     final correct = await ref.read(roomServiceProvider).submitAnswer(
           roomId: room.id,
           userId: userId,
@@ -381,11 +385,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
 
                 _scheduleBotTurn(room);
 
-                // Reset reveal flag when turn advances.
-                if (_hasRevealedThisTurn &&
-                    room.currentTurnIndex != _revealedAtTurnIndex) {
+                // Reset per-turn flags when turn advances.
+                if (room.currentTurnIndex != _revealedAtTurnIndex &&
+                    (_hasRevealedThisTurn || _hasGuessedThisTurn)) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) setState(() => _hasRevealedThisTurn = false);
+                    if (mounted) {
+                      setState(() {
+                        _hasRevealedThisTurn = false;
+                        _hasGuessedThisTurn = false;
+                      });
+                    }
                   });
                 }
 
@@ -413,6 +422,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     : 0;
                 final canGuessNow = isMyTurn &&
                     _hasRevealedThisTurn &&
+                    !_hasGuessedThisTurn &&
                     room.currentTurnIndex == _revealedAtTurnIndex;
 
                 return _GameLayout(
