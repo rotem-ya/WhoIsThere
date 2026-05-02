@@ -358,6 +358,8 @@ class RoomService {
         'phase': GamePhase.finished.name,
         'winnerId': userId,
         'players.$userId.score': FieldValue.increment(difficulty.winReward),
+        'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': true},
+        'guessCount': FieldValue.increment(1),
       });
       return true;
     }
@@ -366,16 +368,23 @@ class RoomService {
     final room = RoomModel.fromFirestore(doc);
     final currentScore = room.players[userId]?.score ?? 0;
     final newScore = currentScore - difficulty.wrongGuessPenalty;
+    final nextTurnIndex = room.currentTurnIndex + 1;
 
     if (newScore <= 0) {
       await _rooms.doc(roomId).update({
         'players.$userId.score': 0,
         'players.$userId.isEliminated': true,
+        'currentTurnIndex': nextTurnIndex,
+        'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
+        'guessCount': FieldValue.increment(1),
       });
       await _checkLastPlayerStanding(roomId);
     } else {
       await _rooms.doc(roomId).update({
         'players.$userId.score': newScore,
+        'currentTurnIndex': nextTurnIndex,
+        'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
+        'guessCount': FieldValue.increment(1),
       });
     }
     return false;

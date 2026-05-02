@@ -19,6 +19,8 @@ class RoomModel extends Equatable {
   final List<int> availablePieceIndices;
   final List<String> solvedLetters;    // lowercase letters correctly guessed
   final String? winnerId;
+  final Map<String, dynamic>? lastGuessEvent;
+  final int guessCount;
   final DateTime createdAt;
 
   const RoomModel({
@@ -37,6 +39,8 @@ class RoomModel extends Equatable {
     this.availablePieceIndices = const [],
     this.solvedLetters = const [],
     this.winnerId,
+    this.lastGuessEvent,
+    this.guessCount = 0,
     required this.createdAt,
   });
 
@@ -98,6 +102,8 @@ class RoomModel extends Equatable {
       availablePieceIndices: List<int>.from(data['availablePieceIndices'] ?? []),
       solvedLetters: List<String>.from(data['solvedLetters'] ?? []),
       winnerId: data['winnerId'],
+      lastGuessEvent: data['lastGuessEvent'] as Map<String, dynamic>?,
+      guessCount: data['guessCount'] as int? ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
@@ -117,6 +123,8 @@ class RoomModel extends Equatable {
         'availablePieceIndices': availablePieceIndices,
         'solvedLetters': solvedLetters,
         'winnerId': winnerId,
+        'lastGuessEvent': lastGuessEvent,
+        'guessCount': guessCount,
         'createdAt': Timestamp.fromDate(createdAt),
       };
 
@@ -133,6 +141,8 @@ class RoomModel extends Equatable {
     List<int>? availablePieceIndices,
     List<String>? solvedLetters,
     String? winnerId,
+    Map<String, dynamic>? lastGuessEvent,
+    int? guessCount,
   }) =>
       RoomModel(
         id: id,
@@ -150,6 +160,8 @@ class RoomModel extends Equatable {
         availablePieceIndices: availablePieceIndices ?? this.availablePieceIndices,
         solvedLetters: solvedLetters ?? this.solvedLetters,
         winnerId: winnerId ?? this.winnerId,
+        lastGuessEvent: lastGuessEvent ?? this.lastGuessEvent,
+        guessCount: guessCount ?? this.guessCount,
         createdAt: createdAt,
       );
 
@@ -167,5 +179,6 @@ class RoomModel extends Equatable {
         currentTurnIndex,
         placedPieces,
         winnerId,
+        guessCount,
       ];
 }

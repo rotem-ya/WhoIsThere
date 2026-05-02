@@ -39,6 +39,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   String _lastBotTurnKey = '';
   bool _isBusy = false;
 
+  // Turn-reveal tracking for human guess gate
+  bool _hasRevealedThisTurn = false;
+  int _revealedAtTurnIndex = -1;
+
+  // Guess-event banner
+  int _lastShownGuessCount = -1;
+  Map<String, dynamic>? _currentBanner;
+  bool _showBanner = false;
+
   @override
   void dispose() {
     _guessController.dispose();
@@ -56,7 +65,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     }
   }
 
-  Future<void> _revealAndAdvance({
+  // Human reveals a tile: stores it but does NOT advance the turn.
+  // Guess button becomes active; player then guesses or taps Skip.
+  Future<void> _humanRevealTile({
     required RoomModel room,
     required String userId,
     required int index,
@@ -78,8 +89,24 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       if (isLastTile) {
         await ref.read(roomServiceProvider).endGameNoWinner(room.id);
       } else {
-        await ref.read(roomServiceProvider).skipPiecePlacement(roomId: room.id);
+        if (mounted) {
+          setState(() {
+            _hasRevealedThisTurn = true;
+            _revealedAtTurnIndex = room.currentTurnIndex;
+          });
+        }
       }
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
+  }
+
+  Future<void> _skipTurn(RoomModel room) async {
+    if (_isBusy) return;
+    setState(() => _isBusy = true);
+    try {
+      await ref.read(roomServiceProvider).skipPiecePlacement(roomId: room.id);
+      if (mounted) setState(() => _hasRevealedThisTurn = false);
     } finally {
       if (mounted) setState(() => _isBusy = false);
     }
@@ -92,61 +119,82 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     final player = room.players[currentId];
     if (player == null || !player.isBot) return;
 
-    final total = room.gridSize * room.gridSize;
-    final revealedCount = room.placedPieces.length;
-    final revealedRatio = total > 0 ? revealedCount / total : 0.0;
+    if (room.availablePieceIndices.isEmpty) return;
 
-    // Bot can guess only after 3 tiles AND ratio >= 30%.
-    final canConsiderGuessing = revealedCount >= 3 && revealedRatio >= 0.30;
-    if (!canConsiderGuessing && room.availablePieceIndices.isEmpty) return;
-
-    final key =
-        '${room.id}-${room.currentTurnIndex}-$revealedCount';
+    // Dedup on turn index only — prevent re-scheduling mid-turn.
+    final key = '${room.id}-${room.currentTurnIndex}';
     if (_lastBotTurnKey == key) return;
     _lastBotTurnKey = key;
 
-    final delayMs = 900 + _random.nextInt(701); // 900–1600 ms
+    final delayMs = 1200 + _random.nextInt(1001); // 1200–2200 ms
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
-      final latest =
+      final snapshot =
           await ref.read(roomServiceProvider).watchRoom(room.id).first;
-      if (latest == null) return;
-      if (latest.phase == GamePhase.finished) return;
-      if (latest.currentTurnUserId != currentId) return;
+      if (snapshot == null) return;
+      if (snapshot.phase == GamePhase.finished) return;
+      if (snapshot.currentTurnUserId != currentId) return;
+      if (snapshot.availablePieceIndices.isEmpty) return;
 
-      final latestTotal = latest.gridSize * latest.gridSize;
-      final latestRevealed = latest.placedPieces.length;
-      final latestRatio =
-          latestTotal > 0 ? latestRevealed / latestTotal : 0.0;
+      // Step 1: Always reveal a tile first.
+      final idx = snapshot.availablePieceIndices[
+          _random.nextInt(snapshot.availablePieceIndices.length)];
+      final isLastTile = snapshot.availablePieceIndices.length == 1;
+      final difficulty = snapshot.selectedDifficulty ?? Difficulty.easy;
 
-      // Tiered attempt / correctness probabilities.
-      // No guessing before 3 tiles revealed or ratio < 30%.
+      await ref.read(roomServiceProvider).revealPiece(
+            roomId: snapshot.id,
+            userId: currentId,
+            pieceIndex: idx,
+            difficulty: difficulty,
+          );
+
+      if (isLastTile) {
+        if (mounted) {
+          await ref.read(roomServiceProvider).endGameNoWinner(snapshot.id);
+        }
+        return;
+      }
+
+      if (!mounted) return;
+
+      // Step 2: Fetch updated state, then decide whether to guess.
+      final afterReveal =
+          await ref.read(roomServiceProvider).watchRoom(room.id).first;
+      if (afterReveal == null || afterReveal.phase == GamePhase.finished) return;
+
+      final afterTotal = afterReveal.gridSize * afterReveal.gridSize;
+      final afterRevealed = afterReveal.placedPieces.length;
+      final afterRatio =
+          afterTotal > 0 ? afterRevealed / afterTotal : 0.0;
+
+      // Bots never guess before 50 % revealed or fewer than 5 tiles.
       double attemptChance;
       double correctChance;
-      if (latestRevealed < 3 || latestRatio < 0.30) {
+      if (afterRevealed < 5 || afterRatio < 0.50) {
         attemptChance = 0.0;
         correctChance = 0.0;
-      } else if (latestRatio >= 0.75) {
-        attemptChance = 0.65;
-        correctChance = 0.70;
-      } else if (latestRatio >= 0.50) {
+      } else if (afterRatio >= 0.75) {
         attemptChance = 0.45;
         correctChance = 0.55;
       } else {
-        // 30 %–50 % revealed
+        // 50 %–75 % revealed
         attemptChance = 0.25;
-        correctChance = 0.35;
+        correctChance = 0.30;
       }
 
       final shouldGuess =
           _image != null && _random.nextDouble() < attemptChance;
 
       if (shouldGuess) {
-        await _performBotGuess(latest, currentId, correctChance);
-      } else if (latest.availablePieceIndices.isNotEmpty) {
-        final index = latest.availablePieceIndices[
-            _random.nextInt(latest.availablePieceIndices.length)];
-        await _revealAndAdvance(room: latest, userId: currentId, index: index);
+        await _performBotGuess(afterReveal, currentId, correctChance);
+        // submitAnswer advances turn on wrong; game ends on correct.
+      } else {
+        if (mounted) {
+          await ref
+              .read(roomServiceProvider)
+              .skipPiecePlacement(roomId: afterReveal.id);
+        }
       }
     });
   }
@@ -154,31 +202,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   Future<void> _performBotGuess(
       RoomModel room, String botId, double correctChance) async {
     final image = _image;
-    if (image == null || _isBusy) return;
+    if (image == null) return;
 
-    setState(() => _isBusy = true);
-    try {
-      final isCorrect = _random.nextDouble() < correctChance;
-      final guess =
-          isCorrect ? image.answer : _randomWrongGuess(image.answer);
+    final isCorrect = _random.nextDouble() < correctChance;
+    final guess = isCorrect ? image.answer : _randomWrongGuess(image.answer);
 
-      final correct = await ref.read(roomServiceProvider).submitAnswer(
-            roomId: room.id,
-            userId: botId,
-            guess: guess,
-            image: image,
-            difficulty: room.selectedDifficulty ?? Difficulty.easy,
-          );
-
-      // After a wrong guess advance the turn so the game doesn't stall.
-      if (!correct && mounted) {
-        await ref
-            .read(roomServiceProvider)
-            .skipPiecePlacement(roomId: room.id);
-      }
-    } finally {
-      if (mounted) setState(() => _isBusy = false);
-    }
+    await ref.read(roomServiceProvider).submitAnswer(
+          roomId: room.id,
+          userId: botId,
+          guess: guess,
+          image: image,
+          difficulty: room.selectedDifficulty ?? Difficulty.easy,
+        );
+    // Turn advances via submitAnswer: wrong → nextTurnIndex; correct → game ends.
   }
 
   String _randomWrongGuess(String correctAnswer) {
@@ -345,11 +381,39 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
 
                 _scheduleBotTurn(room);
 
+                // Reset reveal flag when turn advances.
+                if (_hasRevealedThisTurn &&
+                    room.currentTurnIndex != _revealedAtTurnIndex) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) setState(() => _hasRevealedThisTurn = false);
+                  });
+                }
+
+                // Trigger guess-event banner when a new guess is stored.
+                if (room.guessCount != _lastShownGuessCount &&
+                    room.lastGuessEvent != null) {
+                  _lastShownGuessCount = room.guessCount;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    setState(() {
+                      _currentBanner = room.lastGuessEvent;
+                      _showBanner = true;
+                    });
+                    Future.delayed(const Duration(milliseconds: 1800), () {
+                      if (mounted) setState(() => _showBanner = false);
+                    });
+                  });
+                }
+
                 final currentUserId = user?.id;
-                final isMyTurn = currentUserId != null && room.currentTurnUserId == currentUserId;
+                final isMyTurn = currentUserId != null &&
+                    room.currentTurnUserId == currentUserId;
                 final myCoins = currentUserId != null
                     ? (room.players[currentUserId]?.score ?? 0)
                     : 0;
+                final canGuessNow = isMyTurn &&
+                    _hasRevealedThisTurn &&
+                    room.currentTurnIndex == _revealedAtTurnIndex;
 
                 return _GameLayout(
                   room: room,
@@ -357,11 +421,22 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   isMyTurn: isMyTurn,
                   isBusy: _isBusy,
                   myCoins: myCoins,
+                  canGuessNow: canGuessNow,
+                  showBanner: _showBanner,
+                  bannerEvent: _currentBanner,
                   onBack: () => context.go('/home'),
                   onReveal: currentUserId == null
                       ? null
-                      : (index) => _revealAndAdvance(room: room, userId: currentUserId, index: index),
-                  onGuess: currentUserId == null ? null : () => _openGuessDialog(room, currentUserId),
+                      : (index) => _humanRevealTile(
+                          room: room,
+                          userId: currentUserId,
+                          index: index),
+                  onGuess: canGuessNow
+                      ? () => _openGuessDialog(room, currentUserId!)
+                      : null,
+                  onSkip: (isMyTurn && canGuessNow)
+                      ? () => _skipTurn(room)
+                      : null,
                 );
               },
             ),
@@ -378,9 +453,13 @@ class _GameLayout extends StatelessWidget {
   final bool isMyTurn;
   final bool isBusy;
   final int myCoins;
+  final bool canGuessNow;
+  final bool showBanner;
+  final Map<String, dynamic>? bannerEvent;
   final VoidCallback onBack;
   final void Function(int)? onReveal;
   final VoidCallback? onGuess;
+  final VoidCallback? onSkip;
 
   const _GameLayout({
     required this.room,
@@ -388,9 +467,13 @@ class _GameLayout extends StatelessWidget {
     required this.isMyTurn,
     required this.isBusy,
     required this.myCoins,
+    required this.canGuessNow,
+    required this.showBanner,
+    required this.bannerEvent,
     required this.onBack,
     required this.onReveal,
     required this.onGuess,
+    required this.onSkip,
   });
 
   @override
@@ -410,6 +493,8 @@ class _GameLayout extends StatelessWidget {
           myCoins: myCoins,
           onBack: onBack,
         ),
+        if (showBanner && bannerEvent != null)
+          _GuessBanner(event: bannerEvent!, players: room.players),
         Expanded(
           child: Center(
             child: _GameBoard(
@@ -417,7 +502,7 @@ class _GameLayout extends StatelessWidget {
               revealedCells: room.revealedCells,
               availableCells: room.availablePieceIndices,
               imageUrl: image?.imageUrl,
-              enabled: isMyTurn && !isBusy,
+              enabled: isMyTurn && !isBusy && !canGuessNow,
               onReveal: onReveal,
             ),
           ),
@@ -425,9 +510,11 @@ class _GameLayout extends StatelessWidget {
         _BottomActions(
           isMyTurn: isMyTurn,
           isBusy: isBusy,
+          canGuessNow: canGuessNow,
           revealedCount: revealedCount,
           totalTiles: total,
           onGuess: onGuess,
+          onSkip: onSkip,
         ),
       ],
     );
@@ -714,16 +801,20 @@ class _ClosedTileOverlay extends StatelessWidget {
 class _BottomActions extends StatelessWidget {
   final bool isMyTurn;
   final bool isBusy;
+  final bool canGuessNow;
   final int revealedCount;
   final int totalTiles;
   final VoidCallback? onGuess;
+  final VoidCallback? onSkip;
 
   const _BottomActions({
     required this.isMyTurn,
     required this.isBusy,
+    required this.canGuessNow,
     required this.revealedCount,
     required this.totalTiles,
     required this.onGuess,
+    required this.onSkip,
   });
 
   int _reward() => _calcReward(revealedCount, totalTiles);
@@ -735,6 +826,16 @@ class _BottomActions extends StatelessWidget {
     final reward = _reward();
     final penalty = _penalty(reward);
     final hiddenTiles = totalTiles - revealedCount;
+    final guessActive = canGuessNow && !isBusy;
+
+    String hintText;
+    if (!isMyTurn) {
+      hintText = 'שחקן אחר חושף משבצת';
+    } else if (canGuessNow) {
+      hintText = 'גלית משבצת — נחש או דלג';
+    } else {
+      hintText = 'גלה משבצת תחילה';
+    }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
@@ -742,7 +843,7 @@ class _BottomActions extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            isMyTurn ? 'בחר משבצת או נסה לנחש' : 'שחקן אחר חושף משבצת',
+            hintText,
             style: TextStyle(
               color: Colors.white.withOpacity(0.55),
               fontSize: 13,
@@ -762,10 +863,10 @@ class _BottomActions extends StatelessWidget {
           ],
           const SizedBox(height: 8),
           GestureDetector(
-            onTap: isMyTurn && !isBusy ? onGuess : null,
+            onTap: guessActive ? onGuess : null,
             child: AnimatedOpacity(
               duration: const Duration(milliseconds: 160),
-              opacity: isMyTurn && !isBusy ? 1 : 0.55,
+              opacity: guessActive ? 1 : 0.38,
               child: Container(
                 height: 58,
                 decoration: BoxDecoration(
@@ -776,11 +877,12 @@ class _BottomActions extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF7B5FFF).withOpacity(0.42),
-                      blurRadius: 22,
-                      offset: const Offset(0, 8),
-                    ),
+                    if (guessActive)
+                      BoxShadow(
+                        color: const Color(0xFF7B5FFF).withOpacity(0.42),
+                        blurRadius: 22,
+                        offset: const Offset(0, 8),
+                      ),
                   ],
                 ),
                 child: Center(
@@ -791,7 +893,7 @@ class _BottomActions extends StatelessWidget {
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2.4),
                         )
-                      : isMyTurn
+                      : canGuessNow
                           ? Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -838,9 +940,9 @@ class _BottomActions extends StatelessWidget {
                                 ),
                               ],
                             )
-                          : const Text(
-                              'ממתין לתור',
-                              style: TextStyle(
+                          : Text(
+                              isMyTurn ? 'נחש' : 'ממתין לתור',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
@@ -850,7 +952,79 @@ class _BottomActions extends StatelessWidget {
               ),
             ),
           ),
+          if (canGuessNow && !isBusy) ...[
+            const SizedBox(height: 6),
+            TextButton(
+              onPressed: onSkip,
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white54,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+              ),
+              child: const Text('דלג על ניחוש',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _GuessBanner extends StatelessWidget {
+  final Map<String, dynamic> event;
+  final Map<String, PlayerModel> players;
+
+  const _GuessBanner({required this.event, required this.players});
+
+  @override
+  Widget build(BuildContext context) {
+    final playerId = event['playerId'] as String? ?? '';
+    final guess = event['guess'] as String? ?? '';
+    final isCorrect = event['isCorrect'] as bool? ?? false;
+    final playerName = players[playerId]?.name ?? playerId;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: isCorrect
+              ? const Color(0xFF1B5E20).withOpacity(0.92)
+              : const Color(0xFF7F0000).withOpacity(0.88),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isCorrect
+                ? Colors.green.shade400.withOpacity(0.5)
+                : Colors.red.shade400.withOpacity(0.5),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text(
+                '$playerName ניחש: "$guess"',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              isCorrect ? 'נכון! ✓' : 'לא נכון ✗',
+              style: TextStyle(
+                color: isCorrect ? Colors.greenAccent : Colors.redAccent,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
