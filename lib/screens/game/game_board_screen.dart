@@ -830,7 +830,7 @@ class _BottomActions extends StatelessWidget {
   }
 }
 
-class _NoWinnerView extends StatelessWidget {
+class _NoWinnerView extends StatefulWidget {
   final String answer;
   final String? imageUrl;
   final VoidCallback onHome;
@@ -842,62 +842,208 @@ class _NoWinnerView extends StatelessWidget {
   });
 
   @override
+  State<_NoWinnerView> createState() => _NoWinnerViewState();
+}
+
+class _NoWinnerViewState extends State<_NoWinnerView> {
+  bool _overlayVisible = false;
+  bool _line1Visible = false;
+  bool _line2Visible = false;
+  bool _line3Visible = false;
+  double _imageScale = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _runSequence();
+  }
+
+  Future<void> _runSequence() async {
+    await Future.delayed(const Duration(milliseconds: 900));
+    if (!mounted) return;
+    setState(() {
+      _overlayVisible = true;
+      _imageScale = 1.05;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    setState(() => _line1Visible = true);
+
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    setState(() => _line2Visible = true);
+
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    setState(() => _line3Visible = true);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final imgSize = min(constraints.maxWidth - 48, 200.0);
+        final imgSize = min(
+          constraints.maxWidth - 32,
+          min(constraints.maxHeight * 0.58, 280.0),
+        );
         return SingleChildScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Center(
               child: Padding(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (imageUrl != null) ...[
+                    if (widget.imageUrl != null) ...[
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: SizedBox(
-                          width: imgSize,
-                          height: imgSize,
-                          child: imageUrl!.startsWith('assets/')
-                              ? Image.asset(imageUrl!, fit: BoxFit.cover)
-                              : CachedNetworkImage(
-                                  imageUrl: imageUrl!, fit: BoxFit.cover),
+                        borderRadius: BorderRadius.circular(18),
+                        child: SizedBox.square(
+                          dimension: imgSize,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              AnimatedScale(
+                                scale: _imageScale,
+                                duration: const Duration(milliseconds: 400),
+                                curve: Curves.easeOut,
+                                child: widget.imageUrl!.startsWith('assets/')
+                                    ? Image.asset(widget.imageUrl!,
+                                        fit: BoxFit.cover)
+                                    : CachedNetworkImage(
+                                        imageUrl: widget.imageUrl!,
+                                        fit: BoxFit.cover),
+                              ),
+                              AnimatedOpacity(
+                                opacity: _overlayVisible ? 0.4 : 0.0,
+                                duration: const Duration(milliseconds: 400),
+                                child: const ColoredBox(color: Colors.black),
+                              ),
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      AnimatedOpacity(
+                                        opacity: _line1Visible ? 1.0 : 0.0,
+                                        duration:
+                                            const Duration(milliseconds: 300),
+                                        child: const Text(
+                                          'אף אחד לא ניחש בזמן',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w900,
+                                            shadows: [
+                                              Shadow(
+                                                  color: Colors.black87,
+                                                  blurRadius: 8)
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      AnimatedOpacity(
+                                        opacity: _line2Visible ? 1.0 : 0.0,
+                                        duration:
+                                            const Duration(milliseconds: 300),
+                                        child: const Text(
+                                          'התשובה היא...',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            shadows: [
+                                              Shadow(
+                                                  color: Colors.black87,
+                                                  blurRadius: 8)
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      AnimatedOpacity(
+                                        opacity: _line3Visible ? 1.0 : 0.0,
+                                        duration:
+                                            const Duration(milliseconds: 300),
+                                        child: Text(
+                                          widget.answer,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: Color(0xFF9B7EFF),
+                                            fontSize: 26,
+                                            fontWeight: FontWeight.w900,
+                                            shadows: [
+                                              Shadow(
+                                                  color: Colors.black87,
+                                                  blurRadius: 12)
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 20),
+                    ] else ...[
+                      AnimatedOpacity(
+                        opacity: _line1Visible ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 300),
+                        child: const Text(
+                          'אף אחד לא ניחש בזמן',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      AnimatedOpacity(
+                        opacity: _line2Visible ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 300),
+                        child: const Text(
+                          'התשובה היא...',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      AnimatedOpacity(
+                        opacity: _line3Visible ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 300),
+                        child: Text(
+                          widget.answer,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Color(0xFF9B7EFF),
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
                     ],
-                    const Text('⏳', style: TextStyle(fontSize: 52)),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'אף אחד לא ניחש בזמן',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (answer.isNotEmpty)
-                      Text(
-                        'התשובה: $answer',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Color(0xFF9B7EFF),
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
                     SizedBox(
                       width: 180,
                       child: FilledButton(
-                        onPressed: onHome,
+                        onPressed: widget.onHome,
                         child: const Text('משחק חדש'),
                       ),
                     ),
