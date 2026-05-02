@@ -93,18 +93,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     if (player == null || !player.isBot) return;
 
     final total = room.gridSize * room.gridSize;
-    final revealedRatio = total > 0 ? room.placedPieces.length / total : 0.0;
-    final reward = _calcReward(room.placedPieces.length, total);
-    final canGuess = _image != null && (revealedRatio > 0.3 || reward >= 40);
+    final revealedCount = room.placedPieces.length;
+    final revealedRatio = total > 0 ? revealedCount / total : 0.0;
 
-    if (!canGuess && room.availablePieceIndices.isEmpty) return;
+    // Bot can guess only after 3 tiles AND ratio >= 30%.
+    final canConsiderGuessing = revealedCount >= 3 && revealedRatio >= 0.30;
+    if (!canConsiderGuessing && room.availablePieceIndices.isEmpty) return;
 
     final key =
-        '${room.id}-${room.currentTurnIndex}-${room.placedPieces.length}';
+        '${room.id}-${room.currentTurnIndex}-$revealedCount';
     if (_lastBotTurnKey == key) return;
     _lastBotTurnKey = key;
 
-    final delayMs = 800 + _random.nextInt(800);
+    final delayMs = 900 + _random.nextInt(701); // 900–1600 ms
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
       final latest =
@@ -114,14 +115,34 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       if (latest.currentTurnUserId != currentId) return;
 
       final latestTotal = latest.gridSize * latest.gridSize;
+      final latestRevealed = latest.placedPieces.length;
       final latestRatio =
-          latestTotal > 0 ? latest.placedPieces.length / latestTotal : 0.0;
-      final latestReward = _calcReward(latest.placedPieces.length, latestTotal);
-      final latestCanGuess =
-          _image != null && (latestRatio > 0.3 || latestReward >= 40);
+          latestTotal > 0 ? latestRevealed / latestTotal : 0.0;
 
-      if (latestCanGuess) {
-        await _performBotGuess(latest, currentId);
+      // Tiered attempt / correctness probabilities.
+      // No guessing before 3 tiles revealed or ratio < 30%.
+      double attemptChance;
+      double correctChance;
+      if (latestRevealed < 3 || latestRatio < 0.30) {
+        attemptChance = 0.0;
+        correctChance = 0.0;
+      } else if (latestRatio >= 0.75) {
+        attemptChance = 0.65;
+        correctChance = 0.70;
+      } else if (latestRatio >= 0.50) {
+        attemptChance = 0.45;
+        correctChance = 0.55;
+      } else {
+        // 30 %–50 % revealed
+        attemptChance = 0.25;
+        correctChance = 0.35;
+      }
+
+      final shouldGuess =
+          _image != null && _random.nextDouble() < attemptChance;
+
+      if (shouldGuess) {
+        await _performBotGuess(latest, currentId, correctChance);
       } else if (latest.availablePieceIndices.isNotEmpty) {
         final index = latest.availablePieceIndices[
             _random.nextInt(latest.availablePieceIndices.length)];
@@ -130,14 +151,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     });
   }
 
-  Future<void> _performBotGuess(RoomModel room, String botId) async {
+  Future<void> _performBotGuess(
+      RoomModel room, String botId, double correctChance) async {
     final image = _image;
     if (image == null || _isBusy) return;
 
     setState(() => _isBusy = true);
     try {
-      // 65 % chance the bot knows the answer.
-      final isCorrect = _random.nextDouble() < 0.65;
+      final isCorrect = _random.nextDouble() < correctChance;
       final guess =
           isCorrect ? image.answer : _randomWrongGuess(image.answer);
 
@@ -163,10 +184,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   String _randomWrongGuess(String correctAnswer) {
     const letters = 'אבגדהוזחטיכלמנסעפצקרשת';
     final length = correctAnswer.replaceAll(' ', '').length;
-    return List.generate(
-      length,
-      (_) => letters[_random.nextInt(letters.length)],
-    ).join();
+    String guess;
+    do {
+      guess = List.generate(
+        length,
+        (_) => letters[_random.nextInt(letters.length)],
+      ).join();
+    } while (normalizeHebrewFinals(guess) ==
+        normalizeHebrewFinals(correctAnswer));
+    return guess;
   }
 
   Future<bool> _submitGuess(RoomModel room, String userId, String value) async {
