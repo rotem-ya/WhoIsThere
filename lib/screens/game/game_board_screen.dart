@@ -440,10 +440,13 @@ class _GameBoard extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final side = min(constraints.maxWidth, constraints.maxHeight) * 0.96;
+        final tile = side / gridSize;
+
         return SizedBox.square(
           dimension: side,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
+            clipBehavior: Clip.hardEdge,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -453,33 +456,65 @@ class _GameBoard extends StatelessWidget {
                   Image.asset(imageUrl!, fit: BoxFit.cover)
                 else
                   CachedNetworkImage(imageUrl: imageUrl!, fit: BoxFit.cover),
-                GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: gridSize,
-                    mainAxisSpacing: 0,
-                    crossAxisSpacing: 0,
-                  ),
-                  itemCount: gridSize * gridSize,
-                  itemBuilder: (context, index) {
-                    final isRevealed = revealedCells.contains(index);
-                    if (isRevealed) return const SizedBox.expand();
-                    final canReveal = enabled && availableCells.contains(index) && onReveal != null;
-                    return GestureDetector(
-                      onTap: canReveal ? () => onReveal!(index) : null,
-                      child: Opacity(
-                        opacity: enabled ? 1 : 0.82,
-                        child: Image.asset(_kTileClosed, fit: BoxFit.cover),
-                      ),
-                    );
-                  },
-                ),
+                for (var index = 0; index < gridSize * gridSize; index++)
+                  if (!revealedCells.contains(index))
+                    _ClosedTileOverlay(
+                      index: index,
+                      gridSize: gridSize,
+                      tileSize: tile,
+                      enabled: enabled &&
+                          availableCells.contains(index) &&
+                          onReveal != null,
+                      onTap: onReveal == null ? null : () => onReveal!(index),
+                    ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _ClosedTileOverlay extends StatelessWidget {
+  final int index;
+  final int gridSize;
+  final double tileSize;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  const _ClosedTileOverlay({
+    required this.index,
+    required this.gridSize,
+    required this.tileSize,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final row = index ~/ gridSize;
+    final col = index % gridSize;
+
+    return Positioned(
+      left: col * tileSize,
+      top: row * tileSize,
+      width: tileSize,
+      height: tileSize,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: enabled ? onTap : null,
+        child: ClipRect(
+          child: Transform.scale(
+            scale: 1.10,
+            child: Image.asset(
+              _kTileClosed,
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.high,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
