@@ -1,6 +1,13 @@
 import 'dart:math' show Random, min;
 
 import 'package:cached_network_image/cached_network_image.dart';
+
+// Shared reward formula used by the button widget and bot logic.
+int _calcReward(int revealedCount, int total) {
+  if (total == 0) return 100;
+  return (100 - revealedCount / total * 80).clamp(20.0, 100.0).round();
+}
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -80,24 +87,81 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
 
     final player = room.players[currentId];
     if (player == null || !player.isBot) return;
-    if (room.availablePieceIndices.isEmpty) return;
 
-    final key = '${room.id}-${room.currentTurnIndex}-${room.placedPieces.length}';
+    final total = room.gridSize * room.gridSize;
+    final revealedRatio = total > 0 ? room.placedPieces.length / total : 0.0;
+    final reward = _calcReward(room.placedPieces.length, total);
+    final canGuess = _image != null && (revealedRatio > 0.3 || reward >= 40);
+
+    if (!canGuess && room.availablePieceIndices.isEmpty) return;
+
+    final key =
+        '${room.id}-${room.currentTurnIndex}-${room.placedPieces.length}';
     if (_lastBotTurnKey == key) return;
     _lastBotTurnKey = key;
 
-    final delayMs = 900 + _random.nextInt(1000);
+    final delayMs = 800 + _random.nextInt(800);
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
-      final latest = await ref.read(roomServiceProvider).watchRoom(room.id).first;
+      final latest =
+          await ref.read(roomServiceProvider).watchRoom(room.id).first;
       if (latest == null) return;
       if (latest.currentTurnUserId != currentId) return;
-      if (latest.availablePieceIndices.isEmpty) return;
 
-      final index = latest.availablePieceIndices[
-          _random.nextInt(latest.availablePieceIndices.length)];
-      await _revealAndAdvance(room: latest, userId: currentId, index: index);
+      final latestTotal = latest.gridSize * latest.gridSize;
+      final latestRatio =
+          latestTotal > 0 ? latest.placedPieces.length / latestTotal : 0.0;
+      final latestReward = _calcReward(latest.placedPieces.length, latestTotal);
+      final latestCanGuess =
+          _image != null && (latestRatio > 0.3 || latestReward >= 40);
+
+      if (latestCanGuess) {
+        await _performBotGuess(latest, currentId);
+      } else if (latest.availablePieceIndices.isNotEmpty) {
+        final index = latest.availablePieceIndices[
+            _random.nextInt(latest.availablePieceIndices.length)];
+        await _revealAndAdvance(room: latest, userId: currentId, index: index);
+      }
     });
+  }
+
+  Future<void> _performBotGuess(RoomModel room, String botId) async {
+    final image = _image;
+    if (image == null || _isBusy) return;
+
+    setState(() => _isBusy = true);
+    try {
+      // 65 % chance the bot knows the answer.
+      final isCorrect = _random.nextDouble() < 0.65;
+      final guess =
+          isCorrect ? image.answer : _randomWrongGuess(image.answer);
+
+      final correct = await ref.read(roomServiceProvider).submitAnswer(
+            roomId: room.id,
+            userId: botId,
+            guess: guess,
+            image: image,
+            difficulty: room.selectedDifficulty ?? Difficulty.easy,
+          );
+
+      // After a wrong guess advance the turn so the game doesn't stall.
+      if (!correct && mounted) {
+        await ref
+            .read(roomServiceProvider)
+            .skipPiecePlacement(roomId: room.id);
+      }
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
+  }
+
+  String _randomWrongGuess(String correctAnswer) {
+    const letters = 'אבגדהוזחטיכלמנסעפצקרשת';
+    final length = correctAnswer.replaceAll(' ', '').length;
+    return List.generate(
+      length,
+      (_) => letters[_random.nextInt(letters.length)],
+    ).join();
   }
 
   Future<bool> _submitGuess(RoomModel room, String userId, String value) async {
@@ -619,11 +683,7 @@ class _BottomActions extends StatelessWidget {
     required this.onGuess,
   });
 
-  int _reward() {
-    if (totalTiles == 0) return 100;
-    final ratio = revealedCount / totalTiles;
-    return (100 - ratio * 80).clamp(20.0, 100.0).round();
-  }
+  int _reward() => _calcReward(revealedCount, totalTiles);
 
   int _penalty(int reward) => (reward * 0.15).round();
 
@@ -692,29 +752,30 @@ class _BottomActions extends StatelessWidget {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
+                                    const Text('🪙',
+                                        style: TextStyle(
+                                            fontSize: 13, height: 1)),
+                                    const SizedBox(width: 3),
                                     Text(
                                       '+$reward',
                                       style: const TextStyle(
                                         color: Color(0xFF66BB6A),
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
                                         height: 1.2,
                                       ),
                                     ),
-                                    const Text(
-                                      '  /  ',
-                                      style: TextStyle(
-                                        color: Colors.white38,
-                                        fontSize: 13,
-                                        height: 1.2,
-                                      ),
-                                    ),
+                                    const SizedBox(width: 14),
+                                    const Text('❌',
+                                        style: TextStyle(
+                                            fontSize: 11, height: 1)),
+                                    const SizedBox(width: 3),
                                     Text(
                                       '-$penalty',
                                       style: const TextStyle(
                                         color: Color(0xFFEF5350),
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
                                         height: 1.2,
                                       ),
                                     ),
