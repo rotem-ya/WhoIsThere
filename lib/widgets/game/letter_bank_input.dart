@@ -13,10 +13,11 @@ String normalizeHebrewFinals(String s) {
       .replaceAll(' ', '');
 }
 
+// Visual RTL order: index 0 is the rightmost key on screen.
 const List<List<String>> _keyboardRows = [
-  ['ק', 'ר', 'א', 'ט', 'ו', 'ן', 'ם', 'פ'],
-  ['ש', 'ד', 'ג', 'כ', 'ע', 'י', 'ח', 'ל', 'ך', 'ף'],
-  ['ז', 'ס', 'ב', 'ה', 'נ', 'מ', 'צ', 'ת', 'ץ'],
+  ['פ', 'ם', 'ן', 'ו', 'ט', 'א', 'ר', 'ק'],
+  ['ף', 'ך', 'ל', 'ח', 'י', 'ע', 'כ', 'ג', 'ד', 'ש'],
+  ['ץ', 'ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז'],
 ];
 
 class LetterBankInput extends StatefulWidget {
@@ -36,6 +37,7 @@ class LetterBankInput extends StatefulWidget {
 }
 
 class _LetterBankInputState extends State<LetterBankInput> {
+  late List<int> _wordLengths;
   late List<String?> _filled;
   bool _isSubmitting = false;
   bool _showError = false;
@@ -53,8 +55,26 @@ class _LetterBankInputState extends State<LetterBankInput> {
   }
 
   void _resetForAnswer() {
-    final count = widget.answer.replaceAll(' ', '').characters.take(12).length;
-    _filled = List<String?>.filled(count, null);
+    final rawWords = widget.answer
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
+
+    var total = 0;
+    final lengths = <int>[];
+    for (final word in rawWords) {
+      if (total >= 12) break;
+      final lettersInWord = word.characters.length;
+      final allowed = math.min(lettersInWord, 12 - total);
+      if (allowed > 0) {
+        lengths.add(allowed);
+        total += allowed;
+      }
+    }
+
+    _wordLengths = lengths.isEmpty ? [1] : lengths;
+    _filled = List<String?>.filled(math.max(1, total), null);
     _isSubmitting = false;
     _showError = false;
   }
@@ -130,6 +150,7 @@ class _LetterBankInputState extends State<LetterBankInput> {
               children: [
                 _AnswerSlots(
                   filled: _filled,
+                  wordLengths: _wordLengths,
                   enabled: enabled,
                   onBackspace: _backspace,
                 ),
@@ -167,11 +188,13 @@ class _LetterBankInputState extends State<LetterBankInput> {
 
 class _AnswerSlots extends StatelessWidget {
   final List<String?> filled;
+  final List<int> wordLengths;
   final bool enabled;
   final VoidCallback onBackspace;
 
   const _AnswerSlots({
     required this.filled,
+    required this.wordLengths,
     required this.enabled,
     required this.onBackspace,
   });
@@ -180,24 +203,45 @@ class _AnswerSlots extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const gap = 5.0;
-        final count = math.max(1, math.min(12, filled.length));
-        final usableWidth = math.max(220.0, constraints.maxWidth - 8.0);
-        final size = math.min(
+        const slotGap = 4.0;
+        const wordGap = 12.0;
+
+        final totalLetters = math.max(1, wordLengths.fold(0, (a, b) => a + b));
+        final wordCount = math.max(1, wordLengths.length);
+        final usableWidth = constraints.maxWidth - 8.0;
+        // Total gap = inner-slot gaps (between letters in a word) + word gaps
+        final totalGapWidth =
+            slotGap * (totalLetters - wordCount) + wordGap * (wordCount - 1);
+        final slotSize = math.min(
           34.0,
-          math.max(24.0, (usableWidth - gap * (count - 1)) / count),
+          math.max(18.0, (usableWidth - totalGapWidth) / totalLetters),
         );
+
+        var idx = 0;
+        final wordWidgets = <Widget>[];
+        for (final wordLen in wordLengths) {
+          final slots = <Widget>[];
+          for (var i = 0; i < wordLen; i++) {
+            if (i > 0) slots.add(const SizedBox(width: slotGap));
+            final letter = idx < filled.length ? filled[idx] : null;
+            slots.add(_Slot(letter: letter, size: slotSize));
+            idx++;
+          }
+          wordWidgets.add(Row(
+            textDirection: TextDirection.rtl,
+            mainAxisSize: MainAxisSize.min,
+            children: slots,
+          ));
+        }
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Wrap(
             textDirection: TextDirection.rtl,
             alignment: WrapAlignment.center,
-            spacing: gap,
+            spacing: wordGap,
             runSpacing: 6,
-            children: List.generate(count, (i) {
-              return _Slot(letter: filled[i], size: size);
-            }),
+            children: wordWidgets,
           ),
         );
       },
@@ -256,9 +300,14 @@ class _HebrewKeyboard extends StatelessWidget {
       builder: (context, constraints) {
         const gap = 4.0;
         const maxKeysInRow = 10;
+        // Derive size from widest row so all keys are uniform.
+        // Lower bound of 20 keeps keys readable; formula guarantees no overflow.
         final keySize = math.min(
           38.0,
-          math.max(25.0, (constraints.maxWidth - gap * (maxKeysInRow - 1)) / maxKeysInRow),
+          math.max(
+            20.0,
+            (constraints.maxWidth - gap * (maxKeysInRow - 1)) / maxKeysInRow,
+          ),
         );
         return Column(
           mainAxisSize: MainAxisSize.min,
