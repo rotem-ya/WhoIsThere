@@ -1,13 +1,6 @@
 import 'dart:math' show Random, min;
 
 import 'package:cached_network_image/cached_network_image.dart';
-
-// Shared reward formula used by the button widget and bot logic.
-int _calcReward(int revealedCount, int total) {
-  if (total == 0) return 100;
-  return (100 - revealedCount / total * 80).clamp(20.0, 100.0).round();
-}
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +11,12 @@ import '../../models/player_model.dart';
 import '../../models/room_model.dart';
 import '../../providers/providers.dart';
 import '../../widgets/game/letter_bank_input.dart';
+
+// Shared reward formula used by the button widget and bot logic.
+int _calcReward(int revealedCount, int total) {
+  if (total == 0) return 100;
+  return (100 - revealedCount / total * 80).clamp(20.0, 100.0).round();
+}
 
 const _kTileClosed = 'assets/images/tiles/tile_closed.png';
 const _kTileEmpty = 'assets/images/tiles/tile_closed_empty.png';
