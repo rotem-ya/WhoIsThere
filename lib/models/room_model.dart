@@ -17,7 +17,8 @@ class RoomModel extends Equatable {
   final int currentTurnIndex;
   final Map<int, String> placedPieces; // pieceIndex -> userId
   final List<int> availablePieceIndices;
-  final List<String> solvedLetters;    // lowercase letters correctly guessed
+  final List<String> solvedLetters; // lowercase letters correctly guessed
+  final List<String> letterCardGrantedPlayerIds;
   final String? winnerId;
   final Map<String, dynamic>? lastGuessEvent;
   final int guessCount;
@@ -38,6 +39,7 @@ class RoomModel extends Equatable {
     this.placedPieces = const {},
     this.availablePieceIndices = const [],
     this.solvedLetters = const [],
+    this.letterCardGrantedPlayerIds = const [],
     this.winnerId,
     this.lastGuessEvent,
     this.guessCount = 0,
@@ -101,6 +103,8 @@ class RoomModel extends Equatable {
       placedPieces: placedPieces,
       availablePieceIndices: List<int>.from(data['availablePieceIndices'] ?? []),
       solvedLetters: List<String>.from(data['solvedLetters'] ?? []),
+      letterCardGrantedPlayerIds:
+          List<String>.from(data['letterCardGrantedPlayerIds'] ?? []),
       winnerId: data['winnerId'],
       lastGuessEvent: data['lastGuessEvent'] as Map<String, dynamic>?,
       guessCount: data['guessCount'] as int? ?? 0,
@@ -122,6 +126,7 @@ class RoomModel extends Equatable {
         'placedPieces': placedPieces.map((k, v) => MapEntry(k.toString(), v)),
         'availablePieceIndices': availablePieceIndices,
         'solvedLetters': solvedLetters,
+        'letterCardGrantedPlayerIds': letterCardGrantedPlayerIds,
         'winnerId': winnerId,
         'lastGuessEvent': lastGuessEvent,
         'guessCount': guessCount,
@@ -140,6 +145,7 @@ class RoomModel extends Equatable {
     Map<int, String>? placedPieces,
     List<int>? availablePieceIndices,
     List<String>? solvedLetters,
+    List<String>? letterCardGrantedPlayerIds,
     String? winnerId,
     Map<String, dynamic>? lastGuessEvent,
     int? guessCount,
@@ -159,6 +165,8 @@ class RoomModel extends Equatable {
         placedPieces: placedPieces ?? this.placedPieces,
         availablePieceIndices: availablePieceIndices ?? this.availablePieceIndices,
         solvedLetters: solvedLetters ?? this.solvedLetters,
+        letterCardGrantedPlayerIds:
+            letterCardGrantedPlayerIds ?? this.letterCardGrantedPlayerIds,
         winnerId: winnerId ?? this.winnerId,
         lastGuessEvent: lastGuessEvent ?? this.lastGuessEvent,
         guessCount: guessCount ?? this.guessCount,
@@ -178,6 +186,8 @@ class RoomModel extends Equatable {
         selectedDifficulty,
         currentTurnIndex,
         placedPieces,
+        solvedLetters,
+        letterCardGrantedPlayerIds,
         winnerId,
         guessCount,
       ];
