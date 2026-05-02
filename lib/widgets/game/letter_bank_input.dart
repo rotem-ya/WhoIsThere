@@ -59,16 +59,20 @@ class _LetterBankInputState extends State<LetterBankInput> {
     _showError = false;
   }
 
-  void _clear() => setState(() => _filled = List<String?>.filled(_filled.length, null));
+  void _clear() {
+    setState(() => _filled = List<String?>.filled(_filled.length, null));
+  }
 
   Future<void> _tapLetter(String letter) async {
     if (!widget.enabled || _isSubmitting) return;
     final idx = _filled.indexOf(null);
     if (idx < 0) return;
+
     setState(() {
       _filled[idx] = letter;
       _showError = false;
     });
+
     if (_filled.every((v) => v != null)) await _submit();
   }
 
@@ -93,16 +97,19 @@ class _LetterBankInputState extends State<LetterBankInput> {
     } catch (_) {
       ok = false;
     }
+
     if (!mounted) return;
     if (ok) {
       setState(() => _isSubmitting = false);
       return;
     }
+
     setState(() {
       _isSubmitting = false;
       _showError = true;
     });
     _clear();
+
     Future.delayed(const Duration(milliseconds: 1100), () {
       if (mounted) setState(() => _showError = false);
     });
@@ -111,48 +118,47 @@ class _LetterBankInputState extends State<LetterBankInput> {
   @override
   Widget build(BuildContext context) {
     final enabled = widget.enabled && !_isSubmitting;
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth < 350 || constraints.maxHeight < 430;
-        final answerHeight = compact ? 48.0 : 56.0;
-        final keyboardHeight = math.max(170.0, constraints.maxHeight - answerHeight - 30);
-        return Column(
-          children: [
-            SizedBox(
-              height: answerHeight,
-              child: _AnswerSlots(
-                filled: _filled,
-                enabled: enabled,
-                onBackspace: _backspace,
-              ),
-            ),
-            SizedBox(
-              height: 22,
-              child: AnimatedOpacity(
-                opacity: _showError ? 1 : 0,
-                duration: const Duration(milliseconds: 150),
-                child: const Center(
-                  child: Text(
-                    'לא נכון, נסה שוב',
-                    style: TextStyle(
-                      color: AppColors.secondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
+        return SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _AnswerSlots(
+                  filled: _filled,
+                  enabled: enabled,
+                  onBackspace: _backspace,
+                ),
+                SizedBox(
+                  height: 22,
+                  child: AnimatedOpacity(
+                    opacity: _showError ? 1 : 0,
+                    duration: const Duration(milliseconds: 150),
+                    child: const Center(
+                      child: Text(
+                        'לא נכון, נסה שוב',
+                        style: TextStyle(
+                          color: AppColors.secondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 10),
+                _HebrewKeyboard(
+                  enabled: enabled,
+                  onLetter: _tapLetter,
+                  onBackspace: _backspace,
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: keyboardHeight,
-              child: _HebrewKeyboard(
-                enabled: enabled,
-                onLetter: _tapLetter,
-                onBackspace: _backspace,
-              ),
-            ),
-          ],
+          ),
         );
       },
     );
@@ -176,28 +182,23 @@ class _AnswerSlots extends StatelessWidget {
       builder: (context, constraints) {
         const gap = 5.0;
         final count = math.max(1, math.min(12, filled.length));
-        final contentWidth = constraints.maxWidth - 50;
-        final size = math.min(40.0, math.max(24.0, (contentWidth - gap * (count - 1)) / count));
-        return Row(
-          textDirection: TextDirection.rtl,
-          children: [
-            Expanded(
-              child: Center(
-                child: Row(
-                  textDirection: TextDirection.rtl,
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(count, (i) {
-                    return Padding(
-                      padding: EdgeInsets.only(left: i == count - 1 ? 0 : gap),
-                      child: _Slot(letter: filled[i], size: size),
-                    );
-                  }),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            _BackKey(enabled: enabled, onTap: onBackspace),
-          ],
+        final usableWidth = math.max(220.0, constraints.maxWidth - 8.0);
+        final size = math.min(
+          34.0,
+          math.max(24.0, (usableWidth - gap * (count - 1)) / count),
+        );
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Wrap(
+            textDirection: TextDirection.rtl,
+            alignment: WrapAlignment.center,
+            spacing: gap,
+            runSpacing: 6,
+            children: List.generate(count, (i) {
+              return _Slot(letter: filled[i], size: size);
+            }),
+          ),
         );
       },
     );
@@ -212,16 +213,16 @@ class _Slot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final filled = letter != null;
+    final isFilled = letter != null;
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: filled ? const Color(0xFFEDEBFF) : Colors.white,
+        color: isFilled ? const Color(0xFFEDEBFF) : Colors.white,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: filled ? AppColors.primary : const Color(0xFFD7D4FF),
-          width: filled ? 2 : 1.4,
+          color: isFilled ? AppColors.primary : const Color(0xFFD7D4FF),
+          width: isFilled ? 2 : 1.4,
         ),
       ),
       alignment: Alignment.center,
@@ -229,7 +230,7 @@ class _Slot extends StatelessWidget {
         letter ?? '',
         style: TextStyle(
           color: AppColors.darkBlue,
-          fontSize: math.max(15, size * 0.55),
+          fontSize: math.max(14, size * 0.55),
           fontWeight: FontWeight.w900,
           height: 1,
         ),
@@ -253,9 +254,8 @@ class _HebrewKeyboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final rowGap = constraints.maxHeight < 210 ? 7.0 : 9.0;
         return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             for (var i = 0; i < _keyboardRows.length; i++) ...[
               _KeyboardRow(
@@ -264,9 +264,9 @@ class _HebrewKeyboard extends StatelessWidget {
                 maxWidth: constraints.maxWidth,
                 onLetter: onLetter,
               ),
-              if (i != _keyboardRows.length - 1) SizedBox(height: rowGap),
+              if (i != _keyboardRows.length - 1) const SizedBox(height: 7),
             ],
-            SizedBox(height: rowGap),
+            const SizedBox(height: 10),
             _BackAction(enabled: enabled, onTap: onBackspace),
           ],
         );
@@ -290,8 +290,12 @@ class _KeyboardRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const gap = 5.0;
-    final size = math.min(42.0, math.max(26.0, (maxWidth - gap * (letters.length - 1)) / letters.length));
+    const gap = 4.0;
+    final size = math.min(
+      38.0,
+      math.max(25.0, (maxWidth - gap * (letters.length - 1)) / letters.length),
+    );
+
     return Row(
       textDirection: TextDirection.rtl,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -329,46 +333,34 @@ class _LetterKey extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(12),
         child: Ink(
           width: size,
-          height: size,
+          height: size + 4,
           decoration: BoxDecoration(
             color: enabled ? Colors.white : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(13),
-            border: Border.all(color: const Color(0xFFC9C4FF), width: 1.4),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFC9C4FF), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.14),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Center(
             child: Text(
               label,
               style: TextStyle(
                 color: enabled ? AppColors.darkBlue : Colors.grey.shade500,
-                fontSize: math.max(16, size * 0.52),
+                fontSize: math.max(17, size * 0.58),
                 fontWeight: FontWeight.w900,
                 height: 1,
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _BackKey extends StatelessWidget {
-  final bool enabled;
-  final VoidCallback onTap;
-
-  const _BackKey({required this.enabled, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: enabled ? onTap : null,
-      icon: Icon(
-        Icons.backspace_outlined,
-        color: enabled ? AppColors.secondary : Colors.grey,
-        size: 22,
       ),
     );
   }
@@ -382,14 +374,19 @@ class _BackAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: enabled ? onTap : null,
-      icon: const Icon(Icons.backspace_outlined, size: 18),
-      label: const Text('מחיקה'),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.white,
-        side: BorderSide(color: Colors.white.withOpacity(0.35)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return SizedBox(
+      width: 150,
+      height: 46,
+      child: OutlinedButton.icon(
+        onPressed: enabled ? onTap : null,
+        icon: const Icon(Icons.backspace_outlined, size: 18),
+        label: const Text('מחיקה'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.white,
+          side: BorderSide(color: Colors.white.withOpacity(0.35)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        ),
       ),
     );
   }
