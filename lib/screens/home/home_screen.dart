@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
@@ -14,6 +15,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isCreating = false;
   int? _loadingPlayers;
+  DateTime? _lastBackPressedAt;
 
   Future<void> _startQuickGame(int targetPlayers) async {
     if (_isCreating) return;
@@ -88,37 +90,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  void _handleHomeBack() {
+    final now = DateTime.now();
+    final shouldExit = _lastBackPressedAt != null &&
+        now.difference(_lastBackPressedAt!) < const Duration(seconds: 2);
+
+    if (shouldExit) {
+      SystemNavigator.pop();
+      return;
+    }
+
+    _lastBackPressedAt = now;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('לחיצה נוספת ליציאה מהמשחק'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: PopScope(
         canPop: false,
-        onPopInvoked: (didPop) async {
+        onPopInvoked: (didPop) {
           if (didPop) return;
-          final shouldExit = await showDialog<bool>(
-            context: context,
-            builder: (ctx) => Directionality(
-              textDirection: TextDirection.rtl,
-              child: AlertDialog(
-                title: const Text('לצאת מהאפליקציה?'),
-                content: const Text('האם אתה בטוח שברצונך לצאת?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('ביטול'),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text('יציאה'),
-                  ),
-                ],
-              ),
-            ),
-          );
-          if (shouldExit == true && context.mounted) {
-            Navigator.of(context).maybePop();
-          }
+          _handleHomeBack();
         },
         child: Scaffold(
           body: DecoratedBox(
@@ -380,9 +382,9 @@ class _QuickPlayButton extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            'מהיר ופשוט',
-                            style: TextStyle(
+                          Text(
+                            subtitle,
+                            style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
