@@ -10,6 +10,7 @@ import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
 import '../../models/room_model.dart';
 import '../../providers/providers.dart';
+import '../../widgets/game/animated_reward.dart';
 import '../../widgets/game/letter_bank_input.dart';
 
 // Shared reward formula used by the button widget and bot logic.
@@ -917,35 +918,13 @@ class _BottomActions extends StatelessWidget {
                                   ),
                                 ),
                                 Row(
-                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Text('🪙',
-                                        style: TextStyle(
-                                            fontSize: 13, height: 1)),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      '+$reward',
-                                      style: const TextStyle(
-                                        color: Color(0xFF66BB6A),
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w800,
-                                        height: 1.2,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    const Text('❌',
-                                        style: TextStyle(
-                                            fontSize: 11, height: 1)),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      '-$penalty',
-                                      style: const TextStyle(
-                                        color: Color(0xFFEF5350),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        height: 1.2,
-                                      ),
-                                    ),
+                                    AnimatedReward(
+                                        value: reward, isPositive: true),
+                                    const SizedBox(width: 24),
+                                    AnimatedReward(
+                                        value: penalty, isPositive: false),
                                   ],
                                 ),
                               ],
