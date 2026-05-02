@@ -66,6 +66,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     if (!room.availablePieceIndices.contains(index)) return;
 
     final difficulty = room.selectedDifficulty ?? Difficulty.easy;
+    final isLastTile = room.availablePieceIndices.length == 1;
 
     setState(() => _isBusy = true);
     try {
@@ -75,7 +76,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             pieceIndex: index,
             difficulty: difficulty,
           );
-      await ref.read(roomServiceProvider).skipPiecePlacement(roomId: room.id);
+      if (isLastTile) {
+        await ref.read(roomServiceProvider).endGameNoWinner(room.id);
+      } else {
+        await ref.read(roomServiceProvider).skipPiecePlacement(roomId: room.id);
+      }
     } finally {
       if (mounted) setState(() => _isBusy = false);
     }
@@ -106,6 +111,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       final latest =
           await ref.read(roomServiceProvider).watchRoom(room.id).first;
       if (latest == null) return;
+      if (latest.phase == GamePhase.finished) return;
       if (latest.currentTurnUserId != currentId) return;
 
       final latestTotal = latest.gridSize * latest.gridSize;
@@ -296,8 +302,20 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 }
 
                 if (room.phase == GamePhase.finished) {
-                  final winnerName = room.players[room.winnerId]?.name ?? 'שחקן';
-                  return _FinishedView(winnerName: winnerName, onHome: () => context.go('/home'));
+                  final hasWinner =
+                      room.winnerId != null && room.winnerId!.isNotEmpty;
+                  if (hasWinner) {
+                    final winnerName =
+                        room.players[room.winnerId]?.name ?? 'שחקן';
+                    return _FinishedView(
+                        winnerName: winnerName,
+                        onHome: () => context.go('/home'));
+                  }
+                  return _NoWinnerView(
+                    answer: _image?.answer ?? '',
+                    imageUrl: _image?.imageUrl,
+                    onHome: () => context.go('/home'),
+                  );
                 }
 
                 _scheduleBotTurn(room);
@@ -691,6 +709,7 @@ class _BottomActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final reward = _reward();
     final penalty = _penalty(reward);
+    final hiddenTiles = totalTiles - revealedCount;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
@@ -705,6 +724,17 @@ class _BottomActions extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
+          if (hiddenTiles == 1) ...[
+            const SizedBox(height: 4),
+            const Text(
+              'הזדמנות אחרונה לנחש!',
+              style: TextStyle(
+                color: Color(0xFFFFCA28),
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           GestureDetector(
             onTap: isMyTurn && !isBusy ? onGuess : null,
@@ -797,6 +827,88 @@ class _BottomActions extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _NoWinnerView extends StatelessWidget {
+  final String answer;
+  final String? imageUrl;
+  final VoidCallback onHome;
+
+  const _NoWinnerView({
+    required this.answer,
+    required this.imageUrl,
+    required this.onHome,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final imgSize = min(constraints.maxWidth - 48, 200.0);
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (imageUrl != null) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: SizedBox(
+                          width: imgSize,
+                          height: imgSize,
+                          child: imageUrl!.startsWith('assets/')
+                              ? Image.asset(imageUrl!, fit: BoxFit.cover)
+                              : CachedNetworkImage(
+                                  imageUrl: imageUrl!, fit: BoxFit.cover),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                    const Text('⏳', style: TextStyle(fontSize: 52)),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'אף אחד לא ניחש בזמן',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (answer.isNotEmpty)
+                      Text(
+                        'התשובה: $answer',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFF9B7EFF),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    const SizedBox(height: 28),
+                    SizedBox(
+                      width: 180,
+                      child: FilledButton(
+                        onPressed: onHome,
+                        child: const Text('משחק חדש'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

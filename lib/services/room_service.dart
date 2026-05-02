@@ -381,6 +381,12 @@ class RoomService {
     return false;
   }
 
+  Future<void> endGameNoWinner(String roomId) async {
+    await _rooms.doc(roomId).update({
+      'phase': GamePhase.finished.name,
+    });
+  }
+
   Future<void> _checkLastPlayerStanding(String roomId) async {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
