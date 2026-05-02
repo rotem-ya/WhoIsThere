@@ -318,6 +318,8 @@ class _GameLayout extends StatelessWidget {
         _BottomActions(
           isMyTurn: isMyTurn,
           isBusy: isBusy,
+          revealedCount: revealedCount,
+          totalTiles: total,
           onGuess: onGuess,
         ),
       ],
@@ -605,13 +607,31 @@ class _ClosedTileOverlay extends StatelessWidget {
 class _BottomActions extends StatelessWidget {
   final bool isMyTurn;
   final bool isBusy;
+  final int revealedCount;
+  final int totalTiles;
   final VoidCallback? onGuess;
 
-  const _BottomActions({required this.isMyTurn, required this.isBusy, required this.onGuess});
+  const _BottomActions({
+    required this.isMyTurn,
+    required this.isBusy,
+    required this.revealedCount,
+    required this.totalTiles,
+    required this.onGuess,
+  });
+
+  int _reward() {
+    if (totalTiles == 0) return 100;
+    final ratio = revealedCount / totalTiles;
+    return (100 - ratio * 80).clamp(20.0, 100.0).round();
+  }
+
+  int _penalty(int reward) => (reward * 0.15).round();
 
   @override
   Widget build(BuildContext context) {
-    final label = isMyTurn ? 'ניחוש' : 'ממתין לתור';
+    final reward = _reward();
+    final penalty = _penalty(reward);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
       child: Column(
@@ -653,16 +673,63 @@ class _BottomActions extends StatelessWidget {
                       ? const SizedBox(
                           width: 24,
                           height: 24,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4),
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2.4),
                         )
-                      : Text(
-                          label,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+                      : isMyTurn
+                          ? Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'נחש',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.1,
+                                  ),
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '+$reward',
+                                      style: const TextStyle(
+                                        color: Color(0xFF66BB6A),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        height: 1.2,
+                                      ),
+                                    ),
+                                    const Text(
+                                      '  /  ',
+                                      style: TextStyle(
+                                        color: Colors.white38,
+                                        fontSize: 13,
+                                        height: 1.2,
+                                      ),
+                                    ),
+                                    Text(
+                                      '-$penalty',
+                                      style: const TextStyle(
+                                        color: Color(0xFFEF5350),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        height: 1.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            )
+                          : const Text(
+                              'ממתין לתור',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                 ),
               ),
             ),
