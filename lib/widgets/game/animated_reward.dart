@@ -90,10 +90,10 @@ class _AnimatedRewardState extends State<AnimatedReward>
                 ),
               ),
               const SizedBox(width: 6),
-              Image.asset(
-                'assets/ui/coin.png',
-                width: 16,
-                height: 16,
+              const Icon(
+                Icons.monetization_on,
+                size: 16,
+                color: Colors.amber,
               ),
             ],
           ),

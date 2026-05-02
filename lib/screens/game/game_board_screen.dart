@@ -920,11 +920,21 @@ class _BottomActions extends StatelessWidget {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    AnimatedReward(
-                                        value: reward, isPositive: true),
-                                    const SizedBox(width: 24),
-                                    AnimatedReward(
-                                        value: penalty, isPositive: false),
+                                    Flexible(
+                                      child: AnimatedReward(
+                                        key: ValueKey(reward),
+                                        value: reward,
+                                        isPositive: true,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Flexible(
+                                      child: AnimatedReward(
+                                        key: ValueKey(penalty),
+                                        value: penalty,
+                                        isPositive: false,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ],
