@@ -254,6 +254,12 @@ class _HebrewKeyboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        const gap = 4.0;
+        const maxKeysInRow = 10;
+        final keySize = math.min(
+          38.0,
+          math.max(25.0, (constraints.maxWidth - gap * (maxKeysInRow - 1)) / maxKeysInRow),
+        );
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -261,7 +267,7 @@ class _HebrewKeyboard extends StatelessWidget {
               _KeyboardRow(
                 letters: _keyboardRows[i],
                 enabled: enabled,
-                maxWidth: constraints.maxWidth,
+                keySize: keySize,
                 onLetter: onLetter,
               ),
               if (i != _keyboardRows.length - 1) const SizedBox(height: 7),
@@ -278,24 +284,19 @@ class _HebrewKeyboard extends StatelessWidget {
 class _KeyboardRow extends StatelessWidget {
   final List<String> letters;
   final bool enabled;
-  final double maxWidth;
+  final double keySize;
   final ValueChanged<String> onLetter;
 
   const _KeyboardRow({
     required this.letters,
     required this.enabled,
-    required this.maxWidth,
+    required this.keySize,
     required this.onLetter,
   });
 
   @override
   Widget build(BuildContext context) {
     const gap = 4.0;
-    final size = math.min(
-      38.0,
-      math.max(25.0, (maxWidth - gap * (letters.length - 1)) / letters.length),
-    );
-
     return Row(
       textDirection: TextDirection.rtl,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -304,7 +305,7 @@ class _KeyboardRow extends StatelessWidget {
           padding: EdgeInsets.only(left: i == letters.length - 1 ? 0 : gap),
           child: _LetterKey(
             label: letters[i],
-            size: size,
+            size: keySize,
             enabled: enabled,
             onTap: () => onLetter(letters[i]),
           ),

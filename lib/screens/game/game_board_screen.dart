@@ -132,10 +132,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
           insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 18),
           child: LayoutBuilder(
             builder: (context, constraints) {
+              final inputHeight = min(380.0, constraints.maxHeight - 84);
               return Center(
                 child: Container(
-                  width: min(420, constraints.maxWidth),
-                  height: min(420, constraints.maxHeight),
+                  width: min(420.0, constraints.maxWidth),
                   padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
                   decoration: BoxDecoration(
                     color: const Color(0xFF171B3D),
@@ -143,6 +143,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     border: Border.all(color: Colors.white.withOpacity(0.08)),
                   ),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(
                         height: 62,
@@ -170,7 +171,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           ],
                         ),
                       ),
-                      Expanded(
+                      SizedBox(
+                        height: inputHeight,
                         child: LetterBankInput(
                           answer: image.answer,
                           enabled: true,
@@ -504,13 +506,16 @@ class _ClosedTileOverlay extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: enabled ? onTap : null,
-        child: ClipRect(
-          child: Transform.scale(
-            scale: 1.10,
-            child: Image.asset(
-              _kTileClosed,
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.high,
+        child: Container(
+          color: const Color(0xFF15183D),
+          child: ClipRect(
+            child: Transform.scale(
+              scale: 1.08,
+              child: Image.asset(
+                _kTileClosed,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
+              ),
             ),
           ),
         ),
