@@ -61,3 +61,69 @@ class GuessBanner extends StatelessWidget {
   }
 }
 
+
+class BotTypingBanner extends StatelessWidget {
+  final String botName;
+  final String typedSoFar;
+
+  const BotTypingBanner({
+    super.key,
+    required this.botName,
+    required this.typedSoFar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isTyping = typedSoFar.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF751010).withOpacity(0.92),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.redAccent.withOpacity(0.45)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isTyping ? '$botName מקליד...' : '$botName חושב...',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            if (isTyping)
+              Text(
+                '"$typedSoFar" |',
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              )
+            else
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white70,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
