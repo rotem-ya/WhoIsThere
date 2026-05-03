@@ -359,7 +359,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                           enabled: true,
                           onComplete: (filled) async {
                             final correct = await _submitGuess(room, userId, filled);
-                            if (correct && dialogContext.mounted) {
+                            if (dialogContext.mounted) {
                               Navigator.pop(dialogContext);
                             }
                             return correct;
