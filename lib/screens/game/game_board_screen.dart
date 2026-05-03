@@ -133,7 +133,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     if (_lastBotTurnKey == key) return;
     _lastBotTurnKey = key;
 
-    final delayMs = 1200 + _random.nextInt(1001); // 1200–2200 ms
+    final delayMs = 2000 + _random.nextInt(1201); // 2000–3200 ms
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
       final snapshot =
@@ -220,7 +220,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     for (int i = 1; i <= word.length; i++) {
       if (!mounted) return;
       setState(() => _botTypingText = word.substring(0, i));
-      await Future.delayed(Duration(milliseconds: 110 + _random.nextInt(60)));
+      await Future.delayed(Duration(milliseconds: 160 + _random.nextInt(81)));
     }
 
     // Pause on the completed word before submitting.
@@ -395,6 +395,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             ),
           ),
           child: SafeArea(
+            top: false,
             child: roomAsync.when(
               loading: () => const Center(
                 child: CircularProgressIndicator(color: Color(0xFF8B6FFF)),
@@ -578,6 +579,7 @@ class _GameLayout extends StatelessWidget {
               availableCells: room.availablePieceIndices,
               imageUrl: image?.imageUrl,
               enabled: isMyTurn && !isBusy && !canGuessNow,
+              glowEnabled: isMyTurn && !isBusy && !canGuessNow,
               onReveal: onReveal,
             ),
           ),
@@ -795,6 +797,7 @@ class _GameBoard extends StatelessWidget {
   final List<int> availableCells;
   final String? imageUrl;
   final bool enabled;
+  final bool glowEnabled;
   final void Function(int)? onReveal;
 
   const _GameBoard({
@@ -803,6 +806,7 @@ class _GameBoard extends StatelessWidget {
     required this.availableCells,
     required this.imageUrl,
     required this.enabled,
+    required this.glowEnabled,
     required this.onReveal,
   });
 
@@ -810,41 +814,58 @@ class _GameBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Floor tile to a whole logical pixel so tile * gridSize == side exactly,
-        // eliminating sub-pixel gaps between Positioned tiles.
-        final tile = (min(constraints.maxWidth, constraints.maxHeight) * 0.96 / gridSize).floorToDouble();
+        final tile =
+            (min(constraints.maxWidth, constraints.maxHeight) * 0.96 / gridSize)
+                .floorToDouble();
         final side = tile * gridSize;
 
-        return SizedBox.square(
-          dimension: side,
-          child: ClipRRect(
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            clipBehavior: Clip.hardEdge,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (imageUrl == null)
-                  Image.asset(_kTileEmpty, fit: BoxFit.cover)
-                else if (imageUrl!.startsWith('assets/'))
-                  Image.asset(imageUrl!, fit: BoxFit.cover)
-                else
-                  CachedNetworkImage(
-                    imageUrl: imageUrl!,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => const _ImageFallback(),
-                  ),
-                for (var index = 0; index < gridSize * gridSize; index++)
-                  if (!revealedCells.contains(index))
-                    _ClosedTileOverlay(
-                      index: index,
-                      gridSize: gridSize,
-                      tileSize: tile,
-                      enabled: enabled &&
-                          availableCells.contains(index) &&
-                          onReveal != null,
-                      onTap: onReveal == null ? null : () => onReveal!(index),
+            boxShadow: glowEnabled
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF8B6FFF).withOpacity(0.40),
+                      blurRadius: 28,
+                      spreadRadius: 4,
                     ),
-              ],
+                  ]
+                : [],
+          ),
+          child: SizedBox.square(
+            dimension: side,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              clipBehavior: Clip.hardEdge,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (imageUrl == null)
+                    Image.asset(_kTileEmpty, fit: BoxFit.cover)
+                  else if (imageUrl!.startsWith('assets/'))
+                    Image.asset(imageUrl!, fit: BoxFit.cover)
+                  else
+                    CachedNetworkImage(
+                      imageUrl: imageUrl!,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => const _ImageFallback(),
+                    ),
+                  for (var index = 0; index < gridSize * gridSize; index++)
+                    if (!revealedCells.contains(index))
+                      _ClosedTileOverlay(
+                        index: index,
+                        gridSize: gridSize,
+                        tileSize: tile,
+                        glowEnabled: glowEnabled,
+                        enabled: enabled &&
+                            availableCells.contains(index) &&
+                            onReveal != null,
+                        onTap: onReveal == null ? null : () => onReveal!(index),
+                      ),
+                ],
+              ),
             ),
           ),
         );
@@ -858,6 +879,7 @@ class _ClosedTileOverlay extends StatelessWidget {
   final int gridSize;
   final double tileSize;
   final bool enabled;
+  final bool glowEnabled;
   final VoidCallback? onTap;
 
   const _ClosedTileOverlay({
@@ -865,6 +887,7 @@ class _ClosedTileOverlay extends StatelessWidget {
     required this.gridSize,
     required this.tileSize,
     required this.enabled,
+    required this.glowEnabled,
     required this.onTap,
   });
 
@@ -883,6 +906,14 @@ class _ClosedTileOverlay extends StatelessWidget {
         onTap: enabled ? onTap : null,
         child: Container(
           color: const Color(0xFF15183D),
+          foregroundDecoration: glowEnabled
+              ? BoxDecoration(
+                  border: Border.all(
+                    color: const Color(0xFF8B6FFF).withOpacity(0.42),
+                    width: 1,
+                  ),
+                )
+              : null,
           child: ClipRect(
             child: Transform.scale(
               scale: 1.08,
@@ -929,28 +960,26 @@ class _BottomActions extends StatelessWidget {
     final hiddenTiles = totalTiles - revealedCount;
     final guessActive = canGuessNow && !isBusy;
 
-    String hintText;
-    if (!isMyTurn) {
-      hintText = 'שחקן אחר חושף משבצת';
-    } else if (canGuessNow) {
-      hintText = 'גלית משבצת — נחש או דלג';
-    } else {
-      hintText = 'גלה משבצת תחילה';
-    }
+    final hintText = !isMyTurn
+        ? ''
+        : canGuessNow
+            ? 'נחש או דלג'
+            : 'בחר משבצת';
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            hintText,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.55),
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+          if (hintText.isNotEmpty)
+            Text(
+              hintText,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.55),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
           if (hiddenTiles == 1) ...[
             const SizedBox(height: 4),
             const Text(
@@ -966,31 +995,34 @@ class _BottomActions extends StatelessWidget {
           GestureDetector(
             onTap: guessActive ? onGuess : null,
             child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 160),
-              opacity: guessActive ? 1 : 0.38,
-              child: Container(
-                height: 58,
+              duration: const Duration(milliseconds: 200),
+              opacity: guessActive ? 1.0 : 0.38,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                height: 54,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF9B7EFF), Color(0xFF6B44F8)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: [
-                    if (guessActive)
-                      BoxShadow(
-                        color: const Color(0xFF7B5FFF).withOpacity(0.42),
-                        blurRadius: 22,
-                        offset: const Offset(0, 8),
-                      ),
-                  ],
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: guessActive
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF7B5FFF).withOpacity(0.48),
+                            blurRadius: 24,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 6),
+                          ),
+                        ]
+                      : [],
                 ),
                 child: Center(
                   child: isBusy
                       ? const SizedBox(
-                          width: 24,
-                          height: 24,
+                          width: 22,
+                          height: 22,
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2.4),
                         )
@@ -1002,7 +1034,7 @@ class _BottomActions extends StatelessWidget {
                                   'נחש',
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 20,
+                                    fontSize: 19,
                                     fontWeight: FontWeight.w800,
                                     height: 1.1,
                                   ),
@@ -1033,7 +1065,7 @@ class _BottomActions extends StatelessWidget {
                               isMyTurn ? 'נחש' : 'ממתין לתור',
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 20,
+                                fontSize: 19,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -1042,16 +1074,31 @@ class _BottomActions extends StatelessWidget {
             ),
           ),
           if (canGuessNow && !isBusy) ...[
-            const SizedBox(height: 6),
-            TextButton(
-              onPressed: onSkip,
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.white54,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: onSkip,
+              child: Container(
+                height: 38,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.22),
+                    width: 1,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 28),
+                  child: Text(
+                    'דלג',
+                    style: TextStyle(
+                      color: Colors.white60,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ),
-              child: const Text('דלג על ניחוש',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
             ),
           ],
         ],
