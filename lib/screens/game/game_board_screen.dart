@@ -421,6 +421,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 final myCoins = currentUserId != null
                     ? (room.players[currentUserId]?.score ?? 0)
                     : 0;
+                final myLetterCards = currentUserId != null
+                    ? (room.players[currentUserId]?.letterCards ?? 0)
+                    : 0;
                 final canGuessNow = isMyTurn &&
                     _hasRevealedThisTurn &&
                     !_hasGuessedThisTurn &&
@@ -432,6 +435,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   isMyTurn: isMyTurn,
                   isBusy: _isBusy,
                   myCoins: myCoins,
+                  myLetterCards: myLetterCards,
                   canGuessNow: canGuessNow,
                   showBanner: _showBanner,
                   bannerEvent: _currentBanner,
@@ -464,6 +468,7 @@ class _GameLayout extends StatelessWidget {
   final bool isMyTurn;
   final bool isBusy;
   final int myCoins;
+  final int myLetterCards;
   final bool canGuessNow;
   final bool showBanner;
   final Map<String, dynamic>? bannerEvent;
@@ -478,6 +483,7 @@ class _GameLayout extends StatelessWidget {
     required this.isMyTurn,
     required this.isBusy,
     required this.myCoins,
+    required this.myLetterCards,
     required this.canGuessNow,
     required this.showBanner,
     required this.bannerEvent,
@@ -502,6 +508,7 @@ class _GameLayout extends StatelessWidget {
           currentPlayerName: currentPlayer?.name ?? '',
           revealedText: '$revealedCount/$total',
           myCoins: myCoins,
+          myLetterCards: myLetterCards,
           onBack: onBack,
         ),
         if (showBanner && bannerEvent != null)
@@ -539,6 +546,7 @@ class _TopHud extends StatelessWidget {
   final String currentPlayerName;
   final String revealedText;
   final int myCoins;
+  final int myLetterCards;
   final VoidCallback onBack;
 
   const _TopHud({
@@ -548,6 +556,7 @@ class _TopHud extends StatelessWidget {
     required this.currentPlayerName,
     required this.revealedText,
     required this.myCoins,
+    required this.myLetterCards,
     required this.onBack,
   });
 
@@ -581,6 +590,26 @@ class _TopHud extends StatelessWidget {
                 ),
               ),
               _CoinBadge(amount: myCoins),
+              if (myLetterCards > 0) ...[
+                const SizedBox(width: 5),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                  ),
+                  child: Text(
+                    '🔤 ×$myLetterCards',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(width: 6),
               Text(
                 revealedText,
