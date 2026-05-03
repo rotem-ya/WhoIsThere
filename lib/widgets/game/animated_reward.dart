@@ -21,10 +21,10 @@ class _AnimatedRewardState extends State<AnimatedReward>
 
   double _getScalePeak(int value) {
     final abs = value.abs();
-    if (abs < 30) return 1.06;
-    if (abs < 70) return 1.10;
-    if (abs < 120) return 1.14;
-    return 1.18;
+    if (abs < 30) return 1.04;
+    if (abs < 70) return 1.07;
+    if (abs < 120) return 1.10;
+    return 1.12;
   }
 
   @override
@@ -33,7 +33,7 @@ class _AnimatedRewardState extends State<AnimatedReward>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 260),
+      duration: const Duration(milliseconds: 220),
     );
 
     _scale = Tween(begin: 1.0, end: 1.0).animate(_controller);
@@ -77,25 +77,28 @@ class _AnimatedRewardState extends State<AnimatedReward>
       builder: (_, __) {
         return Transform.scale(
           scale: _scale.value,
-          child: Row(
-            children: [
-              Text(
-                widget.isPositive
-                    ? '+${widget.value}'
-                    : '-${widget.value}',
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.monetization_on,
+                  size: 12,
+                  color: Colors.amber,
                 ),
-              ),
-              const SizedBox(width: 6),
-              const Icon(
-                Icons.monetization_on,
-                size: 16,
-                color: Colors.amber,
-              ),
-            ],
+                const SizedBox(width: 2),
+                Text(
+                  widget.isPositive ? '+${widget.value}' : '-${widget.value}',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                    height: 1,
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
