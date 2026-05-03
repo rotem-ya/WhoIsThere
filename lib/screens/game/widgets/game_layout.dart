@@ -1,4 +1,13 @@
 import 'package:flutter/material.dart';
+
+import '../../../models/game_image_model.dart';
+import '../../../models/room_model.dart';
+import 'answer_slots.dart';
+import 'game_actions.dart';
+import 'game_banners.dart';
+import 'game_board_view.dart';
+import 'game_top_hud.dart';
+
 class GameLayout extends StatelessWidget {
   final RoomModel room;
   final GameImageModel? image;
@@ -17,7 +26,7 @@ class GameLayout extends StatelessWidget {
   final VoidCallback? onGuess;
   final VoidCallback? onSkip;
 
-  const _GameLayout({
+  const GameLayout({
     required this.room,
     required this.image,
     required this.isMyTurn,
@@ -55,9 +64,9 @@ class GameLayout extends StatelessWidget {
           onBack: onBack,
         ),
         if (showBotTyping)
-          _BotTypingBanner(botName: botTypingName, typedSoFar: botTypingText)
+          BotTypingBanner(botName: botTypingName, typedSoFar: botTypingText)
         else if (showBanner && bannerEvent != null)
-          _GuessBanner(event: bannerEvent!, players: room.players),
+          GuessBanner(event: bannerEvent!, players: room.players),
         Expanded(
           child: Center(
             child: GameBoardView(
@@ -71,8 +80,8 @@ class GameLayout extends StatelessWidget {
             ),
           ),
         ),
-        _AnswerSlots(answer: image?.answer ?? ''),
-        _BottomActions(
+        AnswerSlots(answer: image?.answer ?? ''),
+        GameActions(
           isMyTurn: isMyTurn,
           isBusy: isBusy,
           canGuessNow: canGuessNow,
