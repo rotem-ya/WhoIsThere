@@ -215,12 +215,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     });
 
     // Brief "thinking" pause before typing starts.
-    await Future.delayed(const Duration(milliseconds: 420));
+    await Future.delayed(Duration(milliseconds: 1200 + _random.nextInt(801)));
 
     for (int i = 1; i <= word.length; i++) {
       if (!mounted) return;
       setState(() => _botTypingText = word.substring(0, i));
-      await Future.delayed(Duration(milliseconds: 160 + _random.nextInt(81)));
+      await Future.delayed(Duration(milliseconds: 220 + _random.nextInt(121)));
     }
 
     // Pause on the completed word before submitting.
@@ -782,7 +782,7 @@ class _CoinBadge extends StatelessWidget {
             style: const TextStyle(
               color: Color(0xFFFFC107),
               fontSize: 11,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w900,
               height: 1,
             ),
           ),
@@ -1210,7 +1210,7 @@ class _GuessBanner extends StatelessWidget {
               style: TextStyle(
                 color: isCorrect ? Colors.greenAccent : Colors.redAccent,
                 fontSize: 13,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ],
@@ -1477,9 +1477,7 @@ class _BotTypingBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = typedSoFar.isEmpty
-        ? '$botName חושב...'
-        : '$botName מקליד: "$typedSoFar"';
+    final isTyping = typedSoFar.isNotEmpty;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
@@ -1494,8 +1492,24 @@ class _BotTypingBanner extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Flexible(
-              child: Text(
-                label,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isTyping ? '$botName מקליד...' : '$botName חושב...',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  if (isTyping)
+                    Text(
+                      '"$typedSoFar" |',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
