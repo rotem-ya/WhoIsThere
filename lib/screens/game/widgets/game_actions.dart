@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../widgets/game/animated_reward.dart';
 
+int _calcReward(int revealedCount, int total) {
+  if (total == 0) return 100;
+  return (100 - revealedCount / total * 80).clamp(20.0, 100.0).round();
+}
+
 class GameActions extends StatelessWidget {
   final bool isMyTurn;
   final bool isBusy;

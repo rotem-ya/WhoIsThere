@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 class AnswerSlots extends StatelessWidget {
   final String answer;
 
-  const _AnswerSlots({required this.answer});
+  const AnswerSlots({required this.answer});
 
   @override
   Widget build(BuildContext context) {
