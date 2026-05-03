@@ -584,14 +584,16 @@ class _GameLayout extends StatelessWidget {
             ),
           ),
         ),
-        _BottomActions(
-          isMyTurn: isMyTurn,
-          isBusy: isBusy,
-          canGuessNow: canGuessNow,
-          revealedCount: revealedCount,
-          totalTiles: total,
-          onGuess: onGuess,
-          onSkip: onSkip,
+        Flexible(
+          child: _BottomActions(
+            isMyTurn: isMyTurn,
+            isBusy: isBusy,
+            canGuessNow: canGuessNow,
+            revealedCount: revealedCount,
+            totalTiles: total,
+            onGuess: onGuess,
+            onSkip: onSkip,
+          ),
         ),
       ],
     );
@@ -966,144 +968,146 @@ class _BottomActions extends StatelessWidget {
             ? 'נחש או דלג'
             : 'בחר משבצת';
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (hintText.isNotEmpty)
-            Text(
-              hintText,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.55),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          if (hiddenTiles == 1) ...[
-            const SizedBox(height: 4),
-            const Text(
-              'הזדמנות אחרונה לנחש!',
-              style: TextStyle(
-                color: Color(0xFFFFCA28),
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: guessActive ? onGuess : null,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 200),
-              opacity: guessActive ? 1.0 : 0.38,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                height: 54,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF9B7EFF), Color(0xFF6B44F8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: guessActive
-                      ? [
-                          BoxShadow(
-                            color: const Color(0xFF7B5FFF).withOpacity(0.48),
-                            blurRadius: 24,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 6),
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (hintText.isNotEmpty)
+                    Text(
+                      hintText,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.55),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  if (hiddenTiles == 1) ...[
+                    const SizedBox(height: 4),
+                    const Text(
+                      'הזדמנות אחרונה לנחש!',
+                      style: TextStyle(
+                        color: Color(0xFFFFCA28),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    onTap: guessActive ? onGuess : null,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      opacity: guessActive ? 1.0 : 0.38,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: 52,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF9B7EFF), Color(0xFF6B44F8)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                        ]
-                      : [],
-                ),
-                child: Center(
-                  child: isBusy
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2.4),
-                        )
-                      : canGuessNow
-                          ? Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text(
-                                  'נחש',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.w800,
-                                    height: 1.1,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: guessActive
+                              ? [
+                                  BoxShadow(
+                                    color: const Color(0xFF7B5FFF).withOpacity(0.48),
+                                    blurRadius: 24,
+                                    spreadRadius: 1,
+                                    offset: const Offset(0, 6),
                                   ),
-                                ),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Flexible(
-                                      child: AnimatedReward(
-                                        key: ValueKey(reward),
-                                        value: reward,
-                                        isPositive: true,
+                                ]
+                              : [],
+                        ),
+                        child: Center(
+                          child: isBusy
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 2.4),
+                                )
+                              : canGuessNow
+                                  ? Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Text(
+                                          'נחש',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 19,
+                                            fontWeight: FontWeight.w800,
+                                            height: 1.1,
+                                          ),
+                                        ),
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              AnimatedReward(
+                                                key: ValueKey(reward),
+                                                value: reward,
+                                                isPositive: true,
+                                              ),
+                                              const SizedBox(width: 16),
+                                              AnimatedReward(
+                                                key: ValueKey(penalty),
+                                                value: penalty,
+                                                isPositive: false,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Text(
+                                      isMyTurn ? 'נחש' : 'ממתין לתור',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 19,
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
-                                    const SizedBox(width: 16),
-                                    Flexible(
-                                      child: AnimatedReward(
-                                        key: ValueKey(penalty),
-                                        value: penalty,
-                                        isPositive: false,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            )
-                          : Text(
-                              isMyTurn ? 'נחש' : 'ממתין לתור',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 19,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                ),
-              ),
-            ),
-          ),
-          if (canGuessNow && !isBusy) ...[
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: onSkip,
-              child: Container(
-                height: 38,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.22),
-                    width: 1,
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 28),
-                  child: Text(
-                    'דלג',
-                    style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  if (canGuessNow && !isBusy) ...[
+                    const SizedBox(height: 6),
+                    GestureDetector(
+                      onTap: onSkip,
+                      child: Container(
+                        height: 34,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.22),
+                            width: 1,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 28),
+                          child: Text(
+                            'דלג',
+                            style: TextStyle(
+                              color: Colors.white60,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-          ],
-        ],
-      ),
-    );
+          );
   }
 }
 
