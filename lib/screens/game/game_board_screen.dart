@@ -1473,61 +1473,60 @@ class _BotTypingBanner extends StatelessWidget {
   final String botName;
   final String typedSoFar;
 
-  const _BotTypingBanner({required this.botName, required this.typedSoFar});
+  const _BotTypingBanner({
+    required this.botName,
+    required this.typedSoFar,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isTyping = typedSoFar.isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A237E).withOpacity(0.88),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.blue.shade300.withOpacity(0.5)),
+          color: const Color(0xFF751010).withOpacity(0.92),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.redAccent.withOpacity(0.45)),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Flexible(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    isTyping ? '$botName מקליד...' : '$botName חושב...',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  if (isTyping)
-                    Text(
-                      '"$typedSoFar" |',
+            Text(
+              isTyping ? '$botName מקליד...' : '$botName חושב...',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            if (isTyping)
+              Text(
+                '"$typedSoFar" |',
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              )
+            else
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white70,
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
-            const SizedBox(
-              width: 12,
-              height: 12,
-              child: CircularProgressIndicator(
-                color: Colors.white54,
-                strokeWidth: 1.5,
-              ),
-            ),
           ],
         ),
       ),
