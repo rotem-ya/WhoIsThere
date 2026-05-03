@@ -15,14 +15,6 @@ class RoomService {
 
   static const List<GameImageModel> _fallbackImages = [
     GameImageModel(
-      id: 'local_dead_sea',
-      name: 'ים המלח',
-      answer: 'ים המלח',
-      category: ImageCategory.israeliLandmark,
-      imageUrl: 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=1200',
-      thumbnailUrl: 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=400',
-    ),
-    GameImageModel(
       id: 'local_western_wall',
       name: 'הכותל המערבי',
       answer: 'הכותל המערבי',

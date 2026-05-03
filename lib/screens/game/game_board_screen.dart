@@ -50,6 +50,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   Map<String, dynamic>? _currentBanner;
   bool _showBanner = false;
 
+  // Bot typing simulation
+  bool _showBotTyping = false;
+  String _botTypingName = '';
+  String _botTypingText = '';
+
   @override
   void dispose() {
     _guessController.dispose();
@@ -201,13 +206,40 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     });
   }
 
+  Future<void> _simulateBotTyping(String botName, String word) async {
+    if (!mounted) return;
+    setState(() {
+      _showBotTyping = true;
+      _botTypingName = botName;
+      _botTypingText = '';
+    });
+
+    // Brief "thinking" pause before typing starts.
+    await Future.delayed(const Duration(milliseconds: 420));
+
+    for (int i = 1; i <= word.length; i++) {
+      if (!mounted) return;
+      setState(() => _botTypingText = word.substring(0, i));
+      await Future.delayed(Duration(milliseconds: 110 + _random.nextInt(60)));
+    }
+
+    // Pause on the completed word before submitting.
+    await Future.delayed(const Duration(milliseconds: 350));
+  }
+
   Future<void> _performBotGuess(
       RoomModel room, String botId, double correctChance) async {
     final image = _image;
     if (image == null) return;
 
     final isCorrect = _random.nextDouble() < correctChance;
-    final guess = isCorrect ? image.answer : _randomWrongGuess(image.answer);
+    final guess = isCorrect ? image.answer : _realisticWrongGuess(image.answer);
+
+    final botName = room.players[botId]?.name ?? 'בוט';
+    await _simulateBotTyping(botName, guess);
+
+    if (!mounted) return;
+    setState(() => _showBotTyping = false);
 
     await ref.read(roomServiceProvider).submitAnswer(
           roomId: room.id,
@@ -219,18 +251,31 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     // Turn advances via submitAnswer: wrong → nextTurnIndex; correct → game ends.
   }
 
-  String _randomWrongGuess(String correctAnswer) {
-    const letters = 'אבגדהוזחטיכלמנסעפצקרשת';
-    final length = correctAnswer.replaceAll(' ', '').length;
-    String guess;
-    do {
-      guess = List.generate(
-        length,
-        (_) => letters[_random.nextInt(letters.length)],
-      ).join();
-    } while (normalizeHebrewFinals(guess) ==
-        normalizeHebrewFinals(correctAnswer));
-    return guess;
+  static const _realisticGuessPool = [
+    'מצדה',
+    'הכותל',
+    'ים המלח',
+    'אילת',
+    'החרמון',
+    'קיסריה',
+    'עכו',
+    'יפו',
+    'מכתש רמון',
+    'הגנים הבהאיים',
+    'נהריה',
+    'בית שאן',
+    'ראש הנקרה',
+    'חיפה',
+    'הכנרת',
+  ];
+
+  String _realisticWrongGuess(String correctAnswer) {
+    final norm = normalizeHebrewFinals(correctAnswer.trim());
+    final candidates = _realisticGuessPool
+        .where((g) => normalizeHebrewFinals(g) != norm)
+        .toList();
+    if (candidates.isEmpty) return 'מצדה';
+    return candidates[_random.nextInt(candidates.length)];
   }
 
   Future<bool> _submitGuess(RoomModel room, String userId, String value) async {
@@ -408,8 +453,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     setState(() {
                       _currentBanner = room.lastGuessEvent;
                       _showBanner = true;
+                      _showBotTyping = false; // result replaces typing banner
                     });
-                    Future.delayed(const Duration(milliseconds: 1800), () {
+                    Future.delayed(const Duration(milliseconds: 3500), () {
                       if (mounted) setState(() => _showBanner = false);
                     });
                   });
@@ -439,6 +485,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   canGuessNow: canGuessNow,
                   showBanner: _showBanner,
                   bannerEvent: _currentBanner,
+                  showBotTyping: _showBotTyping,
+                  botTypingName: _botTypingName,
+                  botTypingText: _botTypingText,
                   onBack: () => context.go('/home'),
                   onReveal: currentUserId == null
                       ? null
@@ -472,6 +521,9 @@ class _GameLayout extends StatelessWidget {
   final bool canGuessNow;
   final bool showBanner;
   final Map<String, dynamic>? bannerEvent;
+  final bool showBotTyping;
+  final String botTypingName;
+  final String botTypingText;
   final VoidCallback onBack;
   final void Function(int)? onReveal;
   final VoidCallback? onGuess;
@@ -487,6 +539,9 @@ class _GameLayout extends StatelessWidget {
     required this.canGuessNow,
     required this.showBanner,
     required this.bannerEvent,
+    required this.showBotTyping,
+    required this.botTypingName,
+    required this.botTypingText,
     required this.onBack,
     required this.onReveal,
     required this.onGuess,
@@ -511,7 +566,9 @@ class _GameLayout extends StatelessWidget {
           myLetterCards: myLetterCards,
           onBack: onBack,
         ),
-        if (showBanner && bannerEvent != null)
+        if (showBotTyping)
+          _BotTypingBanner(botName: botTypingName, typedSoFar: botTypingText)
+        else if (showBanner && bannerEvent != null)
           _GuessBanner(event: bannerEvent!, players: room.players),
         Expanded(
           child: Center(
@@ -771,7 +828,11 @@ class _GameBoard extends StatelessWidget {
                 else if (imageUrl!.startsWith('assets/'))
                   Image.asset(imageUrl!, fit: BoxFit.cover)
                 else
-                  CachedNetworkImage(imageUrl: imageUrl!, fit: BoxFit.cover),
+                  CachedNetworkImage(
+                    imageUrl: imageUrl!,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => const _ImageFallback(),
+                  ),
                 for (var index = 0; index < gridSize * gridSize; index++)
                   if (!revealedCells.contains(index))
                     _ClosedTileOverlay(
@@ -1143,7 +1204,10 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
                                         fit: BoxFit.cover)
                                     : CachedNetworkImage(
                                         imageUrl: widget.imageUrl!,
-                                        fit: BoxFit.cover),
+                                        fit: BoxFit.cover,
+                                        errorWidget: (_, __, ___) =>
+                                            const _ImageFallback(),
+                                      ),
                               ),
                               AnimatedOpacity(
                                 opacity: _overlayVisible ? 0.4 : 0.0,
@@ -1282,6 +1346,76 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
           ),
         );
       },
+    );
+  }
+}
+
+class _ImageFallback extends StatelessWidget {
+  const _ImageFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF1A1A3E),
+      child: const Center(
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          color: Colors.white24,
+          size: 48,
+        ),
+      ),
+    );
+  }
+}
+
+class _BotTypingBanner extends StatelessWidget {
+  final String botName;
+  final String typedSoFar;
+
+  const _BotTypingBanner({required this.botName, required this.typedSoFar});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = typedSoFar.isEmpty
+        ? '$botName חושב...'
+        : '$botName מקליד: "$typedSoFar"';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A237E).withOpacity(0.88),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.blue.shade300.withOpacity(0.5)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                color: Colors.white54,
+                strokeWidth: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
