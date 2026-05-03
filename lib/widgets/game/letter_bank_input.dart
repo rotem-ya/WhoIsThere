@@ -213,8 +213,8 @@ class _AnswerSlots extends StatelessWidget {
         final totalGapWidth =
             slotGap * (totalLetters - wordCount) + wordGap * (wordCount - 1);
         final slotSize = math.min(
-          34.0,
-          math.max(18.0, (usableWidth - totalGapWidth) / totalLetters),
+          44.0,
+          math.max(22.0, (usableWidth - totalGapWidth) / totalLetters),
         );
 
         var idx = 0;
@@ -303,9 +303,9 @@ class _HebrewKeyboard extends StatelessWidget {
         // Derive size from widest row so all keys are uniform.
         // Lower bound of 20 keeps keys readable; formula guarantees no overflow.
         final keySize = math.min(
-          38.0,
+          44.0,
           math.max(
-            20.0,
+            22.0,
             (constraints.maxWidth - gap * (maxKeysInRow - 1)) / maxKeysInRow,
           ),
         );
@@ -386,7 +386,7 @@ class _LetterKey extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: Ink(
           width: size,
-          height: size + 4,
+          height: size + 10,
           decoration: BoxDecoration(
             color: enabled ? Colors.white : Colors.grey.shade100,
             borderRadius: BorderRadius.circular(12),
@@ -404,7 +404,7 @@ class _LetterKey extends StatelessWidget {
               label,
               style: TextStyle(
                 color: enabled ? AppColors.darkBlue : Colors.grey.shade500,
-                fontSize: math.max(17, size * 0.58),
+                fontSize: math.max(20, size * 0.60),
                 fontWeight: FontWeight.w900,
                 height: 1,
               ),

@@ -313,11 +313,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
           insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 18),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final inputHeight = min(380.0, constraints.maxHeight - 84);
+              final inputHeight = min(400.0, constraints.maxHeight - 60);
               return Center(
                 child: Container(
                   width: min(420.0, constraints.maxWidth),
-                  padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                   decoration: BoxDecoration(
                     color: const Color(0xFF171B3D),
                     borderRadius: BorderRadius.circular(24),
@@ -327,7 +327,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(
-                        height: 62,
+                        height: 44,
                         child: Stack(
                           children: [
                             const Center(
@@ -336,7 +336,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 32,
+                                  fontSize: 24,
                                   fontWeight: FontWeight.w900,
                                   height: 1,
                                 ),
@@ -959,155 +959,130 @@ class _BottomActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final reward = _reward();
     final penalty = _penalty(reward);
-    final hiddenTiles = totalTiles - revealedCount;
     final guessActive = canGuessNow && !isBusy;
 
-    final hintText = !isMyTurn
-        ? ''
+    final buttonLabel = !isMyTurn
+        ? 'ממתין לתור'
         : canGuessNow
-            ? 'נחש או דלג'
+            ? 'נחש'
             : 'בחר משבצת';
 
-        return SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-            child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (hintText.isNotEmpty)
-                    Text(
-                      hintText,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.55),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(
+              onTap: guessActive ? onGuess : null,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: guessActive ? 1.0 : 0.38,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF9B7EFF), Color(0xFF6B44F8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  if (hiddenTiles == 1) ...[
-                    const SizedBox(height: 4),
-                    const Text(
-                      'הזדמנות אחרונה לנחש!',
-                      style: TextStyle(
-                        color: Color(0xFFFFCA28),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 6),
-                  GestureDetector(
-                    onTap: guessActive ? onGuess : null,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 200),
-                      opacity: guessActive ? 1.0 : 0.38,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: 52,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF9B7EFF), Color(0xFF6B44F8)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: guessActive
-                              ? [
-                                  BoxShadow(
-                                    color: const Color(0xFF7B5FFF).withOpacity(0.48),
-                                    blurRadius: 24,
-                                    spreadRadius: 1,
-                                    offset: const Offset(0, 6),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: guessActive
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF7B5FFF).withOpacity(0.48),
+                              blurRadius: 24,
+                              spreadRadius: 1,
+                              offset: const Offset(0, 6),
+                            ),
+                          ]
+                        : [],
+                  ),
+                  child: Center(
+                    child: isBusy
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2.4),
+                          )
+                        : canGuessNow
+                            ? Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'נחש',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      height: 1.1,
+                                    ),
                                   ),
-                                ]
-                              : [],
-                        ),
-                        child: Center(
-                          child: isBusy
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white, strokeWidth: 2.4),
-                                )
-                              : canGuessNow
-                                  ? Column(
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Text(
-                                          'נחש',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 19,
-                                            fontWeight: FontWeight.w800,
-                                            height: 1.1,
-                                          ),
+                                        AnimatedReward(
+                                          key: ValueKey(reward),
+                                          value: reward,
+                                          isPositive: true,
                                         ),
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              AnimatedReward(
-                                                key: ValueKey(reward),
-                                                value: reward,
-                                                isPositive: true,
-                                              ),
-                                              const SizedBox(width: 16),
-                                              AnimatedReward(
-                                                key: ValueKey(penalty),
-                                                value: penalty,
-                                                isPositive: false,
-                                              ),
-                                            ],
-                                          ),
+                                        const SizedBox(width: 12),
+                                        AnimatedReward(
+                                          key: ValueKey(penalty),
+                                          value: penalty,
+                                          isPositive: false,
                                         ),
                                       ],
-                                    )
-                                  : Text(
-                                      isMyTurn ? 'נחש' : 'ממתין לתור',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 19,
-                                        fontWeight: FontWeight.w800,
-                                      ),
                                     ),
-                        ),
-                      ),
-                    ),
+                                  ),
+                                ],
+                              )
+                            : Text(
+                                buttonLabel,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                   ),
-                  if (canGuessNow && !isBusy) ...[
-                    const SizedBox(height: 6),
-                    GestureDetector(
-                      onTap: onSkip,
-                      child: Container(
-                        height: 34,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.22),
-                            width: 1,
-                          ),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 28),
-                          child: Text(
-                            'דלג',
-                            style: TextStyle(
-                              color: Colors.white60,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
             ),
-          );
+            if (canGuessNow && !isBusy) ...[
+              const SizedBox(height: 5),
+              GestureDetector(
+                onTap: onSkip,
+                child: Container(
+                  height: 32,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.22),
+                      width: 1,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'דלג',
+                    style: TextStyle(
+                      color: Colors.white60,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 
