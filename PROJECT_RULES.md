@@ -76,6 +76,10 @@ UI is dumb. Logic stays in the screen or service layer.
 - Buttons must be readable and tappable on small Android phones
 - Hebrew screens must preserve RTL behavior
 
+## Build Rule
+
+Feature branches must run the APK workflow before merge.
+
 ## Pre-Commit Checklist
 
 Before every commit:
