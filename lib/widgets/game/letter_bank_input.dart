@@ -15,9 +15,9 @@ String normalizeHebrewFinals(String s) {
 
 // Visual RTL order: index 0 is the rightmost key on screen.
 const List<List<String>> _keyboardRows = [
-  ['פ', 'ם', 'ן', 'ו', 'ט', 'א', 'ר', 'ק'],
-  ['ף', 'ך', 'ל', 'ח', 'י', 'ע', 'כ', 'ג', 'ד', 'ש'],
-  ['ץ', 'ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז'],
+  ['פ', 'ם', 'ן', 'ו', 'ט', 'א', 'ר', 'ק', 'ש'],
+  ['ד', 'ג', 'כ', 'ע', 'י', 'ח', 'ל', 'ך', 'ף'],
+  ['ז', 'ס', 'ב', 'ה', 'נ', 'מ', 'צ', 'ת', 'ץ'],
 ];
 
 class LetterBankInput extends StatefulWidget {
@@ -41,6 +41,11 @@ class _LetterBankInputState extends State<LetterBankInput> {
   late List<String?> _filled;
   bool _isSubmitting = false;
   bool _showError = false;
+  bool _hasUsedUndo = false;
+  String? _previewLetter;
+  int _previewToken = 0;
+
+  bool get _isComplete => _filled.every((v) => v != null);
 
   @override
   void initState() {
@@ -77,10 +82,19 @@ class _LetterBankInputState extends State<LetterBankInput> {
     _filled = List<String?>.filled(math.max(1, total), null);
     _isSubmitting = false;
     _showError = false;
+    _hasUsedUndo = false;
+    _previewLetter = null;
+    _previewToken = 0;
   }
 
-  void _clear() {
-    setState(() => _filled = List<String?>.filled(_filled.length, null));
+  void _showLetterPreview(String letter) {
+    _previewToken++;
+    final token = _previewToken;
+    setState(() => _previewLetter = letter);
+    Future.delayed(const Duration(milliseconds: 230), () {
+      if (!mounted || token != _previewToken) return;
+      setState(() => _previewLetter = null);
+    });
   }
 
   Future<void> _tapLetter(String letter) async {
@@ -92,16 +106,16 @@ class _LetterBankInputState extends State<LetterBankInput> {
       _filled[idx] = letter;
       _showError = false;
     });
-
-    if (_filled.every((v) => v != null)) await _submit();
+    _showLetterPreview(letter);
   }
 
-  void _backspace() {
-    if (!widget.enabled || _isSubmitting) return;
+  void _undoLastLetter() {
+    if (!widget.enabled || _isSubmitting || _hasUsedUndo) return;
     for (var i = _filled.length - 1; i >= 0; i--) {
       if (_filled[i] != null) {
         setState(() {
           _filled[i] = null;
+          _hasUsedUndo = true;
           _showError = false;
         });
         return;
@@ -110,6 +124,8 @@ class _LetterBankInputState extends State<LetterBankInput> {
   }
 
   Future<void> _submit() async {
+    if (!widget.enabled || _isSubmitting || !_isComplete) return;
+
     setState(() => _isSubmitting = true);
     bool ok = false;
     try {
@@ -119,67 +135,78 @@ class _LetterBankInputState extends State<LetterBankInput> {
     }
 
     if (!mounted) return;
-    if (ok) {
-      setState(() => _isSubmitting = false);
-      return;
-    }
-
     setState(() {
       _isSubmitting = false;
-      _showError = true;
+      _showError = !ok;
     });
-    _clear();
 
-    Future.delayed(const Duration(milliseconds: 1100), () {
-      if (mounted) setState(() => _showError = false);
-    });
+    if (!ok) {
+      Future.delayed(const Duration(milliseconds: 1100), () {
+        if (mounted) setState(() => _showError = false);
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final enabled = widget.enabled && !_isSubmitting;
+    final canUndo = enabled && !_hasUsedUndo && _filled.any((v) => v != null);
+    final canSubmit = enabled && _isComplete;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        return SingleChildScrollView(
-          physics: const ClampingScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _AnswerSlots(
-                  filled: _filled,
-                  wordLengths: _wordLengths,
-                  enabled: enabled,
-                  onBackspace: _backspace,
-                ),
-                SizedBox(
-                  height: 22,
-                  child: AnimatedOpacity(
-                    opacity: _showError ? 1 : 0,
-                    duration: const Duration(milliseconds: 150),
-                    child: const Center(
-                      child: Text(
-                        'לא נכון, נסה שוב',
-                        style: TextStyle(
-                          color: AppColors.secondary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
+        return Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _AnswerSlots(
+                      filled: _filled,
+                      wordLengths: _wordLengths,
+                    ),
+                    SizedBox(
+                      height: 22,
+                      child: AnimatedOpacity(
+                        opacity: _showError ? 1 : 0,
+                        duration: const Duration(milliseconds: 150),
+                        child: const Center(
+                          child: Text(
+                            'לא נכון, התור עובר',
+                            style: TextStyle(
+                              color: AppColors.secondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    _HebrewKeyboard(
+                      enabled: enabled,
+                      onLetter: _tapLetter,
+                    ),
+                    const SizedBox(height: 12),
+                    _GuessControls(
+                      enabled: enabled,
+                      canUndo: canUndo,
+                      canSubmit: canSubmit,
+                      isSubmitting: _isSubmitting,
+                      hasUsedUndo: _hasUsedUndo,
+                      onUndo: _undoLastLetter,
+                      onSubmit: _submit,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                _HebrewKeyboard(
-                  enabled: enabled,
-                  onLetter: _tapLetter,
-                  onBackspace: _backspace,
-                ),
-              ],
+              ),
             ),
-          ),
+            IgnorePointer(child: _LetterPreview(letter: _previewLetter)),
+          ],
         );
       },
     );
@@ -189,32 +216,24 @@ class _LetterBankInputState extends State<LetterBankInput> {
 class _AnswerSlots extends StatelessWidget {
   final List<String?> filled;
   final List<int> wordLengths;
-  final bool enabled;
-  final VoidCallback onBackspace;
 
-  const _AnswerSlots({
-    required this.filled,
-    required this.wordLengths,
-    required this.enabled,
-    required this.onBackspace,
-  });
+  const _AnswerSlots({required this.filled, required this.wordLengths});
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const slotGap = 4.0;
-        const wordGap = 12.0;
+        const slotGap = 5.0;
+        const wordGap = 14.0;
 
         final totalLetters = math.max(1, wordLengths.fold(0, (a, b) => a + b));
         final wordCount = math.max(1, wordLengths.length);
         final usableWidth = constraints.maxWidth - 8.0;
-        // Total gap = inner-slot gaps (between letters in a word) + word gaps
         final totalGapWidth =
             slotGap * (totalLetters - wordCount) + wordGap * (wordCount - 1);
         final slotSize = math.min(
-          44.0,
-          math.max(22.0, (usableWidth - totalGapWidth) / totalLetters),
+          48.0,
+          math.max(26.0, (usableWidth - totalGapWidth) / totalLetters),
         );
 
         var idx = 0;
@@ -240,7 +259,7 @@ class _AnswerSlots extends StatelessWidget {
             textDirection: TextDirection.rtl,
             alignment: WrapAlignment.center,
             spacing: wordGap,
-            runSpacing: 6,
+            runSpacing: 8,
             children: wordWidgets,
           ),
         );
@@ -258,23 +277,34 @@ class _Slot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isFilled = letter != null;
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 140),
+      curve: Curves.easeOut,
       width: size,
       height: size,
       decoration: BoxDecoration(
         color: isFilled ? const Color(0xFFEDEBFF) : Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isFilled ? AppColors.primary : const Color(0xFFD7D4FF),
-          width: isFilled ? 2 : 1.4,
+          width: isFilled ? 2.2 : 1.4,
         ),
+        boxShadow: isFilled
+            ? [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.24),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : [],
       ),
       alignment: Alignment.center,
       child: Text(
         letter ?? '',
         style: TextStyle(
           color: AppColors.darkBlue,
-          fontSize: math.max(14, size * 0.55),
+          fontSize: math.max(18, size * 0.60),
           fontWeight: FontWeight.w900,
           height: 1,
         ),
@@ -286,26 +316,19 @@ class _Slot extends StatelessWidget {
 class _HebrewKeyboard extends StatelessWidget {
   final bool enabled;
   final ValueChanged<String> onLetter;
-  final VoidCallback onBackspace;
 
-  const _HebrewKeyboard({
-    required this.enabled,
-    required this.onLetter,
-    required this.onBackspace,
-  });
+  const _HebrewKeyboard({required this.enabled, required this.onLetter});
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const gap = 4.0;
-        const maxKeysInRow = 10;
-        // Derive size from widest row so all keys are uniform.
-        // Lower bound of 20 keeps keys readable; formula guarantees no overflow.
+        const gap = 6.0;
+        const maxKeysInRow = 9;
         final keySize = math.min(
-          44.0,
+          50.0,
           math.max(
-            22.0,
+            30.0,
             (constraints.maxWidth - gap * (maxKeysInRow - 1)) / maxKeysInRow,
           ),
         );
@@ -319,10 +342,8 @@ class _HebrewKeyboard extends StatelessWidget {
                 keySize: keySize,
                 onLetter: onLetter,
               ),
-              if (i != _keyboardRows.length - 1) const SizedBox(height: 7),
+              if (i != _keyboardRows.length - 1) const SizedBox(height: 8),
             ],
-            const SizedBox(height: 10),
-            _BackAction(enabled: enabled, onTap: onBackspace),
           ],
         );
       },
@@ -345,7 +366,7 @@ class _KeyboardRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const gap = 4.0;
+    const gap = 6.0;
     return Row(
       textDirection: TextDirection.rtl,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -364,7 +385,7 @@ class _KeyboardRow extends StatelessWidget {
   }
 }
 
-class _LetterKey extends StatelessWidget {
+class _LetterKey extends StatefulWidget {
   final String label;
   final double size;
   final bool enabled;
@@ -378,33 +399,49 @@ class _LetterKey extends StatelessWidget {
   });
 
   @override
+  State<_LetterKey> createState() => _LetterKeyState();
+}
+
+class _LetterKeyState extends State<_LetterKey> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(12),
-        child: Ink(
-          width: size,
-          height: size + 10,
+    return GestureDetector(
+      onTapDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
+      onTapCancel: widget.enabled ? () => setState(() => _pressed = false) : null,
+      onTapUp: widget.enabled
+          ? (_) {
+              setState(() => _pressed = false);
+              widget.onTap();
+            }
+          : null,
+      child: AnimatedScale(
+        scale: _pressed ? 1.12 : 1.0,
+        duration: const Duration(milliseconds: 90),
+        curve: Curves.easeOut,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          width: widget.size,
+          height: widget.size + 14,
           decoration: BoxDecoration(
-            color: enabled ? Colors.white : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
+            color: widget.enabled ? Colors.white : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: const Color(0xFFC9C4FF), width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.14),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+                color: Colors.black.withOpacity(_pressed ? 0.24 : 0.14),
+                blurRadius: _pressed ? 9 : 4,
+                offset: Offset(0, _pressed ? 4 : 2),
               ),
             ],
           ),
           child: Center(
             child: Text(
-              label,
+              widget.label,
               style: TextStyle(
-                color: enabled ? AppColors.darkBlue : Colors.grey.shade500,
-                fontSize: math.max(20, size * 0.60),
+                color: widget.enabled ? AppColors.darkBlue : Colors.grey.shade500,
+                fontSize: math.max(24, widget.size * 0.72),
                 fontWeight: FontWeight.w900,
                 height: 1,
               ),
@@ -416,28 +453,136 @@ class _LetterKey extends StatelessWidget {
   }
 }
 
-class _BackAction extends StatelessWidget {
+class _GuessControls extends StatelessWidget {
   final bool enabled;
-  final VoidCallback onTap;
+  final bool canUndo;
+  final bool canSubmit;
+  final bool isSubmitting;
+  final bool hasUsedUndo;
+  final VoidCallback onUndo;
+  final VoidCallback onSubmit;
 
-  const _BackAction({required this.enabled, required this.onTap});
+  const _GuessControls({
+    required this.enabled,
+    required this.canUndo,
+    required this.canSubmit,
+    required this.isSubmitting,
+    required this.hasUsedUndo,
+    required this.onUndo,
+    required this.onSubmit,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 150,
-      height: 46,
-      child: OutlinedButton.icon(
-        onPressed: enabled ? onTap : null,
-        icon: const Icon(Icons.backspace_outlined, size: 18),
-        label: const Text('מחיקה'),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.white,
-          side: BorderSide(color: Colors.white.withOpacity(0.35)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+    return Row(
+      children: [
+        Expanded(
+          flex: 4,
+          child: SizedBox(
+            height: 50,
+            child: OutlinedButton.icon(
+              onPressed: canUndo ? onUndo : null,
+              icon: const Icon(Icons.undo_rounded, size: 19),
+              label: Text(hasUsedUndo ? 'תיקון נוצל' : 'תיקון אחרון'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                disabledForegroundColor: Colors.white30,
+                side: BorderSide(color: Colors.white.withOpacity(0.35)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
         ),
-      ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 5,
+          child: SizedBox(
+            height: 50,
+            child: FilledButton(
+              onPressed: canSubmit ? onSubmit : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                disabledBackgroundColor: Colors.white.withOpacity(0.14),
+                foregroundColor: Colors.white,
+                disabledForegroundColor: Colors.white38,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('שלח ניחוש'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LetterPreview extends StatelessWidget {
+  final String? letter;
+
+  const _LetterPreview({required this.letter});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 110),
+      reverseDuration: const Duration(milliseconds: 90),
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(scale: animation, child: child),
+        );
+      },
+      child: letter == null
+          ? const SizedBox.shrink(key: ValueKey('empty'))
+          : Container(
+              key: ValueKey(letter),
+              width: 72,
+              height: 72,
+              margin: const EdgeInsets.only(top: 2),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: AppColors.primary, width: 2.4),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.32),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                letter!,
+                style: const TextStyle(
+                  color: AppColors.darkBlue,
+                  fontSize: 44,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                ),
+              ),
+            ),
     );
   }
 }
