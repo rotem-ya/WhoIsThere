@@ -1,6 +1,6 @@
 import 'widgets/answer_slots.dart';
 import 'widgets/game_layout.dart';
-import 'dart:math' show Random, min;
+import 'dart:math' show Random, min, max;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -314,11 +314,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
           insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 18),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final inputHeight = min(400.0, constraints.maxHeight - 60);
+              final inputHeight = min(
+                520.0,
+                max(430.0, constraints.maxHeight * 0.68),
+              );
               return Center(
                 child: Container(
-                  width: min(420.0, constraints.maxWidth),
-                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                  width: min(430.0, constraints.maxWidth),
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                   decoration: BoxDecoration(
                     color: const Color(0xFF171B3D),
                     borderRadius: BorderRadius.circular(24),
