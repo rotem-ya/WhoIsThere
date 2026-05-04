@@ -318,16 +318,14 @@ class _Slot extends StatelessWidget {
             : [],
       ),
       alignment: Alignment.center,
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          letter ?? '',
-          style: TextStyle(
-            color: AppColors.darkBlue,
-            fontSize: size * 0.66,
-            fontWeight: FontWeight.w900,
-            height: 1,
-          ),
+      child: Text(
+        letter ?? '',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: AppColors.darkBlue,
+          fontSize: size * 0.58,
+          fontWeight: FontWeight.w900,
+          height: 1,
         ),
       ),
     );
@@ -410,27 +408,24 @@ class _KeyboardRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Row(
-        textDirection: TextDirection.rtl,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(letters.length, (i) {
-          final label = letters[i];
-          final isBackspace = label == _backspaceKey;
-          final isEnabled = isBackspace ? canUndo : enabled;
-          return Padding(
-            padding: EdgeInsets.only(left: i == letters.length - 1 ? 0 : gap),
-            child: _LetterKey(
-              label: label,
-              size: keySize,
-              enabled: isEnabled,
-              isBackspace: isBackspace,
-              onTap: isBackspace ? onUndo : () => onLetter(label),
-            ),
-          );
-        }),
-      ),
+    return Row(
+      textDirection: TextDirection.rtl,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(letters.length, (i) {
+        final label = letters[i];
+        final isBackspace = label == _backspaceKey;
+        final isEnabled = isBackspace ? canUndo : enabled;
+        return Padding(
+          padding: EdgeInsets.only(left: i == letters.length - 1 ? 0 : gap),
+          child: _LetterKey(
+            label: label,
+            size: keySize,
+            enabled: isEnabled,
+            isBackspace: isBackspace,
+            onTap: isBackspace ? onUndo : () => onLetter(label),
+          ),
+        );
+      }),
     );
   }
 }
@@ -506,20 +501,14 @@ class _LetterKeyState extends State<_LetterKey> {
                   size: widget.size * 0.50,
                   color: textColor,
                 )
-              : SizedBox(
-                  width: widget.size * 0.72,
-                  height: keyHeight * 0.78,
-                  child: FittedBox(
-                    fit: BoxFit.contain,
-                    child: Text(
-                      widget.label,
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 34,
-                        fontWeight: FontWeight.w900,
-                        height: 1,
-                      ),
-                    ),
+              : Text(
+                  widget.label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: widget.size * 0.52,
+                    fontWeight: FontWeight.w900,
+                    height: 1,
                   ),
                 ),
         ),
