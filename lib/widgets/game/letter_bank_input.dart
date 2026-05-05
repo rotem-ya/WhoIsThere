@@ -13,16 +13,16 @@ String normalizeHebrewFinals(String s) => s
     .replaceAll(' ', '');
 
 const String _backspaceKey = '⌫';
-const double _keyGap = 4.0;
-const double _runGap = 10.0;
+const double _keyGap = 6.0;
+const double _rowGap = 10.0;
 const double _minKeySize = 28.0;
 const double _maxKeySize = 48.0;
-const double _widthSafety = 0.96;
+const double _widthSafety = 0.94;
 
-const List<String> _keyboardLetters = [
-  'פ', 'ם', 'ן', 'ו', 'ט', 'א', 'ר', 'ק',
-  'ף', 'ך', 'ל', 'ח', 'י', 'ע', 'כ', 'ג', 'ד', 'ש',
-  _backspaceKey, 'ץ', 'ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז',
+const List<List<String>> _keyboardRows = [
+  ['פ', 'ם', 'ן', 'ו', 'ט', 'א', 'ר', 'ק'],
+  ['ף', 'ך', 'ל', 'ח', 'י', 'ע', 'כ', 'ג', 'ד', 'ש'],
+  [_backspaceKey, 'ץ', 'ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז'],
 ];
 
 class LetterBankInput extends StatefulWidget {
@@ -173,11 +173,7 @@ class _LetterBankInputState extends State<LetterBankInput> {
                         child: const Center(
                           child: Text(
                             'לא נכון, התור עובר',
-                            style: TextStyle(
-                              color: AppColors.secondary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                            ),
+                            style: TextStyle(color: AppColors.secondary, fontSize: 12, fontWeight: FontWeight.w800),
                           ),
                         ),
                       ),
@@ -188,11 +184,7 @@ class _LetterBankInputState extends State<LetterBankInput> {
                       onLetter: _tapLetter,
                       onUndo: _undoLastLetter,
                     ),
-                    _GuessControls(
-                      canSubmit: enabled && _isComplete,
-                      isSubmitting: _isSubmitting,
-                      onSubmit: _submit,
-                    ),
+                    _GuessControls(canSubmit: enabled && _isComplete, isSubmitting: _isSubmitting, onSubmit: _submit),
                   ],
                 ),
               ),
@@ -233,13 +225,7 @@ class _AnswerSlots extends StatelessWidget {
       }
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Wrap(
-          textDirection: TextDirection.rtl,
-          alignment: WrapAlignment.center,
-          spacing: wordGap,
-          runSpacing: 9,
-          children: words,
-        ),
+        child: Wrap(textDirection: TextDirection.rtl, alignment: WrapAlignment.center, spacing: wordGap, runSpacing: 9, children: words),
       );
     });
   }
@@ -265,11 +251,7 @@ class _Slot extends StatelessWidget {
         border: Border.all(color: isFilled ? const Color(0xFF58B8E8) : const Color(0xFFB8D7EA), width: isFilled ? 2.4 : 1.5),
         boxShadow: isFilled ? [BoxShadow(color: const Color(0xFF58B8E8).withOpacity(0.28), blurRadius: 12, offset: const Offset(0, 3))] : [],
       ),
-      child: Text(
-        letter ?? '',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: AppColors.darkBlue, fontSize: size * 0.58, fontWeight: FontWeight.w900, height: 1),
-      ),
+      child: Text(letter ?? '', textAlign: TextAlign.center, style: TextStyle(color: AppColors.darkBlue, fontSize: size * 0.58, fontWeight: FontWeight.w900, height: 1)),
     );
   }
 }
@@ -287,30 +269,67 @@ class _HebrewKeyboard extends StatelessWidget {
     return LayoutBuilder(builder: (context, constraints) {
       final rawWidth = constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.sizeOf(context).width;
       final keyboardWidth = rawWidth * _widthSafety;
-      final keysPerRow = math.max(7, (keyboardWidth / 46).floor());
-      final keySize = math.min(_maxKeySize, math.max(_minKeySize, (keyboardWidth - _keyGap * (keysPerRow - 1)) / keysPerRow));
+      const maxKeysInRow = 10;
+      final keySize = math.min(
+        _maxKeySize,
+        math.max(_minKeySize, (keyboardWidth - _keyGap * (maxKeysInRow - 1)) / maxKeysInRow),
+      );
       return Center(
         child: SizedBox(
           width: keyboardWidth,
-          child: Wrap(
-            textDirection: TextDirection.rtl,
-            alignment: WrapAlignment.center,
-            spacing: _keyGap,
-            runSpacing: _runGap,
-            children: _keyboardLetters.map((label) {
-              final isBackspace = label == _backspaceKey;
-              return _LetterKey(
-                label: label,
-                size: keySize,
-                enabled: isBackspace ? canUndo : enabled,
-                isBackspace: isBackspace,
-                onTap: isBackspace ? onUndo : () => onLetter(label),
-              );
-            }).toList(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < _keyboardRows.length; i++) ...[
+                _KeyboardRow(
+                  letters: _keyboardRows[i],
+                  keySize: keySize,
+                  enabled: enabled,
+                  canUndo: canUndo,
+                  onLetter: onLetter,
+                  onUndo: onUndo,
+                ),
+                if (i != _keyboardRows.length - 1) const SizedBox(height: _rowGap),
+              ],
+            ],
           ),
         ),
       );
     });
+  }
+}
+
+class _KeyboardRow extends StatelessWidget {
+  final List<String> letters;
+  final double keySize;
+  final bool enabled;
+  final bool canUndo;
+  final ValueChanged<String> onLetter;
+  final VoidCallback onUndo;
+
+  const _KeyboardRow({required this.letters, required this.keySize, required this.enabled, required this.canUndo, required this.onLetter, required this.onUndo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      textDirection: TextDirection.rtl,
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(letters.length, (index) {
+        final label = letters[index];
+        final isBackspace = label == _backspaceKey;
+        return Padding(
+          padding: EdgeInsetsDirectional.only(start: index == 0 ? 0 : _keyGap),
+          child: _LetterKey(
+            label: label,
+            size: keySize,
+            enabled: isBackspace ? canUndo : enabled,
+            isBackspace: isBackspace,
+            onTap: isBackspace ? onUndo : () => onLetter(label),
+          ),
+        );
+      }),
+    );
   }
 }
 
