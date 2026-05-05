@@ -12,16 +12,16 @@ String normalizeHebrewFinals(String s) => s
     .replaceAll('ץ', 'צ')
     .replaceAll(' ', '');
 
-const String _backspaceKey = '⌫';
-const double _keyGap = 4.0;
+const String _undoKey = '__undo__';
+const double _keyGap = 2.0;
 const double _rowGap = 10.0;
-const double _maxKeySize = 48.0;
-const double _sideMargin = 28.0;
+const double _maxKeySize = 54.0;
+const double _sideMargin = 0.0;
 
 const List<List<String>> _keyboardRows = [
   ['פ', 'ם', 'ן', 'ו', 'ט', 'א', 'ר', 'ק'],
   ['ף', 'ך', 'ל', 'ח', 'י', 'ע', 'כ', 'ג', 'ד', 'ש'],
-  [_backspaceKey, 'ץ', 'ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז'],
+  [_undoKey, 'ץ', 'ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז'],
 ];
 
 class LetterBankInput extends StatefulWidget {
@@ -314,15 +314,15 @@ class _KeyboardRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(letters.length, (index) {
         final label = letters[index];
-        final isBackspace = label == _backspaceKey;
+        final isUndo = label == _undoKey;
         return Padding(
           padding: EdgeInsetsDirectional.only(start: index == 0 ? 0 : _keyGap),
           child: _LetterKey(
             label: label,
             size: keySize,
-            enabled: isBackspace ? canUndo : enabled,
-            isBackspace: isBackspace,
-            onTap: isBackspace ? onUndo : () => onLetter(label),
+            enabled: isUndo ? canUndo : enabled,
+            isUndo: isUndo,
+            onTap: isUndo ? onUndo : () => onLetter(label),
           ),
         );
       }),
@@ -334,10 +334,10 @@ class _LetterKey extends StatefulWidget {
   final String label;
   final double size;
   final bool enabled;
-  final bool isBackspace;
+  final bool isUndo;
   final VoidCallback onTap;
 
-  const _LetterKey({required this.label, required this.size, required this.enabled, required this.isBackspace, required this.onTap});
+  const _LetterKey({required this.label, required this.size, required this.enabled, required this.isUndo, required this.onTap});
 
   @override
   State<_LetterKey> createState() => _LetterKeyState();
@@ -356,7 +356,7 @@ class _LetterKeyState extends State<_LetterKey> {
     final keyColor = widget.enabled ? Colors.white : const Color(0xFFE8EEF4);
     final borderColor = widget.enabled ? const Color(0xFFA9D8F0) : const Color(0xFFCAD2DA);
     final textColor = widget.enabled ? AppColors.darkBlue : const Color(0xFF88929D);
-    final keyHeight = widget.size * 1.18;
+    final keyHeight = widget.size * 1.28;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: widget.enabled ? (_) => _setPressed(true) : null,
@@ -377,9 +377,9 @@ class _LetterKeyState extends State<_LetterKey> {
             border: Border.all(color: borderColor, width: 1.4),
             boxShadow: [BoxShadow(color: const Color(0xFF58B8E8).withOpacity(_pressed ? 0.18 : 0.10), blurRadius: _pressed ? 5 : 3, offset: const Offset(0, 2))],
           ),
-          child: widget.isBackspace
-              ? Icon(Icons.backspace_outlined, size: widget.size * 0.50, color: textColor)
-              : Text(widget.label, textAlign: TextAlign.center, style: TextStyle(color: textColor, fontSize: widget.size * 0.52, fontWeight: FontWeight.w900, height: 1)),
+          child: widget.isUndo
+              ? Icon(Icons.undo_rounded, size: widget.size * 0.62, color: textColor)
+              : Text(widget.label, textAlign: TextAlign.center, style: TextStyle(color: textColor, fontSize: widget.size * 0.60, fontWeight: FontWeight.w900, height: 1)),
         ),
       ),
     );
