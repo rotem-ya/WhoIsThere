@@ -200,7 +200,7 @@ class RoomService {
           .where((image) => image.category.name == winningCategory)
           .toList();
       final pool = localImages.isNotEmpty ? localImages : _fallbackImages;
-      selectedImageId = pool[Random().nextInt(pool.length)];
+      selectedImageId = pool[Random().nextInt(pool.length)].id;
     }
 
     await _rooms.doc(roomId).update({
