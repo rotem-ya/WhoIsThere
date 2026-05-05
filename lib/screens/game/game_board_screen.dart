@@ -171,38 +171,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
           await ref.read(roomServiceProvider).watchRoom(room.id).first;
       if (afterReveal == null || afterReveal.phase == GamePhase.finished) return;
 
-      final afterTotal = afterReveal.gridSize * afterReveal.gridSize;
-      final afterRevealed = afterReveal.placedPieces.length;
-      final afterRatio =
-          afterTotal > 0 ? afterRevealed / afterTotal : 0.0;
+      final shouldAttemptGuess = _image != null && _random.nextDouble() < 0.50;
 
-      // Bots never guess before 50 % revealed or fewer than 5 tiles.
-      double attemptChance;
-      double correctChance;
-      if (afterRevealed < 5 || afterRatio < 0.50) {
-        attemptChance = 0.0;
-        correctChance = 0.0;
-      } else if (afterRatio >= 0.75) {
-        attemptChance = 0.45;
-        correctChance = 0.55;
-      } else {
-        // 50 %–75 % revealed
-        attemptChance = 0.25;
-        correctChance = 0.30;
+      if (shouldAttemptGuess) {
+        final didSubmit = await _performBotGuess(afterReveal, currentId);
+        if (didSubmit) return;
       }
 
-      final shouldGuess =
-          _image != null && _random.nextDouble() < attemptChance;
-
-      if (shouldGuess) {
-        await _performBotGuess(afterReveal, currentId, correctChance);
-        // submitAnswer advances turn on wrong; game ends on correct.
-      } else {
-        if (mounted) {
-          await ref
-              .read(roomServiceProvider)
-              .skipPiecePlacement(roomId: afterReveal.id);
-        }
+      if (mounted) {
+        await ref
+            .read(roomServiceProvider)
+            .skipPiecePlacement(roomId: afterReveal.id);
       }
     });
   }
@@ -228,18 +207,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     await Future.delayed(const Duration(milliseconds: 350));
   }
 
-  Future<void> _performBotGuess(
-      RoomModel room, String botId, double correctChance) async {
+  Future<bool> _performBotGuess(RoomModel room, String botId) async {
     final image = _image;
-    if (image == null) return;
+    if (image == null) return false;
 
-    final isCorrect = _random.nextDouble() < correctChance;
-    final guess = isCorrect ? image.answer : _realisticWrongGuess(image.answer);
+    final guess = _buildBotGuess(room: room, image: image);
+    if (guess == null) return false;
 
     final botName = room.players[botId]?.name ?? 'בוט';
     await _simulateBotTyping(botName, guess);
 
-    if (!mounted) return;
+    if (!mounted) return false;
     setState(() => _showBotTyping = false);
 
     await ref.read(roomServiceProvider).submitAnswer(
@@ -250,6 +228,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
           difficulty: room.selectedDifficulty ?? Difficulty.easy,
         );
     // Turn advances via submitAnswer: wrong → nextTurnIndex; correct → game ends.
+    return true;
   }
 
   static const _realisticGuessPool = [
@@ -268,14 +247,46 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     'ראש הנקרה',
     'חיפה',
     'הכנרת',
+    'ירושלים',
+    'תל אביב',
+    'באר שבע',
+    'רמת הגולן',
+    'עין גדי',
+    'תמנע',
+    'זכרון יעקב',
+    'מוזיאון ישראל',
+    'נחל עמוד',
+    'פארק הירקון',
+    'גן סאקר',
   ];
 
-  String _realisticWrongGuess(String correctAnswer) {
+  String? _buildBotGuess({
+    required RoomModel room,
+    required GameImageModel image,
+  }) {
+    final total = room.gridSize * room.gridSize;
+    final revealed = room.placedPieces.length;
+    final revealedRatio = total > 0 ? revealed / total : 0.0;
+    final canBeCorrect = revealedRatio >= 0.90 && _random.nextDouble() < 0.01;
+
+    if (canBeCorrect) return image.answer;
+    return _realisticWrongGuess(image.answer);
+  }
+
+  int _normalizedGuessLength(String value) {
+    return normalizeHebrewFinals(value.trim()).characters.length;
+  }
+
+  String? _realisticWrongGuess(String correctAnswer) {
     final norm = normalizeHebrewFinals(correctAnswer.trim());
-    final candidates = _realisticGuessPool
-        .where((g) => normalizeHebrewFinals(g) != norm)
-        .toList();
-    if (candidates.isEmpty) return 'מצדה';
+    final targetLength = _normalizedGuessLength(correctAnswer);
+    final candidates = _realisticGuessPool.where((guess) {
+      final normalizedGuess = normalizeHebrewFinals(guess.trim());
+      return normalizedGuess != norm &&
+          normalizedGuess.characters.length == targetLength;
+    }).toList();
+
+    if (candidates.isEmpty) return null;
     return candidates[_random.nextInt(candidates.length)];
   }
 
