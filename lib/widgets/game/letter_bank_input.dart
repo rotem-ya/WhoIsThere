@@ -13,11 +13,10 @@ String normalizeHebrewFinals(String s) => s
     .replaceAll(' ', '');
 
 const String _backspaceKey = '⌫';
-const double _keyGap = 6.0;
+const double _keyGap = 4.0;
 const double _rowGap = 10.0;
-const double _minKeySize = 28.0;
 const double _maxKeySize = 48.0;
-const double _widthSafety = 0.94;
+const double _sideMargin = 28.0;
 
 const List<List<String>> _keyboardRows = [
   ['פ', 'ם', 'ן', 'ו', 'ט', 'א', 'ר', 'ק'],
@@ -249,7 +248,7 @@ class _Slot extends StatelessWidget {
         color: isFilled ? const Color(0xFFEAF6FF) : Colors.white,
         borderRadius: BorderRadius.circular(13),
         border: Border.all(color: isFilled ? const Color(0xFF58B8E8) : const Color(0xFFB8D7EA), width: isFilled ? 2.4 : 1.5),
-        boxShadow: isFilled ? [BoxShadow(color: const Color(0xFF58B8E8).withOpacity(0.28), blurRadius: 12, offset: const Offset(0, 3))] : [],
+        boxShadow: isFilled ? [BoxShadow(color: const Color(0xFF58B8E8).withOpacity(0.24), blurRadius: 6, offset: const Offset(0, 2))] : [],
       ),
       child: Text(letter ?? '', textAlign: TextAlign.center, style: TextStyle(color: AppColors.darkBlue, fontSize: size * 0.58, fontWeight: FontWeight.w900, height: 1)),
     );
@@ -268,12 +267,10 @@ class _HebrewKeyboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
       final rawWidth = constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.sizeOf(context).width;
-      final keyboardWidth = rawWidth * _widthSafety;
+      final keyboardWidth = math.max(0.0, rawWidth - _sideMargin * 2);
       const maxKeysInRow = 10;
-      final keySize = math.min(
-        _maxKeySize,
-        math.max(_minKeySize, (keyboardWidth - _keyGap * (maxKeysInRow - 1)) / maxKeysInRow),
-      );
+      final totalGap = _keyGap * (maxKeysInRow - 1);
+      final keySize = math.min(_maxKeySize, (keyboardWidth - totalGap) / maxKeysInRow);
       return Center(
         child: SizedBox(
           width: keyboardWidth,
@@ -366,7 +363,7 @@ class _LetterKeyState extends State<_LetterKey> {
       onTapCancel: widget.enabled ? () => _setPressed(false) : null,
       onTapUp: widget.enabled ? (_) { _setPressed(false); widget.onTap(); } : null,
       child: AnimatedScale(
-        scale: _pressed ? 1.07 : 1.0,
+        scale: _pressed ? 1.05 : 1.0,
         duration: const Duration(milliseconds: 90),
         curve: Curves.easeOut,
         child: AnimatedContainer(
@@ -378,7 +375,7 @@ class _LetterKeyState extends State<_LetterKey> {
             color: keyColor,
             borderRadius: BorderRadius.circular(13),
             border: Border.all(color: borderColor, width: 1.4),
-            boxShadow: [BoxShadow(color: const Color(0xFF58B8E8).withOpacity(_pressed ? 0.24 : 0.12), blurRadius: _pressed ? 10 : 5, offset: Offset(0, _pressed ? 4 : 2))],
+            boxShadow: [BoxShadow(color: const Color(0xFF58B8E8).withOpacity(_pressed ? 0.18 : 0.10), blurRadius: _pressed ? 5 : 3, offset: const Offset(0, 2))],
           ),
           child: widget.isBackspace
               ? Icon(Icons.backspace_outlined, size: widget.size * 0.50, color: textColor)
@@ -442,7 +439,7 @@ class _LetterPreview extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(color: const Color(0xFF58B8E8), width: 2.6),
-                boxShadow: [BoxShadow(color: const Color(0xFF58B8E8).withOpacity(0.34), blurRadius: 22, offset: const Offset(0, 6))],
+                boxShadow: [BoxShadow(color: const Color(0xFF58B8E8).withOpacity(0.28), blurRadius: 10, offset: const Offset(0, 4))],
               ),
               child: Text(letter!, style: const TextStyle(color: AppColors.darkBlue, fontSize: 46, fontWeight: FontWeight.w900, height: 1)),
             ),
