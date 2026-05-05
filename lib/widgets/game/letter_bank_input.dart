@@ -15,12 +15,12 @@ String normalizeHebrewFinals(String s) {
 }
 
 const String _backspaceKey = '⌫';
-const double _keyboardHorizontalPadding = 10.0;
-const double _keyboardGap = 5.0;
+const double _keyboardHorizontalPadding = 14.0;
+const double _keyboardGap = 4.0;
 const double _keyboardRowGap = 10.0;
-const double _keyboardMinKeySize = 31.0;
-const double _keyboardMaxKeySize = 54.0;
-const int _keyboardMaxKeysInRow = 10;
+const double _keyboardMinKeySize = 28.0;
+const double _keyboardMaxKeySize = 52.0;
+const double _keyboardWidthSafety = 0.94;
 
 // Visual RTL order: index 0 is the rightmost key on screen.
 const List<List<String>> _keyboardRows = [
@@ -349,16 +349,23 @@ class _HebrewKeyboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final maxKeysInRow = _keyboardRows
+            .map((row) => row.length)
+            .reduce((a, b) => math.max(a, b));
         final fallbackWidth = MediaQuery.sizeOf(context).width - 48;
-        final availableWidth = constraints.maxWidth.isFinite
-            ? constraints.maxWidth - _keyboardHorizontalPadding * 2
+        final rawWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
             : fallbackWidth;
+        final availableWidth = math.max(
+          0.0,
+          rawWidth - _keyboardHorizontalPadding * 2,
+        );
         final widthKeySize =
-            (availableWidth - _keyboardGap * (_keyboardMaxKeysInRow - 1)) /
-                _keyboardMaxKeysInRow;
+            (availableWidth - _keyboardGap * (maxKeysInRow - 1)) /
+                maxKeysInRow;
         final keySize = math.min(
           _keyboardMaxKeySize,
-          math.max(_keyboardMinKeySize, widthKeySize),
+          math.max(_keyboardMinKeySize, widthKeySize * _keyboardWidthSafety),
         );
 
         return Padding(
