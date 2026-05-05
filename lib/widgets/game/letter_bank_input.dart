@@ -15,12 +15,11 @@ String normalizeHebrewFinals(String s) {
 }
 
 const String _backspaceKey = '⌫';
-const double _keyboardHorizontalPadding = 14.0;
 const double _keyboardGap = 4.0;
 const double _keyboardRowGap = 10.0;
 const double _keyboardMinKeySize = 28.0;
-const double _keyboardMaxKeySize = 52.0;
-const double _keyboardWidthSafety = 0.94;
+const double _keyboardMaxKeySize = 48.0;
+const double _keyboardWidthSafety = 0.86;
 
 // Visual RTL order: index 0 is the rightmost key on screen.
 const List<List<String>> _keyboardRows = [
@@ -352,41 +351,39 @@ class _HebrewKeyboard extends StatelessWidget {
         final maxKeysInRow = _keyboardRows
             .map((row) => row.length)
             .reduce((a, b) => math.max(a, b));
-        final fallbackWidth = MediaQuery.sizeOf(context).width - 48;
+        final screenWidth = MediaQuery.sizeOf(context).width;
         final rawWidth = constraints.maxWidth.isFinite
-            ? constraints.maxWidth
-            : fallbackWidth;
-        final availableWidth = math.max(
-          0.0,
-          rawWidth - _keyboardHorizontalPadding * 2,
-        );
+            ? math.min(constraints.maxWidth, screenWidth * 0.78)
+            : screenWidth * 0.78;
+        final keyboardWidth = math.max(0.0, rawWidth * _keyboardWidthSafety);
         final widthKeySize =
-            (availableWidth - _keyboardGap * (maxKeysInRow - 1)) /
-                maxKeysInRow;
+            (keyboardWidth - _keyboardGap * (maxKeysInRow - 1)) / maxKeysInRow;
         final keySize = math.min(
           _keyboardMaxKeySize,
-          math.max(_keyboardMinKeySize, widthKeySize * _keyboardWidthSafety),
+          math.max(_keyboardMinKeySize, widthKeySize),
         );
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: _keyboardHorizontalPadding),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < _keyboardRows.length; i++) ...[
-                _KeyboardRow(
-                  letters: _keyboardRows[i],
-                  enabled: enabled,
-                  canUndo: canUndo,
-                  keySize: keySize,
-                  gap: _keyboardGap,
-                  onLetter: onLetter,
-                  onUndo: onUndo,
-                ),
-                if (i != _keyboardRows.length - 1)
-                  const SizedBox(height: _keyboardRowGap),
+        return Center(
+          child: SizedBox(
+            width: keyboardWidth,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < _keyboardRows.length; i++) ...[
+                  _KeyboardRow(
+                    letters: _keyboardRows[i],
+                    enabled: enabled,
+                    canUndo: canUndo,
+                    keySize: keySize,
+                    gap: _keyboardGap,
+                    onLetter: onLetter,
+                    onUndo: onUndo,
+                  ),
+                  if (i != _keyboardRows.length - 1)
+                    const SizedBox(height: _keyboardRowGap),
+                ],
               ],
-            ],
+            ),
           ),
         );
       },
