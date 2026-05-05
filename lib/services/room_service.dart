@@ -1,5 +1,9 @@
+import 'dart:convert';
 import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart' show rootBundle;
+
 import '../models/room_model.dart';
 import '../models/player_model.dart';
 import '../models/game_image_model.dart';
@@ -13,16 +17,58 @@ class RoomService {
 
   static const double _letterCardBonusChance = 0.12;
 
-  static const List<GameImageModel> _fallbackImages = [
-    GameImageModel(
-      id: 'local_western_wall',
-      name: 'הכותל המערבי',
-      answer: 'הכותל המערבי',
+  static const Set<String> _availableLocalPlaceIds = {
+    'western_wall',
+    'dome_of_the_rock',
+    'tower_of_david',
+    'mahane_yehuda_market',
+    'knesset',
+    'israel_museum',
+    'yad_vashem',
+    'masada',
+    'dead_sea',
+    'ein_gedi',
+  };
+
+  Future<List<GameImageModel>>? _localImagesFuture;
+
+  Future<List<GameImageModel>> _loadLocalImages() {
+    return _localImagesFuture ??= _readLocalImages();
+  }
+
+  Future<List<GameImageModel>> _readLocalImages() async {
+    final rawJson = await rootBundle.loadString('assets/game_places/data/israel_places.json');
+    final decoded = jsonDecode(rawJson);
+    final rawPlaces = decoded is List
+        ? decoded
+        : (decoded is Map<String, dynamic> ? decoded['places'] as List<dynamic>? : null);
+
+    if (rawPlaces == null) return const [];
+
+    return rawPlaces
+        .whereType<Map<String, dynamic>>()
+        .where((place) => place['is_active'] == true)
+        .where((place) => _availableLocalPlaceIds.contains(place['id']))
+        .map(_localPlaceToImage)
+        .toList(growable: false);
+  }
+
+  GameImageModel _localPlaceToImage(Map<String, dynamic> place) {
+    final id = (place['id'] ?? '').toString();
+    final name = (place['name_he'] ?? '').toString();
+    final answer = (place['answer_he'] ?? name).toString();
+    final asset = (place['image_asset'] ?? 'assets/game_places/images/$id.jpg').toString();
+
+    return GameImageModel(
+      id: id,
+      name: name,
+      answer: answer,
+      acceptedAnswers: List<String>.from(place['aliases_he'] ?? const []),
       category: ImageCategory.israeliLandmark,
-      imageUrl: 'assets/images/places/western_wall.jpg',
-      thumbnailUrl: 'assets/images/places/western_wall.jpg',
-    ),
-  ];
+      imageUrl: asset,
+      thumbnailUrl: asset,
+    );
+  }
 
   Future<RoomModel> createRoom({
     required String hostId,
@@ -136,7 +182,9 @@ class RoomService {
   Future<void> startGameDirectly(String roomId) async {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
-    final image = _fallbackImages[Random().nextInt(_fallbackImages.length)];
+    final images = await _loadLocalImages();
+    if (images.isEmpty) return;
+    final image = images[Random().nextInt(images.length)];
     await _rooms.doc(roomId).update({'selectedImageId': image.id});
     await _startGame(roomId, room, Difficulty.easy);
   }
@@ -162,44 +210,10 @@ class RoomService {
   Future<void> resolveImageVote(String roomId, String hostId) async {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
+    final images = await _loadLocalImages();
+    if (images.isEmpty) return;
 
-    final tally = <String, int>{};
-    for (final entry in room.imageVotes.entries) {
-      final weight = entry.key == hostId
-          ? GameConstants.hostVoteWeight
-          : GameConstants.regularVoteWeight;
-      tally[entry.value] = (tally[entry.value] ?? 0) + weight;
-    }
-
-    if (tally.isEmpty) return;
-
-    final maxVotes = tally.values.reduce(max);
-    final winners = tally.entries
-        .where((e) => e.value == maxVotes)
-        .map((e) => e.key)
-        .toList();
-
-    final hostVotedCategory = room.imageVotes[hostId];
-    final winningCategory = hostVotedCategory != null && winners.contains(hostVotedCategory)
-        ? hostVotedCategory
-        : winners[Random().nextInt(winners.length)];
-
-    String selectedImageId;
-    var query = await _firestore
-        .collection('images')
-        .where('isPremium', isEqualTo: false)
-        .where('category', isEqualTo: winningCategory)
-        .get();
-
-    if (query.docs.isNotEmpty) {
-      selectedImageId = query.docs[Random().nextInt(query.docs.length)].id;
-    } else {
-      final localImages = _fallbackImages
-          .where((image) => image.category.name == winningCategory)
-          .toList();
-      final pool = localImages.isNotEmpty ? localImages : _fallbackImages;
-      selectedImageId = pool[Random().nextInt(pool.length)].id;
-    }
+    final selectedImageId = images[Random().nextInt(images.length)].id;
 
     await _rooms.doc(roomId).update({
       'selectedImageId': selectedImageId,
@@ -381,39 +395,13 @@ class RoomService {
     }
   }
 
-  Future<List<GameImageModel>> getPublicImages() async {
-    try {
-      final query = await _firestore
-          .collection('images')
-          .where('isPremium', isEqualTo: false)
-          .where('category', isEqualTo: ImageCategory.israeliLandmark.name)
-          .get();
-      final images = query.docs.map(GameImageModel.fromFirestore).toList();
-      return images.isEmpty ? _fallbackImages : images;
-    } catch (_) {
-      return _fallbackImages;
-    }
-  }
+  Future<List<GameImageModel>> getPublicImages() => _loadLocalImages();
 
-  Future<List<GameImageModel>> getAllImages() async {
-    try {
-      final query = await _firestore
-          .collection('images')
-          .where('category', isEqualTo: ImageCategory.israeliLandmark.name)
-          .get();
-      final images = query.docs.map(GameImageModel.fromFirestore).toList();
-      return images.isEmpty ? _fallbackImages : images;
-    } catch (_) {
-      return _fallbackImages;
-    }
-  }
+  Future<List<GameImageModel>> getAllImages() => _loadLocalImages();
 
   Future<GameImageModel?> getImage(String imageId) async {
-    final localMatch = _fallbackImages.where((image) => image.id == imageId);
-    if (localMatch.isNotEmpty) return localMatch.first;
-
-    final doc = await _firestore.collection('images').doc(imageId).get();
-    if (!doc.exists) return _fallbackImages.first;
-    return GameImageModel.fromFirestore(doc);
+    final images = await _loadLocalImages();
+    return images.where((image) => image.id == imageId).cast<GameImageModel?>().firstOrNull ??
+        (images.isNotEmpty ? images.first : null);
   }
 }
