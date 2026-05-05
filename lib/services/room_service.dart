@@ -12,6 +12,8 @@ class RoomService {
   CollectionReference get _rooms => _firestore.collection('rooms');
 
   static const double _letterCardBonusChance = 0.12;
+  static const int _correctGuessReward = 20;
+  static const int _wrongGuessPenalty = 5;
 
   static const List<GameImageModel> _fallbackImages = [
     GameImageModel(
@@ -198,7 +200,7 @@ class RoomService {
           .where((image) => image.category.name == winningCategory)
           .toList();
       final pool = localImages.isNotEmpty ? localImages : _fallbackImages;
-      selectedImageId = pool[Random().nextInt(pool.length)].id;
+      selectedImageId = pool[Random().nextInt(pool.length)];
     }
 
     await _rooms.doc(roomId).update({
@@ -329,7 +331,7 @@ class RoomService {
       await _rooms.doc(roomId).update({
         'phase': GamePhase.finished.name,
         'winnerId': userId,
-        'players.$userId.score': FieldValue.increment(difficulty.winReward),
+        'players.$userId.score': FieldValue.increment(_correctGuessReward),
         'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': true},
         'guessCount': FieldValue.increment(1),
       });
@@ -339,26 +341,15 @@ class RoomService {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
     final currentScore = room.players[userId]?.score ?? 0;
-    final newScore = currentScore - difficulty.wrongGuessPenalty;
+    final newScore = max(0, currentScore - _wrongGuessPenalty);
     final nextTurnIndex = room.currentTurnIndex + 1;
 
-    if (newScore <= 0) {
-      await _rooms.doc(roomId).update({
-        'players.$userId.score': 0,
-        'players.$userId.isEliminated': true,
-        'currentTurnIndex': nextTurnIndex,
-        'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
-        'guessCount': FieldValue.increment(1),
-      });
-      await _checkLastPlayerStanding(roomId);
-    } else {
-      await _rooms.doc(roomId).update({
-        'players.$userId.score': newScore,
-        'currentTurnIndex': nextTurnIndex,
-        'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
-        'guessCount': FieldValue.increment(1),
-      });
-    }
+    await _rooms.doc(roomId).update({
+      'players.$userId.score': newScore,
+      'currentTurnIndex': nextTurnIndex,
+      'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
+      'guessCount': FieldValue.increment(1),
+    });
     return false;
   }
 
