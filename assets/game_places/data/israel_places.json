@@ -1,0 +1,502 @@
+[
+  {
+    "id": "western_wall",
+    "name_he": "הכותל המערבי",
+    "answer_he": "הכותל",
+    "category": "landmark",
+    "city_he": "ירושלים",
+    "image_asset": "assets/game_places/images/western_wall.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "dome_of_the_rock",
+    "name_he": "כיפת הסלע",
+    "answer_he": "כיפת הסלע",
+    "category": "landmark",
+    "city_he": "ירושלים",
+    "image_asset": "assets/game_places/images/dome_of_the_rock.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "tower_of_david",
+    "name_he": "מגדל דוד",
+    "answer_he": "מגדל דוד",
+    "category": "landmark",
+    "city_he": "ירושלים",
+    "image_asset": "assets/game_places/images/tower_of_david.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "mahane_yehuda_market",
+    "name_he": "שוק מחנה יהודה",
+    "answer_he": "מחנה יהודה",
+    "category": "market",
+    "city_he": "ירושלים",
+    "image_asset": "assets/game_places/images/mahane_yehuda_market.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "knesset",
+    "name_he": "הכנסת",
+    "answer_he": "הכנסת",
+    "category": "landmark",
+    "city_he": "ירושלים",
+    "image_asset": "assets/game_places/images/knesset.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "israel_museum",
+    "name_he": "מוזיאון ישראל",
+    "answer_he": "מוזיאון ישראל",
+    "category": "museum",
+    "city_he": "ירושלים",
+    "image_asset": "assets/game_places/images/israel_museum.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "yad_vashem",
+    "name_he": "יד ושם",
+    "answer_he": "יד ושם",
+    "category": "museum",
+    "city_he": "ירושלים",
+    "image_asset": "assets/game_places/images/yad_vashem.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "masada",
+    "name_he": "מצדה",
+    "answer_he": "מצדה",
+    "category": "landmark",
+    "city_he": "ים המלח",
+    "image_asset": "assets/game_places/images/masada.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "dead_sea",
+    "name_he": "ים המלח",
+    "answer_he": "ים המלח",
+    "category": "nature",
+    "city_he": "ים המלח",
+    "image_asset": "assets/game_places/images/dead_sea.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "ein_gedi",
+    "name_he": "עין גדי",
+    "answer_he": "עין גדי",
+    "category": "nature",
+    "city_he": "ים המלח",
+    "image_asset": "assets/game_places/images/ein_gedi.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "ramon_crater",
+    "name_he": "מכתש רמון",
+    "answer_he": "מכתש רמון",
+    "category": "nature",
+    "city_he": "מצפה רמון",
+    "image_asset": "assets/game_places/images/ramon_crater.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "timna_park",
+    "name_he": "פארק תמנע",
+    "answer_he": "תמנע",
+    "category": "nature",
+    "city_he": "אילת",
+    "image_asset": "assets/game_places/images/timna_park.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "eilat",
+    "name_he": "אילת",
+    "answer_he": "אילת",
+    "category": "city",
+    "city_he": "אילת",
+    "image_asset": "assets/game_places/images/eilat.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "dolphin_reef",
+    "name_he": "ריף הדולפינים",
+    "answer_he": "ריף הדולפינים",
+    "category": "nature",
+    "city_he": "אילת",
+    "image_asset": "assets/game_places/images/dolphin_reef.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "mount_hermon",
+    "name_he": "החרמון",
+    "answer_he": "החרמון",
+    "category": "nature",
+    "city_he": "רמת הגולן",
+    "image_asset": "assets/game_places/images/mount_hermon.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "sea_of_galilee",
+    "name_he": "הכנרת",
+    "answer_he": "הכנרת",
+    "category": "nature",
+    "city_he": "טבריה",
+    "image_asset": "assets/game_places/images/sea_of_galilee.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "tiberias",
+    "name_he": "טבריה",
+    "answer_he": "טבריה",
+    "category": "city",
+    "city_he": "טבריה",
+    "image_asset": "assets/game_places/images/tiberias.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "safed",
+    "name_he": "צפת",
+    "answer_he": "צפת",
+    "category": "city",
+    "city_he": "צפת",
+    "image_asset": "assets/game_places/images/safed.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "rosh_hanikra",
+    "name_he": "ראש הנקרה",
+    "answer_he": "ראש הנקרה",
+    "category": "nature",
+    "city_he": "ראש הנקרה",
+    "image_asset": "assets/game_places/images/rosh_hanikra.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "old_acre",
+    "name_he": "עכו העתיקה",
+    "answer_he": "עכו",
+    "category": "old_city",
+    "city_he": "עכו",
+    "image_asset": "assets/game_places/images/old_acre.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "haifa",
+    "name_he": "חיפה",
+    "answer_he": "חיפה",
+    "category": "city",
+    "city_he": "חיפה",
+    "image_asset": "assets/game_places/images/haifa.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "bahai_gardens",
+    "name_he": "הגנים הבהאיים",
+    "answer_he": "הגנים הבהאיים",
+    "category": "landmark",
+    "city_he": "חיפה",
+    "image_asset": "assets/game_places/images/bahai_gardens.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "haifa_port",
+    "name_he": "נמל חיפה",
+    "answer_he": "נמל חיפה",
+    "category": "landmark",
+    "city_he": "חיפה",
+    "image_asset": "assets/game_places/images/haifa_port.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "caesarea",
+    "name_he": "קיסריה",
+    "answer_he": "קיסריה",
+    "category": "landmark",
+    "city_he": "קיסריה",
+    "image_asset": "assets/game_places/images/caesarea.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "zichron_yaakov",
+    "name_he": "זכרון יעקב",
+    "answer_he": "זכרון יעקב",
+    "category": "city",
+    "city_he": "זכרון יעקב",
+    "image_asset": "assets/game_places/images/zichron_yaakov.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "tel_aviv",
+    "name_he": "תל אביב",
+    "answer_he": "תל אביב",
+    "category": "city",
+    "city_he": "תל אביב",
+    "image_asset": "assets/game_places/images/tel_aviv.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "old_jaffa",
+    "name_he": "יפו העתיקה",
+    "answer_he": "יפו",
+    "category": "old_city",
+    "city_he": "תל אביב יפו",
+    "image_asset": "assets/game_places/images/old_jaffa.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "azrieli_towers",
+    "name_he": "מגדלי עזריאלי",
+    "answer_he": "עזריאלי",
+    "category": "landmark",
+    "city_he": "תל אביב",
+    "image_asset": "assets/game_places/images/azrieli_towers.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "tel_aviv_port",
+    "name_he": "נמל תל אביב",
+    "answer_he": "נמל תל אביב",
+    "category": "landmark",
+    "city_he": "תל אביב",
+    "image_asset": "assets/game_places/images/tel_aviv_port.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "carmel_market",
+    "name_he": "שוק הכרמל",
+    "answer_he": "שוק הכרמל",
+    "category": "market",
+    "city_he": "תל אביב",
+    "image_asset": "assets/game_places/images/carmel_market.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "yarkon_park",
+    "name_he": "פארק הירקון",
+    "answer_he": "פארק הירקון",
+    "category": "park",
+    "city_he": "תל אביב",
+    "image_asset": "assets/game_places/images/yarkon_park.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "netanya",
+    "name_he": "נתניה",
+    "answer_he": "נתניה",
+    "category": "city",
+    "city_he": "נתניה",
+    "image_asset": "assets/game_places/images/netanya.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "ashdod",
+    "name_he": "אשדוד",
+    "answer_he": "אשדוד",
+    "category": "city",
+    "city_he": "אשדוד",
+    "image_asset": "assets/game_places/images/ashdod.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "ashkelon",
+    "name_he": "אשקלון",
+    "answer_he": "אשקלון",
+    "category": "city",
+    "city_he": "אשקלון",
+    "image_asset": "assets/game_places/images/ashkelon.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "beer_sheva",
+    "name_he": "באר שבע",
+    "answer_he": "באר שבע",
+    "category": "city",
+    "city_he": "באר שבע",
+    "image_asset": "assets/game_places/images/beer_sheva.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "old_city_jerusalem",
+    "name_he": "העיר העתיקה בירושלים",
+    "answer_he": "העיר העתיקה",
+    "category": "old_city",
+    "city_he": "ירושלים",
+    "image_asset": "assets/game_places/images/old_city_jerusalem.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "jaffa_gate",
+    "name_he": "שער יפו",
+    "answer_he": "שער יפו",
+    "category": "landmark",
+    "city_he": "ירושלים",
+    "image_asset": "assets/game_places/images/jaffa_gate.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "damascus_gate",
+    "name_he": "שער שכם",
+    "answer_he": "שער שכם",
+    "category": "landmark",
+    "city_he": "ירושלים",
+    "image_asset": "assets/game_places/images/damascus_gate.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "mount_of_olives",
+    "name_he": "הר הזיתים",
+    "answer_he": "הר הזיתים",
+    "category": "landmark",
+    "city_he": "ירושלים",
+    "image_asset": "assets/game_places/images/mount_of_olives.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "temple_mount",
+    "name_he": "הר הבית",
+    "answer_he": "הר הבית",
+    "category": "landmark",
+    "city_he": "ירושלים",
+    "image_asset": "assets/game_places/images/temple_mount.jpg",
+    "difficulty": "easy",
+    "is_active": true
+  },
+  {
+    "id": "cave_of_the_patriarchs",
+    "name_he": "מערת המכפלה",
+    "answer_he": "מערת המכפלה",
+    "category": "landmark",
+    "city_he": "חברון",
+    "image_asset": "assets/game_places/images/cave_of_the_patriarchs.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "beit_shean",
+    "name_he": "בית שאן",
+    "answer_he": "בית שאן",
+    "category": "landmark",
+    "city_he": "בית שאן",
+    "image_asset": "assets/game_places/images/beit_shean.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "megiddo",
+    "name_he": "מגידו",
+    "answer_he": "מגידו",
+    "category": "landmark",
+    "city_he": "מגידו",
+    "image_asset": "assets/game_places/images/megiddo.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "amud_stream",
+    "name_he": "נחל עמוד",
+    "answer_he": "נחל עמוד",
+    "category": "nature",
+    "city_he": "גליל עליון",
+    "image_asset": "assets/game_places/images/amud_stream.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "david_stream",
+    "name_he": "נחל דוד",
+    "answer_he": "נחל דוד",
+    "category": "nature",
+    "city_he": "עין גדי",
+    "image_asset": "assets/game_places/images/david_stream.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "banias_stream",
+    "name_he": "נחל הבניאס",
+    "answer_he": "הבניאס",
+    "category": "nature",
+    "city_he": "רמת הגולן",
+    "image_asset": "assets/game_places/images/banias_stream.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "ein_gev_kibbutz",
+    "name_he": "קיבוץ עין גב",
+    "answer_he": "עין גב",
+    "category": "landmark",
+    "city_he": "עין גב",
+    "image_asset": "assets/game_places/images/ein_gev_kibbutz.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "mount_tabor",
+    "name_he": "הר תבור",
+    "answer_he": "הר תבור",
+    "category": "nature",
+    "city_he": "גליל תחתון",
+    "image_asset": "assets/game_places/images/mount_tabor.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "apollonia_national_park",
+    "name_he": "גן לאומי אפולוניה",
+    "answer_he": "אפולוניה",
+    "category": "landmark",
+    "city_he": "הרצליה",
+    "image_asset": "assets/game_places/images/apollonia_national_park.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  },
+  {
+    "id": "stalactite_cave",
+    "name_he": "מערת הנטיפים",
+    "answer_he": "מערת הנטיפים",
+    "category": "nature",
+    "city_he": "בית שמש",
+    "image_asset": "assets/game_places/images/stalactite_cave.jpg",
+    "difficulty": "medium",
+    "is_active": true
+  }
+]
