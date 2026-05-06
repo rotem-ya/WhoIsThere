@@ -34,24 +34,43 @@ class GameBoardView extends StatelessWidget {
         final side = math.min(constraints.maxWidth, constraints.maxHeight);
         final tileSize = side / gridSize;
         return Center(
-          child: Container(
+          child: AnimatedContainer(
+            duration: kRevealDuration,
             width: side,
             height: side,
-            color: kNavyBlack,
-            child: Stack(
-              children: [
-                for (var index = 0; index < gridSize * gridSize; index++)
-                  _Tile(
-                    index: index,
-                    gridSize: gridSize,
-                    tileSize: tileSize,
-                    imageUrl: imageUrl,
-                    isRevealed: revealedCells.contains(index),
-                    isAvailable: availableCells.contains(index),
-                    enabled: enabled,
-                    onReveal: onReveal,
-                  ),
-              ],
+            padding: const EdgeInsets.all(1),
+            decoration: BoxDecoration(
+              color: kNavyBlack,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: enabled ? kCyan.withOpacity(0.15) : Colors.transparent,
+                width: 1,
+              ),
+            ),
+            child: ColorFiltered(
+              colorFilter: enabled
+                  ? const ColorFilter.mode(Colors.transparent, BlendMode.dst)
+                  : const ColorFilter.matrix(<double>[
+                      0.95, 0, 0, 0, 0,
+                      0, 0.95, 0, 0, 0,
+                      0, 0, 0.95, 0, 0,
+                      0, 0, 0, 1, 0,
+                    ]),
+              child: Stack(
+                children: [
+                  for (var index = 0; index < gridSize * gridSize; index++)
+                    _Tile(
+                      index: index,
+                      gridSize: gridSize,
+                      tileSize: tileSize,
+                      imageUrl: imageUrl,
+                      isRevealed: revealedCells.contains(index),
+                      isAvailable: availableCells.contains(index),
+                      enabled: enabled,
+                      onReveal: onReveal,
+                    ),
+                ],
+              ),
             ),
           ),
         );
@@ -99,7 +118,6 @@ class _TileState extends State<_Tile> {
   Widget build(BuildContext context) {
     final row = widget.index ~/ widget.gridSize;
     final col = widget.index % widget.gridSize;
-    final isFocused = widget.enabled && widget.isAvailable && !widget.isRevealed;
 
     return Positioned(
       left: col * widget.tileSize,
@@ -154,7 +172,7 @@ class _TileState extends State<_Tile> {
                 ),
                 child: VaultGemTile(
                   isRevealed: widget.isRevealed,
-                  isFocused: isFocused,
+                  isFocused: false,
                   child: _ImageSlice(
                     index: widget.index,
                     gridSize: widget.gridSize,
