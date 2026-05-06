@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/providers.dart';
 import '../../services/feedback_service.dart';
+import '../../widgets/game/vault_game_icon.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -27,7 +28,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
   }
 
@@ -152,7 +153,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               SafeArea(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
+                    final verySmall = constraints.maxHeight < 640;
                     final compact = constraints.maxHeight < 760;
+                    final iconSize = verySmall ? 104.0 : compact ? 124.0 : 146.0;
                     return SingleChildScrollView(
                       physics: const ClampingScrollPhysics(),
                       child: ConstrainedBox(
@@ -162,9 +165,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              SizedBox(height: compact ? 18 : 38),
-                              _VaultHeroMark(size: compact ? 138 : 166),
-                              SizedBox(height: compact ? 22 : 28),
+                              SizedBox(height: verySmall ? 10 : compact ? 18 : 34),
+                              Center(child: VaultGameIcon(size: iconSize)),
+                              SizedBox(height: verySmall ? 14 : compact ? 20 : 26),
                               const FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
@@ -184,18 +187,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 10),
                               Text(
                                 'חשוף חלקים ונחש את המקום',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: const Color(0xFF87CEEB).withOpacity(0.86),
-                                  fontSize: compact ? 18 : 20,
+                                  fontSize: verySmall ? 16 : compact ? 18 : 20,
                                   fontWeight: FontWeight.w800,
                                   height: 1.2,
                                 ),
                               ),
-                              SizedBox(height: compact ? 22 : 36),
+                              SizedBox(height: verySmall ? 16 : compact ? 22 : 32),
                               const Text(
                                 'משחק מהיר',
                                 textAlign: TextAlign.center,
@@ -210,7 +213,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 pulseController: _pulseController,
                                 label: '2 שחקנים',
                                 subtitle: 'מהיר ופשוט',
-                                height: compact ? 68 : 74,
+                                height: verySmall ? 62 : compact ? 66 : 72,
                                 isLoading: _isCreating && _loadingPlayers == 2,
                                 onTap: _isCreating ? null : () => _startQuickGame(2),
                               ),
@@ -220,7 +223,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   Expanded(
                                     child: _GlassButton(
                                       label: '3 שחקנים',
-                                      height: compact ? 54 : 60,
+                                      height: verySmall ? 50 : compact ? 54 : 58,
                                       isLoading: _isCreating && _loadingPlayers == 3,
                                       onTap: _isCreating ? null : () => _startQuickGame(3),
                                     ),
@@ -229,19 +232,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   Expanded(
                                     child: _GlassButton(
                                       label: '4 שחקנים',
-                                      height: compact ? 54 : 60,
+                                      height: verySmall ? 50 : compact ? 54 : 58,
                                       isLoading: _isCreating && _loadingPlayers == 4,
                                       onTap: _isCreating ? null : () => _startQuickGame(4),
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 24),
+                              SizedBox(height: verySmall ? 16 : 22),
                               _PrivateRoomButton(
                                 isLoading: _isCreating && _loadingPlayers == null,
                                 onTap: _isCreating ? null : _createPrivateRoom,
                               ),
-                              SizedBox(height: compact ? 20 : 34),
+                              SizedBox(height: verySmall ? 14 : compact ? 20 : 30),
                             ],
                           ),
                         ),
@@ -266,9 +269,9 @@ class _VaultBackground extends StatelessWidget {
     return DecoratedBox(
       decoration: const BoxDecoration(
         gradient: RadialGradient(
-          center: Alignment.topCenter,
-          radius: 1.28,
-          colors: [Color(0xFF12345F), Color(0xFF07101F), Color(0xFF050A14)],
+          center: Alignment.center,
+          radius: 1.5,
+          colors: [Color(0xFF0E1E35), Color(0xFF050A14)],
         ),
       ),
       child: Stack(
@@ -320,65 +323,6 @@ class _Dot extends StatelessWidget {
   }
 }
 
-class _VaultHeroMark extends StatelessWidget {
-  final double size;
-
-  const _VaultHeroMark({required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.84, end: 1.0),
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.elasticOut,
-      builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
-      child: Center(
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: const Color(0xFF07101F).withOpacity(0.62),
-            borderRadius: BorderRadius.circular(size * 0.25),
-            border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.82), width: 2.1),
-            boxShadow: [
-              BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.20), blurRadius: 30, spreadRadius: 3),
-              BoxShadow(color: Colors.black.withOpacity(0.42), blurRadius: 24, offset: const Offset(0, 12)),
-            ],
-          ),
-          child: Center(
-            child: SizedBox.square(
-              dimension: size * 0.55,
-              child: GridView.builder(
-                padding: EdgeInsets.zero,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: 7, crossAxisSpacing: 7),
-                itemCount: 9,
-                itemBuilder: (context, index) {
-                  final revealed = index == 1 || index == 4 || index == 8;
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: revealed ? const Color(0xFF35D9D0) : const Color(0xFF050A14),
-                      borderRadius: BorderRadius.circular(13),
-                      border: Border.all(color: revealed ? const Color(0xFF87CEEB) : const Color(0xFFD4AF37).withOpacity(0.55), width: 1.8),
-                      boxShadow: revealed ? [BoxShadow(color: const Color(0xFF87CEEB).withOpacity(0.35), blurRadius: 10)] : const [],
-                    ),
-                    child: Center(
-                      child: Text(
-                        revealed ? '✦' : '?',
-                        style: TextStyle(color: revealed ? const Color(0xFFFFE082) : const Color(0xFFD4AF37), fontSize: size * 0.12, fontWeight: FontWeight.w900, height: 1),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _MainVaultButton extends StatelessWidget {
   final AnimationController pulseController;
   final String label;
@@ -392,7 +336,7 @@ class _MainVaultButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScaleTransition(
-      scale: Tween<double>(begin: 1.0, end: 1.018).animate(CurvedAnimation(parent: pulseController, curve: Curves.easeInOut)),
+      scale: Tween<double>(begin: 1.0, end: 1.04).animate(CurvedAnimation(parent: pulseController, curve: Curves.easeInOut)),
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedOpacity(
