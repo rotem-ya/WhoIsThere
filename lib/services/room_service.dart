@@ -21,7 +21,6 @@ class RoomService {
     'western_wall',
     'dome_of_the_rock',
     'tower_of_david',
-    'mahane_yehuda_market',
     'knesset',
     'israel_museum',
     'yad_vashem',
