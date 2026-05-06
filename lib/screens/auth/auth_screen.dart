@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/constants/app_colors.dart';
 import '../../providers/providers.dart';
 
@@ -14,62 +15,46 @@ class AuthScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
+  static const gold = Color(0xFFD4AF37);
+  static const goldLight = Color(0xFFFFE082);
+  static const goldDark = Color(0xFFA1811A);
+  static const navyBlack = Color(0xFF050A14);
+  static const cyan = Color(0xFF87CEEB);
+
   bool _isLoading = false;
 
+  Future<void> _runAuth(Future<dynamic> Function() action) async {
+    setState(() => _isLoading = true);
+    try {
+      final user = await action();
+      if (user != null && mounted) context.go('/home');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ההתחברות נכשלה: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _signInWithGoogle() async {
-    setState(() => _isLoading = true);
-    try {
+    await _runAuth(() async {
       final user = await ref.read(authServiceProvider).signInWithGoogle();
-      if (user != null && mounted) context.go('/home');
-    } catch (_) {
-      try {
-        final user = await ref.read(authServiceProvider).signInAnonymously();
-        if (user != null && mounted) context.go('/home');
-      } catch (_) {}
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+      return user ?? await ref.read(authServiceProvider).signInAnonymously();
+    });
   }
 
-  Future<void> _signInAnonymously() async {
-    setState(() => _isLoading = true);
-    try {
-      final user = await ref.read(authServiceProvider).signInAnonymously();
-      if (user != null && mounted) context.go('/home');
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ההתחברות נכשלה: ${e.toString()}')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _signInWithApple() async {
-    setState(() => _isLoading = true);
-    try {
-      final user = await ref.read(authServiceProvider).signInWithApple();
-      if (user != null && mounted) context.go('/home');
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ההתחברות נכשלה: ${e.toString()}')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
+  Future<void> _signInAnonymously() => _runAuth(ref.read(authServiceProvider).signInAnonymously);
+  Future<void> _signInWithApple() => _runAuth(ref.read(authServiceProvider).signInWithApple);
 
   @override
   Widget build(BuildContext context) {
-    final isIOS = Platform.isIOS;
-
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
+        backgroundColor: AppColors.background,
         body: DecoratedBox(
           decoration: const BoxDecoration(gradient: AppColors.pageBackground),
           child: SafeArea(
@@ -85,55 +70,32 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     fit: BoxFit.scaleDown,
                     child: Text(
                       'מה בתמונה?',
-                      textAlign: TextAlign.center,
                       maxLines: 1,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 48,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -1.0,
-                        height: 1,
-                      ),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -1, height: 1),
                     ),
                   ),
                   const SizedBox(height: 14),
                   const Text(
                     'המשך כדי לשמור התקדמות ולשחק',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      height: 1.25,
-                    ),
+                    style: TextStyle(color: Colors.white70, fontSize: 20, fontWeight: FontWeight.w600, height: 1.25),
                   ),
                   const Spacer(flex: 7),
                   if (_isLoading)
                     const Center(
                       child: Padding(
                         padding: EdgeInsets.only(bottom: 34),
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2.6,
-                        ),
+                        child: CircularProgressIndicator(color: gold, strokeWidth: 2.6),
                       ),
                     )
                   else ...[
-                    _PrimaryEntryButton(
-                      label: 'המשך כאורח',
-                      onPressed: _signInAnonymously,
-                    ),
+                    _PrimaryEntryButton(label: 'המשך כאורח', onPressed: _signInAnonymously),
                     const SizedBox(height: 12),
-                    _SecondaryEntryButton(
-                      label: 'המשך עם Google',
-                      onPressed: _signInWithGoogle,
-                    ),
-                    if (isIOS) ...[
+                    _SecondaryEntryButton(label: 'המשך עם Google', onPressed: _signInWithGoogle),
+                    if (Platform.isIOS) ...[
                       const SizedBox(height: 12),
-                      _SecondaryEntryButton(
-                        label: 'המשך עם Apple',
-                        onPressed: _signInWithApple,
-                      ),
+                      _SecondaryEntryButton(label: 'המשך עם Apple', onPressed: _signInWithApple),
                     ],
                   ],
                   const SizedBox(height: 42),
@@ -157,67 +119,16 @@ class _EntryHeroMark extends StatelessWidget {
         width: 188,
         height: 188,
         decoration: BoxDecoration(
+          color: _AuthScreenState.navyBlack.withOpacity(0.72),
           borderRadius: BorderRadius.circular(54),
-          gradient: LinearGradient(
-            colors: [
-              Colors.white.withOpacity(0.16),
-              Colors.white.withOpacity(0.07),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          border: Border.all(color: Colors.white.withOpacity(0.20), width: 2),
+          border: Border.all(color: _AuthScreenState.gold.withOpacity(0.55), width: 2),
           boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF29E6FF).withOpacity(0.20),
-              blurRadius: 48,
-              spreadRadius: 3,
-            ),
+            BoxShadow(color: _AuthScreenState.gold.withOpacity(0.16), blurRadius: 44, spreadRadius: 3),
+            BoxShadow(color: _AuthScreenState.cyan.withOpacity(0.10), blurRadius: 54, spreadRadius: 6),
           ],
         ),
-        child: Center(
-          child: SizedBox(
-            width: 104,
-            height: 104,
-            child: GridView.builder(
-              padding: EdgeInsets.zero,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 7,
-                crossAxisSpacing: 7,
-              ),
-              itemCount: 9,
-              itemBuilder: (context, index) {
-                final revealed = index == 1 || index == 4 || index == 8;
-                return DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: revealed
-                        ? const Color(0xFF35D9D0)
-                        : Colors.white.withOpacity(0.16),
-                    borderRadius: BorderRadius.circular(13),
-                    border: Border.all(
-                      color: revealed
-                          ? const Color(0xFF78FFF2)
-                          : Colors.white.withOpacity(0.22),
-                      width: 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      revealed ? '✦' : '?',
-                      style: TextStyle(
-                        color: revealed ? const Color(0xFFFFD740) : Colors.white70,
-                        fontSize: revealed ? 22 : 23,
-                        fontWeight: FontWeight.w900,
-                        height: 1,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+        child: const Center(
+          child: Icon(Icons.auto_awesome_rounded, color: _AuthScreenState.gold, size: 78),
         ),
       ),
     );
@@ -238,29 +149,15 @@ class _PrimaryEntryButton extends StatelessWidget {
         height: 66,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF35D9FF), Color(0xFF6A43FF), Color(0xFFFF4EB8)],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
+            colors: [_AuthScreenState.goldLight, _AuthScreenState.gold, _AuthScreenState.goldDark],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
           borderRadius: BorderRadius.circular(999),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF6A43FF).withOpacity(0.42),
-              blurRadius: 28,
-              offset: const Offset(0, 11),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: _AuthScreenState.gold.withOpacity(0.34), blurRadius: 24, offset: const Offset(0, 10))],
         ),
-        child: Center(
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 25,
-              fontWeight: FontWeight.w800,
-              height: 1,
-            ),
-          ),
+        child: const Center(
+          child: Text('המשך כאורח', style: TextStyle(color: _AuthScreenState.navyBlack, fontSize: 25, fontWeight: FontWeight.w900, height: 1)),
         ),
       ),
     );
@@ -280,14 +177,11 @@ class _SecondaryEntryButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         minimumSize: const Size.fromHeight(54),
         foregroundColor: Colors.white,
-        side: BorderSide(color: Colors.white.withOpacity(0.32)),
+        side: BorderSide(color: _AuthScreenState.cyan.withOpacity(0.30)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-        backgroundColor: Colors.white.withOpacity(0.08),
+        backgroundColor: _AuthScreenState.navyBlack.withOpacity(0.34),
       ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-      ),
+      child: Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
     );
   }
 }
