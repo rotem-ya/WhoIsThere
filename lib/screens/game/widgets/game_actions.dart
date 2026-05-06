@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../services/feedback_service.dart';
 import '../../../widgets/game/animated_reward.dart';
 
 int _calcReward(int revealedCount, int total) {
@@ -103,38 +104,51 @@ class _ActionButton extends StatelessWidget {
     final hasReward = reward != null && penalty != null;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: onTap == null
+          ? null
+          : () {
+              FeedbackService.click();
+              onTap!();
+            },
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 180),
         opacity: isActive ? 1.0 : 0.42,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
-          height: 50,
+          height: 54,
           decoration: BoxDecoration(
             gradient: isPrimary
                 ? const LinearGradient(
-                    colors: [Color(0xFF9B7EFF), Color(0xFF6B44F8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   )
                 : null,
-            color: isPrimary ? null : Colors.white.withOpacity(0.045),
+            color: isPrimary ? null : const Color(0xFF07101F).withOpacity(0.64),
             borderRadius: BorderRadius.circular(18),
-            border: isPrimary
-                ? null
-                : Border.all(
-                    color: Colors.white.withOpacity(isActive ? 0.28 : 0.12),
-                    width: 1,
-                  ),
+            border: Border.all(
+              color: isPrimary
+                  ? Colors.white.withOpacity(0.16)
+                  : const Color(0xFF87CEEB).withOpacity(isActive ? 0.40 : 0.16),
+              width: 1.2,
+            ),
             boxShadow: glow
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF7B5FFF).withOpacity(0.46),
-                      blurRadius: 20,
+                      color: const Color(0xFFD4AF37).withOpacity(0.42),
+                      blurRadius: 22,
                       offset: const Offset(0, 7),
                     ),
                   ]
-                : [],
+                : isPrimary
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.28),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ]
+                    : [],
           ),
           child: Center(
             child: isPrimary && label == 'נחש' && hasReward
@@ -145,7 +159,7 @@ class _ActionButton extends StatelessWidget {
                       const Text(
                         'נחש',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Color(0xFF07101F),
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
                           height: 1,
@@ -180,7 +194,7 @@ class _ActionButton extends StatelessWidget {
                       textDirection: TextDirection.rtl,
                       maxLines: 1,
                       style: TextStyle(
-                        color: isPrimary ? Colors.white : Colors.white70,
+                        color: isPrimary ? const Color(0xFF07101F) : Colors.white.withOpacity(0.78),
                         fontSize: isPrimary ? 21 : 18,
                         fontWeight: FontWeight.w900,
                         height: 1,
@@ -193,4 +207,3 @@ class _ActionButton extends StatelessWidget {
     );
   }
 }
-
