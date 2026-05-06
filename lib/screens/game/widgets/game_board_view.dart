@@ -97,13 +97,36 @@ class _Tile extends StatelessWidget {
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 140),
             opacity: isAvailable || isRevealed ? 1.0 : 0.45,
-            child: VaultGemTile(
-              isRevealed: isRevealed,
-              child: _ImageSlice(
-                index: index,
-                gridSize: gridSize,
-                tileSize: tileSize,
-                imageUrl: imageUrl,
+            child: TweenAnimationBuilder<double>(
+              key: ValueKey('$index-$isRevealed'),
+              tween: Tween<double>(begin: isRevealed ? 1.12 : 1.0, end: 1.0),
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.elasticOut,
+              builder: (context, scale, child) {
+                return Transform.scale(scale: scale, child: child);
+              },
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: isRevealed
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF87CEEB).withOpacity(0.32),
+                            blurRadius: 18,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: VaultGemTile(
+                  isRevealed: isRevealed,
+                  child: _ImageSlice(
+                    index: index,
+                    gridSize: gridSize,
+                    tileSize: tileSize,
+                    imageUrl: imageUrl,
+                  ),
+                ),
               ),
             ),
           ),
