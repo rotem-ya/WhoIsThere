@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../../../utils/game_constants.dart';
 import '../../../widgets/game/vault_gem_tile.dart';
 
 class GameBoardView extends StatelessWidget {
@@ -35,7 +37,7 @@ class GameBoardView extends StatelessWidget {
           child: Container(
             width: side,
             height: side,
-            color: const Color(0xFF050A14),
+            color: kNavyBlack,
             child: Stack(
               children: [
                 for (var index = 0; index < gridSize * gridSize; index++)
@@ -58,7 +60,7 @@ class GameBoardView extends StatelessWidget {
   }
 }
 
-class _Tile extends StatelessWidget {
+class _Tile extends StatefulWidget {
   final int index;
   final int gridSize;
   final double tileSize;
@@ -80,51 +82,81 @@ class _Tile extends StatelessWidget {
   });
 
   @override
+  State<_Tile> createState() => _TileState();
+}
+
+class _TileState extends State<_Tile> {
+  bool _pressed = false;
+
+  bool get _canTap => widget.enabled && widget.isAvailable && !widget.isRevealed && widget.onReveal != null;
+
+  void _setPressed(bool value) {
+    if (_pressed == value) return;
+    setState(() => _pressed = value);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final row = index ~/ gridSize;
-    final col = index % gridSize;
-    final canTap = enabled && isAvailable && !isRevealed && onReveal != null;
+    final row = widget.index ~/ widget.gridSize;
+    final col = widget.index % widget.gridSize;
     return Positioned(
-      left: col * tileSize,
-      top: row * tileSize,
-      width: tileSize,
-      height: tileSize,
+      left: col * widget.tileSize,
+      top: row * widget.tileSize,
+      width: widget.tileSize,
+      height: widget.tileSize,
       child: Padding(
         padding: const EdgeInsets.all(2),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: canTap ? () => onReveal!(index) : null,
+          onTapDown: _canTap
+              ? (_) {
+                  HapticFeedback.lightImpact();
+                  _setPressed(true);
+                }
+              : null,
+          onTapCancel: () => _setPressed(false),
+          onTapUp: _canTap
+              ? (_) {
+                  _setPressed(false);
+                  widget.onReveal!(widget.index);
+                }
+              : null,
           child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 140),
-            opacity: isAvailable || isRevealed ? 1.0 : 0.45,
+            duration: kRevealDuration,
+            opacity: widget.isAvailable || widget.isRevealed ? 1.0 : 0.45,
             child: TweenAnimationBuilder<double>(
-              key: ValueKey('$index-$isRevealed'),
-              tween: Tween<double>(begin: isRevealed ? 1.12 : 1.0, end: 1.0),
-              duration: const Duration(milliseconds: 420),
-              curve: Curves.elasticOut,
-              builder: (context, scale, child) {
-                return Transform.scale(scale: scale, child: child);
+              key: ValueKey('${widget.index}-${widget.isRevealed}'),
+              tween: Tween<double>(begin: widget.isRevealed ? 1.08 : 1.0, end: 1.0),
+              duration: kRevealDuration,
+              curve: Curves.easeOutCubic,
+              builder: (context, revealScale, child) {
+                return AnimatedScale(
+                  scale: _pressed ? kTapScale : revealScale,
+                  duration: const Duration(milliseconds: 100),
+                  curve: Curves.easeOutCubic,
+                  child: child,
+                );
               },
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: isRevealed
+                  boxShadow: widget.isRevealed
                       ? [
                           BoxShadow(
-                            color: const Color(0xFF87CEEB).withOpacity(0.32),
-                            blurRadius: 18,
-                            spreadRadius: 2,
+                            color: kCyan.withOpacity(0.22),
+                            blurRadius: 14,
+                            spreadRadius: 1,
                           ),
                         ]
                       : null,
                 ),
                 child: VaultGemTile(
-                  isRevealed: isRevealed,
+                  isRevealed: widget.isRevealed,
                   child: _ImageSlice(
-                    index: index,
-                    gridSize: gridSize,
-                    tileSize: tileSize,
-                    imageUrl: imageUrl,
+                    index: widget.index,
+                    gridSize: widget.gridSize,
+                    tileSize: widget.tileSize,
+                    imageUrl: widget.imageUrl,
                   ),
                 ),
               ),
