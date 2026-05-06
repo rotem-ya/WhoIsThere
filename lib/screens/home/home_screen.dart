@@ -1,9 +1,12 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/constants/app_colors.dart';
+
 import '../../providers/providers.dart';
+import '../../services/feedback_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -12,13 +15,31 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseController;
   bool _isCreating = false;
   int? _loadingPlayers;
   DateTime? _lastBackPressedAt;
 
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
   Future<void> _startQuickGame(int targetPlayers) async {
     if (_isCreating) return;
+    FeedbackService.click();
     setState(() {
       _isCreating = true;
       _loadingPlayers = targetPlayers;
@@ -57,6 +78,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _createPrivateRoom() async {
     if (_isCreating) return;
+    FeedbackService.click();
     setState(() {
       _isCreating = true;
       _loadingPlayers = null;
@@ -123,103 +145,227 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _handleHomeBack();
         },
         child: Scaffold(
-          body: DecoratedBox(
-            decoration: const BoxDecoration(gradient: AppColors.pageBackground),
-            child: SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final compact = constraints.maxHeight < 760;
-                  return SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: compact ? 20 : 26),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            SizedBox(height: compact ? 10 : 24),
-                            _EntryHeroMark(size: compact ? 150 : 180),
-                            SizedBox(height: compact ? 20 : 28),
-                            const FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                'מה בתמונה?',
+          backgroundColor: const Color(0xFF050A14),
+          body: Stack(
+            children: [
+              const Positioned.fill(child: _VaultBackground()),
+              SafeArea(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxHeight < 760;
+                    return SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: compact ? 20 : 24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              SizedBox(height: compact ? 18 : 38),
+                              _VaultHeroMark(size: compact ? 138 : 166),
+                              SizedBox(height: compact ? 22 : 28),
+                              const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'מה בתמונה?',
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 56,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -1.7,
+                                    height: 1,
+                                    shadows: [
+                                      Shadow(color: Color(0xFFD4AF37), blurRadius: 16),
+                                      Shadow(color: Colors.black87, offset: Offset(0, 4), blurRadius: 10),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'חשוף חלקים ונחש את המקום',
                                 textAlign: TextAlign.center,
-                                maxLines: 1,
+                                style: TextStyle(
+                                  color: const Color(0xFF87CEEB).withOpacity(0.86),
+                                  fontSize: compact ? 18 : 20,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.2,
+                                ),
+                              ),
+                              SizedBox(height: compact ? 22 : 36),
+                              const Text(
+                                'משחק מהיר',
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 52,
+                                  fontSize: 23,
                                   fontWeight: FontWeight.w900,
-                                  letterSpacing: -1.4,
-                                  height: 1,
                                 ),
                               ),
-                            ),
-                            SizedBox(height: compact ? 10 : 14),
-                            Text(
-                              'חשוף חלקים ונחש את המקום',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: compact ? 19 : 22,
-                                fontWeight: FontWeight.w600,
-                                height: 1.2,
+                              const SizedBox(height: 14),
+                              _MainVaultButton(
+                                pulseController: _pulseController,
+                                label: '2 שחקנים',
+                                subtitle: 'מהיר ופשוט',
+                                height: compact ? 68 : 74,
+                                isLoading: _isCreating && _loadingPlayers == 2,
+                                onTap: _isCreating ? null : () => _startQuickGame(2),
                               ),
-                            ),
-                            SizedBox(height: compact ? 18 : 32),
-                            Text(
-                              'משחק מהיר',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: compact ? 19 : 22,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            SizedBox(height: compact ? 8 : 12),
-                            _QuickPlayButton(
-                              label: '2 שחקנים',
-                              subtitle: 'מהיר ופשוט',
-                              height: compact ? 64 : 72,
-                              isLoading: _isCreating && _loadingPlayers == 2,
-                              onPressed:
-                                  _isCreating ? null : () => _startQuickGame(2),
-                            ),
-                            SizedBox(height: compact ? 8 : 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _SmallQuickButton(
-                                    label: '3 שחקנים',
-                                    height: compact ? 48 : 54,
-                                    isLoading: _isCreating && _loadingPlayers == 3,
-                                    onPressed: _isCreating
-                                        ? null
-                                        : () => _startQuickGame(3),
+                              const SizedBox(height: 14),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _GlassButton(
+                                      label: '3 שחקנים',
+                                      height: compact ? 54 : 60,
+                                      isLoading: _isCreating && _loadingPlayers == 3,
+                                      onTap: _isCreating ? null : () => _startQuickGame(3),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _SmallQuickButton(
-                                    label: '4 שחקנים',
-                                    height: compact ? 48 : 54,
-                                    isLoading: _isCreating && _loadingPlayers == 4,
-                                    onPressed: _isCreating
-                                        ? null
-                                        : () => _startQuickGame(4),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _GlassButton(
+                                      label: '4 שחקנים',
+                                      height: compact ? 54 : 60,
+                                      isLoading: _isCreating && _loadingPlayers == 4,
+                                      onTap: _isCreating ? null : () => _startQuickGame(4),
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: compact ? 8 : 12),
-                            _PrivateRoomButton(
-                              isLoading: _isCreating && _loadingPlayers == null,
-                              onPressed: _isCreating ? null : _createPrivateRoom,
-                            ),
-                            SizedBox(height: compact ? 12 : 24),
-                          ],
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              _PrivateRoomButton(
+                                isLoading: _isCreating && _loadingPlayers == null,
+                                onTap: _isCreating ? null : _createPrivateRoom,
+                              ),
+                              SizedBox(height: compact ? 20 : 34),
+                            ],
+                          ),
                         ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VaultBackground extends StatelessWidget {
+  const _VaultBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment.topCenter,
+          radius: 1.28,
+          colors: [Color(0xFF12345F), Color(0xFF07101F), Color(0xFF050A14)],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(top: -110, right: -80, child: _Glow(color: Color(0xFFD4AF37), size: 310, opacity: 0.12)),
+          Positioned(bottom: -95, left: -80, child: _Glow(color: Color(0xFF87CEEB), size: 285, opacity: 0.14)),
+          Positioned(top: 190, left: 26, child: _Dot(size: 5, opacity: 0.40)),
+          Positioned(top: 270, right: 34, child: _Dot(size: 4, opacity: 0.28)),
+          Positioned(bottom: 190, right: 52, child: _Dot(size: 6, opacity: 0.24)),
+        ],
+      ),
+    );
+  }
+}
+
+class _Glow extends StatelessWidget {
+  final Color color;
+  final double size;
+  final double opacity;
+
+  const _Glow({required this.color, required this.size, required this.opacity});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [BoxShadow(color: color.withOpacity(opacity), blurRadius: 120, spreadRadius: 48)],
+      ),
+    );
+  }
+}
+
+class _Dot extends StatelessWidget {
+  final double size;
+  final double opacity;
+
+  const _Dot({required this.size, required this.opacity});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(opacity)),
+    );
+  }
+}
+
+class _VaultHeroMark extends StatelessWidget {
+  final double size;
+
+  const _VaultHeroMark({required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.84, end: 1.0),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.elasticOut,
+      builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+      child: Center(
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: const Color(0xFF07101F).withOpacity(0.62),
+            borderRadius: BorderRadius.circular(size * 0.25),
+            border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.82), width: 2.1),
+            boxShadow: [
+              BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.20), blurRadius: 30, spreadRadius: 3),
+              BoxShadow(color: Colors.black.withOpacity(0.42), blurRadius: 24, offset: const Offset(0, 12)),
+            ],
+          ),
+          child: Center(
+            child: SizedBox.square(
+              dimension: size * 0.55,
+              child: GridView.builder(
+                padding: EdgeInsets.zero,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: 7, crossAxisSpacing: 7),
+                itemCount: 9,
+                itemBuilder: (context, index) {
+                  final revealed = index == 1 || index == 4 || index == 8;
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: revealed ? const Color(0xFF35D9D0) : const Color(0xFF050A14),
+                      borderRadius: BorderRadius.circular(13),
+                      border: Border.all(color: revealed ? const Color(0xFF87CEEB) : const Color(0xFFD4AF37).withOpacity(0.55), width: 1.8),
+                      boxShadow: revealed ? [BoxShadow(color: const Color(0xFF87CEEB).withOpacity(0.35), blurRadius: 10)] : const [],
+                    ),
+                    child: Center(
+                      child: Text(
+                        revealed ? '✦' : '?',
+                        style: TextStyle(color: revealed ? const Color(0xFFFFE082) : const Color(0xFFD4AF37), fontSize: size * 0.12, fontWeight: FontWeight.w900, height: 1),
                       ),
                     ),
                   );
@@ -233,168 +379,52 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _EntryHeroMark extends StatelessWidget {
-  final double size;
-
-  const _EntryHeroMark({required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(size * 0.29),
-          gradient: LinearGradient(
-            colors: [
-              Colors.white.withOpacity(0.16),
-              Colors.white.withOpacity(0.07),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          border: Border.all(color: Colors.white.withOpacity(0.20), width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF29E6FF).withOpacity(0.22),
-              blurRadius: 46,
-              spreadRadius: 3,
-            ),
-          ],
-        ),
-        child: Center(
-          child: SizedBox(
-            width: size * 0.55,
-            height: size * 0.55,
-            child: GridView.builder(
-              padding: EdgeInsets.zero,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 7,
-                crossAxisSpacing: 7,
-              ),
-              itemCount: 9,
-              itemBuilder: (context, index) {
-                final revealed = index == 1 || index == 4 || index == 6;
-                return DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: revealed
-                        ? const Color(0xFF35D9D0)
-                        : Colors.white.withOpacity(0.16),
-                    borderRadius: BorderRadius.circular(13),
-                    border: Border.all(
-                      color: revealed
-                          ? const Color(0xFF78FFF2)
-                          : Colors.white.withOpacity(0.22),
-                      width: 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      revealed ? '✦' : '?',
-                      style: TextStyle(
-                        color:
-                            revealed ? const Color(0xFFFFD740) : Colors.white70,
-                        fontSize: size * 0.12,
-                        fontWeight: FontWeight.w900,
-                        height: 1,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickPlayButton extends StatelessWidget {
+class _MainVaultButton extends StatelessWidget {
+  final AnimationController pulseController;
   final String label;
   final String subtitle;
   final double height;
   final bool isLoading;
-  final VoidCallback? onPressed;
+  final VoidCallback? onTap;
 
-  const _QuickPlayButton({
-    required this.label,
-    required this.subtitle,
-    required this.height,
-    required this.isLoading,
-    required this.onPressed,
-  });
+  const _MainVaultButton({required this.pulseController, required this.label, required this.subtitle, required this.height, required this.isLoading, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 160),
-        opacity: onPressed == null ? 0.72 : 1,
-        child: Container(
-          height: height,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF35D9FF), Color(0xFF6A43FF), Color(0xFFFF4EB8)],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
+    return ScaleTransition(
+      scale: Tween<double>(begin: 1.0, end: 1.018).animate(CurvedAnimation(parent: pulseController, curve: Curves.easeInOut)),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 160),
+          opacity: onTap == null ? 0.65 : 1,
+          child: Container(
+            height: height,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.42), blurRadius: 25, offset: const Offset(0, 10))],
             ),
-            borderRadius: BorderRadius.circular(999),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF6A43FF).withOpacity(0.40),
-                blurRadius: 24,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Center(
-            child: isLoading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2.6,
+            child: Center(
+              child: isLoading
+                  ? const SizedBox(width: 25, height: 25, child: CircularProgressIndicator(color: Color(0xFF07101F), strokeWidth: 2.7))
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.bolt_rounded, color: Color(0xFF07101F), size: 30),
+                        const SizedBox(width: 10),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(label, style: const TextStyle(color: Color(0xFF07101F), fontSize: 28, fontWeight: FontWeight.w900, height: 1)),
+                            const SizedBox(height: 4),
+                            Text(subtitle, style: TextStyle(color: const Color(0xFF07101F).withOpacity(0.68), fontSize: 14, fontWeight: FontWeight.w800, height: 1)),
+                          ],
+                        ),
+                      ],
                     ),
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.bolt_rounded, color: Colors.white, size: 28),
-                      const SizedBox(width: 10),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            label,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 26,
-                              fontWeight: FontWeight.w900,
-                              height: 1,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            subtitle,
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              height: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+            ),
           ),
         ),
       ),
@@ -402,51 +432,38 @@ class _QuickPlayButton extends StatelessWidget {
   }
 }
 
-class _SmallQuickButton extends StatelessWidget {
+class _GlassButton extends StatelessWidget {
   final String label;
   final double height;
   final bool isLoading;
-  final VoidCallback? onPressed;
+  final VoidCallback? onTap;
 
-  const _SmallQuickButton({
-    required this.label,
-    required this.height,
-    required this.isLoading,
-    required this.onPressed,
-  });
+  const _GlassButton({required this.label, required this.height, required this.isLoading, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onPressed,
+      onTap: onTap,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 160),
-        opacity: onPressed == null ? 0.72 : 1,
-        child: Container(
-          height: height,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withOpacity(0.20)),
-          ),
-          child: Center(
-            child: isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2.4,
-                    ),
-                  )
-                : Text(
-                    label,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+        opacity: onTap == null ? 0.62 : 1,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+            child: Container(
+              height: height,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.065),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.34), width: 1.2),
+              ),
+              child: Center(
+                child: isLoading
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4))
+                    : Text(label, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+              ),
+            ),
           ),
         ),
       ),
@@ -456,25 +473,38 @@ class _SmallQuickButton extends StatelessWidget {
 
 class _PrivateRoomButton extends StatelessWidget {
   final bool isLoading;
-  final VoidCallback? onPressed;
+  final VoidCallback? onTap;
 
-  const _PrivateRoomButton({required this.isLoading, required this.onPressed});
+  const _PrivateRoomButton({required this.isLoading, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return TextButton.icon(
-      onPressed: onPressed,
-      icon: isLoading
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(color: Colors.white70, strokeWidth: 2),
-            )
-          : const Icon(Icons.lock_outline_rounded, size: 18),
-      label: const Text('חדר פרטי עם קוד'),
-      style: TextButton.styleFrom(
-        foregroundColor: Colors.white70,
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+    return Center(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 160),
+          opacity: onTap == null ? 0.58 : 1,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+            decoration: BoxDecoration(
+              color: const Color(0xFF050A14).withOpacity(0.50),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.26)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isLoading)
+                  const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Color(0xFF87CEEB), strokeWidth: 2))
+                else
+                  const Icon(Icons.lock_outline_rounded, color: Color(0xFF87CEEB), size: 19),
+                const SizedBox(width: 8),
+                const Text('חדר פרטי עם קוד', style: TextStyle(color: Color(0xFF87CEEB), fontSize: 16, fontWeight: FontWeight.w800)),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
