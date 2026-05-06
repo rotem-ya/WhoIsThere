@@ -125,7 +125,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen>
                       children: [
                         _LobbyHeader(
                           onExit: () async {
-                            AppFeedback.click();
+                            AppFeedback.tap();
                             if (currentUser != null) {
                               await ref
                                   .read(roomServiceProvider)
