@@ -99,6 +99,8 @@ class _TileState extends State<_Tile> {
   Widget build(BuildContext context) {
     final row = widget.index ~/ widget.gridSize;
     final col = widget.index % widget.gridSize;
+    final isFocused = widget.enabled && widget.isAvailable && !widget.isRevealed;
+
     return Positioned(
       left: col * widget.tileSize,
       top: row * widget.tileSize,
@@ -152,6 +154,7 @@ class _TileState extends State<_Tile> {
                 ),
                 child: VaultGemTile(
                   isRevealed: widget.isRevealed,
+                  isFocused: isFocused,
                   child: _ImageSlice(
                     index: widget.index,
                     gridSize: widget.gridSize,
