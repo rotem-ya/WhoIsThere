@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class VaultGemTile extends StatefulWidget {
   final bool isRevealed;
@@ -18,11 +19,24 @@ class _VaultGemTileState extends State<VaultGemTile> {
   bool _isPressed = false;
 
   @override
+  void didUpdateWidget(covariant VaultGemTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isRevealed && !oldWidget.isRevealed) {
+      HapticFeedback.mediumImpact();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scale = _isPressed ? 0.94 : 1.0;
 
     return Listener(
-      onPointerDown: (_) => setState(() => _isPressed = true),
+      onPointerDown: (_) {
+        if (!widget.isRevealed && !_isPressed) {
+          HapticFeedback.lightImpact();
+          setState(() => _isPressed = true);
+        }
+      },
       onPointerUp: (_) => setState(() => _isPressed = false),
       onPointerCancel: (_) => setState(() => _isPressed = false),
       child: AnimatedScale(
