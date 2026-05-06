@@ -1,5 +1,6 @@
 import 'widgets/answer_slots.dart';
 import 'widgets/game_layout.dart';
+import 'widgets/game_winner_view.dart';
 import 'dart:math' show Random, min;
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -73,8 +74,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     }
   }
 
-  // Human reveals a tile: stores it but does NOT advance the turn.
-  // Guess button becomes active; player then guesses or taps Skip.
   Future<void> _humanRevealTile({
     required RoomModel room,
     required String userId,
@@ -129,22 +128,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
 
     if (room.availablePieceIndices.isEmpty) return;
 
-    // Dedup on turn index only — prevent re-scheduling mid-turn.
     final key = '${room.id}-${room.currentTurnIndex}';
     if (_lastBotTurnKey == key) return;
     _lastBotTurnKey = key;
 
-    final delayMs = 2000 + _random.nextInt(1201); // 2000–3200 ms
+    final delayMs = 2000 + _random.nextInt(1201);
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
-      final snapshot =
-          await ref.read(roomServiceProvider).watchRoom(room.id).first;
+      final snapshot = await ref.read(roomServiceProvider).watchRoom(room.id).first;
       if (snapshot == null) return;
       if (snapshot.phase == GamePhase.finished) return;
       if (snapshot.currentTurnUserId != currentId) return;
       if (snapshot.availablePieceIndices.isEmpty) return;
 
-      // Step 1: Always reveal a tile first.
       final idx = snapshot.availablePieceIndices[
           _random.nextInt(snapshot.availablePieceIndices.length)];
       final isLastTile = snapshot.availablePieceIndices.length == 1;
@@ -166,17 +162,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
 
       if (!mounted) return;
 
-      // Step 2: Fetch updated state, then decide whether to guess.
-      final afterReveal =
-          await ref.read(roomServiceProvider).watchRoom(room.id).first;
+      final afterReveal = await ref.read(roomServiceProvider).watchRoom(room.id).first;
       if (afterReveal == null || afterReveal.phase == GamePhase.finished) return;
 
       final afterTotal = afterReveal.gridSize * afterReveal.gridSize;
       final afterRevealed = afterReveal.placedPieces.length;
-      final afterRatio =
-          afterTotal > 0 ? afterRevealed / afterTotal : 0.0;
+      final afterRatio = afterTotal > 0 ? afterRevealed / afterTotal : 0.0;
 
-      // Bots never guess before 50 % revealed or fewer than 5 tiles.
       double attemptChance;
       double correctChance;
       if (afterRevealed < 5 || afterRatio < 0.50) {
@@ -186,22 +178,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         attemptChance = 0.45;
         correctChance = 0.55;
       } else {
-        // 50 %–75 % revealed
         attemptChance = 0.25;
         correctChance = 0.30;
       }
 
-      final shouldGuess =
-          _image != null && _random.nextDouble() < attemptChance;
+      final shouldGuess = _image != null && _random.nextDouble() < attemptChance;
 
       if (shouldGuess) {
         await _performBotGuess(afterReveal, currentId, correctChance);
-        // submitAnswer advances turn on wrong; game ends on correct.
       } else {
         if (mounted) {
-          await ref
-              .read(roomServiceProvider)
-              .skipPiecePlacement(roomId: afterReveal.id);
+          await ref.read(roomServiceProvider).skipPiecePlacement(roomId: afterReveal.id);
         }
       }
     });
@@ -215,7 +202,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       _botTypingText = '';
     });
 
-    // Brief "thinking" pause before typing starts.
     await Future.delayed(Duration(milliseconds: 1200 + _random.nextInt(801)));
 
     for (int i = 1; i <= word.length; i++) {
@@ -224,12 +210,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       await Future.delayed(Duration(milliseconds: 220 + _random.nextInt(121)));
     }
 
-    // Pause on the completed word before submitting.
     await Future.delayed(const Duration(milliseconds: 350));
   }
 
-  Future<void> _performBotGuess(
-      RoomModel room, String botId, double correctChance) async {
+  Future<void> _performBotGuess(RoomModel room, String botId, double correctChance) async {
     final image = _image;
     if (image == null) return;
 
@@ -249,7 +233,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
           image: image,
           difficulty: room.selectedDifficulty ?? Difficulty.easy,
         );
-    // Turn advances via submitAnswer: wrong → nextTurnIndex; correct → game ends.
   }
 
   static const _realisticGuessPool = [
@@ -283,7 +266,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     final image = _image;
     if (image == null || value.trim().isEmpty) return false;
 
-    // Lock out further guesses for this turn immediately.
     setState(() => _hasGuessedThisTurn = true);
 
     final correct = await ref.read(roomServiceProvider).submitAnswer(
@@ -415,14 +397,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 }
 
                 if (room.phase == GamePhase.finished) {
-                  final hasWinner =
-                      room.winnerId != null && room.winnerId!.isNotEmpty;
+                  final hasWinner = room.winnerId != null && room.winnerId!.isNotEmpty;
                   if (hasWinner) {
-                    final winnerName =
-                        room.players[room.winnerId]?.name ?? 'שחקן';
-                    return _FinishedView(
-                        winnerName: winnerName,
-                        onHome: () => context.go('/home'));
+                    final winnerName = room.players[room.winnerId]?.name ?? 'שחקן';
+                    return GameWinnerView(
+                      winnerName: winnerName,
+                      onHome: () => context.go('/home'),
+                    );
                   }
                   return _NoWinnerView(
                     answer: _image?.answer ?? '',
@@ -433,7 +414,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
 
                 _scheduleBotTurn(room);
 
-                // Reset per-turn flags when turn advances.
                 if (room.currentTurnIndex != _revealedAtTurnIndex &&
                     (_hasRevealedThisTurn || _hasGuessedThisTurn)) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -446,16 +426,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   });
                 }
 
-                // Trigger guess-event banner when a new guess is stored.
-                if (room.guessCount != _lastShownGuessCount &&
-                    room.lastGuessEvent != null) {
+                if (room.guessCount != _lastShownGuessCount && room.lastGuessEvent != null) {
                   _lastShownGuessCount = room.guessCount;
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (!mounted) return;
                     setState(() {
                       _currentBanner = room.lastGuessEvent;
                       _showBanner = true;
-                      _showBotTyping = false; // result replaces typing banner
+                      _showBotTyping = false;
                     });
                     Future.delayed(const Duration(milliseconds: 3500), () {
                       if (mounted) setState(() => _showBanner = false);
@@ -464,14 +442,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 }
 
                 final currentUserId = user?.id;
-                final isMyTurn = currentUserId != null &&
-                    room.currentTurnUserId == currentUserId;
-                final myCoins = currentUserId != null
-                    ? (room.players[currentUserId]?.score ?? 0)
-                    : 0;
-                final myLetterCards = currentUserId != null
-                    ? (room.players[currentUserId]?.letterCards ?? 0)
-                    : 0;
+                final isMyTurn = currentUserId != null && room.currentTurnUserId == currentUserId;
+                final myCoins = currentUserId != null ? (room.players[currentUserId]?.score ?? 0) : 0;
+                final myLetterCards = currentUserId != null ? (room.players[currentUserId]?.letterCards ?? 0) : 0;
                 final canGuessNow = isMyTurn &&
                     _hasRevealedThisTurn &&
                     !_hasGuessedThisTurn &&
@@ -494,15 +467,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   onReveal: currentUserId == null
                       ? null
                       : (index) => _humanRevealTile(
-                          room: room,
-                          userId: currentUserId,
-                          index: index),
-                  onGuess: canGuessNow
-                      ? () => _openGuessDialog(room, currentUserId!)
-                      : null,
-                  onSkip: (isMyTurn && canGuessNow)
-                      ? () => _skipTurn(room)
-                      : null,
+                            room: room,
+                            userId: currentUserId,
+                            index: index,
+                          ),
+                  onGuess: canGuessNow ? () => _openGuessDialog(room, currentUserId!) : null,
+                  onSkip: (isMyTurn && canGuessNow) ? () => _skipTurn(room) : null,
                 );
               },
             ),
@@ -512,7 +482,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     );
   }
 }
-
 
 class _NoWinnerView extends StatefulWidget {
   final String answer;
@@ -576,8 +545,7 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Center(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
@@ -595,13 +563,11 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
                                 duration: const Duration(milliseconds: 400),
                                 curve: Curves.easeOut,
                                 child: widget.imageUrl!.startsWith('assets/')
-                                    ? Image.asset(widget.imageUrl!,
-                                        fit: BoxFit.cover)
+                                    ? Image.asset(widget.imageUrl!, fit: BoxFit.cover)
                                     : CachedNetworkImage(
                                         imageUrl: widget.imageUrl!,
                                         fit: BoxFit.cover,
-                                        errorWidget: (_, __, ___) =>
-                                            const _ImageFallback(),
+                                        errorWidget: (_, __, ___) => const _ImageFallback(),
                                       ),
                               ),
                               AnimatedOpacity(
@@ -618,8 +584,7 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
                                     children: [
                                       AnimatedOpacity(
                                         opacity: _line1Visible ? 1.0 : 0.0,
-                                        duration:
-                                            const Duration(milliseconds: 300),
+                                        duration: const Duration(milliseconds: 300),
                                         child: const Text(
                                           'אף אחד לא ניחש בזמן',
                                           textAlign: TextAlign.center,
@@ -627,19 +592,14 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
                                             color: Colors.white,
                                             fontSize: 17,
                                             fontWeight: FontWeight.w900,
-                                            shadows: [
-                                              Shadow(
-                                                  color: Colors.black87,
-                                                  blurRadius: 8)
-                                            ],
+                                            shadows: [Shadow(color: Colors.black87, blurRadius: 8)],
                                           ),
                                         ),
                                       ),
                                       const SizedBox(height: 8),
                                       AnimatedOpacity(
                                         opacity: _line2Visible ? 1.0 : 0.0,
-                                        duration:
-                                            const Duration(milliseconds: 300),
+                                        duration: const Duration(milliseconds: 300),
                                         child: const Text(
                                           'התשובה היא...',
                                           textAlign: TextAlign.center,
@@ -647,19 +607,14 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
                                             color: Colors.white70,
                                             fontSize: 13,
                                             fontWeight: FontWeight.w700,
-                                            shadows: [
-                                              Shadow(
-                                                  color: Colors.black87,
-                                                  blurRadius: 8)
-                                            ],
+                                            shadows: [Shadow(color: Colors.black87, blurRadius: 8)],
                                           ),
                                         ),
                                       ),
                                       const SizedBox(height: 6),
                                       AnimatedOpacity(
                                         opacity: _line3Visible ? 1.0 : 0.0,
-                                        duration:
-                                            const Duration(milliseconds: 300),
+                                        duration: const Duration(milliseconds: 300),
                                         child: Text(
                                           widget.answer,
                                           textAlign: TextAlign.center,
@@ -667,11 +622,7 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
                                             color: Color(0xFF9B7EFF),
                                             fontSize: 26,
                                             fontWeight: FontWeight.w900,
-                                            shadows: [
-                                              Shadow(
-                                                  color: Colors.black87,
-                                                  blurRadius: 12)
-                                            ],
+                                            shadows: [Shadow(color: Colors.black87, blurRadius: 12)],
                                           ),
                                         ),
                                       ),
@@ -757,44 +708,6 @@ class _ImageFallback extends StatelessWidget {
           Icons.image_not_supported_outlined,
           color: Colors.white24,
           size: 48,
-        ),
-      ),
-    );
-  }
-}
-
-
-class _FinishedView extends StatelessWidget {
-  final String winnerName;
-  final VoidCallback onHome;
-
-  const _FinishedView({required this.winnerName, required this.onHome});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('🏆', style: TextStyle(fontSize: 84)),
-            const SizedBox(height: 18),
-            Text(
-              '$winnerName ניצח!',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 34,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 30),
-            FilledButton(
-              onPressed: onHome,
-              child: const Text('חזרה למסך הראשי'),
-            ),
-          ],
         ),
       ),
     );
