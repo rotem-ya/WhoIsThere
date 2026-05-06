@@ -19,14 +19,14 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(firebaseUserProvider);
 
   return GoRouter(
-    initialLocation: '/splash',
+    initialLocation: '/auth',
     redirect: (context, state) {
-      final isLoading = authState.isLoading;
-      if (isLoading) return '/splash';
+      if (authState.isLoading) return null;
 
       final isLoggedIn = authState.value != null;
-      final onAuth = state.matchedLocation == '/auth';
-      final onSplash = state.matchedLocation == '/splash';
+      final location = state.matchedLocation;
+      final onAuth = location == '/auth';
+      final onSplash = location == '/splash';
 
       if (onSplash) return isLoggedIn ? '/home' : '/auth';
       if (!isLoggedIn && !onAuth) return '/auth';
