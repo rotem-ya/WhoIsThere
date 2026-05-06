@@ -28,20 +28,14 @@ class TopHud extends StatelessWidget {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(10, 10, 10, 9),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: const Color(0xFF07101F).withOpacity(0.78),
+            color: const Color(0xFF07101F).withOpacity(0.82),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.28)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.34),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.30)),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 16, offset: const Offset(0, 7))],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -50,41 +44,26 @@ class TopHud extends StatelessWidget {
                 children: [
                   _BackButton(onTap: onBack),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: _TurnPanel(
-                      currentPlayerName: currentPlayerName,
-                      revealedText: revealedText,
-                      code: code,
-                    ),
-                  ),
+                  Expanded(child: _TurnInfo(name: currentPlayerName, revealedText: revealedText, code: code)),
                   const SizedBox(width: 8),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      CoinBadge(amount: myCoins),
-                      if (myLetterCards > 0) ...[
-                        const SizedBox(height: 5),
-                        _LetterCardBadge(amount: myLetterCards),
-                      ],
-                    ],
-                  ),
+                  CoinBadge(amount: myCoins),
                 ],
               ),
-              const SizedBox(height: 9),
-              SizedBox(
-                height: 34,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: players.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 7),
-                  itemBuilder: (context, index) {
-                    final player = players[index];
-                    final active = player.id == currentPlayerId;
-                    return _PlayerChip(player: player, active: active);
-                  },
+              if (players.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 32,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: players.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 6),
+                    itemBuilder: (context, index) {
+                      final player = players[index];
+                      return _PlayerChip(player: player, active: player.id == currentPlayerId);
+                    },
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -95,7 +74,6 @@ class TopHud extends StatelessWidget {
 
 class _BackButton extends StatelessWidget {
   final VoidCallback onTap;
-
   const _BackButton({required this.onTap});
 
   @override
@@ -104,82 +82,48 @@ class _BackButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
-        width: 42,
-        height: 42,
+        width: 40,
+        height: 40,
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.06),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.10)),
+          border: Border.all(color: Colors.white.withOpacity(0.12)),
         ),
-        child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 18),
+        child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 17),
       ),
     );
   }
 }
 
-class _TurnPanel extends StatelessWidget {
-  final String currentPlayerName;
+class _TurnInfo extends StatelessWidget {
+  final String name;
   final String revealedText;
   final String code;
-
-  const _TurnPanel({
-    required this.currentPlayerName,
-    required this.revealedText,
-    required this.code,
-  });
+  const _TurnInfo({required this.name, required this.revealedText, required this.code});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'תור עכשיו',
-          maxLines: 1,
-          style: TextStyle(
-            color: const Color(0xFFD4AF37).withOpacity(0.88),
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            height: 1,
+    return FittedBox(
+      alignment: Alignment.centerRight,
+      fit: BoxFit.scaleDown,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('תור עכשיו', style: TextStyle(color: const Color(0xFFD4AF37).withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.w900, height: 1)),
+          const SizedBox(height: 4),
+          Text(name.isEmpty ? 'ממתין לשחקן' : name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900, height: 1)),
+          const SizedBox(height: 5),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('נחשפו $revealedText', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 13, fontWeight: FontWeight.w800)),
+              const SizedBox(width: 12),
+              Text(code, style: TextStyle(color: Colors.white.withOpacity(0.24), fontSize: 11, letterSpacing: 2.4, fontWeight: FontWeight.w900)),
+            ],
           ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          currentPlayerName.isEmpty ? 'ממתין לשחקן' : currentPlayerName,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w900,
-            height: 1.05,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Text(
-              'נחשפו $revealedText',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.56),
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              code,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.22),
-                fontSize: 9,
-                letterSpacing: 2.5,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -187,55 +131,29 @@ class _TurnPanel extends StatelessWidget {
 class _PlayerChip extends StatelessWidget {
   final PlayerModel player;
   final bool active;
-
   const _PlayerChip({required this.player, required this.active});
 
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 220),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        gradient: active
-            ? const LinearGradient(
-                colors: [Color(0xFFD4AF37), Color(0xFFA1811A)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              )
-            : null,
+        gradient: active ? const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)]) : null,
         color: active ? null : Colors.white.withOpacity(0.055),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: active
-              ? Colors.white.withOpacity(0.18)
-              : Colors.white.withOpacity(0.10),
-        ),
+        border: Border.all(color: active ? Colors.white.withOpacity(0.18) : Colors.white.withOpacity(0.10)),
+        boxShadow: active ? [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.22), blurRadius: 10)] : const [],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 86),
-            child: Text(
-              player.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: active ? const Color(0xFF07101F) : Colors.white.withOpacity(0.76),
-                fontSize: 12,
-                fontWeight: active ? FontWeight.w900 : FontWeight.w700,
-              ),
-            ),
+            constraints: const BoxConstraints(maxWidth: 78),
+            child: Text(player.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: active ? const Color(0xFF07101F) : Colors.white.withOpacity(0.76), fontSize: 12, fontWeight: FontWeight.w900)),
           ),
           const SizedBox(width: 5),
-          Text(
-            '${player.score}',
-            style: TextStyle(
-              color: active ? const Color(0xFF07101F).withOpacity(0.82) : Colors.white.withOpacity(0.46),
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          Text('${player.score}', style: TextStyle(color: active ? const Color(0xFF07101F).withOpacity(0.82) : Colors.white.withOpacity(0.46), fontSize: 11, fontWeight: FontWeight.w900)),
         ],
       ),
     );
@@ -244,71 +162,23 @@ class _PlayerChip extends StatelessWidget {
 
 class CoinBadge extends StatelessWidget {
   final int amount;
-
   const CoinBadge({required this.amount});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD4AF37).withOpacity(0.24),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        gradient: const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.26), blurRadius: 12, offset: const Offset(0, 4))],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('🪙', style: TextStyle(fontSize: 13, height: 1)),
-          const SizedBox(width: 3),
-          Text(
-            '$amount',
-            style: const TextStyle(
-              color: Color(0xFF07101F),
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              height: 1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LetterCardBadge extends StatelessWidget {
-  final int amount;
-
-  const _LetterCardBadge({required this.amount});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFF87CEEB).withOpacity(0.14),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.28)),
-      ),
-      child: Text(
-        '🔤 ×$amount',
-        style: const TextStyle(
-          color: Color(0xFF87CEEB),
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          height: 1,
-        ),
-      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        const Text('🪙', style: TextStyle(fontSize: 14, height: 1)),
+        const SizedBox(width: 4),
+        Text('$amount', style: const TextStyle(color: Color(0xFF07101F), fontSize: 18, fontWeight: FontWeight.w900, height: 1)),
+      ]),
     );
   }
 }
