@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../core/constants/app_colors.dart';
 
 String normalizeHebrewFinals(String s) => s
     .replaceAll('ך', 'כ')
@@ -30,6 +29,13 @@ class LetterBankInput extends StatefulWidget {
 }
 
 class _LetterBankInputState extends State<LetterBankInput> {
+  static const Color _navy = Color(0xFF07101F);
+  static const Color _navySoft = Color(0xFF111B36);
+  static const Color _gold = Color(0xFFD4AF37);
+  static const Color _goldLight = Color(0xFFFFE082);
+  static const Color _goldDark = Color(0xFFA1811A);
+  static const Color _cyan = Color(0xFF87CEEB);
+
   late List<int> _wordLengths;
   late List<String?> _filled;
   bool _isSubmitting = false;
@@ -140,7 +146,10 @@ class _LetterBankInputState extends State<LetterBankInput> {
                   opacity: _showError ? 1 : 0,
                   duration: const Duration(milliseconds: 150),
                   child: const Center(
-                    child: Text('לא נכון, התור עובר', style: TextStyle(color: AppColors.secondary, fontSize: 12, fontWeight: FontWeight.w800)),
+                    child: Text(
+                      'לא נכון, התור עובר',
+                      style: TextStyle(color: _goldLight, fontSize: 12, fontWeight: FontWeight.w900),
+                    ),
                   ),
                 ),
               ),
@@ -166,12 +175,12 @@ class _AnswerSlots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, constraints) {
-        const slotGap = 4.0;
-        const wordGap = 12.0;
+        const slotGap = 6.0;
+        const wordGap = 16.0;
         final totalLetters = math.max(1, wordLengths.fold(0, (a, b) => a + b));
         final wordCount = math.max(1, wordLengths.length);
         final totalGapWidth = slotGap * (totalLetters - wordCount) + wordGap * (wordCount - 1);
-        final slotSize = math.min(44.0, math.max(22.0, (constraints.maxWidth - 8 - totalGapWidth) / totalLetters));
+        final slotSize = math.min(50.0, math.max(28.0, (constraints.maxWidth - 8 - totalGapWidth) / totalLetters));
         var idx = 0;
         final words = <Widget>[];
         for (final len in wordLengths) {
@@ -185,7 +194,7 @@ class _AnswerSlots extends StatelessWidget {
         }
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Wrap(textDirection: TextDirection.rtl, alignment: WrapAlignment.center, spacing: wordGap, runSpacing: 6, children: words),
+          child: Wrap(textDirection: TextDirection.rtl, alignment: WrapAlignment.center, spacing: wordGap, runSpacing: 8, children: words),
         );
       });
 }
@@ -199,16 +208,27 @@ class _Slot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final filled = letter != null;
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
       width: size,
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: filled ? const Color(0xFFEDEBFF) : Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: filled ? AppColors.primary : const Color(0xFFD7D4FF), width: filled ? 2 : 1.4),
+        gradient: filled
+            ? const LinearGradient(
+                colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              )
+            : null,
+        color: filled ? null : const Color(0xFF07101F),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: filled ? const Color(0xFFFFE082) : const Color(0xFFD4AF37).withOpacity(0.65), width: filled ? 2.2 : 1.5),
+        boxShadow: filled
+            ? [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.42), blurRadius: 12, offset: const Offset(0, 5))]
+            : [BoxShadow(color: const Color(0xFF87CEEB).withOpacity(0.12), blurRadius: 8)],
       ),
-      child: Text(letter ?? '', style: TextStyle(color: AppColors.darkBlue, fontSize: math.max(14, size * 0.55), fontWeight: FontWeight.w900, height: 1)),
+      child: Text(letter ?? '', style: TextStyle(color: const Color(0xFF07101F), fontSize: math.max(16, size * 0.58), fontWeight: FontWeight.w900, height: 1)),
     );
   }
 }
@@ -223,7 +243,7 @@ class _HebrewKeyboard extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, constraints) {
         const gap = 4.0;
         const maxKeysInRow = 10;
-        final keySize = math.min(44.0, math.max(22.0, (constraints.maxWidth - gap * (maxKeysInRow - 1)) / maxKeysInRow));
+        final keySize = math.min(44.0, math.max(24.0, (constraints.maxWidth - gap * (maxKeysInRow - 1)) / maxKeysInRow));
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -270,18 +290,21 @@ class _LetterKey extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: enabled ? onTap : null,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(13),
           child: Ink(
             width: size,
             height: size + 10,
             decoration: BoxDecoration(
-              color: enabled ? Colors.white : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFC9C4FF), width: 1.2),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.14), blurRadius: 4, offset: const Offset(0, 2))],
+              color: enabled ? Colors.white : Colors.white.withOpacity(0.58),
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.45), width: 1.2),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 5, offset: const Offset(0, 3)),
+                BoxShadow(color: const Color(0xFF87CEEB).withOpacity(0.12), blurRadius: 8),
+              ],
             ),
             child: Center(
-              child: Text(label, style: TextStyle(color: enabled ? AppColors.darkBlue : Colors.grey.shade500, fontSize: math.max(20, size * 0.60), fontWeight: FontWeight.w900, height: 1)),
+              child: Text(label, style: TextStyle(color: enabled ? const Color(0xFF07101F) : Colors.grey.shade500, fontSize: math.max(20, size * 0.60), fontWeight: FontWeight.w900, height: 1)),
             ),
           ),
         ),
@@ -296,18 +319,19 @@ class _UndoAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        width: 190,
-        height: 46,
+        width: 220,
+        height: 48,
         child: OutlinedButton.icon(
           onPressed: enabled ? onTap : null,
-          icon: const Icon(Icons.undo_rounded, size: 20),
-          label: const Text('בטל אות אחרונה'),
+          icon: const Icon(Icons.undo_rounded, size: 22),
+          label: const Text('בטל פעולה', maxLines: 1, overflow: TextOverflow.visible),
           style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.white,
+            foregroundColor: enabled ? const Color(0xFFFFE082) : Colors.white38,
             disabledForegroundColor: Colors.white38,
-            side: BorderSide(color: Colors.white.withOpacity(enabled ? 0.38 : 0.16)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            side: BorderSide(color: enabled ? const Color(0xFFD4AF37).withOpacity(0.85) : Colors.white.withOpacity(0.16), width: 1.4),
+            backgroundColor: const Color(0xFF07101F).withOpacity(0.52),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
           ),
         ),
       );
@@ -323,19 +347,22 @@ class _SubmitAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
         width: double.infinity,
-        height: 54,
+        height: 56,
         child: FilledButton(
           onPressed: enabled ? onTap : null,
           style: FilledButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            disabledBackgroundColor: Colors.white.withOpacity(0.14),
-            foregroundColor: Colors.white,
+            backgroundColor: const Color(0xFFD4AF37),
+            disabledBackgroundColor: const Color(0xFF07101F).withOpacity(0.72),
+            foregroundColor: const Color(0xFF07101F),
             disabledForegroundColor: Colors.white38,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: enabled ? const Color(0xFFFFE082) : Colors.white.withOpacity(0.14), width: 1.2),
+            ),
+            textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
           ),
           child: isSubmitting
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF07101F)))
               : const Text('שלח ניחוש'),
         ),
       );
