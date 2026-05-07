@@ -32,13 +32,13 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 450),
+      duration: const Duration(milliseconds: 480),
       value: widget.isRevealed ? 1.0 : 0.0,
     );
     _aperture = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeInOutCubic,
-      reverseCurve: Curves.easeInOutCubic,
+      curve: Curves.easeOutBack,
+      reverseCurve: Curves.easeInCubic,
     );
   }
 
@@ -78,7 +78,10 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
               width: widget.isFocused && !widget.isRevealed ? 2.0 : 1.0,
             ),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.56), blurRadius: 9, offset: const Offset(0, 5)),
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.56),
+                  blurRadius: 9,
+                  offset: const Offset(0, 5)),
               if (widget.isFocused && !widget.isRevealed)
                 BoxShadow(color: _gold.withOpacity(0.55), blurRadius: 10, spreadRadius: 1),
               if (widget.isRevealed)
@@ -92,19 +95,18 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
               children: [
                 widget.child,
                 if (progress < 1.0)
-                  Transform.rotate(
-                    angle: progress * math.pi / 6,
-                    child: CustomPaint(
-                      painter: _AperturePlatePainter(
-                        progress: progress,
-                        isFocused: widget.isFocused,
-                        gold: _gold,
-                        goldDark: _goldDark,
-                        navyBlack: _navyBlack,
-                      ),
+                  CustomPaint(
+                    painter: _AperturePlatePainter(
+                      // clamp guards against easeOutBack overshoot past 1.0
+                      progress: progress.clamp(0.0, 1.0),
+                      isFocused: widget.isFocused,
+                      gold: _gold,
+                      goldDark: _goldDark,
+                      navyBlack: _navyBlack,
                     ),
                   ),
-                if (progress < 0.96) _LockMark(progress: progress, isFocused: widget.isFocused, gold: _gold),
+                if (progress < 0.96)
+                  _LockMark(progress: progress, isFocused: widget.isFocused, gold: _gold),
               ],
             ),
           ),
@@ -127,7 +129,8 @@ class _LockMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final opacity = (1.0 - progress).clamp(0.0, 1.0);
+    // Fade out quickly in the first third of the animation
+    final opacity = (1.0 - (progress * 3.0)).clamp(0.0, 1.0);
     return IgnorePointer(
       child: Opacity(
         opacity: opacity,
@@ -158,73 +161,114 @@ class _AperturePlatePainter extends CustomPainter {
     required this.navyBlack,
   });
 
+  // Build a regular hexagon path at [center] with [radius], rotated by [rotation] radians.
+  // This is the aperture "hole" that grows as progress → 1.
+  static Path _hexPath(Offset center, double radius, double rotation) {
+    final path = Path();
+    for (var i = 0; i < 6; i++) {
+      final angle = (math.pi / 3) * i + rotation;
+      final pt = center + Offset(math.cos(angle), math.sin(angle)) * radius;
+      if (i == 0) {
+        path.moveTo(pt.dx, pt.dy);
+      } else {
+        path.lineTo(pt.dx, pt.dy);
+      }
+    }
+    path.close();
+    return path;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final maxRadius = math.sqrt(size.width * size.width + size.height * size.height) * 0.72;
-    final radius = maxRadius * progress;
+    final diag = math.sqrt(size.width * size.width + size.height * size.height);
+    // maxRadius large enough to fully cover the tile when the iris is closed (t=0)
+    final maxRadius = diag * 0.62;
+    final t = progress;
     final rect = Offset.zero & size;
 
+    // Rotation: iris rotates 30° (π/6) as it opens — the "snap" comes from easeOutBack
+    final rotAngle = t * math.pi / 6;
+    // Aperture opening radius: 0 when fully closed, maxRadius when fully open
+    final apertureR = maxRadius * t;
+
+    // ── 1. Dark mechanical plate with hexagonal aperture hole ─────────
+    //
+    // PathFillType.evenOdd means the overlap between the outer rect and the
+    // inner hexagon is "un-filled", revealing the image beneath.
     final platePath = Path()
       ..fillType = PathFillType.evenOdd
       ..addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(11)));
-    if (radius > 0.01) {
-      platePath.addOval(Rect.fromCircle(center: center, radius: radius));
+
+    if (apertureR > 0.5) {
+      platePath.addPath(_hexPath(center, apertureR, rotAngle), Offset.zero);
     }
 
-    // Fully opaque mechanical plate. The hidden image must not leak through the closed tile.
-    final platePaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Color(0xFF10213A),
-          Color(0xFF050A14),
-          Color(0xFF02050B),
-        ],
-        stops: [0.0, 0.58, 1.0],
-      ).createShader(rect);
-    canvas.drawPath(platePath, platePaint);
+    // Gradient background — fully opaque, image cannot leak through
+    canvas.drawPath(
+      platePath,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF10213A), Color(0xFF050A14), Color(0xFF02050B)],
+          stops: [0.0, 0.58, 1.0],
+        ).createShader(rect),
+    );
 
-    final vignettePaint = Paint()
-      ..shader = const RadialGradient(
-        colors: [
-          Color(0x00000000),
-          Color(0xCC000000),
-        ],
-        stops: [0.46, 1.0],
-      ).createShader(rect);
-    canvas.drawPath(platePath, vignettePaint);
+    // Radial vignette — depth on the dark plate
+    canvas.drawPath(
+      platePath,
+      Paint()
+        ..shader = RadialGradient(
+          center: Alignment.center,
+          radius: 0.7,
+          colors: const [Color(0x00000000), Color(0xBB000000)],
+          stops: const [0.45, 1.0],
+        ).createShader(rect),
+    );
 
+    // ── 2. Blade dividers: 6 lines from aperture edge to tile boundary ─
+    //
+    // Each line runs along a hexagon vertex direction, visually separating
+    // the 6 "blade" segments of the dark plate.
     final bladePaint = Paint()
-      ..color = (isFocused ? gold : goldDark).withOpacity(isFocused ? 0.50 : 0.28)
+      ..color = (isFocused ? gold : goldDark).withOpacity(isFocused ? 0.55 : 0.30)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.15;
+      ..strokeWidth = 1.4;
+
     for (var i = 0; i < 6; i++) {
-      final angle = (math.pi * 2 / 6) * i + (progress * math.pi / 8);
-      final from = center + Offset(math.cos(angle), math.sin(angle)) * (radius + 2);
-      final to = center + Offset(math.cos(angle), math.sin(angle)) * maxRadius;
-      canvas.drawLine(from, to, bladePaint);
+      final angle = (math.pi / 3) * i + rotAngle;
+      final inner = center + Offset(math.cos(angle), math.sin(angle)) * (apertureR + 1);
+      final outer = center + Offset(math.cos(angle), math.sin(angle)) * maxRadius;
+      canvas.drawLine(inner, outer, bladePaint);
     }
 
-    if (radius > 1) {
-      final innerShadow = Paint()
-        ..color = Colors.black.withOpacity(0.42 * (1.0 - progress * 0.3))
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 5.0
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-      canvas.drawCircle(center, radius, innerShadow);
+    // ── 3. Gold hexagonal iris ring at the aperture edge ──────────────
+    if (apertureR > 1) {
+      // Soft inner shadow to add depth to the opening
+      canvas.drawCircle(
+        center,
+        apertureR,
+        Paint()
+          ..color = Colors.black.withOpacity(0.45)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 6
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+      );
 
-      final goldRing = Paint()
-        ..color = gold.withOpacity(0.78)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5;
-      canvas.drawCircle(center, radius, goldRing);
+      // Gold hexagonal outline — follows the exact shape of the aperture hole
+      canvas.drawPath(
+        _hexPath(center, apertureR, rotAngle),
+        Paint()
+          ..color = gold.withOpacity(0.88)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.6,
+      );
     }
   }
 
   @override
-  bool shouldRepaint(covariant _AperturePlatePainter oldDelegate) {
-    return oldDelegate.progress != progress || oldDelegate.isFocused != isFocused;
-  }
+  bool shouldRepaint(covariant _AperturePlatePainter old) =>
+      old.progress != progress || old.isFocused != isFocused;
 }
