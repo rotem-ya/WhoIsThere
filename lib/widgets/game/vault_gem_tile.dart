@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-// וודא שהנתיב ל-SoundManager/SoundService שלך נכון כאן
+
+// הערה: במידה ויש לך SoundService, בטל את ה-comment בשורת הנגינה ב-didUpdateWidget
 // import 'package:ask_the_kids/services/sound_service.dart'; 
 
 class VaultGemTile extends StatefulWidget {
@@ -31,11 +32,11 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600), // אנימציה מעט איטית יותר בשביל היוקרה
+      duration: const Duration(milliseconds: 700), // אנימציה חלקה ויוקרתית
     );
     _animation = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeInOutQuart,
+      curve: Curves.easeInOutCubic,
     );
     
     if (widget.isRevealed) {
@@ -48,8 +49,7 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
     super.didUpdateWidget(oldWidget);
     if (widget.isRevealed != oldWidget.isRevealed) {
       if (widget.isRevealed) {
-        // הזרקת סאונד - וודא שהפונקציה קיימת אצלך
-        // SoundService.playReveal(); 
+        // SoundService.playReveal(); // הפעלת הסאונד ברגע הלחיצה
         _controller.forward();
       } else {
         _controller.reverse();
@@ -70,12 +70,16 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: widget.isFocused ? kGold : kGold.withOpacity(0.3),
-          width: widget.isFocused ? 2.5 : 1.0,
+          color: widget.isFocused ? kGold : kGold.withOpacity(0.4),
+          width: widget.isFocused ? 2.5 : 1.2,
         ),
         boxShadow: [
           if (widget.isFocused)
-            BoxShadow(color: kGold.withOpacity(0.4), blurRadius: 8, spreadRadius: 1),
+            BoxShadow(
+              color: kGold.withOpacity(0.3),
+              blurRadius: 10,
+              spreadRadius: 2,
+            ),
         ],
       ),
       child: ClipRRect(
@@ -83,33 +87,42 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // התמונה המסתתרת תמיד למטה
+            // התמונה המסתתרת (Child)
             widget.child,
             
-            // המכסה המכני
+            // הצמצם המכני (Aperture)
             AnimatedBuilder(
               animation: _animation,
               builder: (context, _) {
                 return CustomPaint(
                   painter: ApertureIrisPainter(
                     progress: _animation.value,
-                    isFocused: widget.isFocused,
                   ),
                 );
               },
             ),
             
-            // המנעול שמופיע רק כשהצמצם סגור כמעט לגמרי
+            // מנעול מרכזי שנעלם בפתיחה
             AnimatedBuilder(
               animation: _animation,
               builder: (context, _) {
-                return Opacity(
-                  opacity: (1.0 - _animation.value * 2).clamp(0.0, 1.0),
-                  child: Center(
-                    child: Icon(
-                      Icons.lock_person_rounded,
-                      color: kGold.withOpacity(0.9),
-                      size: 32,
+                return IgnorePointer(
+                  child: Opacity(
+                    opacity: (1.0 - _animation.value * 3).clamp(0.0, 1.0),
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: kNavy.withOpacity(0.5),
+                          border: Border.all(color: kGold.withOpacity(0.5), width: 1),
+                        ),
+                        child: const Icon(
+                          Icons.lock_outline_rounded,
+                          color: kGold,
+                          size: 24,
+                        ),
+                      ),
                     ),
                   ),
                 );
@@ -124,66 +137,94 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
 
 class ApertureIrisPainter extends CustomPainter {
   final double progress;
-  final bool isFocused;
 
-  ApertureIrisPainter({required this.progress, required this.isFocused});
+  ApertureIrisPainter({required this.progress});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.sqrt(size.width * size.width + size.height * size.height) * 0.6;
-    
-    // ציור רקע אטום ב-100% מתחת ללהבים למקרה של חריצים קטנים
-    final backgroundPaint = Paint()..color = const Color(0xFF07101F);
-    if (progress < 1.0) {
-      canvas.drawRect(Offset.zero & size, backgroundPaint);
-    }
+    if (progress >= 0.99) return; // אופטימיזציה: אל תצייר אם הכל פתוח
 
-    final bladeCount = 6;
+    final center = Offset(size.width / 2, size.height / 2);
+    final rect = Offset.zero & size;
+    
+    // רדיוס חיצוני שחוסם את כל הריבוע (משפט פיתגורס למציאת הפינה)
+    final outerRadius = math.sqrt(size.width * size.width + size.height * size.height) * 0.6;
+    
+    // רדיוס הפתיחה - ככל שה-progress גדל, החור המרכזי גדל
+    final openingRadius = progress * outerRadius * 1.1;
+
+    // רקע אטום ב-100% כדי ששום פיקסל מהתמונה לא יזלוג
+    canvas.drawRect(rect, Paint()..color = const Color(0xFF07101F));
+
+    const int bladeCount = 8; // 8 להבים יוצרים חפיפה עגולה ויוקרתית יותר מ-6
     final double angleStep = (2 * math.pi) / bladeCount;
     
-    // חישוב הסיבוב והפתיחה
-    final rotation = progress * math.pi / 3; // סיבוב של 60 מעלות
-    final expansion = progress * radius * 1.5;
+    // סיבוב של הצמצם תוך כדי פתיחה (אפקט מכני קלאסי)
+    final double rotation = progress * (math.pi / 4);
 
     for (int i = 0; i < bladeCount; i++) {
-      final double currentAngle = i * angleStep + rotation;
+      final double startAngle = i * angleStep + rotation;
       
       final paint = Paint()
-        ..shader = LinearGradient(
+        ..shader = const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
             Color(0xFFD4AF37), // Gold
-            Color(0xFF8A6E2F), // Dark Gold
-            Color(0xFFCFB53B), // Shiny Gold
+            Color(0xFFF7EF8A), // Highlight
+            Color(0xFFA1811A), // Shadow Gold
           ],
-        ).createShader(Offset.zero & size);
+        ).createShader(rect);
 
       final path = Path();
       
-      // נקודות הלהב - חישוב גיאומטרי של להב כספת
-      Offset p1 = center + Offset(math.cos(currentAngle), math.sin(currentAngle)) * expansion;
-      Offset p2 = center + Offset(math.cos(currentAngle + angleStep * 1.5), math.sin(currentAngle + angleStep * 1.5)) * radius;
-      Offset p3 = center + Offset(math.cos(currentAngle + angleStep * 2), math.sin(currentAngle + angleStep * 2)) * radius;
+      // נקודה 1: על היקף החור הפנימי
+      Offset p1 = center + Offset(math.cos(startAngle), math.sin(startAngle)) * openingRadius;
       
+      // נקודה 2: נקודת העיגון החיצונית
+      Offset p2 = center + Offset(math.cos(startAngle), math.sin(startAngle)) * outerRadius;
+      
+      // נקודה 3: נקודת העיגון החיצונית הבאה (ליצירת רוחב ללהב)
+      Offset p3 = center + Offset(math.cos(startAngle + angleStep * 1.5), math.sin(startAngle + angleStep * 1.5)) * outerRadius;
+
       path.moveTo(p1.dx, p1.dy);
+      
+      // יצירת הקימור (Curve) של הלהב - זה הסוד למראה המעוגל
+      // אנחנו מושכים את הקו בעזרת Control Point שנמצאת ברדיוס ביניים
+      Offset controlPoint = center + Offset(
+        math.cos(startAngle + angleStep * 0.7),
+        math.sin(startAngle + angleStep * 0.7),
+      ) * (openingRadius + (outerRadius - openingRadius) * 0.2);
+      
+      path.quadraticBezierTo(controlPoint.dx, controlPoint.dy, p3.dx, p3.dy);
       path.lineTo(p2.dx, p2.dy);
-      path.lineTo(p3.dx, p3.dy);
       path.close();
 
-      // הוספת צל להפרדה בין הלהבים
+      // ציור צל מתחת לכל להב כדי לתת עומק (תלת-מימד)
       canvas.drawPath(path, Paint()
-        ..color = Colors.black.withOpacity(0.3)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
-        
+        ..color = Colors.black.withOpacity(0.4)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
+
+      // ציור הלהב עצמו
       canvas.drawPath(path, paint);
       
-      // קו מתאר דק לכל להב להדגשת המכניקה
+      // קו מתאר דק (Stroke) להדגשת החפיפה המכנית
       canvas.drawPath(path, Paint()
-        ..color = const Color(0xFF4A3B10)
+        ..color = const Color(0xFF5C4A14).withOpacity(0.6)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0);
+    }
+    
+    // טבעת פנימית מוזהבת דקה מסביב לחור שנפתח (נראה כמו עדשה)
+    if (openingRadius > 2) {
+      canvas.drawCircle(
+        center, 
+        openingRadius, 
+        Paint()
+          ..color = const Color(0xFFF7EF8A).withOpacity(0.3)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0
+      );
     }
   }
 
