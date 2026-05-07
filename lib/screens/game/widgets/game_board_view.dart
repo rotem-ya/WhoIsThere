@@ -109,7 +109,7 @@ class _Tile extends StatefulWidget {
 class _TileState extends State<_Tile> {
   bool _pressed = false;
 
-  static const AssetSource _revealSound = AssetSource('sounds/vault_open.mp3');
+  static final AssetSource _revealSound = AssetSource('sounds/vault_open.mp3');
   static final AudioPlayer _revealPlayer = AudioPlayer(playerId: 'vault-reveal');
   static Future<void>? _preloadFuture;
 
