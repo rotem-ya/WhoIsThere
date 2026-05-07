@@ -172,7 +172,7 @@ class _TileState extends State<_Tile> {
                 ),
                 child: VaultGemTile(
                   isRevealed: widget.isRevealed,
-                  isFocused: false,
+                  isFocused: _canTap,
                   child: _ImageSlice(
                     index: widget.index,
                     gridSize: widget.gridSize,
