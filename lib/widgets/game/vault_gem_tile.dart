@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-// הערה: במידה ויש לך SoundService, בטל את ה-comment בשורת הנגינה ב-didUpdateWidget
+// במידה ויש לך SoundService, בטל את ה-comment בשורת הנגינה ב-didUpdateWidget
 // import 'package:ask_the_kids/services/sound_service.dart'; 
 
 class VaultGemTile extends StatefulWidget {
@@ -32,11 +32,11 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700), // אנימציה חלקה ויוקרתית
+      duration: const Duration(milliseconds: 750), // אנימציה יוקרתית ואיטית יותר
     );
     _animation = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeInOutCubic,
+      curve: Curves.easeInOutQuart,
     );
     
     if (widget.isRevealed) {
@@ -49,7 +49,7 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
     super.didUpdateWidget(oldWidget);
     if (widget.isRevealed != oldWidget.isRevealed) {
       if (widget.isRevealed) {
-        // SoundService.playReveal(); // הפעלת הסאונד ברגע הלחיצה
+        // SoundService.playReveal(); // הפעלת הסאונד
         _controller.forward();
       } else {
         _controller.reverse();
@@ -87,10 +87,10 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // התמונה המסתתרת (Child)
+            // התמונה המסתתרת
             widget.child,
             
-            // הצמצם המכני (Aperture)
+            // הצמצם המכני היוקרתי
             AnimatedBuilder(
               animation: _animation,
               builder: (context, _) {
@@ -102,25 +102,25 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
               },
             ),
             
-            // מנעול מרכזי שנעלם בפתיחה
+            // המנעול המרכזי שנעלם בפתיחה
             AnimatedBuilder(
               animation: _animation,
               builder: (context, _) {
                 return IgnorePointer(
                   child: Opacity(
-                    opacity: (1.0 - _animation.value * 3).clamp(0.0, 1.0),
+                    opacity: (1.0 - _animation.value * 3.5).clamp(0.0, 1.0),
                     child: Center(
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: kNavy.withOpacity(0.5),
+                          color: kNavy.withOpacity(0.6),
                           border: Border.all(color: kGold.withOpacity(0.5), width: 1),
                         ),
                         child: const Icon(
-                          Icons.lock_outline_rounded,
+                          Icons.lock_person_rounded,
                           color: kGold,
-                          size: 24,
+                          size: 26,
                         ),
                       ),
                     ),
@@ -142,38 +142,39 @@ class ApertureIrisPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (progress >= 0.99) return; // אופטימיזציה: אל תצייר אם הכל פתוח
+    if (progress >= 0.99) return;
 
     final center = Offset(size.width / 2, size.height / 2);
     final rect = Offset.zero & size;
     
-    // רדיוס חיצוני שחוסם את כל הריבוע (משפט פיתגורס למציאת הפינה)
-    final outerRadius = math.sqrt(size.width * size.width + size.height * size.height) * 0.6;
+    // רדיוס חיצוני שחוסם את כל הפינות
+    final outerRadius = math.sqrt(size.width * size.width + size.height * size.height) * 0.7;
     
-    // רדיוס הפתיחה - ככל שה-progress גדל, החור המרכזי גדל
-    final openingRadius = progress * outerRadius * 1.1;
+    // רדיוס החור המרכזי שגדל עם ה-progress
+    final openingRadius = progress * (size.width * 0.6);
 
-    // רקע אטום ב-100% כדי ששום פיקסל מהתמונה לא יזלוג
+    // בסיס אטום לחלוטין - חסימת תמונה ב-100%
     canvas.drawRect(rect, Paint()..color = const Color(0xFF07101F));
 
-    const int bladeCount = 8; // 8 להבים יוצרים חפיפה עגולה ויוקרתית יותר מ-6
+    const int bladeCount = 8; // 8 להבים למראה צפוף ויוקרתי
     final double angleStep = (2 * math.pi) / bladeCount;
     
-    // סיבוב של הצמצם תוך כדי פתיחה (אפקט מכני קלאסי)
-    final double rotation = progress * (math.pi / 4);
+    // סיבוב מכני תוך כדי פתיחה
+    final double rotation = progress * (math.pi / 3);
 
     for (int i = 0; i < bladeCount; i++) {
       final double startAngle = i * angleStep + rotation;
       
       final paint = Paint()
-        ..shader = const LinearGradient(
+        ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFFD4AF37), // Gold
-            Color(0xFFF7EF8A), // Highlight
-            Color(0xFFA1811A), // Shadow Gold
+            const Color(0xFFD4AF37), // Gold
+            const Color(0xFFF7EF8A), // Highlight Shine
+            const Color(0xFFA1811A), // Dark Shadow
           ],
+          stops: const [0.0, 0.35, 1.0],
         ).createShader(rect);
 
       final path = Path();
@@ -181,49 +182,49 @@ class ApertureIrisPainter extends CustomPainter {
       // נקודה 1: על היקף החור הפנימי
       Offset p1 = center + Offset(math.cos(startAngle), math.sin(startAngle)) * openingRadius;
       
-      // נקודה 2: נקודת העיגון החיצונית
-      Offset p2 = center + Offset(math.cos(startAngle), math.sin(startAngle)) * outerRadius;
+      // נקודה 2: נקודה חיצונית רחוקה (בקצה הלהב הבא ליצירת חפיפה)
+      Offset p2 = center + Offset(math.cos(startAngle + angleStep * 1.8), math.sin(startAngle + angleStep * 1.8)) * outerRadius;
       
-      // נקודה 3: נקודת העיגון החיצונית הבאה (ליצירת רוחב ללהב)
-      Offset p3 = center + Offset(math.cos(startAngle + angleStep * 1.5), math.sin(startAngle + angleStep * 1.5)) * outerRadius;
+      // נקודה 3: נקודת סגירה חיצונית רחוקה עוד יותר
+      Offset p3 = center + Offset(math.cos(startAngle + angleStep * 3.0), math.sin(startAngle + angleStep * 3.0)) * outerRadius;
 
       path.moveTo(p1.dx, p1.dy);
       
-      // יצירת הקימור (Curve) של הלהב - זה הסוד למראה המעוגל
-      // אנחנו מושכים את הקו בעזרת Control Point שנמצאת ברדיוס ביניים
+      // יצירת הקימור המכני המעוגל (The Secret Sauce)
+      // נקודת בקרה (Control Point) שמושכת את הקו החוצה בצורה קשתית
       Offset controlPoint = center + Offset(
-        math.cos(startAngle + angleStep * 0.7),
-        math.sin(startAngle + angleStep * 0.7),
-      ) * (openingRadius + (outerRadius - openingRadius) * 0.2);
+        math.cos(startAngle + angleStep * 0.8),
+        math.sin(startAngle + angleStep * 0.8),
+      ) * (openingRadius + (outerRadius - openingRadius) * 0.35);
       
-      path.quadraticBezierTo(controlPoint.dx, controlPoint.dy, p3.dx, p3.dy);
-      path.lineTo(p2.dx, p2.dy);
+      path.quadraticBezierTo(controlPoint.dx, controlPoint.dy, p2.dx, p2.dy);
+      path.lineTo(p3.dx, p3.dy);
       path.close();
 
-      // ציור צל מתחת לכל להב כדי לתת עומק (תלת-מימד)
+      // שכבת צל ליצירת עומק תלת-ממדי בין הלהבים
       canvas.drawPath(path, Paint()
-        ..color = Colors.black.withOpacity(0.4)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
+        ..color = Colors.black.withOpacity(0.5)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
 
-      // ציור הלהב עצמו
+      // ציור הלהב המוזהב
       canvas.drawPath(path, paint);
       
-      // קו מתאר דק (Stroke) להדגשת החפיפה המכנית
+      // קו הפרדה דק וכהה להדגשת המכניקה
       canvas.drawPath(path, Paint()
-        ..color = const Color(0xFF5C4A14).withOpacity(0.6)
+        ..color = const Color(0xFF4A3B10).withOpacity(0.8)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0);
     }
     
-    // טבעת פנימית מוזהבת דקה מסביב לחור שנפתח (נראה כמו עדשה)
+    // טבעת פנימית עדינה (נראה כמו הברגה של עדשה)
     if (openingRadius > 2) {
       canvas.drawCircle(
         center, 
         openingRadius, 
         Paint()
-          ..color = const Color(0xFFF7EF8A).withOpacity(0.3)
+          ..color = const Color(0xFFF7EF8A).withOpacity(0.2)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.0
+          ..strokeWidth = 1.5
       );
     }
   }
