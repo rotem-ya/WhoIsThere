@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main, claude/puzzle-game-design-CaQqV, rotem/qa-fixes-step-1, claude/letter-bank-puzzle-game-9MzGR, claude/add-tile-images-aILCm ]
+    branches: [ main, claude/puzzle-game-design-CaQqV, rotem/qa-fixes-step-1, claude/letter-bank-puzzle-game-9MzGR, claude/add-tile-images-aILCm, claude/fix-tile-opacity-and-reveal-sound-1Q2HV ]
   workflow_dispatch:
 
 jobs:
