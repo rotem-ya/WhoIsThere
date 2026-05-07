@@ -20,6 +20,7 @@ class VaultGemTile extends StatefulWidget {
 
 class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderStateMixin {
   static const Color _gold = Color(0xFFD4AF37);
+  static const Color _goldDark = Color(0xFFA1811A);
   static const Color _navyBlack = Color(0xFF050A14);
   static const Color _cyan = Color(0xFF87CEEB);
 
@@ -73,7 +74,7 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
                   ? _gold.withOpacity(0.82)
                   : widget.isFocused
                       ? _gold
-                      : _gold.withOpacity(0.30),
+                      : _gold.withOpacity(0.34),
               width: widget.isFocused && !widget.isRevealed ? 2.0 : 1.0,
             ),
             boxShadow: [
@@ -98,6 +99,7 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
                         progress: progress,
                         isFocused: widget.isFocused,
                         gold: _gold,
+                        goldDark: _goldDark,
                         navyBlack: _navyBlack,
                       ),
                     ),
@@ -132,7 +134,7 @@ class _LockMark extends StatelessWidget {
         child: Center(
           child: Icon(
             Icons.lock_outline_rounded,
-            color: gold.withOpacity(isFocused ? 0.78 : 0.28),
+            color: gold.withOpacity(isFocused ? 0.92 : 0.46),
             size: 28,
           ),
         ),
@@ -145,12 +147,14 @@ class _AperturePlatePainter extends CustomPainter {
   final double progress;
   final bool isFocused;
   final Color gold;
+  final Color goldDark;
   final Color navyBlack;
 
   const _AperturePlatePainter({
     required this.progress,
     required this.isFocused,
     required this.gold,
+    required this.goldDark,
     required this.navyBlack,
   });
 
@@ -163,27 +167,39 @@ class _AperturePlatePainter extends CustomPainter {
 
     final platePath = Path()
       ..fillType = PathFillType.evenOdd
-      ..addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(11)))
-      ..addOval(Rect.fromCircle(center: center, radius: radius));
+      ..addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(11)));
+    if (radius > 0.01) {
+      platePath.addOval(Rect.fromCircle(center: center, radius: radius));
+    }
 
+    // Fully opaque mechanical plate. The hidden image must not leak through the closed tile.
     final platePaint = Paint()
-      ..shader = LinearGradient(
+      ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withOpacity(0.08),
-          navyBlack,
-          Colors.black.withOpacity(0.34),
+          Color(0xFF10213A),
+          Color(0xFF050A14),
+          Color(0xFF02050B),
         ],
-        stops: const [0.0, 0.52, 1.0],
+        stops: [0.0, 0.58, 1.0],
       ).createShader(rect);
-
     canvas.drawPath(platePath, platePaint);
 
+    final vignettePaint = Paint()
+      ..shader = const RadialGradient(
+        colors: [
+          Color(0x00000000),
+          Color(0xCC000000),
+        ],
+        stops: [0.46, 1.0],
+      ).createShader(rect);
+    canvas.drawPath(platePath, vignettePaint);
+
     final bladePaint = Paint()
-      ..color = gold.withOpacity(isFocused ? 0.26 : 0.11)
+      ..color = (isFocused ? gold : goldDark).withOpacity(isFocused ? 0.50 : 0.28)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
+      ..strokeWidth = 1.15;
     for (var i = 0; i < 6; i++) {
       final angle = (math.pi * 2 / 6) * i + (progress * math.pi / 8);
       final from = center + Offset(math.cos(angle), math.sin(angle)) * (radius + 2);
@@ -193,14 +209,14 @@ class _AperturePlatePainter extends CustomPainter {
 
     if (radius > 1) {
       final innerShadow = Paint()
-        ..color = Colors.black.withOpacity(0.34 * (1.0 - progress * 0.3))
+        ..color = Colors.black.withOpacity(0.42 * (1.0 - progress * 0.3))
         ..style = PaintingStyle.stroke
         ..strokeWidth = 5.0
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
       canvas.drawCircle(center, radius, innerShadow);
 
       final goldRing = Paint()
-        ..color = gold.withOpacity(0.72)
+        ..color = gold.withOpacity(0.78)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5;
       canvas.drawCircle(center, radius, goldRing);
