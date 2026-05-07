@@ -28,12 +28,12 @@ class VaultGemTile extends StatelessWidget {
         color: _navyBlack,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isFocused ? _cyan : _gold.withOpacity(0.30),
-          width: isFocused ? 2.5 : 1.0,
+          color: isFocused ? _gold : _gold.withOpacity(0.30),
+          width: isFocused ? 2.0 : 1.0,
         ),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.62), blurRadius: 9, offset: const Offset(0, 5)),
-          if (isFocused) BoxShadow(color: _cyan.withOpacity(0.30), blurRadius: 12, spreadRadius: 1),
+          if (isFocused) BoxShadow(color: _gold.withOpacity(0.50), blurRadius: 8, spreadRadius: 1),
         ],
       ),
       child: Stack(
@@ -52,7 +52,7 @@ class VaultGemTile extends StatelessWidget {
           Center(
             child: Icon(
               Icons.lock_outline_rounded,
-              color: _gold.withOpacity(isFocused ? 0.44 : 0.24),
+              color: _gold.withOpacity(isFocused ? 0.72 : 0.24),
               size: 28,
             ),
           ),
