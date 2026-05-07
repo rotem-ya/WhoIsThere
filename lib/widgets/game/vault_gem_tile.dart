@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart'; // וודא שהחבילה מותקנת ב-pubspec.yaml
+import 'package:audioplayers/audioplayers.dart';
 
 class VaultGemTile extends StatefulWidget {
   final bool isRevealed;
@@ -19,9 +19,6 @@ class VaultGemTile extends StatefulWidget {
 }
 
 class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderStateMixin {
-  static const Color kGold = Color(0xFFD4AF37);
-  static const Color kNavy = Color(0xFF07101F);
-  
   late final AnimationController _controller;
   late final Animation<double> _animation;
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -33,38 +30,20 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
       vsync: this,
       duration: const Duration(milliseconds: 750),
     );
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOutQuart);
     
-    // שימוש ב-CurvedAnimation מבטיח שהתנועה תהיה חלקה
-    _animation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOutQuart,
-    );
-    
-    if (widget.isRevealed) {
-      _controller.value = 1.0;
-    }
-  }
-
-  // פונקציית סאונד מובנית כדי לוודא שזה עובד
-  void _playRevealSound() async {
-    try {
-      await _audioPlayer.play(AssetSource('sounds/vault_open.mp3'));
-    } catch (e) {
-      debugPrint("Sound error: $e");
-    }
+    if (widget.isRevealed) _controller.value = 1.0;
   }
 
   @override
-  void didUpdateWidget(covariant VaultGemTile oldWidget) {
+  void didUpdateWidget(VaultGemTile oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
-    // זיהוי שינוי מצב - כאן קורה הקסם
     if (widget.isRevealed != oldWidget.isRevealed) {
       if (widget.isRevealed) {
-        _playRevealSound(); // הפעלת הסאונד
-        _controller.forward(); // התחלת האנימציה
+        _audioPlayer.play(AssetSource('sounds/vault_open.mp3')).catchError((e) => print(e));
+        _controller.forward();
       } else {
-        _controller.reverse(); // סגירה (אם צריך)
+        _controller.reverse();
       }
     }
   }
@@ -83,7 +62,7 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: widget.isFocused ? kGold : kGold.withOpacity(0.4),
+          color: widget.isFocused ? const Color(0xFFD4AF37) : const Color(0xFFD4AF37).withOpacity(0.4),
           width: widget.isFocused ? 2.5 : 1.2,
         ),
       ),
@@ -92,33 +71,21 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // התמונה שנחשפת
             widget.child,
-            
-            // צמצם הלהבים - AnimatedBuilder גורם לו לצייר מחדש בכל פריים
             AnimatedBuilder(
               animation: _animation,
               builder: (context, _) {
-                // כשהאנימציה נגמרת, אנחנו מעלימים את הציור כדי לחסוך ביצועים
-                if (_animation.value >= 0.99) return const SizedBox.shrink();
-                
-                return CustomPaint(
-                  painter: ApertureIrisPainter(
-                    progress: _animation.value,
-                  ),
-                );
+                if (_animation.value >= 0.98) return const SizedBox.shrink();
+                return CustomPaint(painter: ApertureIrisPainter(progress: _animation.value));
               },
             ),
-            
-            // המנעול המרכזי
+            // מנעול מרכזי
             AnimatedBuilder(
               animation: _animation,
               builder: (context, _) {
                 return Opacity(
                   opacity: (1.0 - _animation.value * 4).clamp(0.0, 1.0),
-                  child: Center(
-                    child: Icon(Icons.lock_person_rounded, color: kGold.withOpacity(0.9), size: 28),
-                  ),
+                  child: const Center(child: Icon(Icons.lock_person_rounded, color: Color(0xFFD4AF37), size: 28)),
                 );
               },
             ),
@@ -136,69 +103,40 @@ class ApertureIrisPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final diagonal = math.sqrt(size.width * size.width + size.height * size.height);
-    final outerRadius = diagonal * 0.7;
-    
-    // גודל החור המרכזי - גדל ככל שהאנימציה מתקדמת
+    final outerRadius = math.sqrt(size.width * size.width + size.height * size.height) * 0.7;
     final openingRadius = progress * outerRadius * 1.2;
 
-    // רקע אטום בבסיס
     canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFF07101F));
 
     const int bladeCount = 8;
     final double angleStep = (2 * math.pi) / bladeCount;
-    
-    // סיבוב הדרגתי תוך כדי פתיחה (אפקט הברגה)
     final double rotation = progress * (math.pi / 3);
 
     for (int i = 0; i < bladeCount; i++) {
       final double startAngle = i * angleStep + rotation;
-      
       final paint = Paint()
         ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFFD4AF37),
-            const Color(0xFFF7EF8A),
-            const Color(0xFFA1811A),
-          ],
+          colors: [const Color(0xFFD4AF37), const Color(0xFFF7EF8A), const Color(0xFFA1811A)],
         ).createShader(Offset.zero & size);
 
       final path = Path();
-      
-      // בניית הלהב הקשתי (Arc Blade)
       Offset p1 = center + Offset(math.cos(startAngle), math.sin(startAngle)) * openingRadius;
-      Offset p2 = center + Offset(math.cos(startAngle + angleStep * 1.6), math.sin(startAngle + angleStep * 1.6)) * outerRadius;
+      Offset p2 = center + Offset(math.cos(startAngle + angleStep * 1.8), math.sin(startAngle + angleStep * 1.8)) * outerRadius;
       Offset p3 = center + Offset(math.cos(startAngle + angleStep * 3.0), math.sin(startAngle + angleStep * 3.0)) * outerRadius;
 
       path.moveTo(p1.dx, p1.dy);
-      
-      // שימוש ב-quadraticBezierTo יוצר את הקימור המבוקש מהתמונה
-      Offset controlPoint = center + Offset(
-        math.cos(startAngle + angleStep * 0.8),
-        math.sin(startAngle + angleStep * 0.8),
-      ) * (openingRadius + (outerRadius - openingRadius) * 0.3);
-      
-      path.quadraticBezierTo(controlPoint.dx, controlPoint.dy, p2.dx, p2.dy);
+      path.quadraticBezierTo(
+        center.dx + math.cos(startAngle + angleStep * 0.8) * outerRadius * 0.4,
+        center.dy + math.sin(startAngle + angleStep * 0.8) * outerRadius * 0.4,
+        p2.dx, p2.dy,
+      );
       path.lineTo(p3.dx, p3.dy);
       path.close();
 
-      // צל לעומק תלת-ממדי
-      canvas.drawPath(path, Paint()
-        ..color = Colors.black.withOpacity(0.5)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
-
+      canvas.drawPath(path, Paint()..color = Colors.black54..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
       canvas.drawPath(path, paint);
-
-      // קו מתאר דק להדגשת המכניקה
-      canvas.drawPath(path, Paint()
-        ..color = const Color(0xFF4A3B10).withOpacity(0.7)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0);
     }
   }
-
   @override
   bool shouldRepaint(ApertureIrisPainter oldDelegate) => oldDelegate.progress != progress;
 }
