@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'dart:math' as math;
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
 class ApertureTile extends StatefulWidget {
@@ -23,10 +21,6 @@ class _ApertureTileState extends State<ApertureTile> with SingleTickerProviderSt
   static const Color kGold = Color(0xFFD4AF37);
   static const Color kNavy = Color(0xFF07101F);
 
-  static final AudioPlayer _shutterPlayer = AudioPlayer(playerId: 'aperture-shutter');
-  static final AssetSource _shutterSound = AssetSource('sounds/aperture_open.mp3');
-  static Future<void>? _preloadFuture;
-
   late final AnimationController _controller;
   late final Animation<double> _animation;
 
@@ -42,8 +36,6 @@ class _ApertureTileState extends State<ApertureTile> with SingleTickerProviderSt
       curve: Curves.easeInOutCubic,
     );
 
-    _preloadFuture ??= _shutterPlayer.setSource(_shutterSound);
-
     if (widget.isRevealed) {
       _controller.value = 1.0;
     }
@@ -56,18 +48,10 @@ class _ApertureTileState extends State<ApertureTile> with SingleTickerProviderSt
     if (widget.isRevealed != oldWidget.isRevealed) {
       if (widget.isRevealed) {
         _controller.forward(from: 0.0);
-        unawaited(_playShutterSound());
       } else {
         _controller.reverse();
       }
     }
-  }
-
-  static Future<void> _playShutterSound() async {
-    try {
-      await _shutterPlayer.stop();
-      await _shutterPlayer.play(_shutterSound);
-    } catch (_) {}
   }
 
   @override

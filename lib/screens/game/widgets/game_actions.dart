@@ -5,12 +5,8 @@ import '../../../core/constants/economy_config.dart';
 import '../../../providers/providers.dart';
 import '../../../services/feedback_service.dart';
 import '../../../services/hint_economy_guard.dart';
+import '../../../services/reward_calculator.dart';
 import '../../../widgets/game/animated_reward.dart';
-
-int _calcReward(int revealedCount, int total) {
-  if (total == 0) return 100;
-  return (100 - revealedCount / total * 80).clamp(20.0, 100.0).round();
-}
 
 class GameActions extends ConsumerWidget {
   final bool isMyTurn;
@@ -35,13 +31,13 @@ class GameActions extends ConsumerWidget {
     required this.onSkip,
   });
 
-  int _reward() => _calcReward(revealedCount, totalTiles);
-  int _penalty(int reward) => (reward * 0.15).round();
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final reward = _reward();
-    final penalty = _penalty(reward);
+    final prize = RewardCalculator.calculateCurrentPrizePotential(
+      isSolo: isSolo,
+      revealedCount: revealedCount,
+      totalTiles: totalTiles,
+    );
     final guessActive = canGuessNow && !isBusy;
 
     // Hint affordability — solo only; guard already enforces this server-side
@@ -74,8 +70,7 @@ class GameActions extends ConsumerWidget {
                       isActive: guessActive || (isMyTurn && !canGuessNow),
                       glow: guessActive,
                       onTap: guessActive ? onGuess : null,
-                      reward: canGuessNow ? reward : null,
-                      penalty: canGuessNow ? penalty : null,
+                      reward: canGuessNow ? prize : null,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -172,7 +167,6 @@ class _ActionButton extends StatelessWidget {
   final bool glow;
   final VoidCallback? onTap;
   final int? reward;
-  final int? penalty;
 
   const _ActionButton({
     required this.label,
@@ -181,12 +175,11 @@ class _ActionButton extends StatelessWidget {
     required this.glow,
     required this.onTap,
     this.reward,
-    this.penalty,
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasReward = reward != null && penalty != null;
+    final hasReward = reward != null;
 
     return GestureDetector(
       onTap: onTap == null
@@ -253,21 +246,10 @@ class _ActionButton extends StatelessWidget {
                       const SizedBox(height: 2),
                       FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AnimatedReward(
-                              key: ValueKey('penalty_$penalty'),
-                              value: penalty!,
-                              isPositive: false,
-                            ),
-                            const SizedBox(width: 12),
-                            AnimatedReward(
-                              key: ValueKey('reward_$reward'),
-                              value: reward!,
-                              isPositive: true,
-                            ),
-                          ],
+                        child: AnimatedReward(
+                          key: ValueKey('reward_$reward'),
+                          value: reward!,
+                          isPositive: true,
                         ),
                       ),
                     ],
