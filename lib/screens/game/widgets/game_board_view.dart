@@ -172,7 +172,7 @@ class _TileState extends State<_Tile> {
             duration: kRevealDuration,
             opacity: 1.0,
             child: TweenAnimationBuilder<double>(
-              key: ValueKey('${widget.index}-${widget.isRevealed}'),
+              key: ValueKey(widget.index),
               tween: Tween<double>(begin: widget.isRevealed ? 1.08 : 1.0, end: 1.0),
               duration: kRevealDuration,
               curve: Curves.easeOutCubic,
