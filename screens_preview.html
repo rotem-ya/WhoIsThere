@@ -2,118 +2,106 @@
 <html dir="rtl" lang="he">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #0a0a0a; display: flex; flex-wrap: wrap; justify-content: center; gap: 28px; padding: 28px; font-family: Arial, sans-serif; }
-.col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.label { color: #777; font-size: 11px; text-align: center; letter-spacing: 0.5px; }
-.screen-name { color: #ccc; font-size: 13px; font-weight: 700; margin-bottom: 2px; }
-.phone { width: 320px; height: 693px; border-radius: 36px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.8); display: flex; flex-direction: column; position: relative; }
+body { background: #0a0a0a; display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; font-family: Arial, sans-serif; }
+.col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.label { color: #aaa; font-size: 12px; font-weight: 700; }
 
-/* ── Auth current ── */
-.auth-dark { background: linear-gradient(180deg, #07101F 0%, #0E1E35 50%, #050A14 100%); }
-/* ── Home current ── */
-.home-dark { background: radial-gradient(ellipse at 50% 0%, #0E1E35 0%, #050A14 100%); }
-/* ── Lobby (target) ── */
-.lobby-bright { background: linear-gradient(180deg, #0D47A1 0%, #0A3880 55%, #00B8D4 100%); }
-/* ── Game current ── */
-.game-dark { background: linear-gradient(180deg, #101A48 0%, #0B0B24 55%, #130A2F 100%); }
-/* ── Winner current ── */
-.winner-dark { background: radial-gradient(ellipse at 50% 20%, rgba(212,175,55,0.22) 0%, #101A48 45%, #050A14 100%); }
-
-.sb { height: 36px; display:flex; align-items:center; justify-content:space-between; padding: 0 20px; }
+/* הגרדיאנט היחיד — של הלובי */
+.phone {
+  width: 300px; height: 640px;
+  background: linear-gradient(180deg, #0D47A1 0%, #0A3880 55%, #00B8D4 100%);
+  border-radius: 32px; overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+  display: flex; flex-direction: column;
+}
+.sb { height: 32px; display:flex; align-items:center; justify-content:space-between; padding: 0 18px; }
 .sb span { color:#fff; font-size:11px; font-weight:600; }
-.content { flex:1; padding: 16px; display:flex; flex-direction:column; }
+.content { flex:1; padding:14px 16px; display:flex; flex-direction:column; }
+.spacer { flex:1; }
 
-/* shared glass */
+/* glass card */
 .glass { background: linear-gradient(135deg,rgba(255,255,255,0.18),rgba(255,255,255,0.06)); border:1.2px solid rgba(255,255,255,0.28); border-radius:16px; }
-.glass-dark { background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10); border-radius:16px; }
 
-/* AUTH */
-.auth-logo { width:80px;height:80px;border-radius:24px;background:linear-gradient(135deg,#D4AF37,#A1811A);margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 8px 24px rgba(212,175,55,0.4); }
-.auth-title { color:#fff;font-size:36px;font-weight:900;text-align:center;letter-spacing:-1px;margin-bottom:8px; }
-.auth-sub { color:rgba(255,255,255,0.7);font-size:14px;text-align:center;margin-bottom:32px;line-height:1.4; }
-.btn-gold { height:52px;border-radius:16px;background:linear-gradient(180deg,#FFE082,#D4AF37,#A1811A);display:flex;align-items:center;justify-content:center;margin-bottom:10px;box-shadow:0 6px 20px rgba(212,175,55,0.4); }
-.btn-gold span { color:#07101F;font-size:17px;font-weight:900; }
-.btn-sec { height:48px;border-radius:16px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;margin-bottom:10px; }
-.btn-sec span { color:#fff;font-size:16px;font-weight:800; }
+/* ── AUTH ── */
+.auth-logo { width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#D4AF37,#A1811A);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 6px 20px rgba(212,175,55,0.4); }
+.auth-title { color:#fff;font-size:32px;font-weight:900;text-align:center;letter-spacing:-1px;margin-bottom:6px; }
+.auth-sub { color:rgba(255,255,255,0.7);font-size:13px;text-align:center;margin-bottom:24px;line-height:1.4; }
+.btn-gold { height:50px;border-radius:14px;background:linear-gradient(180deg,#FFE082,#D4AF37,#A1811A);display:flex;align-items:center;justify-content:center;margin-bottom:8px;box-shadow:0 5px 16px rgba(212,175,55,0.4); }
+.btn-gold span { color:#07101F;font-size:16px;font-weight:900; }
+.btn-sec { height:46px;border-radius:14px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;margin-bottom:8px; }
+.btn-sec span { color:#fff;font-size:15px;font-weight:700; }
 
-/* HOME */
-.home-icon { width:110px;height:110px;border-radius:28px;background:linear-gradient(135deg,#1565C0,#0D47A1);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:52px;border:2px solid rgba(212,175,55,0.3);box-shadow:0 0 40px rgba(212,175,55,0.15); }
-.home-title { color:#fff;font-size:40px;font-weight:900;text-align:center;letter-spacing:-1.5px;text-shadow:0 0 16px rgba(212,175,55,0.5); }
-.home-sub { color:#87CEEB;font-size:14px;font-weight:800;text-align:center;margin-bottom:20px; }
-.home-section { color:#fff;font-size:16px;font-weight:900;text-align:center;margin-bottom:10px; }
-.btn-main { height:60px;border-radius:16px;background:linear-gradient(180deg,#FFE082,#D4AF37,#A1811A);display:flex;align-items:center;justify-content:center;margin-bottom:8px;box-shadow:0 8px 24px rgba(212,175,55,0.42); }
-.btn-main span { color:#07101F;font-size:22px;font-weight:900; }
-.btn-join { height:52px;border-radius:16px;background:rgba(255,255,255,0.065);border:1.2px solid rgba(135,206,235,0.34);display:flex;align-items:center;justify-content:center; }
-.btn-join span { color:#fff;font-size:18px;font-weight:900; }
+/* ── HOME ── */
+.home-icon { width:96px;height:96px;border-radius:24px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:44px;box-shadow:0 0 30px rgba(0,242,255,0.2); }
+.home-title { color:#fff;font-size:36px;font-weight:900;text-align:center;letter-spacing:-1.5px;text-shadow:0 0 20px rgba(0,242,255,0.4); }
+.home-sub { color:rgba(255,255,255,0.75);font-size:13px;font-weight:700;text-align:center;margin-bottom:18px; }
+.home-section { color:#fff;font-size:15px;font-weight:900;text-align:center;margin-bottom:8px; }
+.btn-yellow { height:56px;border-radius:16px;background:linear-gradient(180deg,#FFEF70,#FFE14D,#E6C800);display:flex;align-items:center;justify-content:center;margin-bottom:8px;box-shadow:0 6px 16px rgba(255,225,77,0.5); }
+.btn-yellow span { color:#07101F;font-size:20px;font-weight:900; }
+.btn-join { height:48px;border-radius:16px;background:rgba(255,255,255,0.12);border:1.2px solid rgba(255,255,255,0.28);display:flex;align-items:center;justify-content:center; }
+.btn-join span { color:#fff;font-size:17px;font-weight:800; }
 
-/* LOBBY */
-.lobby-header { display:flex;align-items:center;margin-bottom:12px;gap:10px; }
-.back-btn { width:36px;height:36px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0; }
+/* ── LOBBY ── */
+.lobby-header { display:flex;align-items:center;margin-bottom:10px;gap:8px; }
+.back-btn { width:34px;height:34px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;flex-shrink:0; }
 .lobby-titles { flex:1;text-align:center; }
-.lobby-sub { color:rgba(255,255,255,0.7);font-size:11px; }
-.lobby-h1 { color:#fff;font-size:22px;font-weight:900; }
-.code-card { padding:8px 14px;border-radius:22px;margin-bottom:12px;text-align:center; }
-.code-text { font-size:36px;font-weight:900;color:#00F2FF;letter-spacing:4px;font-family:monospace;text-shadow:0 0 16px rgba(0,242,255,0.6); }
-.code-hint { font-size:10px;color:rgba(255,255,255,0.5);margin-top:2px; }
-.sec-label { color:#fff;font-size:15px;font-weight:700;text-align:right;margin-bottom:6px;text-shadow:0 0 8px rgba(0,242,255,0.7); }
-.pgrid { display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1;margin-bottom:8px; }
-.ptile { padding:6px 10px;border-radius:14px;display:flex;align-items:center;gap:8px;min-height:50px; }
-.ptile.me { border:1.5px solid rgba(0,242,255,0.7);box-shadow:0 0 16px rgba(0,242,255,0.4); }
+.lobby-sub { color:rgba(255,255,255,0.7);font-size:10px; }
+.lobby-h1 { color:#fff;font-size:20px;font-weight:900; }
+.code-card { padding:6px 12px;border-radius:20px;margin-bottom:10px;text-align:center; }
+.code-text { font-size:32px;font-weight:900;color:#00F2FF;letter-spacing:4px;font-family:monospace;text-shadow:0 0 14px rgba(0,242,255,0.6); }
+.code-hint { font-size:9px;color:rgba(255,255,255,0.5); }
+.sec-label { color:#fff;font-size:14px;font-weight:700;text-align:right;margin-bottom:5px;text-shadow:0 0 8px rgba(0,242,255,0.7); }
+.pgrid { display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;margin-bottom:8px; }
+.ptile { padding:5px 8px;border-radius:12px;display:flex;align-items:center;gap:6px;min-height:44px;background:linear-gradient(135deg,rgba(255,255,255,0.18),rgba(255,255,255,0.06));border:1px solid rgba(255,255,255,0.2); }
+.ptile.me { border:1.5px solid rgba(0,242,255,0.7);box-shadow:0 0 12px rgba(0,242,255,0.35); }
 .ptile.empty { background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08); }
-.av { width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#07101F;flex-shrink:0; }
-.av-ring { border:2px solid rgba(255,255,255,0.35);border-radius:50%;padding:1px;flex-shrink:0; }
-.av-ring.me { border-color:#00F2FF; }
-.pname { font-size:12px;font-weight:700;color:#fff; }
+.av { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#07101F;flex-shrink:0; }
+.pname { font-size:11px;font-weight:700;color:#fff; }
 .pname.me { color:#00F2FF; }
-.phbadge { font-size:9px;color:#FFE14D; }
-.emav { width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:16px;color:rgba(255,255,255,0.22); }
-.wtext { font-size:11px;color:rgba(255,255,255,0.22); }
-.start-btn { height:54px;border-radius:18px;background:linear-gradient(180deg,#FFEF70,#FFE14D,#E6C800);box-shadow:0 6px 14px rgba(255,225,77,0.5);display:flex;align-items:center;justify-content:center; }
-.start-btn span { font-size:20px;font-weight:800;color:#07101F; }
-.wait-footer { height:54px;border-radius:18px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center; }
-.wait-footer span { font-size:13px;color:rgba(255,255,255,0.5); }
+.phbadge { font-size:8px;color:#FFE14D; }
+.emav { width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:14px;color:rgba(255,255,255,0.22); }
+.wtext { font-size:10px;color:rgba(255,255,255,0.22); }
+.start-btn { height:50px;border-radius:16px;background:linear-gradient(180deg,#FFEF70,#FFE14D,#E6C800);box-shadow:0 5px 12px rgba(255,225,77,0.5);display:flex;align-items:center;justify-content:center; }
+.start-btn span { font-size:18px;font-weight:800;color:#07101F; }
 
-/* GAME */
-.game-hud { padding:10px 14px 8px;display:flex;justify-content:space-between;align-items:center; }
-.game-coin { color:#D4AF37;font-size:13px;font-weight:800; }
-.game-turn { color:rgba(255,255,255,0.6);font-size:11px; }
-.board { margin:8px 0;aspect-ratio:1;background:#050A14;border-radius:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px; }
-.tile { border-radius:8px;background:linear-gradient(135deg,#1A1040,#0D0828);border:1px solid rgba(212,175,55,0.3);display:flex;align-items:center;justify-content:center;font-size:18px; }
-.tile.rev { background:linear-gradient(135deg,#1565C0,#0D47A1);border-color:rgba(0,242,255,0.3); }
-.game-actions { display:flex;gap:8px;margin-top:8px; }
-.ga-btn { flex:1;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center; }
-.ga-btn.primary { background:linear-gradient(180deg,#FFE082,#D4AF37); }
+/* ── GAME ── */
+.game-hud { display:flex;justify-content:space-between;align-items:center;margin-bottom:8px; }
+.game-coin { color:#FFE14D;font-size:13px;font-weight:800;text-shadow:0 0 8px rgba(255,225,77,0.5); }
+.game-turn { color:rgba(255,255,255,0.65);font-size:11px; }
+.board { aspect-ratio:1;background:rgba(0,0,0,0.3);border-radius:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px;margin-bottom:8px; }
+.tile { border-radius:7px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:16px; }
+.tile.rev { background:rgba(0,242,255,0.15);border-color:rgba(0,242,255,0.35); }
+.game-actions { display:flex;gap:8px; }
+.ga-btn { flex:1;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center; }
+.ga-btn.primary { background:linear-gradient(180deg,#FFEF70,#FFE14D,#E6C800);box-shadow:0 4px 12px rgba(255,225,77,0.4); }
 .ga-btn.primary span { color:#07101F;font-size:14px;font-weight:900; }
-.ga-btn.sec { background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15); }
+.ga-btn.sec { background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.2); }
 .ga-btn.sec span { color:rgba(255,255,255,0.7);font-size:13px;font-weight:700; }
 
-/* WINNER */
-.trophy { font-size:64px;text-align:center;margin:20px 0 12px; }
-.win-title { font-size:36px;font-weight:900;color:#D4AF37;text-align:center;margin-bottom:8px; }
-.win-name { font-size:20px;font-weight:800;color:#fff;text-align:center;margin-bottom:6px; }
-.win-sub { font-size:13px;color:rgba(255,255,255,0.65);text-align:center;margin-bottom:24px;line-height:1.4; }
-.win-btn { height:52px;border-radius:16px;background:linear-gradient(180deg,#D4AF37,#A1811A);display:flex;align-items:center;justify-content:center; }
-.win-btn span { color:#07101F;font-size:17px;font-weight:900; }
-
-.section-div { width:100%;height:1px;background:rgba(255,255,255,0.1);margin:8px 0; }
-.spacer { flex:1; }
+/* ── WINNER ── */
+.trophy { font-size:60px;text-align:center;margin-bottom:10px; }
+.win-card { padding:20px;border-radius:20px;background:rgba(255,255,255,0.12);border:1.5px solid rgba(255,255,255,0.25); }
+.win-title { font-size:32px;font-weight:900;color:#FFE14D;text-align:center;margin-bottom:6px;text-shadow:0 0 16px rgba(255,225,77,0.5); }
+.win-name { font-size:18px;font-weight:800;color:#fff;text-align:center;margin-bottom:4px; }
+.win-sub { font-size:12px;color:rgba(255,255,255,0.65);text-align:center;margin-bottom:18px; }
+.win-btn { height:48px;border-radius:14px;background:linear-gradient(180deg,#FFEF70,#FFE14D,#E6C800);display:flex;align-items:center;justify-content:center; }
+.win-btn span { color:#07101F;font-size:16px;font-weight:900; }
 </style>
 </head>
 <body>
 
-<!-- ══ AUTH ══ -->
+<!-- כניסה -->
 <div class="col">
-  <div class="screen-name">כניסה</div>
-  <div class="label">עכשיו: כהה</div>
-  <div class="phone auth-dark">
+  <div class="label">כניסה</div>
+  <div class="phone">
     <div class="sb"><span>9:41</span><span>●●●</span></div>
     <div class="content" style="justify-content:center">
       <div class="auth-logo">📷</div>
       <div class="auth-title">מה בתמונה?</div>
       <div class="auth-sub">המשך כדי לשמור<br>התקדמות ולשחק</div>
-      <div class="spacer" style="max-height:40px"></div>
       <div class="btn-gold"><span>המשך כאורח</span></div>
       <div class="btn-sec"><span>המשך עם Google</span></div>
       <div class="btn-sec"><span>המשך עם Apple</span></div>
@@ -121,11 +109,10 @@ body { background: #0a0a0a; display: flex; flex-wrap: wrap; justify-content: cen
   </div>
 </div>
 
-<!-- ══ HOME ══ -->
+<!-- בית -->
 <div class="col">
-  <div class="screen-name">בית</div>
-  <div class="label">עכשיו: כהה</div>
-  <div class="phone home-dark">
+  <div class="label">בית</div>
+  <div class="phone">
     <div class="sb"><span>9:41</span><span>●●●</span></div>
     <div class="content" style="align-items:stretch">
       <div class="spacer"></div>
@@ -133,26 +120,25 @@ body { background: #0a0a0a; display: flex; flex-wrap: wrap; justify-content: cen
       <div class="home-title">מה בתמונה?</div>
       <div class="home-sub">חשוף חלקים ונחש את המקום</div>
       <div class="home-section">משחק מהיר</div>
-      <div class="btn-main"><span>2 שחקנים</span></div>
-      <div class="btn-main" style="height:54px;margin-top:0"><span>3-4 שחקנים</span></div>
-      <div class="spacer" style="max-height:14px"></div>
-      <div class="btn-join" style="margin-bottom:4px"><span>כניסה עם קוד</span></div>
-      <div class="spacer" style="max-height:24px"></div>
+      <div class="btn-yellow"><span>2 שחקנים</span></div>
+      <div class="btn-yellow" style="height:50px"><span>3-4 שחקנים</span></div>
+      <div style="height:10px"></div>
+      <div class="btn-join"><span>כניסה עם קוד</span></div>
+      <div class="spacer"></div>
     </div>
   </div>
 </div>
 
-<!-- ══ LOBBY ══ -->
+<!-- לובי -->
 <div class="col">
-  <div class="screen-name">לובי ✓</div>
-  <div class="label">יעד: הצבעים האלה</div>
-  <div class="phone lobby-bright">
+  <div class="label">לובי ✓ (קיים)</div>
+  <div class="phone">
     <div class="sb"><span>9:41</span><span>●●●</span></div>
     <div class="content">
       <div class="lobby-header">
         <div class="back-btn">›</div>
         <div class="lobby-titles"><div class="lobby-sub">ברוכים הבאים לחדר של רותם</div><div class="lobby-h1">לובי הסטודיו</div></div>
-        <div style="width:36px"></div>
+        <div style="width:34px"></div>
       </div>
       <div class="glass code-card">
         <div class="code-text">XK7M</div>
@@ -160,8 +146,8 @@ body { background: #0a0a0a; display: flex; flex-wrap: wrap; justify-content: cen
       </div>
       <div class="sec-label">שחקנים בסטודיו</div>
       <div class="pgrid">
-        <div class="ptile glass me"><div class="av-ring me"><div class="av" style="background:#00B8D4">ר</div></div><div><div class="pname me">אני</div><div class="phbadge">👑 מארח</div></div></div>
-        <div class="ptile glass"><div class="av-ring"><div class="av" style="background:#FFE14D">ד</div></div><div><div class="pname">דניאל</div></div></div>
+        <div class="ptile me"><div class="av" style="background:#00B8D4">ר</div><div><div class="pname me">אני</div><div class="phbadge">👑 מארח</div></div></div>
+        <div class="ptile"><div class="av" style="background:#FFE14D">ד</div><div><div class="pname">דניאל</div></div></div>
         <div class="ptile empty"><div class="emav">+</div><div class="wtext">ממתין...</div></div>
         <div class="ptile empty"><div class="emav">+</div><div class="wtext">ממתין...</div></div>
         <div class="ptile empty"><div class="emav">+</div><div class="wtext">ממתין...</div></div>
@@ -174,21 +160,20 @@ body { background: #0a0a0a; display: flex; flex-wrap: wrap; justify-content: cen
   </div>
 </div>
 
-<!-- ══ GAME ══ -->
+<!-- משחק -->
 <div class="col">
-  <div class="screen-name">משחק</div>
-  <div class="label">עכשיו: סגול כהה</div>
-  <div class="phone game-dark">
+  <div class="label">משחק</div>
+  <div class="phone">
     <div class="sb"><span>9:41</span><span>●●●</span></div>
-    <div class="content" style="padding:10px">
+    <div class="content">
       <div class="game-hud">
-        <div class="game-coin">💰 120</div>
+        <div class="game-coin">💰 120 מטבעות</div>
         <div class="game-turn">תור: רותם</div>
       </div>
       <div class="board">
-        <div class="tile rev"></div><div class="tile">🔒</div><div class="tile">🔒</div>
-        <div class="tile">🔒</div><div class="tile rev"></div><div class="tile">🔒</div>
-        <div class="tile">🔒</div><div class="tile">🔒</div><div class="tile rev"></div>
+        <div class="tile rev"></div><div class="tile">📷</div><div class="tile">📷</div>
+        <div class="tile">📷</div><div class="tile rev"></div><div class="tile">📷</div>
+        <div class="tile">📷</div><div class="tile">📷</div><div class="tile rev"></div>
       </div>
       <div class="game-actions">
         <div class="ga-btn primary"><span>נחש!</span></div>
@@ -198,20 +183,22 @@ body { background: #0a0a0a; display: flex; flex-wrap: wrap; justify-content: cen
   </div>
 </div>
 
-<!-- ══ WINNER ══ -->
+<!-- ניצחון -->
 <div class="col">
-  <div class="screen-name">ניצחון</div>
-  <div class="label">עכשיו: כהה + זהב</div>
-  <div class="phone winner-dark">
+  <div class="label">ניצחון</div>
+  <div class="phone">
     <div class="sb"><span>9:41</span><span>●●●</span></div>
     <div class="content" style="justify-content:center">
       <div class="trophy">🏆</div>
-      <div class="win-title">ניצחון!</div>
-      <div class="win-name">רותם גילה את המקום</div>
-      <div class="win-sub">כל הכבוד.<br>זה היה ניחוש מנצח.</div>
-      <div class="win-btn"><span>משחק חדש</span></div>
+      <div class="win-card">
+        <div class="win-title">ניצחון!</div>
+        <div class="win-name">רותם גילה את המקום</div>
+        <div class="win-sub">כל הכבוד. זה היה ניחוש מנצח.</div>
+        <div class="win-btn"><span>משחק חדש</span></div>
+      </div>
     </div>
   </div>
 </div>
 
-</body></html>
+</body>
+</html>
