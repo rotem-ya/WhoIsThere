@@ -69,6 +69,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   static final AudioPlayer _bgPlayer = AudioPlayer(playerId: 'studio-bg');
   static final AssetSource _bgMusic = AssetSource('sounds/background_studio.mp3');
 
+  // Reveal sound — owned here, not by ApertureTile
+  static final AudioPlayer _revealSoundPlayer = AudioPlayer(playerId: 'reveal-aperture');
+  static final AssetSource _revealSound = AssetSource('sounds/aperture_open.mp3');
+
+  static Future<void> _playRevealSound() async {
+    try {
+      await _revealSoundPlayer.stop();
+      await _revealSoundPlayer.play(_revealSound);
+    } catch (_) {}
+  }
+
   static Future<void> _startBackgroundMusic() async {
     try {
       await _bgPlayer.setReleaseMode(ReleaseMode.loop);
@@ -136,6 +147,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     final isLastTile = room.availablePieceIndices.length == 1;
 
     setState(() => _isBusy = true);
+    unawaited(_playRevealSound());
     try {
       await ref.read(roomServiceProvider).revealPiece(
             roomId: room.id,
@@ -341,6 +353,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   }
 
   Future<void> _useRevealHint(RoomModel room, String userId) async {
+    final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
+    if (!isSolo) return;
+
     final wallet = ref.read(walletProvider).valueOrNull;
     if (wallet == null) return;
 
