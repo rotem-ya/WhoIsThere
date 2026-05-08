@@ -66,6 +66,27 @@ class RewardCalculator {
     );
   }
 
+  // ── Prize potential (HUD preview, no speed / no penalty) ─────
+
+  /// Approximate coins the player would earn guessing correctly right now,
+  /// assuming zero wrong guesses. Speed bonus is excluded because the HUD
+  /// should not fluctuate by time.
+  static int calculateCurrentPrizePotential({
+    required bool isSolo,
+    required int revealedCount,
+    required int totalTiles,
+  }) {
+    final base = isSolo ? EconomyConfig.soloWinBase : EconomyConfig.multiWinBase;
+    final ratio = totalTiles <= 0
+        ? 1.0
+        : (revealedCount / totalTiles).clamp(0.0, 1.0);
+    final earlyGuess = _earlyGuessBonus(ratio);
+    final perfect = ratio <= EconomyConfig.perfectRevealRatioMax
+        ? EconomyConfig.perfectRoundBonus
+        : 0;
+    return base + earlyGuess + EconomyConfig.noWrongGuessBonus + perfect;
+  }
+
   // ── Daily reward ──────────────────────────────────────────────
 
   /// Returns the total coins to award for a daily login.

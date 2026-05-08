@@ -224,8 +224,11 @@ class _RewardSummary extends StatefulWidget {
 
 class _RewardSummaryState extends State<_RewardSummary> {
   bool _showBase = false;
+  bool _showEarlyGuess = false;
   bool _showSpeed = false;
-  bool _showEfficiency = false;
+  bool _showNoWrong = false;
+  bool _showPerfect = false;
+  bool _showPenalty = false;
   bool _showTotal = false;
 
   @override
@@ -239,16 +242,34 @@ class _RewardSummaryState extends State<_RewardSummary> {
     if (!mounted) return;
     setState(() => _showBase = true);
 
+    if (widget.breakdown.earlyGuessBonus > 0) {
+      await Future.delayed(const Duration(milliseconds: 480));
+      if (!mounted) return;
+      setState(() => _showEarlyGuess = true);
+    }
+
     if (widget.breakdown.speedBonus > 0) {
       await Future.delayed(const Duration(milliseconds: 480));
       if (!mounted) return;
       setState(() => _showSpeed = true);
     }
 
-    if (widget.breakdown.efficiencyBonus > 0) {
+    if (widget.breakdown.noWrongGuessBonus > 0) {
       await Future.delayed(const Duration(milliseconds: 480));
       if (!mounted) return;
-      setState(() => _showEfficiency = true);
+      setState(() => _showNoWrong = true);
+    }
+
+    if (widget.breakdown.perfectRoundBonus > 0) {
+      await Future.delayed(const Duration(milliseconds: 480));
+      if (!mounted) return;
+      setState(() => _showPerfect = true);
+    }
+
+    if (widget.breakdown.wrongGuessPenalty > 0) {
+      await Future.delayed(const Duration(milliseconds: 480));
+      if (!mounted) return;
+      setState(() => _showPenalty = true);
     }
 
     await Future.delayed(const Duration(milliseconds: 480));
@@ -258,6 +279,7 @@ class _RewardSummaryState extends State<_RewardSummary> {
 
   @override
   Widget build(BuildContext context) {
+    final b = widget.breakdown;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
@@ -269,23 +291,45 @@ class _RewardSummaryState extends State<_RewardSummary> {
         children: [
           _RewardRow(
             label: 'פרס בסיסי',
-            coins: widget.breakdown.baseReward,
+            coins: b.baseReward,
             visible: _showBase,
             color: Colors.white,
           ),
-          if (widget.breakdown.speedBonus > 0)
+          if (b.earlyGuessBonus > 0)
+            _RewardRow(
+              label: '🎯 זיהוי מוקדם',
+              coins: b.earlyGuessBonus,
+              visible: _showEarlyGuess,
+              color: const Color(0xFF87CEEB),
+            ),
+          if (b.speedBonus > 0)
             _RewardRow(
               label: '⚡ בונוס מהירות',
-              coins: widget.breakdown.speedBonus,
+              coins: b.speedBonus,
               visible: _showSpeed,
               color: const Color(0xFFFFE082),
             ),
-          if (widget.breakdown.efficiencyBonus > 0)
+          if (b.noWrongGuessBonus > 0)
             _RewardRow(
-              label: '🎯 בונוס דיוק',
-              coins: widget.breakdown.efficiencyBonus,
-              visible: _showEfficiency,
-              color: const Color(0xFF87CEEB),
+              label: '✅ ללא טעויות',
+              coins: b.noWrongGuessBonus,
+              visible: _showNoWrong,
+              color: const Color(0xFF81C784),
+            ),
+          if (b.perfectRoundBonus > 0)
+            _RewardRow(
+              label: '🌟 פתיחה מושלמת',
+              coins: b.perfectRoundBonus,
+              visible: _showPerfect,
+              color: const Color(0xFFD4AF37),
+            ),
+          if (b.wrongGuessPenalty > 0)
+            _RewardRow(
+              label: '❌ קנס טעויות',
+              coins: b.wrongGuessPenalty,
+              visible: _showPenalty,
+              color: const Color(0xFFEF9A9A),
+              isNegative: true,
             ),
           AnimatedSize(
             duration: const Duration(milliseconds: 280),
@@ -294,7 +338,7 @@ class _RewardSummaryState extends State<_RewardSummary> {
                 ? Column(
                     children: [
                       const SizedBox(height: 8),
-                      _TotalRow(total: widget.breakdown.total),
+                      _TotalRow(total: b.total),
                     ],
                   )
                 : const SizedBox.shrink(),
@@ -310,16 +354,19 @@ class _RewardRow extends StatelessWidget {
   final int coins;
   final bool visible;
   final Color color;
+  final bool isNegative;
 
   const _RewardRow({
     required this.label,
     required this.coins,
     required this.visible,
     required this.color,
+    this.isNegative = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final coinText = isNegative ? '−$coins 🪙' : '+$coins 🪙';
     return AnimatedOpacity(
       opacity: visible ? 1 : 0,
       duration: const Duration(milliseconds: 300),
@@ -338,7 +385,7 @@ class _RewardRow extends StatelessWidget {
               ),
             ),
             Text(
-              '+$coins 🪙',
+              coinText,
               style: TextStyle(
                 color: color,
                 fontSize: 15,
