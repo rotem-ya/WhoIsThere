@@ -1,7 +1,13 @@
 import 'widgets/answer_slots.dart';
 import 'widgets/game_layout.dart';
 import 'widgets/game_winner_view.dart';
-import 'dart:math' show Random, min;
+import 'dart:async';
+import 'dart:math' show Random, min, pi;
+
+import 'package:audioplayers/audioplayers.dart';
+import 'package:confetti/confetti.dart';
+
+import '../../core/theme/app_styles.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -57,10 +63,33 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   String _botTypingName = '';
   String _botTypingText = '';
 
+  // Correct-guess victory overlay
+  bool _showCorrectGuess = false;
+  late final ConfettiController _confettiLeft;
+  late final ConfettiController _confettiRight;
+  static final AudioPlayer _victoryPlayer = AudioPlayer(playerId: 'victory-fanfare');
+  static final AssetSource _victorySound = AssetSource('sounds/victory_fanfare.mp3');
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiLeft = ConfettiController(duration: const Duration(seconds: 2));
+    _confettiRight = ConfettiController(duration: const Duration(seconds: 2));
+  }
+
   @override
   void dispose() {
     _guessController.dispose();
+    _confettiLeft.dispose();
+    _confettiRight.dispose();
     super.dispose();
+  }
+
+  static Future<void> _playVictorySound() async {
+    try {
+      await _victoryPlayer.stop();
+      await _victoryPlayer.play(_victorySound);
+    } catch (_) {}
   }
 
   Future<void> _loadImage(String imageId) async {
@@ -277,9 +306,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
         );
 
     if (!mounted) return correct;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(correct ? 'נכון!' : 'לא נכון, נסה שוב')),
-    );
+    if (correct) {
+      setState(() => _showCorrectGuess = true);
+      _confettiLeft.play();
+      _confettiRight.play();
+      unawaited(_playVictorySound());
+      Future.delayed(const Duration(milliseconds: 2500), () {
+        if (mounted) setState(() => _showCorrectGuess = false);
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('לא נכון, נסה שוב')),
+      );
+    }
     return correct;
   }
 
@@ -369,17 +408,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: const Color(0xFF0A0A1E),
-        body: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF101A48), Color(0xFF0B0B24), Color(0xFF130A2F)],
-            ),
-          ),
-          child: SafeArea(
-            top: false,
-            child: roomAsync.when(
+        body: Stack(
+          children: [
+            DecoratedBox(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF101A48), Color(0xFF0B0B24), Color(0xFF130A2F)],
+                ),
+              ),
+              child: SafeArea(
+                top: false,
+                child: roomAsync.when(
               loading: () => const Center(
                 child: CircularProgressIndicator(color: Color(0xFF8B6FFF)),
               ),
@@ -477,6 +518,50 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               },
             ),
           ),
+        ),
+            if (_showCorrectGuess) ...[
+              Align(
+                alignment: Alignment.topLeft,
+                child: ConfettiWidget(
+                  confettiController: _confettiLeft,
+                  blastDirection: -pi / 4,
+                  colors: const [Color(0xFF00F2FF), Color(0xFFFFE14D), Colors.white],
+                  numberOfParticles: 22,
+                  gravity: 0.18,
+                  shouldLoop: false,
+                ),
+              ),
+              Align(
+                alignment: Alignment.topRight,
+                child: ConfettiWidget(
+                  confettiController: _confettiRight,
+                  blastDirection: -3 * pi / 4,
+                  colors: const [Color(0xFF00F2FF), Color(0xFFFFE14D), Colors.white],
+                  numberOfParticles: 22,
+                  gravity: 0.18,
+                  shouldLoop: false,
+                ),
+              ),
+              Center(
+                child: IgnorePointer(
+                  child: Text(
+                    'ניחוש נכון! ✨',
+                    textAlign: TextAlign.center,
+                    style: AppStyles.heading1.copyWith(
+                      fontSize: 48,
+                      shadows: [
+                        Shadow(color: AppStyles.cyanGlow, blurRadius: 30),
+                        Shadow(
+                          color: AppStyles.cyanGlow.withOpacity(0.5),
+                          blurRadius: 60,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

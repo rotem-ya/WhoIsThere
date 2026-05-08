@@ -9,7 +9,9 @@ import 'package:flutter/services.dart';
 import '../../../utils/game_constants.dart';
 import '../../../widgets/game/aperture_tile.dart';
 
-class GameBoardView extends StatelessWidget {
+const Duration _kApertureDuration = Duration(milliseconds: 1500);
+
+class GameBoardView extends StatefulWidget {
   final int gridSize;
   final List<int> revealedCells;
   final List<int> availableCells;
@@ -30,11 +32,27 @@ class GameBoardView extends StatelessWidget {
   });
 
   @override
+  State<GameBoardView> createState() => _GameBoardViewState();
+}
+
+class _GameBoardViewState extends State<GameBoardView> {
+  bool _locked = false;
+
+  void _handleReveal(int index) {
+    if (_locked) return;
+    setState(() => _locked = true);
+    widget.onReveal?.call(index);
+    Future.delayed(_kApertureDuration, () {
+      if (mounted) setState(() => _locked = false);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final side = math.min(constraints.maxWidth, constraints.maxHeight);
-        final tileSize = side / gridSize;
+        final tileSize = side / widget.gridSize;
         return Center(
           child: AnimatedContainer(
             duration: kRevealDuration,
@@ -45,12 +63,12 @@ class GameBoardView extends StatelessWidget {
               color: kNavyBlack,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: enabled ? kCyan.withOpacity(0.15) : Colors.transparent,
+                color: widget.enabled ? kCyan.withOpacity(0.15) : Colors.transparent,
                 width: 1,
               ),
             ),
             child: ColorFiltered(
-              colorFilter: enabled
+              colorFilter: widget.enabled
                   ? const ColorFilter.mode(Colors.transparent, BlendMode.dst)
                   : const ColorFilter.matrix(<double>[
                       0.95, 0, 0, 0, 0,
@@ -58,20 +76,23 @@ class GameBoardView extends StatelessWidget {
                       0, 0, 0.95, 0, 0,
                       0, 0, 0, 1, 0,
                     ]),
-              child: Stack(
-                children: [
-                  for (var index = 0; index < gridSize * gridSize; index++)
-                    _Tile(
-                      index: index,
-                      gridSize: gridSize,
-                      tileSize: tileSize,
-                      imageUrl: imageUrl,
-                      isRevealed: revealedCells.contains(index),
-                      isAvailable: availableCells.contains(index),
-                      enabled: enabled,
-                      onReveal: onReveal,
-                    ),
-                ],
+              child: IgnorePointer(
+                ignoring: _locked,
+                child: Stack(
+                  children: [
+                    for (var index = 0; index < widget.gridSize * widget.gridSize; index++)
+                      _Tile(
+                        index: index,
+                        gridSize: widget.gridSize,
+                        tileSize: tileSize,
+                        imageUrl: widget.imageUrl,
+                        isRevealed: widget.revealedCells.contains(index),
+                        isAvailable: widget.availableCells.contains(index),
+                        enabled: widget.enabled,
+                        onReveal: widget.onReveal != null ? _handleReveal : null,
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -109,8 +130,8 @@ class _Tile extends StatefulWidget {
 class _TileState extends State<_Tile> {
   bool _pressed = false;
 
-  static final AssetSource _revealSound = AssetSource('sounds/shutter_click.mp3');
-  static final AudioPlayer _revealPlayer = AudioPlayer(playerId: 'shutter-click');
+  static final AssetSource _revealSound = AssetSource('sounds/aperture_open.mp3');
+  static final AudioPlayer _revealPlayer = AudioPlayer(playerId: 'aperture-reveal');
   static Future<void>? _preloadFuture;
 
   bool get _canTap => widget.enabled && widget.isAvailable && !widget.isRevealed && widget.onReveal != null;
