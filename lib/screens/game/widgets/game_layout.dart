@@ -13,8 +13,6 @@ class GameLayout extends StatelessWidget {
   final GameImageModel? image;
   final bool isMyTurn;
   final bool isBusy;
-  final int myCoins;
-  final int myLetterCards;
   final bool canGuessNow;
   final bool isSolo;
   final bool showBanner;
@@ -33,8 +31,6 @@ class GameLayout extends StatelessWidget {
     required this.image,
     required this.isMyTurn,
     required this.isBusy,
-    required this.myCoins,
-    required this.myLetterCards,
     required this.canGuessNow,
     required this.isSolo,
     required this.showBanner,
@@ -63,8 +59,6 @@ class GameLayout extends StatelessWidget {
           currentPlayerId: room.currentTurnUserId,
           currentPlayerName: currentPlayer?.name ?? '',
           revealedText: '$revealedCount/$total',
-          myCoins: myCoins,
-          myLetterCards: myLetterCards,
           onBack: onBack,
         ),
         if (showBotTyping)
