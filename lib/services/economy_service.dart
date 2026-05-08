@@ -63,6 +63,8 @@ class EconomyService {
     required bool isWin,
     required bool isSolo,
     required int tilesRevealedCount,
+    required int totalTilesCount,
+    required int wrongGuessCount,
     required Duration timeTaken,
     String? roomId,
   }) async {
@@ -70,6 +72,8 @@ class EconomyService {
       isWin: isWin,
       isSolo: isSolo,
       tilesRevealedCount: tilesRevealedCount,
+      totalTilesCount: totalTilesCount,
+      wrongGuessCount: wrongGuessCount,
       timeTaken: timeTaken,
     );
 
@@ -80,9 +84,15 @@ class EconomyService {
         type: isWin ? TransactionType.matchWin : TransactionType.matchParticipation,
         roomId: roomId,
         meta: {
+          'earlyGuessBonus': breakdown.earlyGuessBonus,
           'speedBonus': breakdown.speedBonus,
-          'efficiencyBonus': breakdown.efficiencyBonus,
+          'noWrongGuessBonus': breakdown.noWrongGuessBonus,
+          'perfectRoundBonus': breakdown.perfectRoundBonus,
+          'wrongGuessPenalty': breakdown.wrongGuessPenalty,
           'tilesRevealed': tilesRevealedCount,
+          'totalTiles': totalTilesCount,
+          'revealRatio': breakdown.revealRatio,
+          'wrongGuessCount': wrongGuessCount,
           'secondsTaken': timeTaken.inSeconds,
         },
         statUpdater: (w) => w.copyWith(

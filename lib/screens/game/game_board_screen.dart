@@ -321,6 +321,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     final timeTaken = _gameStartTime != null
         ? DateTime.now().difference(_gameStartTime!)
         : const Duration(seconds: 999);
+    final totalTilesCount = room.gridSize * room.gridSize;
 
     try {
       final breakdown = await ref.read(economyServiceProvider).applyMatchReward(
@@ -328,6 +329,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
             isWin: isWin,
             isSolo: isSolo,
             tilesRevealedCount: room.placedPieces.length,
+            totalTilesCount: totalTilesCount,
+            wrongGuessCount: 0,
             timeTaken: timeTaken,
             roomId: room.id,
           );
