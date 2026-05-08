@@ -63,6 +63,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   String _botTypingName = '';
   String _botTypingText = '';
 
+  // Background music
+  static final AudioPlayer _bgPlayer = AudioPlayer(playerId: 'studio-bg');
+  static final AssetSource _bgMusic = AssetSource('sounds/background_studio.mp3');
+
+  static Future<void> _startBackgroundMusic() async {
+    try {
+      await _bgPlayer.setReleaseMode(ReleaseMode.loop);
+      await _bgPlayer.setVolume(0.30);
+      await _bgPlayer.play(_bgMusic);
+    } catch (_) {}
+  }
+
   // Correct-guess victory overlay
   bool _showCorrectGuess = false;
   late final ConfettiController _confettiLeft;
@@ -75,6 +87,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     super.initState();
     _confettiLeft = ConfettiController(duration: const Duration(seconds: 2));
     _confettiRight = ConfettiController(duration: const Duration(seconds: 2));
+    unawaited(_startBackgroundMusic());
   }
 
   @override
@@ -82,6 +95,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
+    unawaited(_bgPlayer.stop());
     super.dispose();
   }
 
