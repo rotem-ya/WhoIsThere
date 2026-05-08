@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants/game_constants.dart';
+import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/player_model.dart';
 import '../../widgets/common/app_feedback.dart';
@@ -19,11 +20,6 @@ class LobbyScreen extends ConsumerStatefulWidget {
 }
 
 class _LobbyScreenState extends ConsumerState<LobbyScreen> {
-  static const Color _navyTop = Color(0xFF07101F);
-  static const Color _navyBottom = Color(0xFF0A1D3A);
-  static const Color _bananaYellow = Color(0xFFFFE14D);
-  static const Color _cyanGlow = Color(0xFF00F2FF);
-
   bool _isStarting = false;
   bool _codeCopied = false;
 
@@ -59,24 +55,22 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         return Scaffold(
           body: Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [_navyTop, _navyBottom],
-              ),
+              gradient: AppStyles.backgroundGradient,
             ),
             child: SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final h = constraints.maxHeight;
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     child: Column(
                       children: [
+                        // ── Header ──────────────────────────────────────
                         _buildHeader(context, currentUser, hostName),
-                        
-                        SizedBox(height: h * 0.02),
-                        
+
+                        SizedBox(height: h * 0.018),
+
+                        // ── Room Code Card ───────────────────────────────
                         Flexible(
                           flex: 2,
                           child: _GlossyRoomCode(
@@ -86,24 +80,28 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                             onShare: () => _shareToWhatsApp(room.code),
                           ),
                         ),
-                        
-                        SizedBox(height: h * 0.03),
-                        
-                        const Align(
+
+                        SizedBox(height: h * 0.022),
+
+                        // ── Section label ─────────────────────────────────
+                        Align(
                           alignment: Alignment.centerRight,
                           child: Text(
-                            'שחקנים בסטודיו', 
-                            style: TextStyle(
-                              color: Colors.white, 
-                              fontSize: 18, 
-                              fontWeight: FontWeight.w900,
-                              shadows: [Shadow(color: _cyanGlow, blurRadius: 10)],
+                            'שחקנים בסטודיו',
+                            style: AppStyles.heading3.copyWith(
+                              shadows: [
+                                Shadow(
+                                  color: AppStyles.cyanGlow.withOpacity(0.8),
+                                  blurRadius: 10,
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        
-                        const SizedBox(height: 10),
-                        
+
+                        const SizedBox(height: 8),
+
+                        // ── Players grid (2 × 4 = 8 fixed slots) ──────────
                         Expanded(
                           flex: 5,
                           child: _PlayerGrid(
@@ -111,13 +109,13 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                             currentUserId: currentUser?.id,
                           ),
                         ),
-                        
-                        const SizedBox(height: 10),
-                        
-                        // תיקון SizedBox ל-Container שתומך ב-constraints
+
+                        const SizedBox(height: 8),
+
+                        // ── Action button / waiting footer ─────────────────
                         Container(
                           height: h * 0.1,
-                          constraints: const BoxConstraints(maxHeight: 75, minHeight: 60),
+                          constraints: const BoxConstraints(maxHeight: 75, minHeight: 56),
                           child: isHost
                               ? _GlossyActionButton(
                                   label: _isStarting ? 'מכין צמצמים...' : 'התחל משחק',
@@ -125,13 +123,15 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                   onTap: () async {
                                     setState(() => _isStarting = true);
                                     try {
-                                      await ref.read(roomServiceProvider).startGameDirectly(widget.roomId);
+                                      await ref
+                                          .read(roomServiceProvider)
+                                          .startGameDirectly(widget.roomId);
                                     } catch (e) {
-                                      setState(() => _isStarting = false);
+                                      if (mounted) setState(() => _isStarting = false);
                                     }
                                   },
                                 )
-                              : _WaitingFooter(),
+                              : const _WaitingFooter(),
                         ),
                       ],
                     ),
@@ -142,8 +142,18 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator(color: _bananaYellow)),
-      error: (e, _) => Center(child: Text('שגיאה: $e', style: const TextStyle(color: Colors.white))),
+      loading: () => const Scaffold(
+        backgroundColor: AppStyles.navyTop,
+        body: Center(
+          child: CircularProgressIndicator(color: AppStyles.bananaYellow),
+        ),
+      ),
+      error: (e, _) => Scaffold(
+        backgroundColor: AppStyles.navyTop,
+        body: Center(
+          child: Text('שגיאה: $e', style: AppStyles.bodyLarge),
+        ),
+      ),
     );
   }
 
@@ -151,47 +161,63 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     return Row(
       textDirection: TextDirection.rtl,
       children: [
+        // Back / leave button
         GestureDetector(
           onTap: () async {
             if (currentUser != null) {
-              await ref.read(roomServiceProvider).leaveRoom(widget.roomId, currentUser.id);
+              await ref
+                  .read(roomServiceProvider)
+                  .leaveRoom(widget.roomId, currentUser.id);
             }
             if (context.mounted) context.go('/home');
           },
           child: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withOpacity(0.15),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white24),
+              border: Border.all(color: Colors.white38),
+              boxShadow: AppStyles.cyanGlowShadow(intensity: 0.3),
             ),
-            child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
         ),
+
         const Spacer(),
+
+        // Title block
         Flexible(
           flex: 8,
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 'ברוכים הבאים לחדר של $hostName',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+                style: AppStyles.bodySmall.copyWith(color: Colors.white70),
               ),
-              const Text(
+              const SizedBox(height: 2),
+              Text(
                 'לובי הסטודיו',
-                style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
+                style: AppStyles.heading1.copyWith(fontSize: 26),
               ),
             ],
           ),
         ),
+
         const Spacer(),
         const SizedBox(width: 40),
       ],
     );
   }
 }
+
+// ── Room Code Card ─────────────────────────────────────────────────────────
 
 class _GlossyRoomCode extends StatelessWidget {
   final String code;
@@ -200,9 +226,9 @@ class _GlossyRoomCode extends StatelessWidget {
   final VoidCallback onShare;
 
   const _GlossyRoomCode({
-    required this.code, 
-    required this.isCopied, 
-    required this.onCopy, 
+    required this.code,
+    required this.isCopied,
+    required this.onCopy,
     required this.onShare,
   });
 
@@ -210,55 +236,68 @@ class _GlossyRoomCode extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.white12, width: 1.5),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: AppStyles.glassCard(radius: 24, opacity: 0.20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // WhatsApp share
                 IconButton(
                   onPressed: onShare,
-                  icon: const Icon(Icons.share_rounded, color: Color(0xFF25D366), size: 24),
+                  icon: const Icon(
+                    Icons.share_rounded,
+                    color: Color(0xFF25D366),
+                    size: 26,
+                  ),
                 ),
                 const SizedBox(width: 8),
+
+                // Room code — tap to copy
                 GestureDetector(
                   onTap: onCopy,
                   child: Text(
                     code,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 42,
+                    style: AppStyles.cyanLabelLarge.copyWith(
+                      fontSize: 44,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 4,
+                      letterSpacing: 5,
+                      shadows: AppStyles.cyanGlowShadow(intensity: 0.6)
+                          .map((s) => Shadow(
+                                color: s.color,
+                                blurRadius: s.blurRadius,
+                              ))
+                          .toList(),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
+
+                // Copy status icon
                 Icon(
                   isCopied ? Icons.check_circle_rounded : Icons.copy_rounded,
                   color: isCopied ? Colors.greenAccent : Colors.white54,
-                  size: 20,
+                  size: 22,
                 ),
               ],
             ),
           ),
-          const Text(
-            'לחץ להעתקה או שתף לחברים', 
-            style: TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold),
+          Text(
+            'לחץ להעתקה או שתף לחברים',
+            style: AppStyles.bodySmall.copyWith(color: Colors.white54),
           ),
         ],
       ),
     );
   }
 }
+
+// ── Players Grid (fixed 2 × 4 = 8 slots) ──────────────────────────────────
 
 class _PlayerGrid extends StatelessWidget {
   final List<PlayerModel> players;
@@ -272,21 +311,25 @@ class _PlayerGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: 8,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 0.75,
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 2.8,
       ),
       itemBuilder: (context, index) {
         if (index < players.length) {
-          final player = players[index];
-          return _PlayerAvatarTile(player: player, isMe: player.id == currentUserId);
+          return _PlayerAvatarTile(
+            player: players[index],
+            isMe: players[index].id == currentUserId,
+          );
         }
-        return _EmptyPlayerTile();
+        return const _EmptyPlayerTile();
       },
     );
   }
 }
+
+// ── Filled player slot ─────────────────────────────────────────────────────
 
 class _PlayerAvatarTile extends StatelessWidget {
   final PlayerModel player;
@@ -295,70 +338,117 @@ class _PlayerAvatarTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: isMe ? const Color(0xFF00F2FF) : Colors.white24, 
-              width: 2,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: AppStyles.glassCard(radius: 16, opacity: 0.18).copyWith(
+        boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.7) : null,
+        border: Border.all(
+          color: isMe
+              ? AppStyles.cyanGlow.withOpacity(0.7)
+              : Colors.white.withOpacity(0.20),
+          width: isMe ? 1.5 : 1.0,
+        ),
+      ),
+      child: Row(
+        textDirection: TextDirection.rtl,
+        children: [
+          // Avatar with cyan ring for current user
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isMe ? AppStyles.cyanGlow : Colors.white38,
+                width: 2,
+              ),
+              boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.5) : null,
+            ),
+            child: PlayerAvatar(name: player.name, radius: 20),
+          ),
+          const SizedBox(width: 10),
+
+          // Name + host badge
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isMe ? 'אני' : player.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppStyles.bodyMedium.copyWith(
+                    color: isMe ? AppStyles.cyanGlow : Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (player.isHost)
+                  Text(
+                    '👑 מארח',
+                    style: AppStyles.bodySmall.copyWith(
+                      color: AppStyles.bananaYellow,
+                      fontSize: 10,
+                    ),
+                  ),
+              ],
             ),
           ),
-          child: PlayerAvatar(name: player.name, radius: 24),
-        ),
-        const SizedBox(height: 4),
-        Flexible(
-          child: Text(
-            isMe ? 'אני' : player.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: isMe ? const Color(0xFF00F2FF) : Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        if (player.isHost) const Text('👑', style: TextStyle(fontSize: 10)),
-      ],
+        ],
+      ),
     );
   }
 }
 
+// ── Empty waiting slot ─────────────────────────────────────────────────────
+
 class _EmptyPlayerTile extends StatelessWidget {
+  const _EmptyPlayerTile();
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withOpacity(0.05),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.04),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.08),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        textDirection: TextDirection.rtl,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.06),
+              border: Border.all(color: Colors.white12, width: 1.5),
+            ),
+            child: const Icon(Icons.add, color: Colors.white24, size: 20),
           ),
-          child: const Icon(Icons.add, color: Colors.white12, size: 20),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'ממתין...', 
-          style: TextStyle(color: Colors.white12, fontSize: 10),
-        ),
-      ],
+          const SizedBox(width: 10),
+          Text(
+            'ממתין...',
+            style: AppStyles.bodySmall.copyWith(color: Colors.white24),
+          ),
+        ],
+      ),
     );
   }
 }
+
+// ── Start game button (host only) ──────────────────────────────────────────
 
 class _GlossyActionButton extends StatelessWidget {
   final String label;
   final bool enabled;
   final VoidCallback onTap;
   const _GlossyActionButton({
-    required this.label, 
-    required this.enabled, 
+    required this.label,
+    required this.enabled,
     required this.onTap,
   });
 
@@ -369,24 +459,19 @@ class _GlossyActionButton extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: enabled 
-                ? [const Color(0xFFFFE14D), const Color(0xFFFFB800)] 
-                : [Colors.white10, Colors.white10],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white30, width: 1.5),
-        ),
+        decoration: enabled
+            ? AppStyles.glossyButton(radius: 20)
+            : BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: Colors.white10,
+                border: Border.all(color: Colors.white12),
+              ),
         child: Center(
           child: Text(
-            label, 
-            style: TextStyle(
-              color: enabled ? const Color(0xFF07101F) : Colors.white24, 
-              fontSize: 22, 
-              fontWeight: FontWeight.w900,
+            label,
+            style: AppStyles.labelButton.copyWith(
+              fontSize: 22,
+              color: enabled ? AppStyles.darkText : Colors.white24,
             ),
           ),
         ),
@@ -395,19 +480,20 @@ class _GlossyActionButton extends StatelessWidget {
   }
 }
 
+// ── Non-host waiting message ───────────────────────────────────────────────
+
 class _WaitingFooter extends StatelessWidget {
+  const _WaitingFooter();
+
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Text(
-        'ממתין למארח שיתחיל...', 
-        style: TextStyle(color: Colors.white24, fontSize: 15, fontWeight: FontWeight.bold),
+      decoration: AppStyles.glassCard(radius: 20, opacity: 0.10),
+      child: Text(
+        'ממתין למארח שיתחיל...',
+        style: AppStyles.bodyMedium.copyWith(color: Colors.white54),
       ),
     );
   }
