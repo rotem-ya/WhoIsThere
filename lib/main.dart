@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'core/theme/app_styles.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_router.dart';
 import 'firebase_options.dart';
@@ -28,10 +29,12 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
+  // Light icons/text on status bar — the new background is blue, not dark navy.
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark, // iOS equivalent
     ),
   );
 
@@ -58,40 +61,36 @@ class _ErrorApp extends StatelessWidget {
       ],
       supportedLocales: const [Locale('he'), Locale('en')],
       home: Scaffold(
-        backgroundColor: const Color(0xFF2D3561),
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('⚠️', style: TextStyle(fontSize: 64)),
-                const SizedBox(height: 16),
-                const Text(
-                  'Startup Error',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: AppStyles.backgroundGradient,
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('⚠️', style: TextStyle(fontSize: 64)),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Startup Error',
+                    style: AppStyles.heading2,
                   ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.black38,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: SelectableText(
-                    error,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                      fontFamily: 'monospace',
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: AppStyles.glassCard(radius: 12),
+                    child: SelectableText(
+                      error,
+                      style: AppStyles.bodySmall.copyWith(
+                        fontFamily: 'monospace',
+                        color: Colors.white70,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -105,6 +104,7 @@ class GuessThePlaceApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // ref.watch keeps the Riverpod provider alive — do not remove.
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
