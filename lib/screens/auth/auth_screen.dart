@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -54,9 +54,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppStyles.navyTop,
         body: DecoratedBox(
-          decoration: const BoxDecoration(gradient: AppColors.pageBackground),
+          decoration: const BoxDecoration(gradient: AppStyles.backgroundGradient),
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30),

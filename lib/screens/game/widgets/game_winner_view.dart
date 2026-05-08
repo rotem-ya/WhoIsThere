@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_styles.dart';
+
 class GameWinnerView extends StatefulWidget {
   final String winnerName;
   final VoidCallback onHome;
@@ -87,17 +89,9 @@ class _WinnerBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    return const DecoratedBox(
       decoration: BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment.topCenter,
-          radius: 1.2,
-          colors: [
-            const Color(0xFFD4AF37).withOpacity(0.22),
-            const Color(0xFF101A48),
-            const Color(0xFF050A14),
-          ],
-        ),
+        gradient: AppStyles.backgroundGradient,
       ),
     );
   }

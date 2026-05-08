@@ -421,16 +421,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFF0A0A1E),
+        backgroundColor: AppStyles.navyTop,
         body: Stack(
           children: [
             DecoratedBox(
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFF101A48), Color(0xFF0B0B24), Color(0xFF130A2F)],
-                ),
+                gradient: AppStyles.backgroundGradient,
               ),
               child: SafeArea(
                 top: false,
@@ -532,6 +528,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               },
             ),
           ),
+          ],
         ),
             if (_showCorrectGuess) ...[
               Align(

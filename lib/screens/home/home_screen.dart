@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../services/feedback_service.dart';
 import '../../widgets/game/vault_game_icon.dart';
@@ -146,7 +147,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           _handleHomeBack();
         },
         child: Scaffold(
-          backgroundColor: const Color(0xFF050A14),
+          backgroundColor: AppStyles.navyTop,
           body: Stack(
             children: [
               const Positioned.fill(child: _VaultBackground()),
@@ -268,11 +269,7 @@ class _VaultBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: const BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment.center,
-          radius: 1.5,
-          colors: [Color(0xFF0E1E35), Color(0xFF050A14)],
-        ),
+        gradient: AppStyles.backgroundGradient,
       ),
       child: Stack(
         children: [
