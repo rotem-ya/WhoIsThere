@@ -528,8 +528,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               },
             ),
           ),
-          ],
-        ),
+            ),
             if (_showCorrectGuess) ...[
               Align(
                 alignment: Alignment.topLeft,
