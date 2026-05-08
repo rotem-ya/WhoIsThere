@@ -19,12 +19,10 @@ class LobbyScreen extends ConsumerStatefulWidget {
 }
 
 class _LobbyScreenState extends ConsumerState<LobbyScreen> {
-  // פלטת צבעים "בננו בננה"
   static const Color _navyTop = Color(0xFF07101F);
   static const Color _navyBottom = Color(0xFF0A1D3A);
   static const Color _bananaYellow = Color(0xFFFFE14D);
   static const Color _cyanGlow = Color(0xFF00F2FF);
-  static const Color _glassWhite = Color(0x22FFFFFF);
 
   bool _isStarting = false;
   bool _codeCopied = false;
@@ -75,20 +73,22 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                     child: Column(
                       children: [
-                        // Header: ברוכים הבאים
                         _buildHeader(context, currentUser, hostName),
                         
-                        SizedBox(height: h * 0.03),
+                        SizedBox(height: h * 0.02),
                         
-                        // כרטיס קוד חדר Glossy
-                        _GlossyRoomCode(
-                          code: room.code,
-                          isCopied: _codeCopied,
-                          onCopy: () => _copyCode(room.code),
-                          onShare: () => _shareToWhatsApp(room.code),
+                        // קוד חדר עם FittedBox למניעת חריגה
+                        Flexible(
+                          flex: 2,
+                          child: _GlossyRoomCode(
+                            code: room.code,
+                            isCopied: _codeCopied,
+                            onCopy: () => _copyCode(room.code),
+                            onShare: () => _shareToWhatsApp(room.code),
+                          ),
                         ),
                         
-                        SizedBox(height: h * 0.04),
+                        SizedBox(height: h * 0.03),
                         
                         const Align(
                           alignment: Alignment.centerRight,
@@ -103,19 +103,23 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                           ),
                         ),
                         
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         
-                        // גריד 8 שחקנים (2X4)
+                        // גריד שחקנים גמיש
                         Expanded(
+                          flex: 5,
                           child: _PlayerGrid(
                             players: room.players.values.toList(),
                             currentUserId: currentUser?.id,
                           ),
                         ),
                         
-                        // כפתור פעולה בתחתית
+                        const SizedBox(height: 10),
+                        
+                        // כפתור פעולה
                         SizedBox(
-                          height: 75,
+                          height: h * 0.1, // גובה יחסי
+                          constraints: const BoxConstraints(maxHeight: 75, minHeight: 60),
                           child: isHost
                               ? _GlossyActionButton(
                                   label: _isStarting ? 'מכין צמצמים...' : 'התחל משחק',
@@ -167,26 +171,25 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           ),
         ),
         const Spacer(),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              'ברוכים הבאים לחדר של $hostName',
-              style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const Text(
-              'לובי הסטודיו',
-              style: TextStyle(
-                color: Colors.white, 
-                fontSize: 28, 
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.2,
+        Flexible(
+          flex: 8,
+          child: Column(
+            children: [
+              Text(
+                'ברוכים הבאים לחדר של $hostName',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
               ),
-            ),
-          ],
+              const Text(
+                'לובי הסטודיו',
+                style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
+              ),
+            ],
+          ),
         ),
         const Spacer(),
-        const SizedBox(width: 40), // איזון לכפתור החזרה
+        const SizedBox(width: 40),
       ],
     );
   }
@@ -198,58 +201,54 @@ class _GlossyRoomCode extends StatelessWidget {
   final VoidCallback onCopy;
   final VoidCallback onShare;
 
-  const _GlossyRoomCode({
-    required this.code,
-    required this.isCopied,
-    required this.onCopy,
-    required this.onShare,
-  });
+  const _GlossyRoomCode({required this.code, required this.isCopied, required this.onCopy, required this.onShare});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(25),
         border: Border.all(color: Colors.white12, width: 1.5),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8)),
-        ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                onPressed: onShare,
-                icon: const Icon(Icons.share_rounded, color: Color(0xFF25D366), size: 28),
-              ),
-              const SizedBox(width: 10),
-              GestureDetector(
-                onTap: onCopy,
-                child: Text(
-                  code,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 48,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 8,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  onPressed: onShare,
+                  icon: const Icon(Icons.share_rounded, color: Color(0xFF25D366), size: 24),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: onCopy,
+                  child: Text(
+                    code,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 42,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 4,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Icon(
-                isCopied ? Icons.check_circle_rounded : Icons.copy_rounded,
-                color: isCopied ? Colors.greenAccent : Colors.white54,
-              ),
-            ],
+                const SizedBox(width: 8),
+                Icon(
+                  isCopied ? Icons.check_circle_rounded : Icons.copy_rounded,
+                  color: isCopied ? Colors.greenAccent : Colors.white54,
+                  size: 20,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 5),
           const Text('לחץ להעתקה או שתף לחברים', 
-            style: TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.bold)),
+            style: TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -269,17 +268,14 @@ class _PlayerGrid extends StatelessWidget {
       itemCount: 8,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
-        crossAxisSpacing: 15,
-        mainAxisSpacing: 20,
-        childAspectRatio: 0.8,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 0.75, // מותאם למנוע חריגה למטה
       ),
       itemBuilder: (context, index) {
         if (index < players.length) {
           final player = players[index];
-          return _PlayerAvatarTile(
-            player: player, 
-            isMe: player.id == currentUserId,
-          );
+          return _PlayerAvatarTile(player: player, isMe: player.id == currentUserId);
         }
         return _EmptyPlayerTile();
       },
@@ -295,27 +291,27 @@ class _PlayerAvatarTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.all(3),
+          padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: isMe ? const Color(0xFF00F2FF) : Colors.white30, width: 2),
-            boxShadow: [
-              if (isMe) BoxShadow(color: const Color(0xFF00F2FF).withOpacity(0.5), blurRadius: 10),
-            ],
+            border: Border.all(color: isMe ? const Color(0xFF00F2FF) : Colors.white24, width: 2),
           ),
-          child: PlayerAvatar(name: player.name, radius: 28),
+          child: PlayerAvatar(name: player.name, radius: 24),
         ),
-        const SizedBox(height: 8),
-        Text(
-          isMe ? 'אני' : player.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: isMe ? const Color(0xFF00F2FF) : Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
+        const SizedBox(height: 4),
+        Flexible(
+          child: Text(
+            isMe ? 'אני' : player.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: isMe ? const Color(0xFF00F2FF) : Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         if (player.isHost) const Text('👑', style: TextStyle(fontSize: 10)),
@@ -330,17 +326,16 @@ class _EmptyPlayerTile extends StatelessWidget {
     return Column(
       children: [
         Container(
-          width: 56,
-          height: 56,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.white.withOpacity(0.05),
-            border: Border.all(color: Colors.white10, width: 1),
           ),
-          child: const Icon(Icons.add, color: Colors.white24, size: 24),
+          child: const Icon(Icons.add, color: Colors.white12, size: 20),
         ),
-        const SizedBox(height: 8),
-        const Text('ממתין...', style: TextStyle(color: Colors.white24, fontSize: 11)),
+        const SizedBox(height: 4),
+        const Text('ממתין...', style: TextStyle(color: Colors.white12, fontSize: 10)),
       ],
     );
   }
@@ -367,18 +362,15 @@ class _GlossyActionButton extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
-          borderRadius: BorderRadius.circular(25),
-          boxShadow: [
-            if (enabled) BoxShadow(color: const Color(0xFFFFB800).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8)),
-          ],
-          border: Border.all(color: Colors.white30, width: 2),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white30, width: 1.5),
         ),
         child: Center(
           child: Text(
             label, 
             style: TextStyle(
               color: enabled ? const Color(0xFF07101F) : Colors.white24, 
-              fontSize: 24, 
+              fontSize: 22, 
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -400,7 +392,7 @@ class _WaitingFooter extends StatelessWidget {
       ),
       child: const Text(
         'ממתין למארח שיתחיל...', 
-        style: TextStyle(color: Colors.white38, fontSize: 16, fontWeight: FontWeight.bold),
+        style: TextStyle(color: Colors.white24, fontSize: 15, fontWeight: FontWeight.bold),
       ),
     );
   }
