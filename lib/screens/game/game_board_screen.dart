@@ -70,11 +70,24 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
   static final AudioPlayer _victoryPlayer = AudioPlayer(playerId: 'victory-fanfare');
   static final AssetSource _victorySound = AssetSource('sounds/victory_fanfare.mp3');
 
+  // Background music
+  static final AudioPlayer _bgPlayer = AudioPlayer(playerId: 'studio-bg');
+  static final AssetSource _bgMusic = AssetSource('sounds/dragon-studio-crowd-cheer-406646.mp3');
+
+  static Future<void> _startBackgroundMusic() async {
+    try {
+      await _bgPlayer.setReleaseMode(ReleaseMode.loop);
+      await _bgPlayer.setVolume(0.30);
+      await _bgPlayer.play(_bgMusic);
+    } catch (_) {}
+  }
+
   @override
   void initState() {
     super.initState();
     _confettiLeft = ConfettiController(duration: const Duration(seconds: 2));
     _confettiRight = ConfettiController(duration: const Duration(seconds: 2));
+    unawaited(_startBackgroundMusic());
   }
 
   @override
@@ -82,6 +95,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
+    unawaited(_bgPlayer.stop());
     super.dispose();
   }
 
