@@ -1,12 +1,12 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-class VaultGemTile extends StatefulWidget {
+class ApertureTile extends StatefulWidget {
   final bool isRevealed;
   final bool isFocused;
   final Widget child;
 
-  const VaultGemTile({
+  const ApertureTile({
     super.key,
     required this.isRevealed,
     required this.child,
@@ -14,10 +14,10 @@ class VaultGemTile extends StatefulWidget {
   });
 
   @override
-  State<VaultGemTile> createState() => _VaultGemTileState();
+  State<ApertureTile> createState() => _ApertureTileState();
 }
 
-class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderStateMixin {
+class _ApertureTileState extends State<ApertureTile> with SingleTickerProviderStateMixin {
   static const Color kGold = Color(0xFFD4AF37);
   static const Color kNavy = Color(0xFF07101F);
 
@@ -29,11 +29,11 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 800),
     );
     _animation = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeOutCubic,
+      curve: Curves.easeInOutCubic,
     );
 
     if (widget.isRevealed) {
@@ -42,7 +42,7 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
   }
 
   @override
-  void didUpdateWidget(covariant VaultGemTile oldWidget) {
+  void didUpdateWidget(covariant ApertureTile oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     if (widget.isRevealed != oldWidget.isRevealed) {
@@ -78,6 +78,7 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
           children: [
             widget.child,
 
+            // Iris aperture overlay
             AnimatedBuilder(
               animation: _animation,
               builder: (context, _) {
@@ -91,6 +92,32 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
               },
             ),
 
+            // Light leak glow when fully open
+            AnimatedBuilder(
+              animation: _animation,
+              builder: (context, _) {
+                final glowOpacity = ((_animation.value - 0.85) / 0.15).clamp(0.0, 1.0);
+                if (glowOpacity <= 0) return const SizedBox.shrink();
+
+                return Opacity(
+                  opacity: glowOpacity * 0.35,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        colors: [
+                          Colors.white,
+                          Colors.white.withOpacity(0.0),
+                        ],
+                        stops: const [0.0, 1.0],
+                        radius: 0.6,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            // Lock icon fades out at start of animation
             AnimatedBuilder(
               animation: _animation,
               builder: (context, _) {
@@ -105,7 +132,7 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
                       color: kNavy.withOpacity(0.5),
                     ),
                     child: const Icon(
-                      Icons.lock_person_rounded,
+                      Icons.camera_rounded,
                       color: kGold,
                       size: 32,
                     ),
@@ -144,10 +171,10 @@ class ApertureIrisPainter extends CustomPainter {
       final double startAngle = i * angleStep + rotation;
 
       final paint = Paint()
-        ..shader = LinearGradient(
+        ..shader = const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: const [
+          colors: [
             Color(0xFFD4AF37),
             Color(0xFFF7EF8A),
             Color(0xFFA1811A),
@@ -171,13 +198,16 @@ class ApertureIrisPainter extends CustomPainter {
       path.lineTo(p3.dx, p3.dy);
       path.close();
 
+      // Blade shadow
       canvas.drawPath(
         path,
         Paint()
           ..color = Colors.black.withOpacity(0.4)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
       );
+      // Blade fill
       canvas.drawPath(path, paint);
+      // Blade edge stroke
       canvas.drawPath(
         path,
         Paint()

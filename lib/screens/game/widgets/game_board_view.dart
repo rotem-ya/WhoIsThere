@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../utils/game_constants.dart';
-import '../../../widgets/game/vault_gem_tile.dart';
+import '../../../widgets/game/aperture_tile.dart';
 
 class GameBoardView extends StatelessWidget {
   final int gridSize;
@@ -109,8 +109,8 @@ class _Tile extends StatefulWidget {
 class _TileState extends State<_Tile> {
   bool _pressed = false;
 
-  static final AssetSource _revealSound = AssetSource('sounds/vault_open.mp3');
-  static final AudioPlayer _revealPlayer = AudioPlayer(playerId: 'vault-reveal');
+  static final AssetSource _revealSound = AssetSource('sounds/shutter_click.mp3');
+  static final AudioPlayer _revealPlayer = AudioPlayer(playerId: 'shutter-click');
   static Future<void>? _preloadFuture;
 
   bool get _canTap => widget.enabled && widget.isAvailable && !widget.isRevealed && widget.onReveal != null;
@@ -197,7 +197,7 @@ class _TileState extends State<_Tile> {
                         ]
                       : null,
                 ),
-                child: VaultGemTile(
+                child: ApertureTile(
                   isRevealed: widget.isRevealed,
                   isFocused: _canTap,
                   child: _ImageSlice(
