@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -107,11 +109,35 @@ class _Tile extends StatefulWidget {
 class _TileState extends State<_Tile> {
   bool _pressed = false;
 
+  static final AssetSource _revealSound = AssetSource('sounds/vault_open.mp3');
+  static final AudioPlayer _revealPlayer = AudioPlayer(playerId: 'vault-reveal');
+  static Future<void>? _preloadFuture;
+
   bool get _canTap => widget.enabled && widget.isAvailable && !widget.isRevealed && widget.onReveal != null;
 
   void _setPressed(bool value) {
     if (_pressed == value) return;
     setState(() => _pressed = value);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_preloadRevealSound());
+  }
+
+  static Future<void> _preloadRevealSound() async {
+    _preloadFuture ??= _revealPlayer.setSource(_revealSound);
+    await _preloadFuture;
+  }
+
+  static Future<void> _playRevealSound() async {
+    try {
+      await _revealPlayer.stop();
+      await _revealPlayer.play(_revealSound);
+    } catch (_) {
+      // Sound failure must never block reveal
+    }
   }
 
   @override
@@ -138,14 +164,15 @@ class _TileState extends State<_Tile> {
           onTapUp: _canTap
               ? (_) {
                   _setPressed(false);
+                  unawaited(_playRevealSound());
                   widget.onReveal!(widget.index);
                 }
               : null,
           child: AnimatedOpacity(
             duration: kRevealDuration,
-            opacity: widget.isAvailable || widget.isRevealed ? 1.0 : 0.45,
+            opacity: 1.0,
             child: TweenAnimationBuilder<double>(
-              key: ValueKey('${widget.index}-${widget.isRevealed}'),
+              key: ValueKey(widget.index),
               tween: Tween<double>(begin: widget.isRevealed ? 1.08 : 1.0, end: 1.0),
               duration: kRevealDuration,
               curve: Curves.easeOutCubic,

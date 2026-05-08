@@ -20,7 +20,7 @@ class VaultGemTile extends StatefulWidget {
 class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderStateMixin {
   static const Color kGold = Color(0xFFD4AF37);
   static const Color kNavy = Color(0xFF07101F);
-  
+
   late final AnimationController _controller;
   late final Animation<double> _animation;
 
@@ -29,13 +29,13 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1200),
     );
     _animation = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeInOutQuart,
+      curve: Curves.easeOutCubic,
     );
-    
+
     if (widget.isRevealed) {
       _controller.value = 1.0;
     }
@@ -44,10 +44,9 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
   @override
   void didUpdateWidget(covariant VaultGemTile oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     if (widget.isRevealed != oldWidget.isRevealed) {
       if (widget.isRevealed) {
-        // תיקון: תמיד מתחיל מ-0 כדי להבטיח אנימציה מלאה בכל חשיפה
         _controller.forward(from: 0.0);
       } else {
         _controller.reverse();
@@ -77,15 +76,13 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // התמונה המסתתרת תמיד למטה
             widget.child,
-            
-            // צמצם הלהבים (Aperture)
+
             AnimatedBuilder(
               animation: _animation,
               builder: (context, _) {
                 if (_animation.value >= 0.99) return const SizedBox.shrink();
-                
+
                 return CustomPaint(
                   painter: ApertureIrisPainter(
                     progress: _animation.value,
@@ -93,14 +90,13 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
                 );
               },
             ),
-            
-            // המנעול המרכזי
+
             AnimatedBuilder(
               animation: _animation,
               builder: (context, _) {
-                double lockOpacity = (1.0 - _animation.value * 4.0).clamp(0.0, 1.0);
+                final lockOpacity = (1.0 - _animation.value * 4.0).clamp(0.0, 1.0);
                 if (lockOpacity <= 0) return const SizedBox.shrink();
-                
+
                 return Center(
                   child: Container(
                     padding: const EdgeInsets.all(10),
@@ -134,11 +130,10 @@ class ApertureIrisPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final rect = Offset.zero & size;
     final diagonal = math.sqrt(size.width * size.width + size.height * size.height);
-    
+
     final outerRadius = diagonal * 0.7;
     final openingRadius = progress * outerRadius * 1.2;
 
-    // חסימה מוחלטת ב-progress=0
     canvas.drawRect(rect, Paint()..color = const Color(0xFF07101F));
 
     const int bladeCount = 8;
@@ -147,49 +142,49 @@ class ApertureIrisPainter extends CustomPainter {
 
     for (int i = 0; i < bladeCount; i++) {
       final double startAngle = i * angleStep + rotation;
-      
+
       final paint = Paint()
         ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFFD4AF37),
-            const Color(0xFFF7EF8A),
-            const Color(0xFFA1811A),
+          colors: const [
+            Color(0xFFD4AF37),
+            Color(0xFFF7EF8A),
+            Color(0xFFA1811A),
           ],
         ).createShader(rect);
 
       final path = Path();
-      
-      // נקודות הלהב הקשתי (Aperture Blade)
-      Offset p1 = center + Offset(math.cos(startAngle), math.sin(startAngle)) * openingRadius;
-      Offset p2 = center + Offset(math.cos(startAngle + angleStep * 1.5), math.sin(startAngle + angleStep * 1.5)) * outerRadius;
-      Offset p3 = center + Offset(math.cos(startAngle + angleStep * 3.0), math.sin(startAngle + angleStep * 3.0)) * outerRadius;
+
+      final p1 = center + Offset(math.cos(startAngle), math.sin(startAngle)) * openingRadius;
+      final p2 = center + Offset(math.cos(startAngle + angleStep * 1.5), math.sin(startAngle + angleStep * 1.5)) * outerRadius;
+      final p3 = center + Offset(math.cos(startAngle + angleStep * 3.0), math.sin(startAngle + angleStep * 3.0)) * outerRadius;
 
       path.moveTo(p1.dx, p1.dy);
-      
-      // המתמטיקה של הקימור האורגני
-      Offset controlPoint = center + Offset(
+
+      final controlPoint = center + Offset(
         math.cos(startAngle + angleStep * 0.8),
         math.sin(startAngle + angleStep * 0.8),
       ) * (openingRadius + (outerRadius - openingRadius) * 0.3);
-      
+
       path.quadraticBezierTo(controlPoint.dx, controlPoint.dy, p2.dx, p2.dy);
       path.lineTo(p3.dx, p3.dy);
       path.close();
 
-      // צל לעומק תלת-מימדי
-      canvas.drawPath(path, Paint()
-        ..color = Colors.black.withOpacity(0.4)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
-
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = Colors.black.withOpacity(0.4)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+      );
       canvas.drawPath(path, paint);
-      
-      // קו מתאר להדגשת המכניקה
-      canvas.drawPath(path, Paint()
-        ..color = const Color(0xFF4A3B10).withOpacity(0.6)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0);
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = const Color(0xFF4A3B10).withOpacity(0.6)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0,
+      );
     }
   }
 
