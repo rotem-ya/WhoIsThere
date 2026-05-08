@@ -368,18 +368,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFF0A0A1E),
-        body: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF101A48), Color(0xFF0B0B24), Color(0xFF130A2F)],
-            ),
-          ),
-          child: SafeArea(
-            top: false,
-            child: roomAsync.when(
+        backgroundColor: AppStyles.navyTop,
+        body: Stack(
+          children: [
+            DecoratedBox(
+              decoration: const BoxDecoration(
+                gradient: AppStyles.backgroundGradient,
+              ),
+              child: SafeArea(
+                top: false,
+                child: roomAsync.when(
               loading: () => const Center(
                 child: CircularProgressIndicator(color: Color(0xFF8B6FFF)),
               ),
