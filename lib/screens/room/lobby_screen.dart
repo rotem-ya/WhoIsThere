@@ -204,7 +204,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
               const SizedBox(height: 2),
               Text(
                 'לובי הסטודיו',
-                style: AppStyles.heading1.copyWith(fontSize: 26),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppStyles.heading1.copyWith(fontSize: 22),
               ),
             ],
           ),
@@ -236,7 +238,7 @@ class _GlossyRoomCode extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: AppStyles.glassCard(radius: 24, opacity: 0.20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -314,7 +316,7 @@ class _PlayerGrid extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 2.8,
+        childAspectRatio: 2.4,
       ),
       itemBuilder: (context, index) {
         if (index < players.length) {
@@ -363,7 +365,7 @@ class _PlayerAvatarTile extends StatelessWidget {
               ),
               boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.5) : null,
             ),
-            child: PlayerAvatar(name: player.name, radius: 20),
+            child: PlayerAvatar(name: player.name, radius: 16),
           ),
           const SizedBox(width: 10),
 
