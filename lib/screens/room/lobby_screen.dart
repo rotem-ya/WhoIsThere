@@ -77,7 +77,6 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                         
                         SizedBox(height: h * 0.02),
                         
-                        // קוד חדר עם FittedBox למניעת חריגה
                         Flexible(
                           flex: 2,
                           child: _GlossyRoomCode(
@@ -105,7 +104,6 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                         
                         const SizedBox(height: 10),
                         
-                        // גריד שחקנים גמיש
                         Expanded(
                           flex: 5,
                           child: _PlayerGrid(
@@ -116,9 +114,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                         
                         const SizedBox(height: 10),
                         
-                        // כפתור פעולה
-                        SizedBox(
-                          height: h * 0.1, // גובה יחסי
+                        // תיקון SizedBox ל-Container שתומך ב-constraints
+                        Container(
+                          height: h * 0.1,
                           constraints: const BoxConstraints(maxHeight: 75, minHeight: 60),
                           child: isHost
                               ? _GlossyActionButton(
@@ -201,7 +199,12 @@ class _GlossyRoomCode extends StatelessWidget {
   final VoidCallback onCopy;
   final VoidCallback onShare;
 
-  const _GlossyRoomCode({required this.code, required this.isCopied, required this.onCopy, required this.onShare});
+  const _GlossyRoomCode({
+    required this.code, 
+    required this.isCopied, 
+    required this.onCopy, 
+    required this.onShare,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -247,8 +250,10 @@ class _GlossyRoomCode extends StatelessWidget {
               ],
             ),
           ),
-          const Text('לחץ להעתקה או שתף לחברים', 
-            style: TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold)),
+          const Text(
+            'לחץ להעתקה או שתף לחברים', 
+            style: TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
@@ -270,7 +275,7 @@ class _PlayerGrid extends StatelessWidget {
         crossAxisCount: 4,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 0.75, // מותאם למנוע חריגה למטה
+        childAspectRatio: 0.75,
       ),
       itemBuilder: (context, index) {
         if (index < players.length) {
@@ -297,7 +302,10 @@ class _PlayerAvatarTile extends StatelessWidget {
           padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: isMe ? const Color(0xFF00F2FF) : Colors.white24, width: 2),
+            border: Border.all(
+              color: isMe ? const Color(0xFF00F2FF) : Colors.white24, 
+              width: 2,
+            ),
           ),
           child: PlayerAvatar(name: player.name, radius: 24),
         ),
@@ -335,7 +343,10 @@ class _EmptyPlayerTile extends StatelessWidget {
           child: const Icon(Icons.add, color: Colors.white12, size: 20),
         ),
         const SizedBox(height: 4),
-        const Text('ממתין...', style: TextStyle(color: Colors.white12, fontSize: 10)),
+        const Text(
+          'ממתין...', 
+          style: TextStyle(color: Colors.white12, fontSize: 10),
+        ),
       ],
     );
   }
@@ -345,7 +356,11 @@ class _GlossyActionButton extends StatelessWidget {
   final String label;
   final bool enabled;
   final VoidCallback onTap;
-  const _GlossyActionButton({required this.label, required this.enabled, required this.onTap});
+  const _GlossyActionButton({
+    required this.label, 
+    required this.enabled, 
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
