@@ -65,14 +65,14 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                     child: ConstrainedBox(
                       constraints: BoxConstraints(minHeight: constraints.maxHeight),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             // ── Header ──────────────────────────────────────
                             _buildHeader(context, currentUser, hostName),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
 
                             // ── Room Code Card ───────────────────────────────
                             _GlossyRoomCode(
@@ -82,7 +82,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                               onShare: () => _shareToWhatsApp(room.code),
                             ),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
 
                             // ── Section label ─────────────────────────────────
                             Align(
@@ -100,7 +100,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                               ),
                             ),
 
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 6),
 
                             // ── Players grid (2 × 4 = 8 fixed slots) ──────────
                             _PlayerGrid(
@@ -108,7 +108,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                               currentUserId: currentUser?.id,
                             ),
 
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
 
                             // ── Action button / waiting footer ─────────────────
                             SizedBox(
@@ -317,7 +317,7 @@ class _PlayerGrid extends StatelessWidget {
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
+        mainAxisSpacing: 8,
         childAspectRatio: 2.4,
       ),
       itemBuilder: (context, index) {
@@ -424,8 +424,8 @@ class _EmptyPlayerTile extends StatelessWidget {
         textDirection: TextDirection.rtl,
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white.withOpacity(0.06),
