@@ -16,6 +16,7 @@ class GameLayout extends StatelessWidget {
   final int myCoins;
   final int myLetterCards;
   final bool canGuessNow;
+  final bool isSolo;
   final bool showBanner;
   final Map<String, dynamic>? bannerEvent;
   final bool showBotTyping;
@@ -23,6 +24,7 @@ class GameLayout extends StatelessWidget {
   final String botTypingText;
   final VoidCallback onBack;
   final void Function(int)? onReveal;
+  final VoidCallback? onRevealHint;
   final VoidCallback? onGuess;
   final VoidCallback? onSkip;
 
@@ -34,6 +36,7 @@ class GameLayout extends StatelessWidget {
     required this.myCoins,
     required this.myLetterCards,
     required this.canGuessNow,
+    required this.isSolo,
     required this.showBanner,
     required this.bannerEvent,
     required this.showBotTyping,
@@ -41,6 +44,7 @@ class GameLayout extends StatelessWidget {
     required this.botTypingText,
     required this.onBack,
     required this.onReveal,
+    required this.onRevealHint,
     required this.onGuess,
     required this.onSkip,
   });
@@ -85,8 +89,10 @@ class GameLayout extends StatelessWidget {
           isMyTurn: isMyTurn,
           isBusy: isBusy,
           canGuessNow: canGuessNow,
+          isSolo: isSolo,
           revealedCount: revealedCount,
           totalTiles: total,
+          onRevealHint: onRevealHint,
           onGuess: onGuess,
           onSkip: onSkip,
         ),

@@ -4,14 +4,17 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_styles.dart';
+import '../../../models/economy/match_reward_breakdown.dart';
 
 class GameWinnerView extends StatefulWidget {
   final String winnerName;
+  final MatchRewardBreakdown? rewardBreakdown;
   final VoidCallback onHome;
 
   const GameWinnerView({
     super.key,
     required this.winnerName,
+    this.rewardBreakdown,
     required this.onHome,
   });
 
@@ -62,7 +65,7 @@ class _GameWinnerViewState extends State<GameWinnerView> {
           gravity: 0.16,
           shouldLoop: false,
         ),
-        Padding(
+        SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: AnimatedScale(
             scale: _showCard ? 1 : 0.86,
@@ -73,6 +76,7 @@ class _GameWinnerViewState extends State<GameWinnerView> {
               duration: const Duration(milliseconds: 260),
               child: _WinnerCard(
                 winnerName: widget.winnerName,
+                rewardBreakdown: widget.rewardBreakdown,
                 showButton: _showButton,
                 onHome: widget.onHome,
               ),
@@ -99,11 +103,13 @@ class _WinnerBackground extends StatelessWidget {
 
 class _WinnerCard extends StatelessWidget {
   final String winnerName;
+  final MatchRewardBreakdown? rewardBreakdown;
   final bool showButton;
   final VoidCallback onHome;
 
   const _WinnerCard({
     required this.winnerName,
+    required this.rewardBreakdown,
     required this.showButton,
     required this.onHome,
   });
@@ -165,6 +171,10 @@ class _WinnerCard extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
+          if (rewardBreakdown != null) ...[
+            const SizedBox(height: 18),
+            _RewardSummary(breakdown: rewardBreakdown!),
+          ],
           const SizedBox(height: 26),
           AnimatedOpacity(
             opacity: showButton ? 1 : 0,
@@ -194,6 +204,185 @@ class _WinnerCard extends StatelessWidget {
                   child: const Text('משחק חדש'),
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Incremental reward breakdown ──────────────────────────────────────────────
+
+class _RewardSummary extends StatefulWidget {
+  final MatchRewardBreakdown breakdown;
+  const _RewardSummary({required this.breakdown});
+
+  @override
+  State<_RewardSummary> createState() => _RewardSummaryState();
+}
+
+class _RewardSummaryState extends State<_RewardSummary> {
+  bool _showBase = false;
+  bool _showSpeed = false;
+  bool _showEfficiency = false;
+  bool _showTotal = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _runSequence();
+  }
+
+  Future<void> _runSequence() async {
+    await Future.delayed(const Duration(milliseconds: 220));
+    if (!mounted) return;
+    setState(() => _showBase = true);
+
+    if (widget.breakdown.speedBonus > 0) {
+      await Future.delayed(const Duration(milliseconds: 480));
+      if (!mounted) return;
+      setState(() => _showSpeed = true);
+    }
+
+    if (widget.breakdown.efficiencyBonus > 0) {
+      await Future.delayed(const Duration(milliseconds: 480));
+      if (!mounted) return;
+      setState(() => _showEfficiency = true);
+    }
+
+    await Future.delayed(const Duration(milliseconds: 480));
+    if (!mounted) return;
+    setState(() => _showTotal = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+      ),
+      child: Column(
+        children: [
+          _RewardRow(
+            label: 'פרס בסיסי',
+            coins: widget.breakdown.baseReward,
+            visible: _showBase,
+            color: Colors.white,
+          ),
+          if (widget.breakdown.speedBonus > 0)
+            _RewardRow(
+              label: '⚡ בונוס מהירות',
+              coins: widget.breakdown.speedBonus,
+              visible: _showSpeed,
+              color: const Color(0xFFFFE082),
+            ),
+          if (widget.breakdown.efficiencyBonus > 0)
+            _RewardRow(
+              label: '🎯 בונוס דיוק',
+              coins: widget.breakdown.efficiencyBonus,
+              visible: _showEfficiency,
+              color: const Color(0xFF87CEEB),
+            ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOut,
+            child: _showTotal
+                ? Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      _TotalRow(total: widget.breakdown.total),
+                    ],
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RewardRow extends StatelessWidget {
+  final String label;
+  final int coins;
+  final bool visible;
+  final Color color;
+
+  const _RewardRow({
+    required this.label,
+    required this.coins,
+    required this.visible,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: visible ? 1 : 0,
+      duration: const Duration(milliseconds: 300),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                color: color.withOpacity(0.88),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              '+$coins 🪙',
+              style: TextStyle(
+                color: color,
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TotalRow extends StatelessWidget {
+  final int total;
+  const _TotalRow({required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFD4AF37).withOpacity(0.14),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.46)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'סה"כ',
+            textDirection: TextDirection.rtl,
+            style: TextStyle(
+              color: Color(0xFFD4AF37),
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          Text(
+            '+$total 🪙',
+            style: const TextStyle(
+              color: Color(0xFFD4AF37),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ],

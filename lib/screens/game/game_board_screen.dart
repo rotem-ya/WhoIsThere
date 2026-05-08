@@ -18,7 +18,9 @@ import '../../core/constants/game_constants.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
 import '../../models/room_model.dart';
+import '../../models/economy/match_reward_breakdown.dart';
 import '../../providers/providers.dart';
+import '../../services/hint_economy_guard.dart';
 import '../../widgets/game/animated_reward.dart';
 import '../../widgets/game/letter_bank_input.dart';
 import 'widgets/game_top_hud.dart';
@@ -74,6 +76,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
       await _bgPlayer.play(_bgMusic);
     } catch (_) {}
   }
+
+  // Economy
+  bool _rewardApplied = false;
+  DateTime? _gameStartTime;
+  MatchRewardBreakdown? _rewardBreakdown;
 
   // Correct-guess victory overlay
   bool _showCorrectGuess = false;
@@ -305,6 +312,53 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     return candidates[_random.nextInt(candidates.length)];
   }
 
+  Future<void> _triggerMatchReward(RoomModel room, String? uid) async {
+    if (_rewardApplied || uid == null) return;
+    _rewardApplied = true;
+
+    final isWin = room.winnerId == uid;
+    final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
+    final timeTaken = _gameStartTime != null
+        ? DateTime.now().difference(_gameStartTime!)
+        : const Duration(seconds: 999);
+
+    try {
+      final breakdown = await ref.read(economyServiceProvider).applyMatchReward(
+            uid: uid,
+            isWin: isWin,
+            isSolo: isSolo,
+            tilesRevealedCount: room.placedPieces.length,
+            timeTaken: timeTaken,
+            roomId: room.id,
+          );
+      if (mounted) setState(() => _rewardBreakdown = breakdown);
+    } catch (e) {
+      debugPrint('Economy reward error: $e');
+    }
+  }
+
+  Future<void> _useRevealHint(RoomModel room, String userId) async {
+    final wallet = ref.read(walletProvider).valueOrNull;
+    if (wallet == null) return;
+
+    final guard = ref.read(hintEconomyGuardProvider);
+    if (!guard.canAfford(wallet, HintType.revealTile)) return;
+
+    final granted = await guard.useHint(
+      uid: userId,
+      hint: HintType.revealTile,
+      wallet: wallet,
+      roomId: room.id,
+    );
+
+    if (!granted || !mounted) return;
+    if (room.availablePieceIndices.isEmpty) return;
+
+    final idx = room.availablePieceIndices[
+        _random.nextInt(room.availablePieceIndices.length)];
+    await _humanRevealTile(room: room, userId: userId, index: idx);
+  }
+
   Future<bool> _submitGuess(RoomModel room, String userId, String value) async {
     final image = _image;
     if (image == null || value.trim().isEmpty) return false;
@@ -443,16 +497,31 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   return const SizedBox.shrink();
                 }
 
+                final currentUserId = user?.id;
+
                 if (room.imageId.isNotEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) => _loadImage(room.imageId));
                 }
 
+                // Capture game-start time the first frame phase becomes 'playing'
+                if (room.phase == GamePhase.playing && _gameStartTime == null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _gameStartTime == null) {
+                      _gameStartTime = DateTime.now();
+                    }
+                  });
+                }
+
                 if (room.phase == GamePhase.finished) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _triggerMatchReward(room, currentUserId);
+                  });
                   final hasWinner = room.winnerId != null && room.winnerId!.isNotEmpty;
                   if (hasWinner) {
                     final winnerName = room.players[room.winnerId]?.name ?? 'שחקן';
                     return GameWinnerView(
                       winnerName: winnerName,
+                      rewardBreakdown: _rewardBreakdown,
                       onHome: () => context.go('/home'),
                     );
                   }
@@ -492,7 +561,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   });
                 }
 
-                final currentUserId = user?.id;
                 final isMyTurn = currentUserId != null && room.currentTurnUserId == currentUserId;
                 final myCoins = currentUserId != null ? (room.players[currentUserId]?.score ?? 0) : 0;
                 final myLetterCards = currentUserId != null ? (room.players[currentUserId]?.letterCards ?? 0) : 0;
@@ -500,6 +568,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                     _hasRevealedThisTurn &&
                     !_hasGuessedThisTurn &&
                     room.currentTurnIndex == _revealedAtTurnIndex;
+                final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
 
                 return GameLayout(
                   room: room,
@@ -509,6 +578,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   myCoins: myCoins,
                   myLetterCards: myLetterCards,
                   canGuessNow: canGuessNow,
+                  isSolo: isSolo,
                   showBanner: _showBanner,
                   bannerEvent: _currentBanner,
                   showBotTyping: _showBotTyping,
@@ -522,6 +592,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                             userId: currentUserId,
                             index: index,
                           ),
+                  onRevealHint: currentUserId == null
+                      ? null
+                      : () => _useRevealHint(room, currentUserId),
                   onGuess: canGuessNow ? () => _openGuessDialog(room, currentUserId!) : null,
                   onSkip: (isMyTurn && canGuessNow) ? () => _skipTurn(room) : null,
                 );
