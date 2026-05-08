@@ -475,6 +475,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
               },
             ),
           ),
+          ],
         ),
       ),
     );
