@@ -26,12 +26,6 @@ import '../../widgets/game/letter_bank_input.dart';
 import 'widgets/game_top_hud.dart';
 import 'widgets/game_board_view.dart';
 
-// Shared reward formula used by the button widget and bot logic.
-int _calcReward(int revealedCount, int total) {
-  if (total == 0) return 100;
-  return (100 - revealedCount / total * 80).clamp(20.0, 100.0).round();
-}
-
 class GameBoardScreen extends ConsumerStatefulWidget {
   final String roomId;
 
@@ -41,7 +35,8 @@ class GameBoardScreen extends ConsumerStatefulWidget {
   ConsumerState<GameBoardScreen> createState() => _GameBoardScreenState();
 }
 
-class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
+class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
+    with WidgetsBindingObserver {
   final _random = Random();
   final _guessController = TextEditingController();
 
@@ -105,7 +100,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     super.initState();
     _confettiLeft = ConfettiController(duration: const Duration(seconds: 2));
     _confettiRight = ConfettiController(duration: const Duration(seconds: 2));
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_startBackgroundMusic());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _bgPlayer.stop().ignore();
+      _revealSoundPlayer.stop().ignore();
+      _victoryPlayer.stop().ignore();
+    }
   }
 
   @override
@@ -113,6 +119,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     unawaited(_bgPlayer.stop());
     super.dispose();
   }
@@ -146,8 +153,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
     final difficulty = room.selectedDifficulty ?? Difficulty.easy;
     final isLastTile = room.availablePieceIndices.length == 1;
 
-    setState(() => _isBusy = true);
     unawaited(_playRevealSound());
+    setState(() => _isBusy = true);
     try {
       await ref.read(roomServiceProvider).revealPiece(
             roomId: room.id,

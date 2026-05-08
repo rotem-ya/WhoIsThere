@@ -120,19 +120,19 @@ class _WinnerCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(22, 28, 22, 22),
       decoration: BoxDecoration(
-        color: const Color(0xFF07101F).withOpacity(0.94),
+        color: const Color(0xFF07101F).withOpacity(0.96),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.72), width: 1.6),
+        border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.52), width: 1.4),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFD4AF37).withOpacity(0.18),
-            blurRadius: 28,
-            spreadRadius: 2,
+            color: const Color(0xFFD4AF37).withOpacity(0.12),
+            blurRadius: 20,
+            spreadRadius: 0,
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.45),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
+            color: Colors.black.withOpacity(0.50),
+            blurRadius: 14,
+            offset: const Offset(0, 7),
           ),
         ],
       ),
@@ -285,7 +285,7 @@ class _RewardSummaryState extends State<_RewardSummary> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.04),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.18)),
       ),
       child: Column(
         children: [
@@ -375,15 +375,19 @@ class _RewardRow extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              label,
-              textDirection: TextDirection.rtl,
-              style: TextStyle(
-                color: color.withOpacity(0.88),
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
+            Flexible(
+              child: Text(
+                label,
+                textDirection: TextDirection.rtl,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: color.withOpacity(0.88),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
+            const SizedBox(width: 8),
             Text(
               coinText,
               style: TextStyle(
