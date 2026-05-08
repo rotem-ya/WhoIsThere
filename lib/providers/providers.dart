@@ -1,6 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../models/economy/user_economy_model.dart';
 import '../services/auth_service.dart';
+import '../services/economy_service.dart';
+import '../services/hint_economy_guard.dart';
+import '../services/local_economy_cache.dart';
 import '../services/room_service.dart';
 import '../models/user_model.dart';
 import '../models/room_model.dart';
@@ -9,6 +14,35 @@ import '../models/game_image_model.dart';
 // Services
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 final roomServiceProvider = Provider<RoomService>((ref) => RoomService());
+
+// Economy — LocalEconomyCache created once (async init via FutureProvider)
+final localEconomyCacheProvider = FutureProvider<LocalEconomyCache>(
+  (ref) => LocalEconomyCache.create(),
+);
+
+final economyServiceProvider = Provider<EconomyService>((ref) {
+  // Cache is optional — EconomyService handles a null cache gracefully.
+  // Once localEconomyCacheProvider resolves, the provider rebuilds and passes
+  // the real cache instance.
+  final cache = ref.watch(localEconomyCacheProvider).valueOrNull;
+  return EconomyService(FirebaseFirestore.instance, cache);
+});
+
+final hintEconomyGuardProvider = Provider<HintEconomyGuard>(
+  (ref) => HintEconomyGuard(ref.watch(economyServiceProvider)),
+);
+
+// Wallet stream for the currently authenticated user
+final walletProvider = StreamProvider.autoDispose<UserEconomyModel?>((ref) {
+  final userAsync = ref.watch(firebaseUserProvider);
+  return userAsync.maybeWhen(
+    data: (user) {
+      if (user == null) return Stream.value(null);
+      return ref.watch(economyServiceProvider).walletStream(user.uid);
+    },
+    orElse: () => Stream.value(null),
+  );
+});
 
 // Auth state
 final firebaseUserProvider = StreamProvider<User?>((ref) {
@@ -110,3 +144,4 @@ final turnStateProvider =
     StateNotifierProvider<TurnStateNotifier, TurnState>(
   (ref) => TurnStateNotifier(),
 );
+

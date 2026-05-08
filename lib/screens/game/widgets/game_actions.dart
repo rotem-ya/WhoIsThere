@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/economy_config.dart';
+import '../../../providers/providers.dart';
 import '../../../services/feedback_service.dart';
+import '../../../services/hint_economy_guard.dart';
 import '../../../widgets/game/animated_reward.dart';
 
 int _calcReward(int revealedCount, int total) {
@@ -8,12 +12,14 @@ int _calcReward(int revealedCount, int total) {
   return (100 - revealedCount / total * 80).clamp(20.0, 100.0).round();
 }
 
-class GameActions extends StatelessWidget {
+class GameActions extends ConsumerWidget {
   final bool isMyTurn;
   final bool isBusy;
   final bool canGuessNow;
+  final bool isSolo;
   final int revealedCount;
   final int totalTiles;
+  final VoidCallback? onRevealHint;
   final VoidCallback? onGuess;
   final VoidCallback? onSkip;
 
@@ -21,21 +27,29 @@ class GameActions extends StatelessWidget {
     required this.isMyTurn,
     required this.isBusy,
     required this.canGuessNow,
+    required this.isSolo,
     required this.revealedCount,
     required this.totalTiles,
+    required this.onRevealHint,
     required this.onGuess,
     required this.onSkip,
   });
 
   int _reward() => _calcReward(revealedCount, totalTiles);
-
   int _penalty(int reward) => (reward * 0.15).round();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final reward = _reward();
     final penalty = _penalty(reward);
     final guessActive = canGuessNow && !isBusy;
+
+    // Hint affordability — solo only; guard already enforces this server-side
+    final wallet = isSolo ? ref.watch(walletProvider).valueOrNull : null;
+    final guard = isSolo ? ref.watch(hintEconomyGuardProvider) : null;
+    final canAffordHint = wallet != null &&
+        guard != null &&
+        guard.canAfford(wallet, HintType.revealTile);
 
     return SafeArea(
       top: false,
@@ -43,33 +57,104 @@ class GameActions extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
         child: Directionality(
           textDirection: TextDirection.ltr,
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                flex: 7,
-                child: _ActionButton(
-                  label: canGuessNow
-                      ? 'נחש'
-                      : isMyTurn
-                          ? 'בחר משבצת'
-                          : 'ממתין לתור',
-                  isPrimary: true,
-                  isActive: guessActive || (isMyTurn && !canGuessNow),
-                  glow: guessActive,
-                  onTap: guessActive ? onGuess : null,
-                  reward: canGuessNow ? reward : null,
-                  penalty: canGuessNow ? penalty : null,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 7,
+                    child: _ActionButton(
+                      label: canGuessNow
+                          ? 'נחש'
+                          : isMyTurn
+                              ? 'בחר משבצת'
+                              : 'ממתין לתור',
+                      isPrimary: true,
+                      isActive: guessActive || (isMyTurn && !canGuessNow),
+                      glow: guessActive,
+                      onTap: guessActive ? onGuess : null,
+                      reward: canGuessNow ? reward : null,
+                      penalty: canGuessNow ? penalty : null,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 5,
+                    child: _ActionButton(
+                      label: 'דלג',
+                      isPrimary: false,
+                      isActive: canGuessNow && !isBusy,
+                      glow: false,
+                      onTap: canGuessNow && !isBusy ? onSkip : null,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 5,
-                child: _ActionButton(
-                  label: 'דלג',
-                  isPrimary: false,
-                  isActive: canGuessNow && !isBusy,
-                  glow: false,
-                  onTap: canGuessNow && !isBusy ? onSkip : null,
+              // Hint button — only in solo mode
+              if (isSolo && onRevealHint != null) ...[
+                const SizedBox(height: 6),
+                _HintButton(
+                  canAfford: canAffordHint,
+                  isBusy: isBusy,
+                  onTap: canAffordHint && !isBusy ? onRevealHint : null,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HintButton extends StatelessWidget {
+  final bool canAfford;
+  final bool isBusy;
+  final VoidCallback? onTap;
+
+  const _HintButton({
+    required this.canAfford,
+    required this.isBusy,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap == null
+          ? null
+          : () {
+              FeedbackService.click();
+              onTap!();
+            },
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 180),
+        opacity: canAfford && !isBusy ? 1.0 : 0.42,
+        child: Container(
+          height: 42,
+          decoration: BoxDecoration(
+            color: const Color(0xFF07101F).withOpacity(0.56),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: const Color(0xFF87CEEB)
+                  .withOpacity(canAfford ? 0.38 : 0.18),
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lightbulb_outline_rounded,
+                  color: Color(0xFF87CEEB), size: 18),
+              const SizedBox(width: 6),
+              Text(
+                'רמז - גלה משבצת  (${EconomyConfig.hintRevealTilePrice} 🪙)',
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(
+                  color: Color(0xFF87CEEB),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
