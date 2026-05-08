@@ -29,11 +29,11 @@ class _VaultGemTileState extends State<VaultGemTile> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1200),
     );
     _animation = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeInOutQuart,
+      curve: Curves.easeOutCubic,
     );
 
     if (widget.isRevealed) {
