@@ -20,8 +20,9 @@ class LobbyScreen extends ConsumerStatefulWidget {
 class _LobbyScreenState extends ConsumerState<LobbyScreen> with SingleTickerProviderStateMixin {
   static const Color _navyTop = Color(0xFF07101F);
   static const Color _navyBottom = Color(0xFF151052);
+  static const Color _navyCard = Color(0xFF0A1324);
   static const Color _gold = Color(0xFFD4AF37);
-  static const Color _goldLight = Color(0xFFF7EF8A);
+  static const Color _cyan = Color(0xFF87CEEB);
 
   bool _isStarting = false;
   bool _codeCopied = false;
@@ -35,28 +36,6 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> with SingleTickerProv
     if (mounted) setState(() => _codeCopied = false);
   }
 
-  Future<void> _handleStartGame() async {
-    if (_isStarting) return;
-    
-    setState(() => _isStarting = true);
-    AppFeedback.success();
-
-    try {
-      // ביצוע הפעולה מול הסרוויס
-      await ref.read(roomServiceProvider).startGameDirectly(widget.roomId);
-      
-      // אנחנו לא עושים כאן setState(false) כי המסך אמור להתחלף 
-      // אוטומטית ברגע שה-stream יזהה שה-phase השתנה ל-playing.
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isStarting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('שגיאה בהתחלת המשחק: $e')),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
@@ -67,13 +46,6 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> with SingleTickerProv
         if (room == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) => context.go('/home'));
           return const SizedBox();
-        }
-
-        // ניווט אוטומטי ברגע שהמשחק התחיל
-        if (room.phase == GamePhase.playing) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/game/${widget.roomId}');
-          });
         }
 
         final isHost = currentUser?.id == room.hostId;
@@ -90,20 +62,22 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> with SingleTickerProv
             ),
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final h = constraints.maxHeight;
                     
                     return Column(
                       children: [
+                        // Header
                         _buildHeader(context, currentUser, widget.roomId),
+                        
                         SizedBox(height: h * 0.02),
                         
-                        // קוד חדר - קומפקטי יותר
+                        // כפתור קוד החדר החדש - מרובע מוזהב יוקרתי
                         SizedBox(
-                          height: h * 0.16,
-                          child: _RoomCodeCard(
+                          height: h * 0.18,
+                          child: _RoomCodeButton( // שונה ל-Button
                             code: room.code,
                             isCopied: _codeCopied,
                             onTap: () => _copyCode(room.code),
@@ -112,18 +86,17 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> with SingleTickerProv
                         
                         SizedBox(height: h * 0.03),
                         
-                        Align(
+                        const Align(
                           alignment: Alignment.centerRight,
-                          child: Text(
-                            'שחקנים (${room.players.length}/${GameConstants.maxPlayers})',
-                            style: const TextStyle(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
+                          child: Text('שחקנים בחדר', 
+                            style: TextStyle(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.w800)),
                         ),
                         
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
                         
-                        // רשימת שחקנים - אריחים מעט קטנים יותר כדי להרוויח מקום
+                        // גריד שחקנים - מתכווץ
                         Expanded(
+                          flex: 5,
                           child: GridView.builder(
                             physics: const BouncingScrollPhysics(),
                             itemCount: room.players.length,
@@ -131,7 +104,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> with SingleTickerProv
                               crossAxisCount: 2,
                               mainAxisSpacing: 8,
                               crossAxisSpacing: 8,
-                              mainAxisExtent: 56, 
+                              mainAxisExtent: 54, 
                             ),
                             itemBuilder: (context, index) {
                               final player = room.players.values.elementAt(index);
@@ -140,17 +113,23 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> with SingleTickerProv
                           ),
                         ),
                         
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         
-                        // כפתור התחלה - זהב פרימיום
+                        // כפתור הפעלה
                         SizedBox(
-                          width: double.infinity,
-                          height: 72,
+                          height: 68,
                           child: isHost
-                              ? _PremiumGoldButton(
-                                  label: _isStarting ? 'מכין כספות...' : (canStart ? 'התחל משחק' : 'צריך עוד שחקנים'),
+                              ? _GoldStartButton(
+                                  label: _isStarting ? 'מכין כספות...' : (canStart ? 'התחל משחק' : 'ממתין לשחקנים'),
                                   enabled: canStart && !_isStarting,
-                                  onTap: _handleStartGame,
+                                  onTap: () async {
+                                    setState(() => _isStarting = true);
+                                    try {
+                                      await ref.read(roomServiceProvider).startGameDirectly(widget.roomId);
+                                    } catch (e) {
+                                      setState(() => _isStarting = false);
+                                    }
+                                  },
                                 )
                               : _WaitingCard(),
                         ),
@@ -164,63 +143,98 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> with SingleTickerProv
         );
       },
       loading: () => const Center(child: CircularProgressIndicator(color: _gold)),
-      error: (e, _) => Center(child: Text('שגיאה: $e', style: const TextStyle(color: Colors.white))),
+      error: (e, _) => Center(child: Text('שגיאה: $e')),
     );
   }
 
   Widget _buildHeader(BuildContext context, currentUser, String roomId) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       textDirection: TextDirection.rtl,
       children: [
-        const Text('לובי החדר', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
         GestureDetector(
           onTap: () async {
-            AppFeedback.tap();
             if (currentUser != null) {
               await ref.read(roomServiceProvider).leaveRoom(roomId, currentUser.id);
             }
             if (context.mounted) context.go('/home');
           },
           child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(15)),
+            child: const Icon(Icons.logout_rounded, color: Colors.white, size: 26),
           ),
         ),
+        const Expanded(
+          child: Center(
+            child: Text('לובי הכספת', style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900)),
+          ),
+        ),
+        const SizedBox(width: 46), // לאיזון המרכוז
       ],
     );
   }
 }
 
-class _RoomCodeCard extends StatelessWidget {
+// הווידג'ט החדש: כפתור קוד חדר מוזהב ומהודק
+class _RoomCodeButton extends StatelessWidget {
   final String code;
   final bool isCopied;
   final VoidCallback onTap;
-  const _RoomCodeCard({required this.code, required this.isCopied, required this.onTap});
+  const _RoomCodeButton({required this.code, required this.isCopied, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.95),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 15, offset: const Offset(0, 5))],
+          // גרדיאנט מוזהב יוקרתי, בדומה לאריחי המשחק
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFF7EF8A), Color(0xFFD4AF37), Color(0xFFA1811A)],
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: isCopied ? _LobbyScreenState._cyan : Colors.white60,
+            width: 2.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.5),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+            if (isCopied)
+              BoxShadow(color: _LobbyScreenState._cyan.withOpacity(0.6), blurRadius: 30, spreadRadius: 4),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(isCopied ? 'הועתק!' : 'לחץ להעתקת הקוד', style: const TextStyle(color: Colors.blueGrey, fontSize: 13, fontWeight: FontWeight.bold)),
+            // אייקון מנעול קטן מעל הקוד
+            Icon(Icons.lock_person_rounded, color: const Color(0xFF07101F).withOpacity(0.8), size: 28),
             const SizedBox(height: 4),
             FittedBox(
+              fit: BoxFit.scaleDown,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(code, style: const TextStyle(color: Color(0xFF07101F), fontSize: 44, fontWeight: FontWeight.w900, letterSpacing: 6)),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  code,
+                  style: const TextStyle(
+                    color: Color(0xFF07101F), // כהה על זהב
+                    fontSize: 44,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 6,
+                    shadows: [Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+                  ),
+                ),
               ),
             ),
+            const SizedBox(height: 2),
+            Text(isCopied ? 'הועתק ✓' : 'לחץ להעתקה', style: TextStyle(color: const Color(0xFF07101F).withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -239,23 +253,21 @@ class _PlayerTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        gradient: isActive 
-          ? const LinearGradient(colors: [Color(0xFFD4AF37), Color(0xFFA1811A)]) 
-          : LinearGradient(colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: isActive ? Colors.white54 : Colors.white10),
+        color: isActive ? _LobbyScreenState._gold : Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: isActive ? Colors.white30 : Colors.white10),
       ),
       child: Row(
         textDirection: TextDirection.rtl,
         children: [
-          PlayerAvatar(name: player.name, radius: 15, photoUrl: player.photoUrl),
+          PlayerAvatar(name: player.name, radius: 14),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               player.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: isActive ? Colors.black : Colors.white, fontWeight: FontWeight.w900, fontSize: 15),
+              style: TextStyle(color: isActive ? Colors.black : Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
             ),
           ),
           if (player.isHost) const Text('👑', style: TextStyle(fontSize: 14)),
@@ -265,35 +277,32 @@ class _PlayerTile extends StatelessWidget {
   }
 }
 
-class _PremiumGoldButton extends StatelessWidget {
+class _GoldStartButton extends StatelessWidget {
   final String label;
   final bool enabled;
   final VoidCallback onTap;
-  const _PremiumGoldButton({required this.label, required this.enabled, required this.onTap});
+  const _GoldStartButton({required this.label, required this.enabled, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: enabled ? onTap : null,
-      child: AnimatedContainer(
+      child: AnimatedOpacity(
         duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: enabled 
-              ? [const Color(0xFFF7EF8A), const Color(0xFFD4AF37), const Color(0xFFA1811A)] 
-              : [Colors.grey.shade600, Colors.grey.shade800],
+        opacity: enabled ? 1.0 : 0.5,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFFE27A), Color(0xFFD4AF37), Color(0xFFA1811A)],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              if (enabled) BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8)),
+            ],
           ),
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            if (enabled) BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5)),
-          ],
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(color: enabled ? const Color(0xFF07101F) : Colors.white38, fontSize: 26, fontWeight: FontWeight.w900),
+          child: Center(
+            child: Text(label, style: const TextStyle(color: Color(0xFF07101F), fontSize: 24, fontWeight: FontWeight.w900)),
           ),
         ),
       ),
@@ -306,12 +315,8 @@ class _WaitingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white12),
-      ),
-      child: const Text('ממתינים שהמנהל יפרוץ את הכספת...', textAlign: TextAlign.center, style: TextStyle(color: Colors.white60, fontSize: 17, fontWeight: FontWeight.bold)),
+      decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(18)),
+      child: const Text('ממתין למארח שיתחיל...', style: TextStyle(color: Colors.white60, fontSize: 18, fontWeight: FontWeight.bold)),
     );
   }
 }
