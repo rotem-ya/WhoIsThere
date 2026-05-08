@@ -1,24 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/game_constants.dart';
+import '../../core/constants/economy_config.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
-import '../../providers/providers.dart';
 import '../../models/game_image_model.dart';
+import '../../providers/providers.dart';
+import '../../services/hint_economy_guard.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/app_header.dart';
+import '../../widgets/economy/coin_display.dart';
 
 class StoreScreen extends ConsumerWidget {
   const StoreScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userAsync = ref.watch(currentUserProvider);
     final imagesAsync = ref.watch(allImagesProvider);
+    final walletAsync = ref.watch(walletProvider);
+    final coins = walletAsync.valueOrNull?.coins ?? 0;
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
@@ -31,45 +35,29 @@ class StoreScreen extends ConsumerWidget {
               icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
               onPressed: () => Navigator.maybePop(context),
             ),
-            trailing: userAsync.when(
-              data: (user) => _PointsPill(points: user?.totalPoints ?? 0),
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
-            ),
+            trailing: const CoinDisplay(compact: true),
           ),
           Expanded(
             child: imagesAsync.when(
               data: (images) {
-                final freeImages = images.where((i) => !i.isPremium).toList();
-                final premiumImages = images.where((i) => i.isPremium).toList();
-                final user = userAsync.value;
-                void showComingSoon() {
-                  AppFeedback.selection();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('הרמזים יופעלו בשלב הבא')),
-                  );
-                }
+                final freeImages =
+                    images.where((i) => !i.isPremium).toList();
+                final premiumImages =
+                    images.where((i) => i.isPremium).toList();
 
                 return SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      AppCard(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Column(
-                          children: [
-                            Text('שדרוגים למשחק',
-                                style: AppTextStyles.titleDark),
-                            const SizedBox(height: AppSpacing.sm),
-                            Text(
-                              'קנה רמזים וחבילות תמונות כדי להפוך כל סיבוב למעניין יותר.',
-                              textAlign: TextAlign.center,
-                              style: AppTextStyles.subtitleDark,
-                            ),
-                          ],
-                        ),
-                      ),
+                      // ── Starter Pack ──────────────────────────────────
+                      _StarterPackCard(coins: coins),
                       const SizedBox(height: AppSpacing.lg),
+
+                      // ── Rewarded ad ───────────────────────────────────
+                      _RewardedAdTile(ref: ref),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // ── Hint packs ────────────────────────────────────
                       Text('רמזים', style: AppTextStyles.titleLight),
                       const SizedBox(height: AppSpacing.sm),
                       Row(
@@ -77,67 +65,61 @@ class StoreScreen extends ConsumerWidget {
                           Expanded(
                             child: _HintCard(
                               icon: Icons.lightbulb_outline_rounded,
-                              title: 'רמז חתיכה',
-                              description: 'עזרה קטנה בזמן המשחק',
-                              cost: GameConstants.hintCost,
-                              canAfford: (user?.totalPoints ?? 0) >=
-                                  GameConstants.hintCost,
-                              onBuy: showComingSoon,
+                              title: 'גלה משבצת',
+                              description: 'פתח חלק נסתר של התמונה',
+                              price: EconomyConfig.hintRevealTilePrice,
+                              coins: coins,
+                              onBuy: () => _buyHint(
+                                  context, ref, HintType.revealTile, coins),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: _HintCard(
-                              icon: Icons.category_rounded,
-                              title: 'רמז קטגוריה',
-                              description: 'דע לאיזה עולם התמונה שייכת',
-                              cost: GameConstants.categoryHintCost,
-                              canAfford: (user?.totalPoints ?? 0) >=
-                                  GameConstants.categoryHintCost,
-                              onBuy: showComingSoon,
+                              icon: Icons.casino_outlined,
+                              title: 'ניחוש נוסף',
+                              description: 'קבל הזדמנות ניחוש נוספת',
+                              price: EconomyConfig.hintExtraGuessPrice,
+                              coins: coins,
+                              onBuy: () => _buyHint(
+                                  context, ref, HintType.extraGuess, coins),
                             ),
                           ),
                         ],
                       ),
+
+                      // ── Premium images ────────────────────────────────
                       if (premiumImages.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.lg),
-                        Text('חבילות פרמיום', style: AppTextStyles.titleLight),
+                        Text('חבילות פרמיום',
+                            style: AppTextStyles.titleLight),
                         const SizedBox(height: AppSpacing.sm),
                         LayoutBuilder(
                           builder: (context, constraints) {
-                            final columns = constraints.maxWidth < 360 ? 1 : 2;
+                            final columns =
+                                constraints.maxWidth < 360 ? 1 : 2;
                             return GridView.builder(
                               shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
+                              physics:
+                                  const NeverScrollableScrollPhysics(),
                               gridDelegate:
                                   SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: columns,
                                 crossAxisSpacing: AppSpacing.md,
                                 mainAxisSpacing: AppSpacing.md,
-                                childAspectRatio: columns == 1 ? 1.35 : 0.78,
+                                childAspectRatio:
+                                    columns == 1 ? 1.35 : 0.78,
                               ),
                               itemCount: premiumImages.length,
                               itemBuilder: (context, index) {
                                 final image = premiumImages[index];
-                                final owned = user?.purchasedImageIds
-                                        .contains(image.id) ??
-                                    false;
-                                final canAfford =
-                                    (user?.totalPoints ?? 0) >= image.cost;
-                                return _ImagePackCard(
-                                  image: image,
-                                  isOwned: owned,
-                                  canAfford: canAfford,
-                                  onBuy: owned
-                                      ? null
-                                      : () => _purchaseImage(context, ref,
-                                          image, user?.totalPoints ?? 0),
-                                );
+                                return _ImagePackCard(image: image);
                               },
                             );
                           },
                         ),
                       ],
+
                       if (freeImages.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.lg),
                         AppCard(
@@ -148,14 +130,17 @@ class StoreScreen extends ConsumerWidget {
                           ),
                         ),
                       ],
+                      const SizedBox(height: AppSpacing.lg),
                     ],
                   ),
                 );
               },
               loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.accent)),
+                  child:
+                      CircularProgressIndicator(color: AppColors.accent)),
               error: (e, _) => Center(
-                  child: Text('שגיאה: $e', style: AppTextStyles.subtitleLight)),
+                  child: Text('שגיאה: $e',
+                      style: AppTextStyles.subtitleLight)),
             ),
           ),
         ],
@@ -163,97 +148,293 @@ class StoreScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _purchaseImage(
+  Future<void> _buyHint(
     BuildContext context,
     WidgetRef ref,
-    GameImageModel image,
-    int userPoints,
+    HintType hint,
+    int currentCoins,
   ) async {
-    AppFeedback.success();
-    if (userPoints < image.cost) {
+    AppFeedback.selection();
+    final guard = ref.read(hintEconomyGuardProvider);
+    final wallet = ref.read(walletProvider).valueOrNull;
+    if (wallet == null) return;
+
+    if (!guard.canAfford(wallet, hint)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('אין מספיק נקודות!')),
+        const SnackBar(content: Text('אין מספיק מטבעות!')),
       );
       return;
     }
 
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('אישור רכישה'),
-        content: Text('לקנות "${image.name}" תמורת ${image.cost} נקודות?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ביטול'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('קנה'),
-          ),
-        ],
-      ),
-    );
+    final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
+    if (uid == null) return;
 
-    if (confirm != true) return;
+    final granted =
+        await guard.useHint(uid: uid, hint: hint, wallet: wallet);
+    if (!context.mounted) return;
 
-    final user = ref.read(currentUserProvider).value;
-    if (user == null) return;
-
-    await ref.read(authServiceProvider).updateTotalPoints(user.id, -image.cost);
-    await ref.read(authServiceProvider).purchaseItem(user.id, image.id, true);
-
-    if (context.mounted) {
+    if (granted) {
+      AppFeedback.success();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✅ "${image.name}" נפתח!'),
-          backgroundColor: AppColors.accent,
-        ),
+        const SnackBar(content: Text('✅ הרמז נקנה ויוחל במשחק הבא')),
       );
     }
   }
 }
 
-class _PointsPill extends StatelessWidget {
-  final int points;
+// ── Starter Pack ──────────────────────────────────────────────────────────────
 
-  const _PointsPill({required this.points});
+class _StarterPackCard extends StatelessWidget {
+  final int coins;
+  const _StarterPackCard({required this.coins});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.14),
-        borderRadius: BorderRadius.circular(999),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1060), Color(0xFF0D0730)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+            color: const Color(0xFFD4AF37).withOpacity(0.55), width: 1.4),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFD4AF37).withOpacity(0.14),
+            blurRadius: 22,
+            spreadRadius: 2,
+          ),
+        ],
       ),
-      child: Text('⭐ $points',
-          style: AppTextStyles.body.copyWith(color: Colors.white)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37).withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  '🔥 הצעה מיוחדת',
+                  style: TextStyle(
+                    color: Color(0xFFD4AF37),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Starter Pack',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _PackFeature(text: '500 🪙 מטבעות'),
+          _PackFeature(text: 'כל תמונות הפרמיום לחודש'),
+          _PackFeature(text: 'הסרת פרסומות'),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: FilledButton(
+                onPressed: () {},
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  foregroundColor: const Color(0xFF07101F),
+                  textStyle: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.w900),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                child: const Text('רכישה — 9.99₪'),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
+
+class _PackFeature extends StatelessWidget {
+  final String text;
+  const _PackFeature({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle_outline_rounded,
+              color: Color(0xFFD4AF37), size: 16),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.82),
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Rewarded Ad ───────────────────────────────────────────────────────────────
+
+class _RewardedAdTile extends ConsumerWidget {
+  final WidgetRef ref;
+  const _RewardedAdTile({required this.ref});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final wallet = ref.watch(walletProvider).valueOrNull;
+    final adsToday = wallet?.adRewardsTodayCount ?? 0;
+    final remaining = (EconomyConfig.maxAdRewardsPerDay - adsToday)
+        .clamp(0, EconomyConfig.maxAdRewardsPerDay);
+    final canWatch = remaining > 0;
+
+    return GestureDetector(
+      onTap: canWatch ? () => _watchAd(context, ref) : null,
+      child: AnimatedOpacity(
+        opacity: canWatch ? 1.0 : 0.48,
+        duration: const Duration(milliseconds: 180),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF07101F).withOpacity(0.72),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+                color: const Color(0xFF87CEEB).withOpacity(0.30)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF87CEEB).withOpacity(0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: const Color(0xFF87CEEB).withOpacity(0.30)),
+                ),
+                child: const Icon(Icons.play_circle_outline_rounded,
+                    color: Color(0xFF87CEEB), size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'צפה וקבל ${EconomyConfig.adRewardCoins} 🪙',
+                      textDirection: TextDirection.rtl,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      canWatch
+                          ? 'נותרו $remaining/${ EconomyConfig.maxAdRewardsPerDay} צפיות היום'
+                          : 'המכסה היומית הושלמה',
+                      textDirection: TextDirection.rtl,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.52),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded,
+                  color: Colors.white38, size: 14),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _watchAd(BuildContext context, WidgetRef ref) async {
+    AppFeedback.selection();
+    final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
+    if (uid == null) return;
+
+    // In production: show real rewarded ad here first.
+    // For MVP we grant the reward directly.
+    final granted =
+        await ref.read(economyServiceProvider).applyAdReward(uid);
+    if (!context.mounted) return;
+
+    if (granted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              '+${EconomyConfig.adRewardCoins} מטבעות הופקדו! 🪙'),
+          backgroundColor: const Color(0xFF0A3880),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('המכסה היומית הושלמה')),
+      );
+    }
+  }
+}
+
+// ── Hint card ─────────────────────────────────────────────────────────────────
 
 class _HintCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String description;
-  final int cost;
-  final bool canAfford;
+  final int price;
+  final int coins;
   final VoidCallback onBuy;
 
   const _HintCard({
     required this.icon,
     required this.title,
     required this.description,
-    required this.cost,
-    required this.canAfford,
+    required this.price,
+    required this.coins,
     required this.onBuy,
   });
 
   @override
   Widget build(BuildContext context) {
+    final canAfford = coins >= price;
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -265,7 +446,8 @@ class _HintCard extends StatelessWidget {
             title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w900),
+            style: AppTextStyles.body
+                .copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(description,
@@ -277,7 +459,7 @@ class _HintCard extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: canAfford ? onBuy : null,
-              child: Text('⭐ $cost'),
+              child: Text('🪙 $price'),
             ),
           ),
         ],
@@ -286,18 +468,12 @@ class _HintCard extends StatelessWidget {
   }
 }
 
+// ── Image pack card ───────────────────────────────────────────────────────────
+
 class _ImagePackCard extends StatelessWidget {
   final GameImageModel image;
-  final bool isOwned;
-  final bool canAfford;
-  final VoidCallback? onBuy;
 
-  const _ImagePackCard({
-    required this.image,
-    required this.isOwned,
-    required this.canAfford,
-    this.onBuy,
-  });
+  const _ImagePackCard({required this.image});
 
   @override
   Widget build(BuildContext context) {
@@ -318,7 +494,8 @@ class _ImagePackCard extends StatelessWidget {
                 errorWidget: (_, __, ___) => Container(
                   color: AppColors.boardBackground,
                   child: const Center(
-                      child: Icon(Icons.image_rounded, color: Colors.white54)),
+                      child: Icon(Icons.image_rounded,
+                          color: Colors.white54)),
                 ),
               ),
             ),
@@ -336,8 +513,8 @@ class _ImagePackCard extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: isOwned ? null : (canAfford ? onBuy : null),
-                    child: Text(isOwned ? 'בבעלותך' : '⭐ ${image.cost}'),
+                    onPressed: null, // IAP integration — Stage 6
+                    child: Text('🪙 ${image.cost}'),
                   ),
                 ),
               ],

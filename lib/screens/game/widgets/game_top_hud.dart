@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/player_model.dart';
+import '../../../widgets/economy/coin_display.dart';
 
 class TopHud extends StatelessWidget {
   final String code;
@@ -8,8 +9,6 @@ class TopHud extends StatelessWidget {
   final String? currentPlayerId;
   final String currentPlayerName;
   final String revealedText;
-  final int myCoins;
-  final int myLetterCards;
   final VoidCallback onBack;
 
   const TopHud({
@@ -18,8 +17,6 @@ class TopHud extends StatelessWidget {
     required this.currentPlayerId,
     required this.currentPlayerName,
     required this.revealedText,
-    required this.myCoins,
-    required this.myLetterCards,
     required this.onBack,
   });
 
@@ -46,7 +43,7 @@ class TopHud extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(child: _TurnInfo(name: currentPlayerName, revealedText: revealedText, code: code)),
                   const SizedBox(width: 8),
-                  CoinBadge(amount: myCoins),
+                  const CoinDisplay(compact: true),
                 ],
               ),
               if (players.isNotEmpty) ...[
@@ -156,29 +153,6 @@ class _PlayerChip extends StatelessWidget {
           Text('${player.score}', style: TextStyle(color: active ? const Color(0xFF07101F).withOpacity(0.82) : Colors.white.withOpacity(0.46), fontSize: 11, fontWeight: FontWeight.w900)),
         ],
       ),
-    );
-  }
-}
-
-class CoinBadge extends StatelessWidget {
-  final int amount;
-  const CoinBadge({required this.amount});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.26), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        const Text('🪙', style: TextStyle(fontSize: 14, height: 1)),
-        const SizedBox(width: 4),
-        Text('$amount', style: const TextStyle(color: Color(0xFF07101F), fontSize: 18, fontWeight: FontWeight.w900, height: 1)),
-      ]),
     );
   }
 }

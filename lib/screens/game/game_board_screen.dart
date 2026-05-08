@@ -562,8 +562,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                 }
 
                 final isMyTurn = currentUserId != null && room.currentTurnUserId == currentUserId;
-                final myCoins = currentUserId != null ? (room.players[currentUserId]?.score ?? 0) : 0;
-                final myLetterCards = currentUserId != null ? (room.players[currentUserId]?.letterCards ?? 0) : 0;
                 final canGuessNow = isMyTurn &&
                     _hasRevealedThisTurn &&
                     !_hasGuessedThisTurn &&
@@ -575,8 +573,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen> {
                   image: _image,
                   isMyTurn: isMyTurn,
                   isBusy: _isBusy,
-                  myCoins: myCoins,
-                  myLetterCards: myLetterCards,
                   canGuessNow: canGuessNow,
                   isSolo: isSolo,
                   showBanner: _showBanner,

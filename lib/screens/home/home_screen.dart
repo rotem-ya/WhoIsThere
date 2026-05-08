@@ -8,6 +8,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../services/feedback_service.dart';
+import '../../widgets/economy/coin_display.dart';
+import '../../widgets/economy/daily_reward_sheet.dart';
 import '../../widgets/game/vault_game_icon.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -31,6 +33,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeTriggerDailyReward());
+  }
+
+  Future<void> _maybeTriggerDailyReward() async {
+    try {
+      final cache = await ref.read(localEconomyCacheProvider.future);
+      if (!mounted || !cache.isDailyRewardAvailable) return;
+      await Future.delayed(const Duration(milliseconds: 900));
+      if (!mounted) return;
+      showDailyRewardSheet(context, ref);
+    } catch (_) {}
   }
 
   @override
@@ -151,6 +164,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           body: Stack(
             children: [
               const Positioned.fill(child: _VaultBackground()),
+              const Positioned(
+                top: 12,
+                left: 16,
+                child: SafeArea(child: CoinDisplay()),
+              ),
               SafeArea(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
