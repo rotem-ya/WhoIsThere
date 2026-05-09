@@ -564,7 +564,7 @@ class _JoinCodeDialogState extends ConsumerState<_JoinCodeDialog> {
         return;
       }
       if (found.players.length >= GameConstants.maxPlayers) {
-        setState(() => _error = 'החדר מלא');
+        setState(() => _error = 'חדר מלא\nניתן להצטרף לעד ${GameConstants.maxPlayers} שחקנים');
         return;
       }
 
