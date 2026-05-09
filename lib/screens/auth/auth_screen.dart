@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_styles.dart';
+import '../../core/utils/display_name_sanitizer.dart';
 import '../../providers/providers.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -15,13 +16,34 @@ class AuthScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
-  static const gold = Color(0xFFD4AF37);
-  static const goldLight = Color(0xFFFFE082);
-  static const goldDark = Color(0xFFA1811A);
-  static const navyBlack = Color(0xFF050A14);
-  static const cyan = Color(0xFF87CEEB);
+  static const _gold = Color(0xFFD4AF37);
+  static const _goldLight = Color(0xFFFFE082);
+  static const _goldDark = Color(0xFFA1811A);
+  static const _navy = Color(0xFF050A14);
+  static const _cyan = Color(0xFF87CEEB);
 
+  final _nameController = TextEditingController();
   bool _isLoading = false;
+  String? _nameError;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  /// Returns the sanitized name to use, or null if field is empty (use guestFallback).
+  /// Sets [_nameError] and returns the sentinel 'invalid' if input is non-empty but invalid.
+  String? _resolvedName() {
+    final raw = _nameController.text.trim();
+    if (raw.isEmpty) return null; // caller uses guestFallback
+    final sanitized = DisplayNameSanitizer.sanitize(raw);
+    if (sanitized == null) {
+      setState(() => _nameError = '2–16 תווים, אותיות ומספרים בלבד');
+      return 'invalid';
+    }
+    return sanitized;
+  }
 
   Future<void> _runAuth(Future<dynamic> Function() action) async {
     setState(() => _isLoading = true);
@@ -31,7 +53,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ההתחברות נכשלה: ${e.toString()}')),
+          SnackBar(
+            content: Text('ההתחברות נכשלה: ${e.toString()}'),
+            backgroundColor: Colors.red.shade900,
+          ),
         );
       }
     } finally {
@@ -39,66 +64,150 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
+  Future<void> _signInAnonymously() async {
+    final name = _resolvedName();
+    if (name == 'invalid') return;
+    await _runAuth(
+      () => ref.read(authServiceProvider).signInAnonymously(preferredName: name),
+    );
+  }
+
   Future<void> _signInWithGoogle() async {
-    // null = user cancelled picker — _runAuth stays on screen (no navigation).
-    // Exception = Google unavailable — _runAuth shows snackbar, user can tap Guest.
+    // Name field is ignored for Google — provider supplies display name.
+    // null return = cancelled picker — stays on screen.
+    // Exception propagates → snackbar shown, user stays on screen.
     await _runAuth(() => ref.read(authServiceProvider).signInWithGoogle());
   }
 
-  Future<void> _signInAnonymously() => _runAuth(ref.read(authServiceProvider).signInAnonymously);
-  Future<void> _signInWithApple() => _runAuth(ref.read(authServiceProvider).signInWithApple);
+  Future<void> _signInWithApple() async {
+    await _runAuth(() => ref.read(authServiceProvider).signInWithApple());
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: AppStyles.navyTop,
-        body: DecoratedBox(
-          decoration: const BoxDecoration(gradient: AppStyles.backgroundGradient),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Spacer(flex: 5),
-                  const _EntryHeroMark(),
-                  const SizedBox(height: 36),
-                  const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      'מה בתמונה?',
-                      maxLines: 1,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -1, height: 1),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          backgroundColor: AppStyles.navyTop,
+          resizeToAvoidBottomInset: true,
+          body: DecoratedBox(
+            decoration: const BoxDecoration(gradient: AppStyles.backgroundGradient),
+            child: SafeArea(
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: MediaQuery.of(context).size.height -
+                        MediaQuery.of(context).padding.top -
+                        MediaQuery.of(context).padding.bottom,
+                  ),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Spacer(flex: 3),
+
+                        // ── Brand mark ───────────────────────────────────────
+                        const _HeroMark(),
+                        const SizedBox(height: 14),
+                        const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'מה בתמונה?',
+                            maxLines: 1,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 40,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -1,
+                              height: 1,
+                            ),
+                          ),
+                        ),
+
+                        const Spacer(flex: 3),
+
+                        // ── Name field ───────────────────────────────────────
+                        const Text(
+                          'מה השם שלך במשחק?',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _NameField(
+                          controller: _nameController,
+                          hasError: _nameError != null,
+                          onChanged: (_) => setState(() => _nameError = null),
+                        ),
+                        if (_nameError != null) ...[
+                          const SizedBox(height: 5),
+                          Text(
+                            _nameError!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.red.shade300,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 6),
+                        const Text(
+                          'תוכל לשמור התקדמות גם בהמשך',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white38,
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
+                        ),
+
+                        const Spacer(flex: 4),
+
+                        // ── Action buttons ───────────────────────────────────
+                        if (_isLoading)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.only(bottom: 16),
+                              child: CircularProgressIndicator(
+                                color: _gold,
+                                strokeWidth: 2.4,
+                              ),
+                            ),
+                          )
+                        else ...[
+                          _PrimaryButton(
+                            label: 'המשך כאורח',
+                            onTap: _signInAnonymously,
+                          ),
+                          const SizedBox(height: 10),
+                          _SecondaryButton(
+                            label: 'המשך עם Google',
+                            onTap: _signInWithGoogle,
+                          ),
+                          if (Platform.isIOS) ...[
+                            const SizedBox(height: 10),
+                            _SecondaryButton(
+                              label: 'המשך עם Apple',
+                              onTap: _signInWithApple,
+                            ),
+                          ],
+                        ],
+
+                        const SizedBox(height: 36),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  const Text(
-                    'המשך כדי לשמור התקדמות ולשחק',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70, fontSize: 20, fontWeight: FontWeight.w600, height: 1.25),
-                  ),
-                  const Spacer(flex: 7),
-                  if (_isLoading)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.only(bottom: 34),
-                        child: CircularProgressIndicator(color: gold, strokeWidth: 2.6),
-                      ),
-                    )
-                  else ...[
-                    _PrimaryEntryButton(label: 'המשך כאורח', onPressed: _signInAnonymously),
-                    const SizedBox(height: 12),
-                    _SecondaryEntryButton(label: 'המשך עם Google', onPressed: _signInWithGoogle),
-                    if (Platform.isIOS) ...[
-                      const SizedBox(height: 12),
-                      _SecondaryEntryButton(label: 'המשך עם Apple', onPressed: _signInWithApple),
-                    ],
-                  ],
-                  const SizedBox(height: 42),
-                ],
+                ),
               ),
             ),
           ),
@@ -108,79 +217,176 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 }
 
-class _EntryHeroMark extends StatelessWidget {
-  const _EntryHeroMark();
+// ── Name text field ────────────────────────────────────────────────────────
+
+class _NameField extends StatelessWidget {
+  final TextEditingController controller;
+  final bool hasError;
+  final ValueChanged<String> onChanged;
+
+  const _NameField({
+    required this.controller,
+    required this.hasError,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const borderRadius = BorderRadius.all(Radius.circular(16));
+    const baseBorder = OutlineInputBorder(
+      borderRadius: borderRadius,
+      borderSide: BorderSide(color: Colors.white24),
+    );
+
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      textDirection: TextDirection.rtl,
+      textAlign: TextAlign.center,
+      maxLength: 16,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.5,
+      ),
+      decoration: InputDecoration(
+        hintText: 'שם מוצג...',
+        hintStyle: const TextStyle(
+          color: Colors.white30,
+          fontSize: 18,
+          fontWeight: FontWeight.w500,
+        ),
+        counterText: '',
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.06),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        border: baseBorder,
+        enabledBorder: hasError
+            ? OutlineInputBorder(
+                borderRadius: borderRadius,
+                borderSide: BorderSide(color: Colors.red.shade400, width: 1.2),
+              )
+            : baseBorder,
+        focusedBorder: const OutlineInputBorder(
+          borderRadius: borderRadius,
+          borderSide: BorderSide(color: _AuthScreenState._cyan, width: 1.5),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Hero mark ──────────────────────────────────────────────────────────────
+
+class _HeroMark extends StatelessWidget {
+  const _HeroMark();
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: 188,
-        height: 188,
+        width: 108,
+        height: 108,
         decoration: BoxDecoration(
-          color: _AuthScreenState.navyBlack.withOpacity(0.72),
-          borderRadius: BorderRadius.circular(54),
-          border: Border.all(color: _AuthScreenState.gold.withOpacity(0.55), width: 2),
+          color: _AuthScreenState._navy.withOpacity(0.72),
+          borderRadius: BorderRadius.circular(36),
+          border: Border.all(
+            color: _AuthScreenState._gold.withOpacity(0.50),
+            width: 1.5,
+          ),
           boxShadow: [
-            BoxShadow(color: _AuthScreenState.gold.withOpacity(0.16), blurRadius: 44, spreadRadius: 3),
-            BoxShadow(color: _AuthScreenState.cyan.withOpacity(0.10), blurRadius: 54, spreadRadius: 6),
+            BoxShadow(
+              color: _AuthScreenState._gold.withOpacity(0.14),
+              blurRadius: 36,
+              spreadRadius: 2,
+            ),
           ],
         ),
         child: const Center(
-          child: Icon(Icons.auto_awesome_rounded, color: _AuthScreenState.gold, size: 78),
+          child: Icon(
+            Icons.auto_awesome_rounded,
+            color: _AuthScreenState._gold,
+            size: 52,
+          ),
         ),
       ),
     );
   }
 }
 
-class _PrimaryEntryButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onPressed;
+// ── Primary button (gold) ──────────────────────────────────────────────────
 
-  const _PrimaryEntryButton({required this.label, required this.onPressed});
+class _PrimaryButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _PrimaryButton({required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onPressed,
+      onTap: onTap,
       child: Container(
-        height: 66,
+        height: 60,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [_AuthScreenState.goldLight, _AuthScreenState.gold, _AuthScreenState.goldDark],
+            colors: [
+              _AuthScreenState._goldLight,
+              _AuthScreenState._gold,
+              _AuthScreenState._goldDark,
+            ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
           borderRadius: BorderRadius.circular(999),
-          boxShadow: [BoxShadow(color: _AuthScreenState.gold.withOpacity(0.34), blurRadius: 24, offset: const Offset(0, 10))],
+          boxShadow: [
+            BoxShadow(
+              color: _AuthScreenState._gold.withOpacity(0.30),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
-        child: const Center(
-          child: Text('המשך כאורח', style: TextStyle(color: _AuthScreenState.navyBlack, fontSize: 25, fontWeight: FontWeight.w900, height: 1)),
+        child: Center(
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: _AuthScreenState._navy,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              height: 1,
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class _SecondaryEntryButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onPressed;
+// ── Secondary button (outline) ─────────────────────────────────────────────
 
-  const _SecondaryEntryButton({required this.label, required this.onPressed});
+class _SecondaryButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _SecondaryButton({required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return OutlinedButton(
-      onPressed: onPressed,
+      onPressed: onTap,
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(54),
+        minimumSize: const Size.fromHeight(50),
         foregroundColor: Colors.white,
-        side: BorderSide(color: _AuthScreenState.cyan.withOpacity(0.30)),
+        side: BorderSide(color: _AuthScreenState._cyan.withOpacity(0.28)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-        backgroundColor: _AuthScreenState.navyBlack.withOpacity(0.34),
+        backgroundColor: _AuthScreenState._navy.withOpacity(0.30),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+      ),
     );
   }
 }
