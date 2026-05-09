@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../services/feedback_service.dart';
@@ -89,6 +90,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         });
       }
     }
+  }
+
+  void _showJoinDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => const _JoinCodeDialog(),
+    );
   }
 
   Future<void> _createPrivateRoom() async {
@@ -262,6 +271,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               _PrivateRoomButton(
                                 isLoading: _isCreating && _loadingPlayers == null,
                                 onTap: _isCreating ? null : _createPrivateRoom,
+                              ),
+                              const SizedBox(height: 10),
+                              _JoinRoomButton(
+                                onTap: _isCreating ? null : _showJoinDialog,
                               ),
                               SizedBox(height: verySmall ? 14 : compact ? 20 : 30),
                             ],
@@ -462,6 +475,215 @@ class _PrivateRoomButton extends StatelessWidget {
                 const Text('חדר פרטי עם קוד', style: TextStyle(color: Color(0xFF87CEEB), fontSize: 16, fontWeight: FontWeight.w800)),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Join by code button ────────────────────────────────────────────────────
+
+class _JoinRoomButton extends StatelessWidget {
+  final VoidCallback? onTap;
+  const _JoinRoomButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 160),
+          opacity: onTap == null ? 0.58 : 1,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+            decoration: BoxDecoration(
+              color: const Color(0xFF050A14).withOpacity(0.50),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0xFF81C784).withOpacity(0.40)),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.group_add_rounded, color: Color(0xFF81C784), size: 19),
+                SizedBox(width: 8),
+                Text('הצטרף עם קוד', style: TextStyle(color: Color(0xFF81C784), fontSize: 16, fontWeight: FontWeight.w800)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Join-by-code dialog ────────────────────────────────────────────────────
+
+class _JoinCodeDialog extends ConsumerStatefulWidget {
+  const _JoinCodeDialog();
+
+  @override
+  ConsumerState<_JoinCodeDialog> createState() => _JoinCodeDialogState();
+}
+
+class _JoinCodeDialogState extends ConsumerState<_JoinCodeDialog> {
+  final _controller = TextEditingController();
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _join() async {
+    final code = _controller.text.trim().toUpperCase();
+    if (code.isEmpty) {
+      setState(() => _error = 'נא להזין קוד חדר');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final user = await ref.read(currentUserProvider.future);
+      if (user == null) return;
+
+      final found = await ref.read(roomServiceProvider).findRoomByCode(code);
+      if (found == null) {
+        setState(() => _error = 'לא נמצא חדר עם הקוד הזה');
+        return;
+      }
+      if (found.phase != GamePhase.waiting) {
+        setState(() => _error = 'המשחק כבר התחיל');
+        return;
+      }
+      if (found.players.length >= GameConstants.maxPlayers) {
+        setState(() => _error = 'החדר מלא');
+        return;
+      }
+
+      final room = await ref.read(roomServiceProvider).joinRoom(
+            code: code,
+            userId: user.id,
+            userName: user.name,
+            userPhotoUrl: user.photoUrl,
+          );
+
+      if (room == null) {
+        setState(() => _error = 'לא ניתן להצטרף לחדר');
+        return;
+      }
+
+      ref.read(currentRoomIdProvider.notifier).state = room.id;
+      if (mounted) {
+        Navigator.of(context).pop();
+        context.go('/lobby/${room.id}');
+      }
+    } catch (e) {
+      setState(() => _error = 'שגיאה: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Dialog(
+        backgroundColor: const Color(0xFF07101F),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'הצטרפות לחדר',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 18),
+              TextField(
+                controller: _controller,
+                textAlign: TextAlign.center,
+                textCapitalization: TextCapitalization.characters,
+                maxLength: 6,
+                autofocus: true,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 8,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'XXXXXX',
+                  hintStyle: const TextStyle(color: Colors.white24, letterSpacing: 8),
+                  counterText: '',
+                  errorText: _error,
+                  errorStyle: const TextStyle(fontSize: 13, height: 1.4),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.white24),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF81C784), width: 1.5),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.redAccent),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+                  ),
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                ],
+                onSubmitted: (_) => _join(),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white54,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                      ),
+                      child: const Text('ביטול', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _join,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF81C784),
+                        foregroundColor: const Color(0xFF07101F),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.2, color: Color(0xFF07101F)))
+                          : const Text('הצטרף', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
