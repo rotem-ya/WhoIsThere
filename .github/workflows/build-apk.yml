@@ -36,8 +36,9 @@ jobs:
         run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
 
       - name: Write GoogleService-Info.plist
-        if: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST != '' }}
-        run: echo '${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}' > ios/Runner/GoogleService-Info.plist
+        env:
+          IOS_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+        run: '[ -n "$IOS_PLIST" ] && echo "$IOS_PLIST" > ios/Runner/GoogleService-Info.plist || true'
 
       - name: Clean Flutter and pub cache
         run: |
@@ -50,12 +51,12 @@ jobs:
       - name: Analyze (non-blocking for QA builds)
         run: flutter analyze || true
 
-      - name: Build debug APK
-        run: flutter build apk --debug
+      - name: Build release APK
+        run: flutter build apk --release
 
-      - name: Upload debug APK
+      - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: GuessThePlace-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: GuessThePlace-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
