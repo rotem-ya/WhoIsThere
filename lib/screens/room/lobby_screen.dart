@@ -112,7 +112,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
                             // ── Action button / waiting footer ─────────────────
                             SizedBox(
-                              height: 58,
+                              height: 52,
                               width: double.infinity,
                               child: isHost
                                   ? _GlossyActionButton(
@@ -353,7 +353,7 @@ class _PlayerAvatarTile extends StatelessWidget {
     final label = player.isHost ? '$base 👑' : base;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: AppStyles.glassCard(radius: 16, opacity: 0.18).copyWith(
         boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.7) : null,
         border: Border.all(
@@ -377,9 +377,9 @@ class _PlayerAvatarTile extends StatelessWidget {
               ),
               boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.5) : null,
             ),
-            child: PlayerAvatar(name: player.name, radius: 16),
+            child: PlayerAvatar(name: player.name, radius: 14),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
 
           // Single-line name (crown inline for host)
           Expanded(
@@ -473,7 +473,7 @@ class _GlossyActionButton extends StatelessWidget {
             child: Text(
               label,
               style: AppStyles.labelButton.copyWith(
-                fontSize: 22,
+                fontSize: 20,
                 color: enabled ? AppStyles.darkText : Colors.white24,
               ),
             ),
