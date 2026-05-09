@@ -54,6 +54,18 @@ jobs:
       - name: Build release APK
         run: flutter build apk --release
 
+      - name: Print APK certificate fingerprints (copy SHA1 → Firebase Console)
+        run: |
+          echo "========================================"
+          echo " APK signing certificate fingerprints"
+          echo " Register SHA1 in Firebase Console:"
+          echo " Project Settings → Your apps → Add fingerprint"
+          echo "========================================"
+          keytool -printcert -jarfile build/app/outputs/flutter-apk/app-release.apk \
+            2>/dev/null | grep -E "SHA1|SHA256" || \
+          apksigner verify --print-certs build/app/outputs/flutter-apk/app-release.apk \
+            2>/dev/null | grep -E "SHA-1|SHA-256"
+
       - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
