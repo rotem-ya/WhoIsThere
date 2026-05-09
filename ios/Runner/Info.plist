@@ -51,16 +51,5 @@
 	<string>This app does not use the camera.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app does not access your photo library.</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.PLACEHOLDER_REVERSED_CLIENT_ID</string>
-			</array>
-		</dict>
-	</array>
 </dict>
 </plist>
