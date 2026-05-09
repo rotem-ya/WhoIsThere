@@ -40,10 +40,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
-    await _runAuth(() async {
-      final user = await ref.read(authServiceProvider).signInWithGoogle();
-      return user ?? await ref.read(authServiceProvider).signInAnonymously();
-    });
+    // null = user cancelled picker — _runAuth stays on screen (no navigation).
+    // Exception = Google unavailable — _runAuth shows snackbar, user can tap Guest.
+    await _runAuth(() => ref.read(authServiceProvider).signInWithGoogle());
   }
 
   Future<void> _signInAnonymously() => _runAuth(ref.read(authServiceProvider).signInAnonymously);

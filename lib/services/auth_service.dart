@@ -14,7 +14,13 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  /// QA / integration-test helper — not called from any production UI path.
+  /// Signs in with the existing Firebase user or creates a fresh anonymous one.
   Future<UserModel?> signInForQa() async {
+    assert(() {
+      debugPrint('AuthService.signInForQa() called — QA path only');
+      return true;
+    }());
     try {
       final existingUser = _auth.currentUser;
       if (existingUser != null) return _syncUser(existingUser);
@@ -30,23 +36,19 @@ class AuthService {
   }
 
   Future<UserModel?> signInWithGoogle() async {
-    try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
+    final googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) return null; // User dismissed the picker — stay on auth screen.
 
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
+    final googleAuth = await googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
 
-      final userCredential = await _auth.signInWithCredential(credential);
-      return _syncUser(userCredential.user!);
-    } catch (_) {
-      // Google Sign-In unavailable (not configured, cancelled, or no network).
-      // Falls back to anonymous so the app is never blocked on any platform.
-      return signInForQa();
-    }
+    final userCredential = await _auth.signInWithCredential(credential);
+    return _syncUser(userCredential.user!);
+    // Exceptions propagate to the caller (auth screen) which shows a visible error.
+    // Do NOT silently fall back to anonymous — that creates unintended ghost accounts.
   }
 
   Future<UserModel?> signInWithApple() async {
