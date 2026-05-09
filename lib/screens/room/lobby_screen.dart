@@ -33,7 +33,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 
   void _shareToWhatsApp(String code) {
-    Share.share('בואו לשחק איתי בננו בננה! קוד החדר: $code');
+    Share.share('בואו לגלות מה בתמונה 📸\n\nהצטרפו לחדר שלי:\nקוד: $code');
   }
 
   @override
@@ -202,11 +202,10 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           ),
         ),
 
-        const Spacer(),
+        const SizedBox(width: 8),
 
-        // Title block
-        Flexible(
-          flex: 8,
+        // Title block — Expanded gives maximum available width
+        Expanded(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -214,6 +213,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                 'ברוכים הבאים לחדר של $hostName',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: AppStyles.bodySmall.copyWith(color: Colors.white70),
               ),
               const SizedBox(height: 2),
@@ -221,14 +221,15 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                 'לובי הסטודיו',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: AppStyles.heading1.copyWith(fontSize: 22),
               ),
             ],
           ),
         ),
 
-        const Spacer(),
-        const SizedBox(width: 40),
+        const SizedBox(width: 8),
+        const SizedBox(width: 36),
       ],
     );
   }
