@@ -73,9 +73,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
-    // Name field is ignored for Google — provider supplies display name.
-    // null return = cancelled picker — stays on screen.
-    // Exception propagates → snackbar shown, user stays on screen.
+    // null = user cancelled picker — _runAuth stays on screen (no navigation).
+    // Exception = Google unavailable — _runAuth shows snackbar, user can tap Guest.
     await _runAuth(() => ref.read(authServiceProvider).signInWithGoogle());
   }
 
