@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "815269999993-i8sgjg222f01a1ha3n65t65a99bn75k0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.whoisthere.app",
+            "certificate_hash": "32ff84ca4786bbcc3d701396984d9b806e72c323"
+          }
+        },
+        {
           "client_id": "815269999993-oe5u6spidpqhdvb4i2trqd2i4g022f0d.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
