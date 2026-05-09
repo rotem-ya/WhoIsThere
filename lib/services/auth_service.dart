@@ -24,15 +24,15 @@ class AuthService {
     try {
       final existingUser = _auth.currentUser;
       if (existingUser != null) return _syncUser(existingUser);
-      return signInAnonymously();
+      return signInAnonymously(); // no preferredName in QA path
     } catch (_) {
       return null;
     }
   }
 
-  Future<UserModel?> signInAnonymously() async {
+  Future<UserModel?> signInAnonymously({String? preferredName}) async {
     final userCredential = await _auth.signInAnonymously();
-    return _syncUser(userCredential.user!);
+    return _syncUser(userCredential.user!, preferredName: preferredName);
   }
 
   Future<UserModel?> signInWithGoogle() async {
@@ -80,7 +80,7 @@ class AuthService {
     return _syncUser(user);
   }
 
-  Future<UserModel> _syncUser(User firebaseUser) async {
+  Future<UserModel> _syncUser(User firebaseUser, {String? preferredName}) async {
     final docRef = _firestore.collection('users').doc(firebaseUser.uid);
     final doc = await docRef.get();
 
@@ -88,7 +88,8 @@ class AuthService {
     final isGuest = firebaseUser.isAnonymous;
 
     if (!doc.exists) {
-      final rawName = firebaseUser.displayName;
+      // preferredName (from auth screen input) takes priority for new accounts.
+      final rawName = preferredName ?? firebaseUser.displayName;
       final name = DisplayNameSanitizer.sanitize(rawName) ??
           DisplayNameSanitizer.guestFallback();
 
