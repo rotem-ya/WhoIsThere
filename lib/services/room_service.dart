@@ -144,6 +144,15 @@ class RoomService {
     return RoomModel.fromFirestore(await doc.reference.get());
   }
 
+  Future<RoomModel?> findRoomByCode(String code) async {
+    final query = await _rooms
+        .where('code', isEqualTo: code.toUpperCase())
+        .limit(1)
+        .get();
+    if (query.docs.isEmpty) return null;
+    return RoomModel.fromFirestore(query.docs.first);
+  }
+
   Stream<RoomModel?> watchRoom(String roomId) {
     return _rooms.doc(roomId).snapshots().map(
           (doc) => doc.exists ? RoomModel.fromFirestore(doc) : null,
