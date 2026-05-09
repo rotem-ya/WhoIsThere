@@ -12,7 +12,28 @@
           "package_name": "com.whoisthere.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "815269999993-i8sgjg222f01a1ha3n65t65a99bn75k0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.whoisthere.app",
+            "certificate_hash": "32ff84ca4786bbcc3d701396984d9b806e72c323"
+          }
+        },
+        {
+          "client_id": "815269999993-oe5u6spidpqhdvb4i2trqd2i4g022f0d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.whoisthere.app",
+            "certificate_hash": "7fe52e9e460aa2a670d1fef54e7ee42b311a4042"
+          }
+        },
+        {
+          "client_id": "815269999993-10ejsitd6jnqn83ats57b6j4uq3ulnrs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDoChtGi-uEV3ZWV31-yikolOfPF8pOiX4"
@@ -20,7 +41,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "815269999993-10ejsitd6jnqn83ats57b6j4uq3ulnrs.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "815269999993-4k44bkufabui8s6ibvg6dbi194hu8bqr.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.rotem.whoisthere"
+              }
+            }
+          ]
         }
       }
     }
