@@ -318,7 +318,7 @@ class _PlayerGrid extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 8,
-        childAspectRatio: 2.4,
+        childAspectRatio: 2.0,
       ),
       itemBuilder: (context, index) {
         if (index < players.length) {
@@ -343,7 +343,7 @@ class _PlayerAvatarTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: AppStyles.glassCard(radius: 16, opacity: 0.18).copyWith(
         boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.7) : null,
         border: Border.all(
@@ -374,6 +374,7 @@ class _PlayerAvatarTile extends StatelessWidget {
           // Name + host badge
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -389,6 +390,8 @@ class _PlayerAvatarTile extends StatelessWidget {
                 if (player.isHost)
                   Text(
                     '👑 מארח',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppStyles.bodySmall.copyWith(
                       color: AppStyles.bananaYellow,
                       fontSize: 10,
@@ -411,7 +414,7 @@ class _EmptyPlayerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         color: Colors.white.withOpacity(0.04),
