@@ -48,6 +48,13 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           return const SizedBox();
         }
 
+        if (room.phase == GamePhase.playing) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) context.go('/game/${room.id}');
+          });
+          return const SizedBox.shrink();
+        }
+
         final isHost = currentUser?.id == room.hostId;
         final hostName = room.players[room.hostId]?.name ?? 'המארח';
         final canStart = room.players.length >= GameConstants.minPlayers;
