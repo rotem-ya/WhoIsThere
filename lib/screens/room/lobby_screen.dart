@@ -119,14 +119,21 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                       label: _isStarting ? 'מכין צמצמים...' : 'התחל משחק',
                                       enabled: canStart && !_isStarting,
                                       onTap: () async {
+                                        debugPrint('Lobby start tapped: roomId=${widget.roomId}');
                                         setState(() => _isStarting = true);
                                         try {
                                           await ref
                                               .read(roomServiceProvider)
                                               .startGameDirectly(widget.roomId);
+                                          debugPrint('Lobby start success');
                                         } catch (e) {
-                                          debugPrint('startGameDirectly failed: $e');
-                                          if (mounted) setState(() => _isStarting = false);
+                                          debugPrint('Lobby startGameDirectly error: $e');
+                                          if (mounted) {
+                                            setState(() => _isStarting = false);
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('לא ניתן להתחיל משחק: $e')),
+                                            );
+                                          }
                                         }
                                       },
                                     )
@@ -342,6 +349,9 @@ class _PlayerAvatarTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final base = isMe ? 'אני' : player.name;
+    final label = player.isHost ? '$base 👑' : base;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: AppStyles.glassCard(radius: 16, opacity: 0.18).copyWith(
@@ -371,33 +381,16 @@ class _PlayerAvatarTile extends StatelessWidget {
           ),
           const SizedBox(width: 10),
 
-          // Name + host badge
+          // Single-line name (crown inline for host)
           Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isMe ? 'אני' : player.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppStyles.bodyMedium.copyWith(
-                    color: isMe ? AppStyles.cyanGlow : Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (player.isHost)
-                  Text(
-                    '👑 מארח',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppStyles.bodySmall.copyWith(
-                      color: AppStyles.bananaYellow,
-                      fontSize: 10,
-                    ),
-                  ),
-              ],
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppStyles.bodyMedium.copyWith(
+                color: isMe ? AppStyles.cyanGlow : Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -461,24 +454,28 @@ class _GlossyActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: double.infinity,
-        decoration: enabled
-            ? AppStyles.glossyButton(radius: 20)
-            : BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                color: Colors.white10,
-                border: Border.all(color: Colors.white12),
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: double.infinity,
+          decoration: enabled
+              ? AppStyles.glossyButton(radius: 20)
+              : BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.white10,
+                  border: Border.all(color: Colors.white12),
+                ),
+          child: Center(
+            child: Text(
+              label,
+              style: AppStyles.labelButton.copyWith(
+                fontSize: 22,
+                color: enabled ? AppStyles.darkText : Colors.white24,
               ),
-        child: Center(
-          child: Text(
-            label,
-            style: AppStyles.labelButton.copyWith(
-              fontSize: 22,
-              color: enabled ? AppStyles.darkText : Colors.white24,
             ),
           ),
         ),
