@@ -22,8 +22,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
-  static bool _rewardShownThisSession = false;
-
   late final AnimationController _pulseController;
   bool _isCreating = false;
   int? _loadingPlayers;
@@ -36,19 +34,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeTriggerDailyReward());
-  }
-
-  Future<void> _maybeTriggerDailyReward() async {
-    if (_rewardShownThisSession) return;
-    try {
-      final cache = await ref.read(localEconomyCacheProvider.future);
-      if (!mounted || !cache.isDailyRewardAvailable) return;
-      _rewardShownThisSession = true;
-      await Future.delayed(const Duration(milliseconds: 900));
-      if (!mounted) return;
-      showDailyRewardSheet(context, ref);
-    } catch (_) {}
   }
 
   @override
@@ -181,6 +166,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 top: 12,
                 left: 16,
                 child: SafeArea(child: CoinDisplay()),
+              ),
+              const Positioned(
+                top: 12,
+                right: 16,
+                child: SafeArea(child: _DailyRewardButton()),
               ),
               SafeArea(
                 child: LayoutBuilder(
@@ -486,6 +476,8 @@ class _PrivateRoomButton extends StatelessWidget {
   }
 }
 
+// ── Join by code button ────────────────────────────────────────────────────
+
 class _JoinRoomButton extends StatelessWidget {
   final VoidCallback? onTap;
   const _JoinRoomButton({required this.onTap});
@@ -519,6 +511,79 @@ class _JoinRoomButton extends StatelessWidget {
     );
   }
 }
+
+// ── Daily reward button (top-right corner) ────────────────────────────────
+
+class _DailyRewardButton extends ConsumerWidget {
+  const _DailyRewardButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isAvailable =
+        ref.watch(localEconomyCacheProvider).valueOrNull?.isDailyRewardAvailable ?? false;
+
+    return GestureDetector(
+      onTap: () => showDailyRewardSheet(context, ref),
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        opacity: isAvailable ? 1.0 : 0.38,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF050A14).withOpacity(0.60),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: isAvailable
+                      ? const Color(0xFFD4AF37).withOpacity(0.70)
+                      : Colors.white.withOpacity(0.15),
+                  width: isAvailable ? 1.5 : 1.0,
+                ),
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.card_giftcard_rounded,
+                  color: Color(0xFFD4AF37),
+                  size: 20,
+                ),
+              ),
+            ),
+            if (isAvailable)
+              Positioned(
+                top: -5,
+                right: -5,
+                child: Container(
+                  width: 17,
+                  height: 17,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD4AF37),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppStyles.navyTop, width: 1.5),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      '1',
+                      style: TextStyle(
+                        color: Color(0xFF07101F),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Join-by-code dialog ────────────────────────────────────────────────────
 
 class _JoinCodeDialog extends ConsumerStatefulWidget {
   const _JoinCodeDialog();
