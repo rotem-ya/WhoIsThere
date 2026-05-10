@@ -167,11 +167,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 left: 16,
                 child: SafeArea(child: CoinDisplay()),
               ),
-              const Positioned(
-                top: 12,
-                right: 16,
-                child: SafeArea(child: _DailyRewardButton()),
-              ),
               SafeArea(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -278,6 +273,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     );
                   },
                 ),
+              ),
+              // Must be last in the Stack so it sits above the SingleChildScrollView
+              // (which uses HitTestBehavior.opaque and would otherwise absorb its taps).
+              const Positioned(
+                top: 12,
+                right: 16,
+                child: SafeArea(child: _DailyRewardButton()),
               ),
             ],
           ),
