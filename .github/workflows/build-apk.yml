@@ -5,6 +5,8 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# Phase 7F QA — 7C share link + 7D join paste + 7E daily reward session flag
+
 jobs:
   build:
     runs-on: ubuntu-latest
