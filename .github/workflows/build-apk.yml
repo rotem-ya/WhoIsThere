@@ -40,6 +40,14 @@ jobs:
           IOS_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
         run: '[ -n "$IOS_PLIST" ] && echo "$IOS_PLIST" > ios/Runner/GoogleService-Info.plist || true'
 
+      - name: Decode release keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_JKS_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > android/app/keystore.jks
+          fi
+
       - name: Clean Flutter and pub cache
         run: |
           flutter clean
@@ -52,6 +60,10 @@ jobs:
         run: flutter analyze || true
 
       - name: Build release APK
+        env:
+          KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEYSTORE_KEY_PASS: ${{ secrets.KEYSTORE_KEY_PASS }}
         run: flutter build apk --release
 
       - name: Upload release APK
