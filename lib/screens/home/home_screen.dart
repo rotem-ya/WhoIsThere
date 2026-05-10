@@ -22,6 +22,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
+  static bool _rewardShownThisSession = false;
+
   late final AnimationController _pulseController;
   bool _isCreating = false;
   int? _loadingPlayers;
@@ -38,9 +40,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _maybeTriggerDailyReward() async {
+    if (_rewardShownThisSession) return;
     try {
       final cache = await ref.read(localEconomyCacheProvider.future);
       if (!mounted || !cache.isDailyRewardAvailable) return;
+      _rewardShownThisSession = true;
       await Future.delayed(const Duration(milliseconds: 900));
       if (!mounted) return;
       showDailyRewardSheet(context, ref);
@@ -482,8 +486,6 @@ class _PrivateRoomButton extends StatelessWidget {
   }
 }
 
-// ── Join by code button ────────────────────────────────────────────────────
-
 class _JoinRoomButton extends StatelessWidget {
   final VoidCallback? onTap;
   const _JoinRoomButton({required this.onTap});
@@ -517,8 +519,6 @@ class _JoinRoomButton extends StatelessWidget {
     );
   }
 }
-
-// ── Join-by-code dialog ────────────────────────────────────────────────────
 
 class _JoinCodeDialog extends ConsumerStatefulWidget {
   const _JoinCodeDialog();
