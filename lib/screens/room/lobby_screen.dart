@@ -33,9 +33,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 
   void _shareToWhatsApp(String code) {
-    Share.share(
-      'בואו לגלות מה בתמונה 📸\n\nקוד חדר:\n$code\n\nהצטרפו דרך האפליקציה והזינו את הקוד.',
-    );
+    final link = 'https://rotem-ya.github.io/apps-share-pages/whoisthere/join.html?code=$code';
+    Share.share('בואו לגלות מה בתמונה 📸\n\nקוד חדר:\n$code\n\nהצטרפו:\n$link');
   }
 
   @override
