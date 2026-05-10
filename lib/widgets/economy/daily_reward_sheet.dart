@@ -57,6 +57,7 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
       if (!mounted) return;
 
       if (result != null) {
+        ref.invalidate(localEconomyCacheProvider);
         setState(() {
           _claimed = true;
           _earnedCoins = result.coins;
@@ -206,7 +207,7 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
   }
 }
 
-// ── Streak row ────────────────────────────────────────────────────────────────
+// ── Streak row ──────────────────────────────────────────────────────────────────────────────
 
 class _StreakRow extends StatelessWidget {
   final int todayDay;       // 1-7 — which slot is TODAY
@@ -324,7 +325,7 @@ class _DaySlot extends StatelessWidget {
   }
 }
 
-// ── Coins preview / success ───────────────────────────────────────────────────
+// ── Coins preview / success ──────────────────────────────────────────────────────
 
 class _CoinsPreview extends StatelessWidget {
   final int coins;

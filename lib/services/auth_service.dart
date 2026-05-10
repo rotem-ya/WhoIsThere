@@ -110,13 +110,19 @@ class AuthService {
       return newUser;
     }
 
-    // Existing user — update login timestamps only, never overwrite displayName.
-    await docRef.update({
+    // Existing user — update login timestamps. Also apply preferredName if the
+    // user explicitly typed one (anonymous path only — never set for social logins).
+    final updates = <String, dynamic>{
       'lastLoginAt': FieldValue.serverTimestamp(),
       'lastSeenAt': FieldValue.serverTimestamp(),
       'provider': provider,
       'isGuest': isGuest,
-    });
+    };
+    if (preferredName != null) {
+      final sanitized = DisplayNameSanitizer.sanitize(preferredName);
+      if (sanitized != null) updates['name'] = sanitized;
+    }
+    await docRef.update(updates);
     return UserModel.fromFirestore(await docRef.get());
   }
 
