@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
@@ -63,6 +64,26 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
     }
   }
 
+  Future<void> _pasteCode() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = (data?.text ?? '').trim().toUpperCase();
+    if (text.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('לא נמצא קוד להדבקה')),
+        );
+      }
+      return;
+    }
+    setState(() {
+      _codeController.text = text.length > 6 ? text.substring(0, 6) : text;
+      _codeController.selection = TextSelection.collapsed(
+        offset: _codeController.text.length,
+      );
+      _errorMessage = null;
+    });
+  }
+
   @override
   void dispose() {
     _codeController.dispose();
@@ -71,6 +92,14 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const borderRadius = BorderRadius.all(Radius.circular(12));
+    const codeTextStyle = TextStyle(
+      fontSize: 34,
+      fontWeight: FontWeight.w900,
+      letterSpacing: 8,
+      color: Color(0xFF07101F),
+    );
+
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -100,16 +129,61 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
                       textAlign: TextAlign.center,
                       textCapitalization: TextCapitalization.characters,
                       maxLength: 6,
-                      style: AppTextStyles.titleDark.copyWith(
-                        fontSize: 34,
-                        letterSpacing: 8,
-                      ),
+                      style: codeTextStyle,
+                      onChanged: (_) => setState(() => _errorMessage = null),
                       decoration: InputDecoration(
                         hintText: 'XXXXXX',
+                        hintStyle: codeTextStyle.copyWith(
+                          color: const Color(0xFF07101F).withOpacity(0.28),
+                        ),
                         counterText: '',
                         errorText: _errorMessage,
+                        filled: true,
+                        fillColor: const Color(0xFF07101F).withOpacity(0.06),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        border: const OutlineInputBorder(
+                          borderRadius: borderRadius,
+                          borderSide: BorderSide(
+                            color: Color(0xFF07101F),
+                            width: 0.8,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: borderRadius,
+                          borderSide: BorderSide(
+                            color: const Color(0xFF07101F).withOpacity(0.20),
+                            width: 0.8,
+                          ),
+                        ),
+                        focusedBorder: const OutlineInputBorder(
+                          borderRadius: borderRadius,
+                          borderSide: BorderSide(
+                            color: AppColors.accent,
+                            width: 2,
+                          ),
+                        ),
+                        errorBorder: const OutlineInputBorder(
+                          borderRadius: borderRadius,
+                          borderSide: BorderSide(color: Colors.red, width: 1),
+                        ),
+                        focusedErrorBorder: const OutlineInputBorder(
+                          borderRadius: borderRadius,
+                          borderSide: BorderSide(color: Colors.red, width: 2),
+                        ),
                       ),
                       onSubmitted: (_) => _joinRoom(),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextButton.icon(
+                      onPressed: _pasteCode,
+                      icon: const Icon(Icons.content_paste_rounded, size: 18),
+                      label: const Text('הדבק קוד'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.accent,
+                      ),
                     ),
                   ],
                 ),
