@@ -124,7 +124,7 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
 
     // Cold start — app launched via deep link
     try {
-      final initial = await appLinks.getInitialAppLink();
+      final initial = await appLinks.getInitialLink();
       if (initial != null) _handleDeepLink(initial, coldStart: true);
     } catch (_) {}
 
