@@ -35,14 +35,30 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
   void _shareToWhatsApp(String code) {
     final deepLink = 'whoisthere://join?code=$code';
-    Share.share(
-      'בואו לגלות מה בתמונה 📸\n\n'
-      'קוד חדר: $code\n\n'
-      'הצטרפו ישירות:\n$deepLink\n\n'
-      'הורידו את האפליקציה:\n'
-      'Android: ${AppConstants.googlePlayUrl}\n'
-      'iOS: ${AppConstants.appStoreUrl}',
-    );
+    final playUrl = AppConstants.googlePlayUrl;
+    final storeUrl = AppConstants.appStoreUrl;
+    final hasStoreUrls =
+        !playUrl.startsWith('TODO') && !storeUrl.startsWith('TODO');
+
+    final msg = StringBuffer();
+    msg.writeln('בואו לגלות מה בתמונה 📸');
+    msg.writeln();
+    msg.writeln('קוד חדר: $code');
+    msg.writeln();
+
+    if (hasStoreUrls) {
+      msg.writeln('1. הורידו את המשחק:');
+      msg.writeln('Android: $playUrl');
+      msg.writeln('iPhone: $storeUrl');
+      msg.writeln();
+      msg.writeln('2. אחרי ההתקנה לחצו כאן להצטרפות:');
+      msg.write(deepLink);
+    } else {
+      msg.writeln('לחצו כאן להצטרפות:');
+      msg.write(deepLink);
+    }
+
+    Share.share(msg.toString());
   }
 
   @override
