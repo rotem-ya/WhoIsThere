@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:app_links/app_links.dart';
 import 'core/theme/app_styles.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_router.dart';
 import 'firebase_options.dart';
+import 'providers/providers.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -99,11 +103,73 @@ class _ErrorApp extends StatelessWidget {
   }
 }
 
-class GuessThePlaceApp extends ConsumerWidget {
+class GuessThePlaceApp extends ConsumerStatefulWidget {
   const GuessThePlaceApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GuessThePlaceApp> createState() => _GuessThePlaceAppState();
+}
+
+class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
+  StreamSubscription<Uri>? _linkSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _initDeepLinks();
+  }
+
+  Future<void> _initDeepLinks() async {
+    final appLinks = AppLinks();
+
+    // Cold start — app launched via deep link
+    try {
+      final initial = await appLinks.getInitialAppLink();
+      if (initial != null) _handleDeepLink(initial, coldStart: true);
+    } catch (_) {}
+
+    // Warm start — app already running, new link arrives
+    _linkSub = appLinks.uriLinkStream.listen(
+      (uri) => _handleDeepLink(uri, coldStart: false),
+      onError: (_) {},
+    );
+  }
+
+  void _handleDeepLink(Uri uri, {required bool coldStart}) {
+    if (uri.scheme != 'whoisthere' || uri.host != 'join') return;
+
+    final raw = uri.queryParameters['code'] ?? '';
+    final code = raw.trim().toUpperCase();
+    if (code.length != 6 || !RegExp(r'^[A-Z0-9]{6}$').hasMatch(code)) return;
+
+    if (coldStart) {
+      // Store for GoRouter redirect to pick up after auth
+      ref.read(pendingJoinCodeProvider.notifier).state = code;
+      return;
+    }
+
+    // Warm start — only navigate if not in an active game session
+    final router = ref.read(routerProvider);
+    final currentPath =
+        router.routeInformationProvider.value.uri.path;
+    final inActiveGame = currentPath.startsWith('/game/') ||
+        currentPath.startsWith('/vote-') ||
+        currentPath.startsWith('/win/') ||
+        currentPath.startsWith('/lobby/');
+
+    if (!inActiveGame) {
+      router.go('/join-room?initialCode=$code');
+    }
+  }
+
+  @override
+  void dispose() {
+    _linkSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // ref.watch keeps the Riverpod provider alive — do not remove.
     final router = ref.watch(routerProvider);
 

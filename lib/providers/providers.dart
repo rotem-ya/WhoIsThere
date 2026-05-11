@@ -53,6 +53,9 @@ final currentUserProvider = StreamProvider<UserModel?>((ref) {
   return ref.watch(authServiceProvider).userModelStream();
 });
 
+// Deep-link join code — set by AppLinks handler, consumed by JoinRoomScreen
+final pendingJoinCodeProvider = StateProvider<String?>((ref) => null);
+
 // Current room
 final currentRoomIdProvider = StateProvider<String?>((ref) => null);
 
@@ -144,4 +147,3 @@ final turnStateProvider =
     StateNotifierProvider<TurnStateNotifier, TurnState>(
   (ref) => TurnStateNotifier(),
 );
-

@@ -13,7 +13,8 @@ import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/app_header.dart';
 
 class JoinRoomScreen extends ConsumerStatefulWidget {
-  const JoinRoomScreen({super.key});
+  final String? initialCode;
+  const JoinRoomScreen({super.key, this.initialCode});
 
   @override
   ConsumerState<JoinRoomScreen> createState() => _JoinRoomScreenState();
@@ -23,6 +24,22 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
   final _codeController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    final raw = widget.initialCode;
+    if (raw != null) {
+      final code = raw.trim().toUpperCase();
+      if (code.length == 6 && RegExp(r'^[A-Z0-9]{6}$').hasMatch(code)) {
+        _codeController.text = code;
+      }
+      // Clear the provider regardless — it has been consumed
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(pendingJoinCodeProvider.notifier).state = null;
+      });
+    }
+  }
 
   Future<void> _joinRoom() async {
     final code = _codeController.text.trim().toUpperCase();

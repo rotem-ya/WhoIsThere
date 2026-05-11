@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
@@ -33,8 +34,15 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 
   void _shareToWhatsApp(String code) {
-    final link = 'https://rotem-ya.github.io/apps-share-pages/whoisthere/join.html?code=$code';
-    Share.share('בואו לגלות מה בתמונה 📸\n\nקוד חדר:\n$code\n\nהצטרפו:\n$link');
+    final deepLink = 'whoisthere://join?code=$code';
+    Share.share(
+      'בואו לגלות מה בתמונה 📸\n\n'
+      'קוד חדר: $code\n\n'
+      'הצטרפו ישירות:\n$deepLink\n\n'
+      'הורידו את האפליקציה:\n'
+      'Android: ${AppConstants.googlePlayUrl}\n'
+      'iOS: ${AppConstants.appStoreUrl}',
+    );
   }
 
   @override
@@ -77,15 +85,22 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            // ── Header ──────────────────────────────────────
                             _buildHeader(context, currentUser, hostName),
+
                             const SizedBox(height: 12),
+
+                            // ── Room Code Card ───────────────────────────────
                             _GlossyRoomCode(
                               code: room.code,
                               isCopied: _codeCopied,
                               onCopy: () => _copyCode(room.code),
                               onShare: () => _shareToWhatsApp(room.code),
                             ),
+
                             const SizedBox(height: 12),
+
+                            // ── Section label ─────────────────────────────────
                             Align(
                               alignment: Alignment.centerRight,
                               child: Text(
@@ -100,12 +115,18 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                 ),
                               ),
                             ),
+
                             const SizedBox(height: 6),
+
+                            // ── Players grid (2 × 4 = 8 fixed slots) ──────────
                             _PlayerGrid(
                               players: room.players.values.toList(),
                               currentUserId: currentUser?.id,
                             ),
+
                             const SizedBox(height: 8),
+
+                            // ── Action button / waiting footer ─────────────────
                             SizedBox(
                               height: 52,
                               width: double.infinity,
@@ -164,6 +185,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     return Row(
       textDirection: TextDirection.rtl,
       children: [
+        // Back / leave button
         GestureDetector(
           onTap: () async {
             if (currentUser != null) {
@@ -188,7 +210,10 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             ),
           ),
         ),
+
         const SizedBox(width: 8),
+
+        // Title block — Expanded gives maximum available width
         Expanded(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -211,12 +236,15 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             ],
           ),
         ),
+
         const SizedBox(width: 8),
         const SizedBox(width: 36),
       ],
     );
   }
 }
+
+// ── Room Code Card ─────────────────────────────────────────────────────────
 
 class _GlossyRoomCode extends StatelessWidget {
   final String code;
@@ -246,6 +274,7 @@ class _GlossyRoomCode extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // WhatsApp share
                 IconButton(
                   onPressed: onShare,
                   icon: const Icon(
@@ -255,6 +284,8 @@ class _GlossyRoomCode extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
+
+                // Room code — tap to copy
                 GestureDetector(
                   onTap: onCopy,
                   child: Text(
@@ -273,6 +304,8 @@ class _GlossyRoomCode extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
+
+                // Copy status icon
                 Icon(
                   isCopied ? Icons.check_circle_rounded : Icons.copy_rounded,
                   color: isCopied ? Colors.greenAccent : Colors.white54,
@@ -290,6 +323,8 @@ class _GlossyRoomCode extends StatelessWidget {
     );
   }
 }
+
+// ── Players Grid (fixed 2 × 4 = 8 slots) ──────────────────────────────────
 
 class _PlayerGrid extends StatelessWidget {
   final List<PlayerModel> players;
@@ -322,6 +357,8 @@ class _PlayerGrid extends StatelessWidget {
   }
 }
 
+// ── Filled player slot ─────────────────────────────────────────────────────
+
 class _PlayerAvatarTile extends StatelessWidget {
   final PlayerModel player;
   final bool isMe;
@@ -346,6 +383,7 @@ class _PlayerAvatarTile extends StatelessWidget {
       child: Row(
         textDirection: TextDirection.rtl,
         children: [
+          // Avatar with cyan ring for current user
           Container(
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
@@ -359,6 +397,8 @@ class _PlayerAvatarTile extends StatelessWidget {
             child: PlayerAvatar(name: player.name, radius: 14),
           ),
           const SizedBox(width: 8),
+
+          // Single-line name (crown inline for host)
           Expanded(
             child: Text(
               label,
@@ -375,6 +415,8 @@ class _PlayerAvatarTile extends StatelessWidget {
     );
   }
 }
+
+// ── Empty waiting slot ─────────────────────────────────────────────────────
 
 class _EmptyPlayerTile extends StatelessWidget {
   const _EmptyPlayerTile();
@@ -414,6 +456,8 @@ class _EmptyPlayerTile extends StatelessWidget {
     );
   }
 }
+
+// ── Start game button (host only) ──────────────────────────────────────────
 
 class _GlossyActionButton extends StatelessWidget {
   final String label;
@@ -456,6 +500,8 @@ class _GlossyActionButton extends StatelessWidget {
     );
   }
 }
+
+// ── Non-host waiting message ───────────────────────────────────────────────
 
 class _WaitingFooter extends StatelessWidget {
   const _WaitingFooter();
