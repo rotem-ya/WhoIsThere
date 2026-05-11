@@ -30,7 +30,11 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (onSplash) return isLoggedIn ? '/home' : '/auth';
       if (!isLoggedIn && !onAuth) return '/auth';
-      if (isLoggedIn && onAuth) return '/home';
+      if (isLoggedIn && onAuth) {
+        final code = ref.read(pendingJoinCodeProvider);
+        if (code != null) return '/join-room?initialCode=$code';
+        return '/home';
+      }
       return null;
     },
     routes: [
@@ -52,7 +56,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/join-room',
-        builder: (context, state) => const JoinRoomScreen(),
+        builder: (context, state) => JoinRoomScreen(
+          initialCode: state.uri.queryParameters['initialCode'],
+        ),
       ),
       GoRoute(
         path: '/lobby/:roomId',

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
@@ -33,8 +34,15 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 
   void _shareToWhatsApp(String code) {
-    final link = 'https://rotem-ya.github.io/apps-share-pages/whoisthere/join.html?code=$code';
-    Share.share('בואו לגלות מה בתמונה 📸\n\nקוד חדר:\n$code\n\nהצטרפו:\n$link');
+    final deepLink = 'whoisthere://join?code=$code';
+    Share.share(
+      'בואו לגלות מה בתמונה 📸\n\n'
+      'קוד חדר: $code\n\n'
+      'הצטרפו ישירות:\n$deepLink\n\n'
+      'הורידו את האפליקציה:\n'
+      'Android: ${AppConstants.googlePlayUrl}\n'
+      'iOS: ${AppConstants.appStoreUrl}',
+    );
   }
 
   @override

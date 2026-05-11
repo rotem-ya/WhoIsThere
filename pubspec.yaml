@@ -40,6 +40,9 @@ dependencies:
   # Storage
   shared_preferences: ^2.2.3
 
+  # Deep links
+  app_links: ^6.0.0
+
   # Utils
   uuid: ^4.3.3
   equatable: ^2.0.5
