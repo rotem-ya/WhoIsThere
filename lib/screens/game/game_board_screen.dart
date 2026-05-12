@@ -69,7 +69,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   // Reveal sound — owned here, not by ApertureTile
   static final AudioPlayer _revealSoundPlayer = AudioPlayer(playerId: 'reveal-aperture');
-  static final AssetSource _revealSound = AssetSource('sounds/aperture_open.mp3');
+  static final AssetSource _revealSound = AssetSource('sounds/aperture_open.wav');
 
   static Future<void> _primeRevealSound() async {
     try {
