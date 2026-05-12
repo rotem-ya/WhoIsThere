@@ -83,8 +83,8 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
 
   Future<void> _pasteCode() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
-    final text = (data?.text ?? '').trim().toUpperCase();
-    if (text.isEmpty) {
+    final raw = (data?.text ?? '').trim();
+    if (raw.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('לא נמצא קוד להדבקה')),
@@ -92,8 +92,16 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
       }
       return;
     }
+    // Extract code from full deep link URI if the user copied the whole line
+    String code;
+    final uri = Uri.tryParse(raw);
+    if (uri != null && uri.queryParameters.containsKey('code')) {
+      code = uri.queryParameters['code']!.trim().toUpperCase();
+    } else {
+      code = raw.toUpperCase();
+    }
     setState(() {
-      _codeController.text = text.length > 6 ? text.substring(0, 6) : text;
+      _codeController.text = code.length > 6 ? code.substring(0, 6) : code;
       _codeController.selection = TextSelection.collapsed(
         offset: _codeController.text.length,
       );

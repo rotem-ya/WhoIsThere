@@ -525,7 +525,19 @@ class _DailyRewardButton extends ConsumerWidget {
         ref.watch(localEconomyCacheProvider).valueOrNull?.isDailyRewardAvailable ?? false;
 
     return GestureDetector(
-      onTap: () => showDailyRewardSheet(context, ref),
+      onTap: () {
+        if (isAvailable) {
+          showDailyRewardSheet(context, ref);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('הפרס היומי כבר נאסף'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      },
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 200),
         opacity: isAvailable ? 1.0 : 0.38,

@@ -68,6 +68,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static final AudioPlayer _revealSoundPlayer = AudioPlayer(playerId: 'reveal-aperture');
   static final AssetSource _revealSound = AssetSource('sounds/aperture_open.mp3');
 
+  static Future<void> _primeRevealSound() async {
+    try {
+      await _revealSoundPlayer.setPlayerMode(PlayerMode.lowLatency);
+    } catch (_) {}
+    try {
+      await _revealSoundPlayer.setSource(_revealSound);
+    } catch (_) {}
+  }
+
   static Future<void> _playRevealSound() async {
     try {
       await _revealSoundPlayer.stop();
@@ -102,6 +111,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _confettiRight = ConfettiController(duration: const Duration(seconds: 2));
     WidgetsBinding.instance.addObserver(this);
     unawaited(_startBackgroundMusic());
+    unawaited(_primeRevealSound());
   }
 
   @override
@@ -153,7 +163,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final difficulty = room.selectedDifficulty ?? Difficulty.easy;
     final isLastTile = room.availablePieceIndices.length == 1;
 
-    unawaited(_playRevealSound());
     setState(() => _isBusy = true);
     try {
       await ref.read(roomServiceProvider).revealPiece(
@@ -162,6 +171,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             pieceIndex: index,
             difficulty: difficulty,
           );
+      unawaited(_playRevealSound());
       if (isLastTile) {
         await ref.read(roomServiceProvider).endGameNoWinner(room.id);
       } else {
