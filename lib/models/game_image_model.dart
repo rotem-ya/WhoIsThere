@@ -8,6 +8,7 @@ class GameImageModel extends Equatable {
   final String name;
   final String answer;
   final List<String> acceptedAnswers;
+  final List<String> facts;
   final ImageCategory category;
   final bool isPremium;
   final int cost;
@@ -19,6 +20,7 @@ class GameImageModel extends Equatable {
     required this.name,
     required this.answer,
     this.acceptedAnswers = const [],
+    this.facts = const [],
     required this.category,
     this.isPremium = false,
     this.cost = 0,

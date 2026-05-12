@@ -50,6 +50,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int _revealedAtTurnIndex = -1;
   bool _hasGuessedThisTurn = false;
 
+  // Hint fact cycling
+  int _nextFactIndex = 0;
+
   // Guess-event banner
   int _lastShownGuessCount = -1;
   Map<String, dynamic>? _currentBanner;
@@ -144,6 +147,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   Future<void> _loadImage(String imageId) async {
     if (imageId.isEmpty || imageId == _loadedImageId) return;
     _loadedImageId = imageId;
+    _nextFactIndex = 0;
     try {
       final image = await ref.read(roomServiceProvider).getImage(imageId);
       if (mounted) setState(() => _image = image);
@@ -371,7 +375,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   Future<void> _useRevealHint(RoomModel room, String userId) async {
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
-    if (!isSolo) return;
+    if (!isSolo) return; // multiplayer: blocked
 
     final wallet = ref.read(walletProvider).valueOrNull;
     if (wallet == null) return;
@@ -387,11 +391,23 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     );
 
     if (!granted || !mounted) return;
-    if (room.availablePieceIndices.isEmpty) return;
 
-    final idx = room.availablePieceIndices[
-        _random.nextInt(room.availablePieceIndices.length)];
-    await _humanRevealTile(room: room, userId: userId, index: idx);
+    final facts = _image?.facts ?? const [];
+    if (facts.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (_) => const _FactDialog(fact: null),
+      );
+      return;
+    }
+
+    final fact = facts[_nextFactIndex % facts.length];
+    _nextFactIndex++;
+
+    showDialog(
+      context: context,
+      builder: (_) => _FactDialog(fact: fact),
+    );
   }
 
   Future<bool> _submitGuess(RoomModel room, String userId, String value) async {
@@ -893,6 +909,59 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
           ),
         );
       },
+    );
+  }
+}
+
+class _FactDialog extends StatelessWidget {
+  final String? fact;
+  const _FactDialog({required this.fact});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF07101F),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.5)),
+      ),
+      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+      contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      title: const Row(
+        children: [
+          Icon(Icons.lightbulb_outline_rounded, color: Color(0xFF87CEEB), size: 20),
+          SizedBox(width: 8),
+          Text(
+            'רמז',
+            style: TextStyle(
+              color: Color(0xFF87CEEB),
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        fact ?? 'אין רמז זמין למקום הזה',
+        textAlign: TextAlign.right,
+        textDirection: TextDirection.rtl,
+        style: TextStyle(
+          color: fact != null ? Colors.white : Colors.white54,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          height: 1.55,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text(
+            'הבנתי',
+            style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.w900),
+          ),
+        ),
+      ],
     );
   }
 }

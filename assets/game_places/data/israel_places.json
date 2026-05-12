@@ -7,7 +7,11 @@
     "city_he": "ירושלים",
     "image_asset": "assets/game_places/images/western_wall.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "הכותל המערבי הוא השריד היחיד שנותר מחומות בית המקדש השני",
+      "מדי שנה מגיעים לכותל למעלה ממיליון מבקרים מרחבי העולם"
+    ]
   },
   {
     "id": "dome_of_the_rock",
@@ -17,7 +21,11 @@
     "city_he": "ירושלים",
     "image_asset": "assets/game_places/images/dome_of_the_rock.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "כיפת הסלע נבנתה בשנת 691 לספירה ומהווה אחד המבנים המוסלמיים העתיקים בעולם",
+      "הכיפה הזהובה עשויה אלומיניום מצופה זהב ושוקלת כ-80 קילוגרם"
+    ]
   },
   {
     "id": "tower_of_david",
@@ -27,7 +35,11 @@
     "city_he": "ירושלים",
     "image_asset": "assets/game_places/images/tower_of_david.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "למרות שמו, מגדל דוד אינו קשור לדוד המלך — הוא נבנה בתקופה ההשמונאית",
+      "המצודה שימשה כמבצר לשליטים רבים לאורך ההיסטוריה, מהשמונאים ועד העות'מאנים"
+    ]
   },
   {
     "id": "mahane_yehuda_market",
@@ -47,7 +59,11 @@
     "city_he": "ירושלים",
     "image_asset": "assets/game_places/images/knesset.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "הכנסת היא הפרלמנט של ישראל ומונה 120 חברים — כמניין אנשי כנסת הגדולה",
+      "הכנסת עברה לבניינה הנוכחי בירושלים בשנת 1966"
+    ]
   },
   {
     "id": "israel_museum",
@@ -57,7 +73,11 @@
     "city_he": "ירושלים",
     "image_asset": "assets/game_places/images/israel_museum.jpg",
     "difficulty": "medium",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "מוזיאון ישראל הוא הגדול בארץ ונפתח בשנת 1965",
+      "בהיכל הספר שבמוזיאון מוצגות מגילות ים המלח — כתבי היד העבריים העתיקים בעולם"
+    ]
   },
   {
     "id": "yad_vashem",
@@ -67,7 +87,11 @@
     "city_he": "ירושלים",
     "image_asset": "assets/game_places/images/yad_vashem.jpg",
     "difficulty": "medium",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "שמו של יד ושם לקוח מהפסוק בישעיהו: 'ונתתי להם בביתי ובחומותי יד ושם'",
+      "יד ושם שומר על עדויות של למעלה ממיליון ניצולי שואה"
+    ]
   },
   {
     "id": "masada",
@@ -77,7 +101,11 @@
     "city_he": "ים המלח",
     "image_asset": "assets/game_places/images/masada.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "מצדה בנויה על צוק בגובה 450 מטר מעל ים המלח ושימשה כמבצר בימי הורדוס",
+      "ב-73 לספירה סירבו מגיני מצדה להיכנע לרומאים — ומשם נולד הביטוי 'מצדה לא תיפול שנית'"
+    ]
   },
   {
     "id": "dead_sea",
@@ -87,7 +115,11 @@
     "city_he": "ים המלח",
     "image_asset": "assets/game_places/images/dead_sea.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "ים המלח הוא הנקודה הנמוכה ביותר על פני כדור הארץ — כ-430 מטר מתחת לפני הים",
+      "מי ים המלח מלוחים פי עשרה מהאוקיינוס, מה שהופך את הציפה על פניו לטבעית לחלוטין"
+    ]
   },
   {
     "id": "ein_gedi",
@@ -97,7 +129,11 @@
     "city_he": "ים המלח",
     "image_asset": "assets/game_places/images/ein_gedi.jpg",
     "difficulty": "medium",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "עין גדי היא אוזיסה ירוקה על שפת ים המלח הידועה במפלי המים ובעושר הצמחייה שלה",
+      "נחל דוד שבעין גדי מוזכר בספר שמואל כמקום מסתורו של דוד מפני שאול המלך"
+    ]
   },
   {
     "id": "ramon_crater",

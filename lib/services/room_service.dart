@@ -63,6 +63,7 @@ class RoomService {
       name: name,
       answer: answer,
       acceptedAnswers: List<String>.from(place['aliases_he'] ?? const []),
+      facts: List<String>.from(place['facts'] ?? const []),
       category: ImageCategory.israeliLandmark,
       imageUrl: asset,
       thumbnailUrl: asset,
