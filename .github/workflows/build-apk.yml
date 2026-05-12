@@ -48,30 +48,6 @@ jobs:
             echo "$KEYSTORE_B64" | base64 -d > android/app/keystore.jks
           fi
 
-      - name: Print keystore SHA-256 (App Links setup — remove after capturing)
-        env:
-          KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
-          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
-        run: |
-          if [ -f android/app/keystore.jks ]; then
-            echo "=== RELEASE KEYSTORE SHA-256 ==="
-            keytool -list -v \
-              -keystore android/app/keystore.jks \
-              -alias "$KEYSTORE_ALIAS" \
-              -storepass "$KEYSTORE_STORE_PASS" \
-              2>/dev/null | grep "SHA256:"
-            echo "================================"
-          else
-            echo "No release keystore found — build will use debug signing"
-            echo "=== DEBUG KEYSTORE SHA-256 ==="
-            keytool -list -v \
-              -keystore ~/.android/debug.keystore \
-              -alias androiddebugkey \
-              -storepass android \
-              2>/dev/null | grep "SHA256:"
-            echo "=============================="
-          fi
-
       - name: Clean Flutter and pub cache
         run: |
           flutter clean
