@@ -13,7 +13,8 @@ class GuessBanner extends StatelessWidget {
     final playerId = event['playerId'] as String? ?? '';
     final guess = event['guess'] as String? ?? '';
     final isCorrect = event['isCorrect'] as bool? ?? false;
-    final playerName = players[playerId]?.name ?? playerId;
+    final rawPlayerName = players[playerId]?.name ?? '';
+    final playerName = rawPlayerName.isNotEmpty ? rawPlayerName : 'שחקן';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),

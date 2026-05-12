@@ -102,7 +102,7 @@ class _WinScreenState extends ConsumerState<WinScreen> {
                           ? 'הנה התוצאות'
                           : isWinner
                               ? 'זיהית את המקום לפני כולם'
-                              : '${winner.name} ניצח/ה בסיבוב',
+                              : '${winner.name.isNotEmpty ? winner.name : 'שחקן'} ניצח/ה בסיבוב',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.subtitleLight,
                     ),

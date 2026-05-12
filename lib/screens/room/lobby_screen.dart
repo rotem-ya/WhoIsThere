@@ -63,7 +63,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         }
 
         final isHost = currentUser?.id == room.hostId;
-        final hostName = room.players[room.hostId]?.name ?? 'המארח';
+        final rawHostName = room.players[room.hostId]?.name ?? '';
+        final hostName = rawHostName.isEmpty ? 'המארח' : rawHostName;
         final canStart = room.players.length >= GameConstants.minPlayers;
 
         return Scaffold(
@@ -364,7 +365,7 @@ class _PlayerAvatarTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = isMe ? 'אני' : player.name;
+    final base = isMe ? 'אני' : (player.name.isNotEmpty ? player.name : 'שחקן');
     final label = player.isHost ? '$base 👑' : base;
 
     return Container(

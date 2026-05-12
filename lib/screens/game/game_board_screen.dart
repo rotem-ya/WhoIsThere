@@ -553,7 +553,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   });
                   final hasWinner = room.winnerId != null && room.winnerId!.isNotEmpty;
                   if (hasWinner) {
-                    final winnerName = room.players[room.winnerId]?.name ?? 'שחקן';
+                    final rawName = room.players[room.winnerId]?.name ?? '';
+                    final winnerName = rawName.isEmpty ? 'שחקן' : rawName;
                     return GameWinnerView(
                       winnerName: winnerName,
                       rewardBreakdown: _rewardBreakdown,
