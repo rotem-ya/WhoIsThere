@@ -133,9 +133,9 @@ class _ApertureTileState extends State<ApertureTile> with SingleTickerProviderSt
                       color: kNavy.withOpacity(0.5),
                     ),
                     child: const Icon(
-                      Icons.camera_rounded,
+                      Icons.lock_outline_rounded,
                       color: kGold,
-                      size: 32,
+                      size: 22,
                     ),
                   ),
                 );

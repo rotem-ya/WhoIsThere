@@ -557,6 +557,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     final winnerName = rawName.isEmpty ? 'שחקן' : rawName;
                     return GameWinnerView(
                       winnerName: winnerName,
+                      placeName: _image?.name,
                       rewardBreakdown: _rewardBreakdown,
                       onHome: () => context.go('/home'),
                     );
