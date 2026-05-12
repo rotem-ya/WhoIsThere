@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../core/constants/app_constants.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
@@ -34,30 +33,13 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 
   void _shareToWhatsApp(String code) {
-    final deepLink = 'whoisthere://join?code=$code';
-    final playUrl = AppConstants.googlePlayUrl;
-    final storeUrl = AppConstants.appStoreUrl;
-    final hasStoreUrls =
-        !playUrl.startsWith('TODO') && !storeUrl.startsWith('TODO');
-
     final msg = StringBuffer();
     msg.writeln('בואו לגלות מה בתמונה 📸');
     msg.writeln();
     msg.writeln('קוד חדר: $code');
     msg.writeln();
-
-    if (hasStoreUrls) {
-      msg.writeln('1. הורידו את המשחק:');
-      msg.writeln('Android: $playUrl');
-      msg.writeln('iPhone: $storeUrl');
-      msg.writeln();
-      msg.writeln('2. אחרי ההתקנה לחצו כאן להצטרפות:');
-      msg.write(deepLink);
-    } else {
-      msg.writeln('לחצו כאן להצטרפות:');
-      msg.write(deepLink);
-    }
-
+    msg.writeln('🎮 הצטרפות ישירה לחדר:');
+    msg.write('whoisthere://join?code=$code');
     Share.share(msg.toString());
   }
 
