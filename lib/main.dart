@@ -136,7 +136,11 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
   }
 
   void _handleDeepLink(Uri uri, {required bool coldStart}) {
-    if (uri.scheme != 'whoisthere' || uri.host != 'join') return;
+    final isCustomScheme = uri.scheme == 'whoisthere' && uri.host == 'join';
+    final isAppLink = uri.scheme == 'https' &&
+        uri.host == 'rotem-ya.github.io' &&
+        uri.path.startsWith('/apps-share-pages/whoisthere/join');
+    if (!isCustomScheme && !isAppLink) return;
 
     final raw = uri.queryParameters['code'] ?? '';
     final code = raw.trim().toUpperCase();
