@@ -20,6 +20,9 @@ class EconomyService {
   DocumentReference<Map<String, dynamic>> _walletRef(String uid) =>
       _db.doc('users/$uid/economy/wallet');
 
+  DocumentReference<Map<String, dynamic>> _exposureRef(String uid) =>
+      _db.doc('users/$uid/exposure_history');
+
   CollectionReference<Map<String, dynamic>> _txCol(String uid) =>
       _db.collection('users/$uid/economy_transactions');
 
@@ -58,6 +61,16 @@ class EconomyService {
 
   // ── Match reward — only writes to the calling user's wallet ───
 
+  Future<int> _getExposureCount(String uid, String imageId) async {
+    try {
+      final snap = await _exposureRef(uid).get();
+      if (!snap.exists) return 0;
+      return (snap.data()?[imageId] as num?)?.toInt() ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   Future<MatchRewardBreakdown> applyMatchReward({
     required String uid,
     required bool isWin,
@@ -67,7 +80,12 @@ class EconomyService {
     required int wrongGuessCount,
     required Duration timeTaken,
     String? roomId,
+    String? imageId,
   }) async {
+    final exposureCount = imageId != null
+        ? await _getExposureCount(uid, imageId)
+        : 0;
+
     final breakdown = RewardCalculator.calculateMatchReward(
       isWin: isWin,
       isSolo: isSolo,
@@ -75,6 +93,7 @@ class EconomyService {
       totalTilesCount: totalTilesCount,
       wrongGuessCount: wrongGuessCount,
       timeTaken: timeTaken,
+      imageExposureCount: exposureCount,
     );
 
     if (breakdown.total > 0) {

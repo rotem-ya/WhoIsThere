@@ -366,6 +366,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             wrongGuessCount: 0,
             timeTaken: timeTaken,
             roomId: room.id,
+            imageId: _image?.id,
           );
       if (mounted) setState(() => _rewardBreakdown = breakdown);
     } catch (e) {

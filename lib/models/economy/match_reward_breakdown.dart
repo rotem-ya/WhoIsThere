@@ -12,6 +12,7 @@ class MatchRewardBreakdown {
   final int totalTilesCount;
   final double revealRatio;
   final int wrongGuessCount;
+  final double exposureMultiplier;
 
   const MatchRewardBreakdown({
     required this.baseReward,
@@ -26,14 +27,18 @@ class MatchRewardBreakdown {
     required this.totalTilesCount,
     required this.revealRatio,
     required this.wrongGuessCount,
+    this.exposureMultiplier = 1.0,
   });
 
   // Backward-compat getter — game_winner_view.dart references efficiencyBonus.
   int get efficiencyBonus => earlyGuessBonus;
 
-  int get total => (baseReward + earlyGuessBonus + speedBonus +
-          noWrongGuessBonus + perfectRoundBonus - wrongGuessPenalty)
-      .clamp(0, 99999);
+  int get total {
+    final base = baseReward + earlyGuessBonus + speedBonus +
+        noWrongGuessBonus + perfectRoundBonus - wrongGuessPenalty;
+    if (base <= 0) return 0;
+    return (base * exposureMultiplier).round().clamp(1, 99999);
+  }
 
   static const zero = MatchRewardBreakdown(
     baseReward: 0,
@@ -48,5 +53,6 @@ class MatchRewardBreakdown {
     totalTilesCount: 1,
     revealRatio: 0.0,
     wrongGuessCount: 0,
+    exposureMultiplier: 1.0,
   );
 }
