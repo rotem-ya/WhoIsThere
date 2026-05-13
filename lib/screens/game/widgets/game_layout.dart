@@ -78,7 +78,7 @@ class GameLayout extends StatelessWidget {
             ),
           ),
         ),
-        AnswerSlots(answer: image?.answer ?? ''),
+        AnswerSlots(answer: image?.answer ?? '', isMyTurn: isMyTurn),
         GameActions(
           isMyTurn: isMyTurn,
           isBusy: isBusy,

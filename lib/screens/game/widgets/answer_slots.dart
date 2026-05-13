@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_styles.dart';
+
 class AnswerSlots extends StatelessWidget {
   final String answer;
+  final bool isMyTurn;
 
-  const AnswerSlots({required this.answer});
+  const AnswerSlots({required this.answer, this.isMyTurn = false});
 
   @override
   Widget build(BuildContext context) {
@@ -21,17 +25,32 @@ class AnswerSlots extends StatelessWidget {
               if (char.trim().isEmpty)
                 const SizedBox(width: 12)
               else
-                Container(
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOut,
                   width: 28,
                   height: 34,
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.10),
+                    color: isMyTurn
+                        ? AppStyles.cyanGlow.withOpacity(0.12)
+                        : Colors.white.withOpacity(0.10),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.28),
-                      width: 1,
+                      color: isMyTurn
+                          ? AppStyles.cyanGlow.withOpacity(0.55)
+                          : Colors.white.withOpacity(0.28),
+                      width: isMyTurn ? 1.4 : 1.0,
                     ),
+                    boxShadow: isMyTurn
+                        ? [
+                            BoxShadow(
+                              color: AppStyles.cyanGlow.withOpacity(0.18),
+                              blurRadius: 8,
+                              spreadRadius: 0,
+                            ),
+                          ]
+                        : null,
                   ),
                 ),
           ],
