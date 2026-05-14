@@ -243,6 +243,8 @@ class _NameField extends StatelessWidget {
       textDirection: TextDirection.rtl,
       textAlign: TextAlign.center,
       maxLength: 16,
+      textInputAction: TextInputAction.done,
+      autocorrect: false,
       style: const TextStyle(
         color: Colors.white,
         fontSize: 20,
@@ -250,7 +252,7 @@ class _NameField extends StatelessWidget {
         letterSpacing: 0.5,
       ),
       decoration: InputDecoration(
-        hintText: 'שם מוצג...',
+        hintText: 'שם מוצג (אופציונלי)',
         hintStyle: const TextStyle(
           color: Colors.white30,
           fontSize: 18,
