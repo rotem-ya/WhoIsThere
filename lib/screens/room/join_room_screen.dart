@@ -163,6 +163,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
                         ),
                         counterText: '',
                         errorText: _errorMessage,
+                        errorMaxLines: 2,
                         filled: true,
                         fillColor: const Color(0xFF07101F).withOpacity(0.06),
                         contentPadding: const EdgeInsets.symmetric(
