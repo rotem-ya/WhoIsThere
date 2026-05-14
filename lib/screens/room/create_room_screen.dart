@@ -165,7 +165,10 @@ class _CountButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        AppFeedback.click();
+        onTap();
+      },
       borderRadius: BorderRadius.circular(18),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
@@ -244,6 +247,12 @@ class _RoomCodeCardState extends State<_RoomCodeCard> {
                 ),
               ),
             ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'לחץ על הקוד להעתקה',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.subtitleDark,
           ),
         ],
       ),
