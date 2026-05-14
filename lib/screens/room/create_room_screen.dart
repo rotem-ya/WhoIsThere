@@ -166,7 +166,7 @@ class _CountButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
-        AppFeedback.click();
+        AppFeedback.tap();
         onTap();
       },
       borderRadius: BorderRadius.circular(18),
