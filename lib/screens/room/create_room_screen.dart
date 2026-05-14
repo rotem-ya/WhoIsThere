@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/theme/app_styles.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
@@ -68,7 +69,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      backgroundGradient: AppColors.pageBackground,
+      backgroundGradient: AppStyles.backgroundGradient,
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         children: [
@@ -100,9 +101,11 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
             icon: _roomCode == null
                 ? Icons.add_rounded
                 : Icons.meeting_room_rounded,
-            onPressed: _roomCode == null
-                ? _createRoom
-                : () => context.go('/lobby/$_roomId'),
+            onPressed: _isLoading
+                ? null
+                : _roomCode == null
+                    ? _createRoom
+                    : () => context.go('/lobby/$_roomId'),
           ),
         ],
       ),
