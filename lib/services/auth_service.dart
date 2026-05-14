@@ -150,11 +150,17 @@ class AuthService {
           .snapshots()
           .asyncMap((doc) async {
             if (doc.exists) return UserModel.fromFirestore(doc);
-            // Doc not yet created — signInAnonymously/Google/Apple is still writing it.
-            // Return null here; the stream will re-emit once the write completes.
-            // Calling _syncUser here without preferredName would race and overwrite the
-            // typed nickname with guestFallback().
-            return null;
+            // Doc not found. Two possible situations:
+            //   (a) signInAnonymously() is still writing it — wait 600 ms so it
+            //       finishes first and sets the correct display name.
+            //   (b) Session was restored but the Firestore doc is genuinely gone
+            //       (e.g. cleared data, reinstall) — we must create it ourselves.
+            // After the delay, re-fetch: if (a), return the real doc. If (b),
+            // call _syncUser as the recovery path.
+            await Future.delayed(const Duration(milliseconds: 600));
+            final recheck = await _firestore.collection('users').doc(user.uid).get();
+            if (recheck.exists) return UserModel.fromFirestore(recheck);
+            return _syncUser(user);
           })
           .handleError((e) {
             debugPrint('userModelStream inner error: $e');
