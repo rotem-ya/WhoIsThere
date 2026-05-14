@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
+import '../../core/utils/display_name_sanitizer.dart';
 import '../../providers/providers.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
@@ -13,6 +14,14 @@ import '../../widgets/common/player_avatar.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
+
+  Future<void> _showEditNameDialog(
+      BuildContext context, WidgetRef ref, String userId, String currentName) async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => _EditNameDialog(userId: userId, currentName: currentName, ref: ref),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -59,12 +68,34 @@ class ProfileScreen extends ConsumerWidget {
                               radius: 50,
                             ),
                             const SizedBox(height: AppSpacing.md),
-                            Text(
-                              user.name,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.titleDark,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    user.name,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.titleDark,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.xs),
+                                InkWell(
+                                  onTap: () => _showEditNameDialog(
+                                      context, ref, user.id, user.name),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(4),
+                                    child: Icon(
+                                      Icons.edit_rounded,
+                                      size: 18,
+                                      color: AppColors.primary.withOpacity(0.75),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: AppSpacing.xs),
                             Text('שחקן פעיל',
@@ -132,6 +163,138 @@ class ProfileScreen extends ConsumerWidget {
             child: CircularProgressIndicator(color: AppColors.accent)),
         error: (e, _) => Center(
             child: Text('שגיאה: $e', style: AppTextStyles.subtitleLight)),
+      ),
+    );
+  }
+}
+
+class _EditNameDialog extends StatefulWidget {
+  final String userId;
+  final String currentName;
+  final WidgetRef ref;
+
+  const _EditNameDialog({
+    required this.userId,
+    required this.currentName,
+    required this.ref,
+  });
+
+  @override
+  State<_EditNameDialog> createState() => _EditNameDialogState();
+}
+
+class _EditNameDialogState extends State<_EditNameDialog> {
+  late final TextEditingController _controller;
+  String? _error;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.currentName);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final raw = _controller.text.trim();
+    final sanitized = DisplayNameSanitizer.sanitize(raw);
+    if (sanitized == null) {
+      setState(() => _error = '2–16 תווים, אותיות ומספרים בלבד');
+      return;
+    }
+    setState(() {
+      _error = null;
+      _saving = true;
+    });
+    try {
+      await widget.ref
+          .read(authServiceProvider)
+          .updateDisplayName(widget.userId, sanitized);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) setState(() => _error = 'שמירה נכשלה, נסה שוב');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: AlertDialog(
+        backgroundColor: const Color(0xFF1A1F3A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'שינוי שם',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _controller,
+              maxLength: 16,
+              autofocus: true,
+              textAlign: TextAlign.center,
+              textDirection: TextDirection.rtl,
+              autocorrect: false,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _save(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+              decoration: InputDecoration(
+                counterText: '',
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.07),
+                errorText: _error,
+                errorMaxLines: 2,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.white24),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.white24),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                      color: AppColors.primary.withOpacity(0.7), width: 1.5),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : () => Navigator.pop(context),
+            child: const Text('ביטול',
+                style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: _saving ? null : _save,
+            child: _saving
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : Text('שמור',
+                    style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w900)),
+          ),
+        ],
       ),
     );
   }

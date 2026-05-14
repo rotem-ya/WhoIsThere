@@ -150,7 +150,11 @@ class AuthService {
           .snapshots()
           .asyncMap((doc) async {
             if (doc.exists) return UserModel.fromFirestore(doc);
-            return _syncUser(user);
+            // Doc not yet created — signInAnonymously/Google/Apple is still writing it.
+            // Return null here; the stream will re-emit once the write completes.
+            // Calling _syncUser here without preferredName would race and overwrite the
+            // typed nickname with guestFallback().
+            return null;
           })
           .handleError((e) {
             debugPrint('userModelStream inner error: $e');
