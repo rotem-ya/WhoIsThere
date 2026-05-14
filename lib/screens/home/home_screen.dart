@@ -707,6 +707,7 @@ class _JoinCodeDialogState extends ConsumerState<_JoinCodeDialog> {
                   hintStyle: const TextStyle(color: Colors.white24, letterSpacing: 8),
                   counterText: '',
                   errorText: _error,
+                  errorMaxLines: 2,
                   errorStyle: const TextStyle(fontSize: 13, height: 1.4),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),

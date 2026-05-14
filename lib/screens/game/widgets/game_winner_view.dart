@@ -221,7 +221,7 @@ class _WinnerCard extends StatelessWidget {
                     textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: const Text('משחק חדש'),
+                  child: const Text('חזור לבית'),
                 ),
               ),
             ),

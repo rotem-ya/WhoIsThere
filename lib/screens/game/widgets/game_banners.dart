@@ -83,9 +83,9 @@ class BotTypingBanner extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFF751010).withOpacity(0.92),
+          color: const Color(0xFF07101F).withOpacity(0.92),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.redAccent.withOpacity(0.45)),
+          border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.30)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
