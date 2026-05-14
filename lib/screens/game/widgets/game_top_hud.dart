@@ -100,28 +100,24 @@ class _TurnInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FittedBox(
-      alignment: Alignment.centerRight,
-      fit: BoxFit.scaleDown,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('עכשיו משחק', style: TextStyle(color: const Color(0xFFD4AF37).withOpacity(0.9), fontSize: 11, fontWeight: FontWeight.w900, height: 1)),
-          const SizedBox(height: 3),
-          Text(name.isEmpty ? 'ממתין לשחקן' : name, maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1)),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('נחשפו $revealedText', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12, fontWeight: FontWeight.w800)),
-              const SizedBox(width: 12),
-              Text(code, style: TextStyle(color: Colors.white.withOpacity(0.24), fontSize: 11, letterSpacing: 2.4, fontWeight: FontWeight.w900)),
-            ],
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('עכשיו משחק', style: TextStyle(color: const Color(0xFFD4AF37).withOpacity(0.9), fontSize: 11, fontWeight: FontWeight.w900, height: 1)),
+        const SizedBox(height: 3),
+        Text(name.isEmpty ? 'ממתין לשחקן' : name, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1)),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('נחשפו $revealedText', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12, fontWeight: FontWeight.w800)),
+            const SizedBox(width: 12),
+            Text(code, style: TextStyle(color: Colors.white.withOpacity(0.24), fontSize: 11, letterSpacing: 2.4, fontWeight: FontWeight.w900)),
+          ],
+        ),
+      ],
     );
   }
 }
