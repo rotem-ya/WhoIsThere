@@ -31,8 +31,26 @@ class AuthService {
   }
 
   Future<UserModel?> signInAnonymously({String? preferredName}) async {
-    final userCredential = await _auth.signInAnonymously();
-    return _syncUser(userCredential.user!, preferredName: preferredName);
+    User? firebaseUser;
+    try {
+      final cred = await _auth.signInAnonymously();
+      firebaseUser = cred.user;
+    } on TypeError {
+      // firebase_auth 4.16.x / firebase_core 2.32.x Pigeon version mismatch:
+      // The native Android plugin signs the user in and authStateChanges()
+      // fires, but the Dart-side Pigeon codec throws a type cast when
+      // deserializing the method-channel response.  currentUser is already
+      // set at this point — use it instead of treating this as auth failure.
+      debugPrint('[AuthService] Pigeon cast workaround — falling back to currentUser');
+      firebaseUser = _auth.currentUser;
+    }
+    if (firebaseUser == null) {
+      throw FirebaseAuthException(
+        code: 'sign-in-failed',
+        message: 'signInAnonymously returned no user',
+      );
+    }
+    return _syncUser(firebaseUser, preferredName: preferredName);
   }
 
   Future<UserModel?> signInWithGoogle() async {
