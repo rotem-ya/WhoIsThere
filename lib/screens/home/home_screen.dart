@@ -287,8 +287,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 child: SafeArea(
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
+                    // Force LTR so ProfileIcon is always at physical left (x=16)
+                    // regardless of ambient RTL directionality.
+                    textDirection: TextDirection.ltr,
                     children: [
-                      _ProfileIconButton(),
+                      const _ProfileIconButton(),
                       const SizedBox(width: 8),
                       const CoinDisplay(),
                     ],
@@ -618,29 +621,31 @@ class _ProfileIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        QaLoggerService.instance.log('HOME', 'TAP_PROFILE');
-        context.push('/profile');
-      },
-      child: SizedBox(
-        width: 44,
-        height: 44,
-        child: Center(
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFF050A14).withOpacity(0.60),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.15),
-                width: 1.0,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          QaLoggerService.instance.log('HOME', 'TAP_PROFILE');
+          context.push('/profile');
+        },
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF050A14).withOpacity(0.60),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.15),
+                  width: 1.0,
+                ),
               ),
-            ),
-            child: const Center(
-              child: Icon(
+              child: const Icon(
                 Icons.person_rounded,
                 color: Colors.white70,
                 size: 20,
