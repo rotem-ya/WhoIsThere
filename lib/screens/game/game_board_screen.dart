@@ -87,10 +87,35 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     } catch (_) {}
   }
 
+  static Future<void> _primeGuessSounds() async {
+    try {
+      await _wrongBuzzPlayer.setPlayerMode(PlayerMode.lowLatency);
+      await _wrongBuzzPlayer.setSource(_wrongBuzzSound);
+    } catch (_) {}
+    try {
+      await _correctDingPlayer.setPlayerMode(PlayerMode.lowLatency);
+      await _correctDingPlayer.setSource(_correctDingSound);
+    } catch (_) {}
+  }
+
+  static Future<void> _playWrongBuzz() async {
+    try {
+      await _wrongBuzzPlayer.stop();
+      await _wrongBuzzPlayer.play(_wrongBuzzSound);
+    } catch (_) {}
+  }
+
+  static Future<void> _playCorrectDing() async {
+    try {
+      await _correctDingPlayer.stop();
+      await _correctDingPlayer.play(_correctDingSound);
+    } catch (_) {}
+  }
+
   static Future<void> _startBackgroundMusic() async {
     try {
       await _bgPlayer.setReleaseMode(ReleaseMode.loop);
-      await _bgPlayer.setVolume(0.30);
+      await _bgPlayer.setVolume(0.44);
       await _bgPlayer.play(_bgMusic);
     } catch (_) {}
   }
@@ -99,6 +124,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   bool _rewardApplied = false;
   DateTime? _gameStartTime;
   MatchRewardBreakdown? _rewardBreakdown;
+
+  // Wrong / correct guess sounds
+  static final AudioPlayer _wrongBuzzPlayer = AudioPlayer(playerId: 'wrong-buzz');
+  static final AssetSource _wrongBuzzSound = AssetSource('sounds/wrong_buzz.wav');
+  static final AudioPlayer _correctDingPlayer = AudioPlayer(playerId: 'correct-ding');
+  static final AssetSource _correctDingSound = AssetSource('sounds/correct_ding.wav');
 
   // Correct-guess victory overlay
   bool _showCorrectGuess = false;
@@ -115,6 +146,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     WidgetsBinding.instance.addObserver(this);
     unawaited(_startBackgroundMusic());
     unawaited(_primeRevealSound());
+    unawaited(_primeGuessSounds());
   }
 
   @override
@@ -123,6 +155,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         state == AppLifecycleState.inactive) {
       _bgPlayer.stop().ignore();
       _revealSoundPlayer.stop().ignore();
+      _wrongBuzzPlayer.stop().ignore();
+      _correctDingPlayer.stop().ignore();
       _victoryPlayer.stop().ignore();
     }
   }
@@ -215,7 +249,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (_lastBotTurnKey == key) return;
     _lastBotTurnKey = key;
 
-    final delayMs = 2000 + _random.nextInt(1201);
+    final delayMs = 1000 + _random.nextInt(601);
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
       final snapshot = await ref.read(roomServiceProvider).watchRoom(room.id).first;
@@ -604,11 +638,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   _lastShownGuessCount = room.guessCount;
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (!mounted) return;
+                    final event = room.lastGuessEvent!;
+                    final isCorrect = event['isCorrect'] as bool? ?? false;
+                    final isLocalGuess = (event['playerId'] as String?) == currentUserId;
                     setState(() {
-                      _currentBanner = room.lastGuessEvent;
+                      _currentBanner = event;
                       _showBanner = true;
                       _showBotTyping = false;
                     });
+                    if (isCorrect && !isLocalGuess) {
+                      unawaited(_playCorrectDing());
+                    } else if (!isCorrect) {
+                      unawaited(_playWrongBuzz());
+                    }
                     Future.delayed(const Duration(milliseconds: 3500), () {
                       if (mounted) setState(() => _showBanner = false);
                     });

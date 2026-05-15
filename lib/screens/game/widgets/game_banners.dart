@@ -63,7 +63,7 @@ class GuessBanner extends StatelessWidget {
 }
 
 
-class BotTypingBanner extends StatelessWidget {
+class BotTypingBanner extends StatefulWidget {
   final String botName;
   final String typedSoFar;
 
@@ -74,56 +74,90 @@ class BotTypingBanner extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final isTyping = typedSoFar.isNotEmpty;
+  State<BotTypingBanner> createState() => _BotTypingBannerState();
+}
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFF07101F).withOpacity(0.92),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.30)),
+class _BotTypingBannerState extends State<BotTypingBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+  late final Animation<double> _borderOpacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 850),
+    )..repeat(reverse: true);
+    _borderOpacity = Tween<double>(begin: 0.18, end: 0.65).animate(
+      CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isTyping = widget.typedSoFar.isNotEmpty;
+
+    return AnimatedBuilder(
+      animation: _borderOpacity,
+      builder: (context, child) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF07101F).withOpacity(0.92),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: const Color(0xFF87CEEB).withOpacity(_borderOpacity.value),
+              width: 1.5,
+            ),
+          ),
+          child: child,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            isTyping ? '${widget.botName} מקליד...' : '${widget.botName} חושב...',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          if (isTyping)
             Text(
-              isTyping ? '$botName מקליד...' : '$botName חושב...',
+              '"${widget.typedSoFar}" |',
               textAlign: TextAlign.center,
+              textDirection: TextDirection.rtl,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
+            )
+          else
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
                 color: Colors.white70,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 6),
-            if (isTyping)
-              Text(
-                '"$typedSoFar" |',
-                textAlign: TextAlign.center,
-                textDirection: TextDirection.rtl,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                ),
-              )
-            else
-              const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white70,
-                ),
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
