@@ -167,20 +167,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           body: Stack(
             children: [
               const Positioned.fill(child: _VaultBackground()),
-              Positioned(
-                top: 12,
-                left: 16,
-                child: SafeArea(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CoinDisplay(),
-                      const SizedBox(width: 8),
-                      _ProfileIconButton(),
-                    ],
-                  ),
-                ),
-              ),
               SafeArea(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -288,12 +274,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   },
                 ),
               ),
-              // Must be last in the Stack so it sits above the SingleChildScrollView
-              // (which uses HitTestBehavior.opaque and would otherwise absorb its taps).
+              // Both of these must be after the ScrollView in the Stack so their
+              // taps are not absorbed by SingleChildScrollView's opaque hit testing.
               const Positioned(
                 top: 12,
                 right: 16,
                 child: SafeArea(child: _DailyRewardButton()),
+              ),
+              Positioned(
+                top: 12,
+                left: 16,
+                child: SafeArea(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _ProfileIconButton(),
+                      const SizedBox(width: 8),
+                      const CoinDisplay(),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -619,26 +619,33 @@ class _ProfileIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () {
         QaLoggerService.instance.log('HOME', 'TAP_PROFILE');
         context.push('/profile');
       },
-      child: Container(
-        height: 40,
-        width: 40,
-        decoration: BoxDecoration(
-          color: const Color(0xFF050A14).withOpacity(0.60),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.15),
-            width: 1.0,
-          ),
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.person_rounded,
-            color: Colors.white70,
-            size: 20,
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: Center(
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFF050A14).withOpacity(0.60),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.15),
+                width: 1.0,
+              ),
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.person_rounded,
+                color: Colors.white70,
+                size: 20,
+              ),
+            ),
           ),
         ),
       ),
