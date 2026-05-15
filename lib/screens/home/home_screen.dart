@@ -9,6 +9,7 @@ import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../services/feedback_service.dart';
+import '../../services/qa_logger_service.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
 import '../../widgets/game/vault_game_icon.dart';
@@ -34,6 +35,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
+    QaLoggerService.instance.log('HOME', 'HOME_SCREEN_OPENED');
   }
 
   @override
@@ -44,6 +46,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Future<void> _startQuickGame(int targetPlayers) async {
     if (_isCreating) return;
+    QaLoggerService.instance.log('HOME', 'TAP_QUICK_GAME players=$targetPlayers');
     FeedbackService.click();
     setState(() {
       _isCreating = true;
@@ -82,6 +85,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   void _showJoinDialog() {
+    QaLoggerService.instance.log('HOME', 'TAP_JOIN_ROOM');
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -91,6 +95,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Future<void> _createPrivateRoom() async {
     if (_isCreating) return;
+    QaLoggerService.instance.log('HOME', 'TAP_CREATE_ROOM');
     FeedbackService.click();
     setState(() {
       _isCreating = true;

@@ -8,6 +8,7 @@ import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/player_model.dart';
+import '../../services/qa_logger_service.dart';
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/player_avatar.dart';
 
@@ -22,9 +23,17 @@ class LobbyScreen extends ConsumerStatefulWidget {
 class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   bool _isStarting = false;
   bool _codeCopied = false;
+  bool _lobbyLogged = false;
+
+  @override
+  void initState() {
+    super.initState();
+    QaLoggerService.instance.log('LOBBY', 'LOBBY_SCREEN_OPENED roomId=${widget.roomId.substring(0, widget.roomId.length.clamp(0, 6))}');
+  }
 
   Future<void> _copyCode(String code) async {
     if (_codeCopied) return;
+    QaLoggerService.instance.log('LOBBY', 'COPY_ROOM_CODE_TAPPED code=$code');
     AppFeedback.success();
     await Clipboard.setData(ClipboardData(text: code));
     setState(() => _codeCopied = true);
@@ -33,6 +42,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 
   void _shareToWhatsApp(String code) {
+    QaLoggerService.instance.log('LOBBY', 'SHARE_ROOM_TAPPED code=$code');
     final msg = StringBuffer();
     msg.writeln('בואו לגלות מה בתמונה 📸');
     msg.writeln();
@@ -53,6 +63,12 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         if (room == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) => context.go('/home'));
           return const SizedBox();
+        }
+
+        if (!_lobbyLogged) {
+          _lobbyLogged = true;
+          QaLoggerService.instance.log(
+              'LOBBY', 'LOBBY_ROOM_DATA code=${room.code} players=${room.players.length}');
         }
 
         if (room.phase == GamePhase.playing) {

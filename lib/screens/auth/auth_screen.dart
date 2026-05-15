@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_styles.dart';
 import '../../core/utils/display_name_sanitizer.dart';
 import '../../providers/providers.dart';
+import '../../services/qa_logger_service.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -28,6 +29,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   String? _nameError;
 
   @override
+  void initState() {
+    super.initState();
+    QaLoggerService.instance.log('AUTH', 'AUTH_SCREEN_OPENED');
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
@@ -46,12 +53,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     return sanitized;
   }
 
-  Future<void> _runAuth(Future<dynamic> Function() action) async {
+  Future<void> _runAuth(
+    Future<dynamic> Function() action, {
+    String logTag = 'AUTH',
+  }) async {
     setState(() => _isLoading = true);
     try {
       final user = await action();
-      if (user != null && mounted) context.go('/home');
+      if (user != null && mounted) {
+        QaLoggerService.instance.log('AUTH', '${logTag}_SUCCESS');
+        context.go('/home');
+      }
     } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log(
+          'AUTH', 'AUTH_ERROR [$logTag] ${msg.length > 80 ? msg.substring(0, 80) : msg}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -68,19 +84,30 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Future<void> _signInAnonymously() async {
     final name = _resolvedName();
     if (name == 'invalid') return;
+    if (name != null) QaLoggerService.instance.log('AUTH', 'AUTH_NAME_PRESENT name=$name');
+    QaLoggerService.instance.log('AUTH', 'AUTH_ANON_ATTEMPT');
     await _runAuth(
       () => ref.read(authServiceProvider).signInAnonymously(preferredName: name),
+      logTag: 'AUTH_ANON',
     );
   }
 
   Future<void> _signInWithGoogle() async {
     // null = user cancelled picker — _runAuth stays on screen (no navigation).
     // Exception = Google unavailable — _runAuth shows snackbar, user can tap Guest.
-    await _runAuth(() => ref.read(authServiceProvider).signInWithGoogle());
+    QaLoggerService.instance.log('AUTH', 'AUTH_GOOGLE_ATTEMPT');
+    await _runAuth(
+      () => ref.read(authServiceProvider).signInWithGoogle(),
+      logTag: 'AUTH_GOOGLE',
+    );
   }
 
   Future<void> _signInWithApple() async {
-    await _runAuth(() => ref.read(authServiceProvider).signInWithApple());
+    QaLoggerService.instance.log('AUTH', 'AUTH_APPLE_ATTEMPT');
+    await _runAuth(
+      () => ref.read(authServiceProvider).signInWithApple(),
+      logTag: 'AUTH_APPLE',
+    );
   }
 
   @override

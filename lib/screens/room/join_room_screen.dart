@@ -7,6 +7,7 @@ import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
+import '../../services/qa_logger_service.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_feedback.dart';
@@ -49,6 +50,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
       return;
     }
 
+    QaLoggerService.instance.log('ROOM', 'JOIN_ROOM_ATTEMPT code=$code');
     AppFeedback.confirm();
     setState(() {
       _isLoading = true;
@@ -68,13 +70,18 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
 
       if (room == null) {
         AppFeedback.error();
+        QaLoggerService.instance.log('ROOM', 'JOIN_ROOM_ERROR code=$code reason=not_found_or_started');
         setState(() => _errorMessage = 'החדר לא נמצא או כבר התחיל');
         return;
       }
 
+      QaLoggerService.instance.log('ROOM', 'JOIN_ROOM_SUCCESS code=${room.code}');
       ref.read(currentRoomIdProvider.notifier).state = room.id;
       if (mounted) context.go('/lobby/${room.id}');
     } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log(
+          'ROOM', 'JOIN_ROOM_ERROR ${msg.length > 80 ? msg.substring(0, 80) : msg}');
       setState(() => _errorMessage = 'ההצטרפות נכשלה: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);

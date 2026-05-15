@@ -8,6 +8,7 @@ import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
+import '../../services/qa_logger_service.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_feedback.dart';
@@ -27,6 +28,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   int _playerCount = 2;
 
   Future<void> _createRoom() async {
+    QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_ATTEMPT players=$_playerCount');
     AppFeedback.confirm();
     setState(() => _isLoading = true);
     try {
@@ -40,12 +42,16 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
             playerCount: _playerCount,
           );
 
+      QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_SUCCESS code=${room.code}');
       ref.read(currentRoomIdProvider.notifier).state = room.id;
       setState(() {
         _roomCode = room.code;
         _roomId = room.id;
       });
     } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log(
+          'ROOM', 'CREATE_ROOM_ERROR ${msg.length > 80 ? msg.substring(0, 80) : msg}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('יצירת החדר נכשלה: $e')),
