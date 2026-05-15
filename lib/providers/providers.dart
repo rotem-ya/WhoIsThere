@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import '../services/economy_service.dart';
 import '../services/hint_economy_guard.dart';
 import '../services/local_economy_cache.dart';
+import '../services/qa_logger_service.dart';
 import '../services/room_service.dart';
 import '../models/user_model.dart';
 import '../models/room_model.dart';
@@ -68,7 +69,20 @@ final currentRoomProvider = StreamProvider<RoomModel?>((ref) {
 // Per-room stream — screens watch this directly using their roomId param
 final roomStreamProvider =
     StreamProvider.autoDispose.family<RoomModel?, String>((ref, roomId) {
-  return ref.watch(roomServiceProvider).watchRoom(roomId);
+  final shortId = roomId.substring(0, roomId.length.clamp(0, 6));
+  return ref.watch(roomServiceProvider).watchRoom(roomId).transform(
+    StreamTransformer.fromHandlers(
+      handleError: (e, st, sink) {
+        final msg = e.toString();
+        QaLoggerService.instance.log('ROOM', 'ROOM_STREAM_ERROR roomId=$shortId e=${msg.length > 80 ? msg.substring(0, 80) : msg}');
+        sink.addError(e, st);
+      },
+      handleDone: (sink) {
+        QaLoggerService.instance.log('ROOM', 'ROOM_STREAM_DONE roomId=$shortId');
+        sink.close();
+      },
+    ),
+  );
 });
 
 // Selected image for game

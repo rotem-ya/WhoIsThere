@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/providers.dart';
+import '../../services/qa_logger_service.dart';
 import '../../screens/splash/splash_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/auth/auth_screen.dart';
@@ -16,6 +17,7 @@ import '../../screens/profile/profile_screen.dart';
 import '../../screens/store/store_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
+  QaLoggerService.instance.log('ROUTER', 'ROUTER_INSTANCE_CREATED');
   final authState = ref.watch(firebaseUserProvider);
 
   return GoRouter(
@@ -28,11 +30,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       final onAuth = location == '/auth';
       final onSplash = location == '/splash';
 
-      if (onSplash) return isLoggedIn ? '/home' : '/auth';
-      if (!isLoggedIn && !onAuth) return '/auth';
+      if (onSplash) {
+        final dest = isLoggedIn ? '/home' : '/auth';
+        QaLoggerService.instance.log('ROUTER', 'ROUTER_REDIRECT from=$location to=$dest reason=splash');
+        return dest;
+      }
+      if (!isLoggedIn && !onAuth) {
+        QaLoggerService.instance.log('ROUTER', 'ROUTER_REDIRECT from=$location to=/auth reason=not_logged_in');
+        return '/auth';
+      }
       if (isLoggedIn && onAuth) {
         final code = ref.read(pendingJoinCodeProvider);
-        if (code != null) return '/join-room?initialCode=$code';
+        if (code != null) {
+          QaLoggerService.instance.log('ROUTER', 'ROUTER_REDIRECT from=/auth to=/join-room reason=pending_code');
+          return '/join-room?initialCode=$code';
+        }
+        QaLoggerService.instance.log('ROUTER', 'ROUTER_REDIRECT from=/auth to=/home reason=logged_in');
         return '/home';
       }
       return null;

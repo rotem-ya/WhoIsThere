@@ -137,6 +137,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   // QA logging flags
   bool _gameScreenLogged = false;
   bool _gameDataLogged = false;
+  GamePhase? _lastKnownPhase;
 
   // Economy
   bool _rewardApplied = false;
@@ -166,7 +167,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     unawaited(_primeRevealSound());
     unawaited(_primeGuessSounds());
     final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
-    QaLoggerService.instance.log('GAME', 'GAME_SCREEN_OPENED roomId=$shortId');
+    QaLoggerService.instance.log('GAME', 'GAME_INIT roomId=$shortId');
   }
 
   @override
@@ -183,6 +184,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   @override
   void dispose() {
+    final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
+    QaLoggerService.instance.log('GAME', 'GAME_DISPOSE roomId=$shortId lastPhase=${_lastKnownPhase?.name ?? 'unknown'}');
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
@@ -620,12 +623,21 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
               loading: () => const Center(
                 child: CircularProgressIndicator(color: Color(0xFF8B6FFF)),
               ),
-              error: (e, _) => Center(
-                child: Text('שגיאה: $e', style: const TextStyle(color: Colors.white70)),
-              ),
+              error: (e, _) {
+                final msg = e.toString();
+                QaLoggerService.instance.log('GAME', 'GAME_ERROR e=${msg.length > 80 ? msg.substring(0, 80) : msg}');
+                return Center(
+                  child: Text('שגיאה: $e', style: const TextStyle(color: Colors.white70)),
+                );
+              },
               data: (room) {
                 if (room == null) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) => context.go('/home'));
+                  final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
+                  QaLoggerService.instance.log('GAME', 'GAME_ROOM_NULL_OR_MISSING roomId=$shortId lastPhase=${_lastKnownPhase?.name ?? 'unknown'}');
+                  QaLoggerService.instance.log('GAME', 'GAME_NAV_HOME reason=room_null_or_deleted');
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) context.go('/home');
+                  });
                   return const SizedBox.shrink();
                 }
 
@@ -641,6 +653,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   final turnName = room.players[room.currentTurnUserId]?.name ?? room.currentTurnUserId?.substring(0, (room.currentTurnUserId ?? '').length.clamp(0, 6)) ?? 'none';
                   QaLoggerService.instance.log('GAME', 'GAME_ROOM_DATA phase=${room.phase.name} turn=$turnName revealed=${room.placedPieces.length}');
                 }
+
+                if (_lastKnownPhase != null && _lastKnownPhase != room.phase) {
+                  QaLoggerService.instance.log('GAME', 'GAME_PHASE_CHANGED from=${_lastKnownPhase!.name} to=${room.phase.name}');
+                }
+                _lastKnownPhase = room.phase;
 
                 if (room.imageId.isNotEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) => _loadImage(room.imageId));
@@ -740,7 +757,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   showBotTyping: _showBotTyping,
                   botTypingName: _botTypingName,
                   botTypingText: _botTypingText,
-                  onBack: () => context.go('/home'),
+                  onBack: () {
+                    QaLoggerService.instance.log('GAME', 'GAME_BACK_BUTTON_TAPPED');
+                    QaLoggerService.instance.log('GAME', 'GAME_NAV_HOME reason=back_button phase=${room.phase.name}');
+                    context.go('/home');
+                  },
                   onReveal: currentUserId == null
                       ? null
                       : (index) => _humanRevealTile(
