@@ -27,6 +27,12 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   String? _roomId;
   int _playerCount = 2;
 
+  @override
+  void initState() {
+    super.initState();
+    QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_SCREEN_OPENED');
+  }
+
   Future<void> _createRoom() async {
     QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_ATTEMPT players=$_playerCount');
     AppFeedback.confirm();
@@ -42,7 +48,8 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
             playerCount: _playerCount,
           );
 
-      QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_SUCCESS code=${room.code}');
+      final shortId = room.id.substring(0, room.id.length.clamp(0, 6));
+      QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_SUCCESS code=${room.code} id=$shortId');
       ref.read(currentRoomIdProvider.notifier).state = room.id;
       setState(() {
         _roomCode = room.code;

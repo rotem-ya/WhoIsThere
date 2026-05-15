@@ -57,6 +57,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       final user = await ref.read(currentUserProvider.future);
       if (user == null) return;
 
+      QaLoggerService.instance.log('HOME', 'QUICK_GAME_ATTEMPT players=$targetPlayers');
       final room = await ref.read(roomServiceProvider).createRoom(
             hostId: user.id,
             hostName: user.name,
@@ -67,8 +68,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       await ref.read(roomServiceProvider).startGameDirectly(room.id);
       ref.read(currentRoomIdProvider.notifier).state = room.id;
 
+      final shortId = room.id.substring(0, room.id.length.clamp(0, 6));
+      QaLoggerService.instance.log('HOME', 'QUICK_GAME_SUCCESS code=${room.code} id=$shortId');
+      QaLoggerService.instance.log('HOME', 'QUICK_GAME_NAVIGATED dest=/game/$shortId');
       if (mounted) context.go('/game/${room.id}');
     } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log('HOME', 'QUICK_GAME_ERROR ${msg.length > 60 ? msg.substring(0, 60) : msg}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('יצירת המשחק נכשלה: $e')),
@@ -86,6 +92,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   void _showJoinDialog() {
     QaLoggerService.instance.log('HOME', 'TAP_JOIN_ROOM');
+    QaLoggerService.instance.log('HOME', 'JOIN_ROOM_SCREEN_OPENED');
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -106,15 +113,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       final user = await ref.read(currentUserProvider.future);
       if (user == null) return;
 
+      QaLoggerService.instance.log('HOME', 'CREATE_ROOM_ATTEMPT playerCount=default');
       final room = await ref.read(roomServiceProvider).createRoom(
             hostId: user.id,
             hostName: user.name,
             hostPhotoUrl: user.photoUrl,
           );
 
+      final shortId = room.id.substring(0, room.id.length.clamp(0, 6));
+      QaLoggerService.instance.log('HOME', 'CREATE_ROOM_SUCCESS code=${room.code} id=$shortId');
       ref.read(currentRoomIdProvider.notifier).state = room.id;
       if (mounted) context.go('/lobby/${room.id}');
     } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log('HOME', 'CREATE_ROOM_ERROR ${msg.length > 60 ? msg.substring(0, 60) : msg}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('יצירת החדר נכשלה: $e')),
@@ -679,12 +691,14 @@ class _JoinCodeDialogState extends ConsumerState<_JoinCodeDialog> {
   }
 
   Future<void> _join() async {
-    final code = _controller.text.trim().toUpperCase();
+    final raw = _controller.text.trim();
+    final code = raw.toUpperCase();
     if (code.isEmpty) {
       setState(() => _error = 'נא להזין קוד חדר');
       return;
     }
 
+    QaLoggerService.instance.log('HOME', 'JOIN_ROOM_ATTEMPT raw=$raw code=$code');
     setState(() {
       _isLoading = true;
       _error = null;
@@ -696,14 +710,17 @@ class _JoinCodeDialogState extends ConsumerState<_JoinCodeDialog> {
 
       final found = await ref.read(roomServiceProvider).findRoomByCode(code);
       if (found == null) {
+        QaLoggerService.instance.log('HOME', 'JOIN_ROOM_ERROR reason=not_found code=$code');
         setState(() => _error = 'לא נמצא חדר עם הקוד הזה');
         return;
       }
       if (found.phase != GamePhase.waiting) {
+        QaLoggerService.instance.log('HOME', 'JOIN_ROOM_ERROR reason=already_started code=$code');
         setState(() => _error = 'המשחק כבר התחיל');
         return;
       }
       if (found.players.length >= GameConstants.maxPlayers) {
+        QaLoggerService.instance.log('HOME', 'JOIN_ROOM_ERROR reason=room_full code=$code');
         setState(() => _error = 'חדר מלא\nניתן להצטרף לעד ${GameConstants.maxPlayers} שחקנים');
         return;
       }
@@ -716,16 +733,21 @@ class _JoinCodeDialogState extends ConsumerState<_JoinCodeDialog> {
           );
 
       if (room == null) {
+        QaLoggerService.instance.log('HOME', 'JOIN_ROOM_ERROR reason=join_failed code=$code');
         setState(() => _error = 'לא ניתן להצטרף לחדר');
         return;
       }
 
+      final shortId = room.id.substring(0, room.id.length.clamp(0, 6));
+      QaLoggerService.instance.log('HOME', 'JOIN_ROOM_SUCCESS code=${room.code} id=$shortId');
       ref.read(currentRoomIdProvider.notifier).state = room.id;
       if (mounted) {
         Navigator.of(context).pop();
         context.go('/lobby/${room.id}');
       }
     } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log('HOME', 'JOIN_ROOM_ERROR reason=exception msg=${msg.length > 50 ? msg.substring(0, 50) : msg}');
       setState(() => _error = 'שגיאה: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);

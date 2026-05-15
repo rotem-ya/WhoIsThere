@@ -21,6 +21,7 @@ import '../../models/room_model.dart';
 import '../../models/economy/match_reward_breakdown.dart';
 import '../../providers/providers.dart';
 import '../../services/hint_economy_guard.dart';
+import '../../services/qa_logger_service.dart';
 import '../../widgets/game/animated_reward.dart';
 import '../../widgets/game/letter_bank_input.dart';
 import 'widgets/game_top_hud.dart';
@@ -133,6 +134,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     }
   }
 
+  // QA logging flags
+  bool _gameScreenLogged = false;
+  bool _gameDataLogged = false;
+
   // Economy
   bool _rewardApplied = false;
   DateTime? _gameStartTime;
@@ -160,6 +165,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     unawaited(_startBackgroundMusic());
     unawaited(_primeRevealSound());
     unawaited(_primeGuessSounds());
+    final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
+    QaLoggerService.instance.log('GAME', 'GAME_SCREEN_OPENED roomId=$shortId');
   }
 
   @override
@@ -624,6 +631,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
                 final currentUserId = user?.id;
 
+                if (!_gameScreenLogged) {
+                  _gameScreenLogged = true;
+                  final shortId = room.id.substring(0, room.id.length.clamp(0, 6));
+                  QaLoggerService.instance.log('GAME', 'GAME_SCREEN_OPENED code=${room.code} id=$shortId players=${room.players.length} phase=${room.phase.name}');
+                }
+                if (!_gameDataLogged) {
+                  _gameDataLogged = true;
+                  final turnName = room.players[room.currentTurnUserId]?.name ?? room.currentTurnUserId?.substring(0, (room.currentTurnUserId ?? '').length.clamp(0, 6)) ?? 'none';
+                  QaLoggerService.instance.log('GAME', 'GAME_ROOM_DATA phase=${room.phase.name} turn=$turnName revealed=${room.placedPieces.length}');
+                }
+
                 if (room.imageId.isNotEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) => _loadImage(room.imageId));
                 }
@@ -649,13 +667,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       winnerName: winnerName,
                       placeName: _image?.name,
                       rewardBreakdown: _rewardBreakdown,
-                      onHome: () => context.go('/home'),
+                      onHome: () {
+                        QaLoggerService.instance.log('GAME', 'GAME_RETURN_HOME phase=finished_winner');
+                        context.go('/home');
+                      },
                     );
                   }
                   return _NoWinnerView(
                     answer: _image?.answer ?? '',
                     imageUrl: _image?.imageUrl,
-                    onHome: () => context.go('/home'),
+                    onHome: () {
+                      QaLoggerService.instance.log('GAME', 'GAME_RETURN_HOME phase=finished_no_winner');
+                      context.go('/home');
+                    },
                   );
                 }
 

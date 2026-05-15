@@ -29,6 +29,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
   @override
   void initState() {
     super.initState();
+    QaLoggerService.instance.log('ROOM', 'JOIN_ROOM_SCREEN_OPENED initialCode=${widget.initialCode ?? 'none'}');
     final raw = widget.initialCode;
     if (raw != null) {
       final code = raw.trim().toUpperCase();
@@ -43,14 +44,15 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
   }
 
   Future<void> _joinRoom() async {
-    final code = _codeController.text.trim().toUpperCase();
+    final raw = _codeController.text.trim();
+    final code = raw.toUpperCase();
     if (code.length != 6) {
       AppFeedback.error();
       setState(() => _errorMessage = 'נא להזין קוד בן 6 תווים');
       return;
     }
 
-    QaLoggerService.instance.log('ROOM', 'JOIN_ROOM_ATTEMPT code=$code');
+    QaLoggerService.instance.log('ROOM', 'JOIN_ROOM_ATTEMPT raw=$raw code=$code');
     AppFeedback.confirm();
     setState(() {
       _isLoading = true;
@@ -75,7 +77,8 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
         return;
       }
 
-      QaLoggerService.instance.log('ROOM', 'JOIN_ROOM_SUCCESS code=${room.code}');
+      final shortId = room.id.substring(0, room.id.length.clamp(0, 6));
+      QaLoggerService.instance.log('ROOM', 'JOIN_ROOM_SUCCESS code=${room.code} id=$shortId');
       ref.read(currentRoomIdProvider.notifier).state = room.id;
       if (mounted) context.go('/lobby/${room.id}');
     } catch (e) {
