@@ -58,6 +58,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   Map<String, dynamic>? _currentBanner;
   bool _showBanner = false;
 
+  // Dynamic music volume — escalates with board fill
+  double _lastMusicVolume = 0.44;
+
   // Bot typing simulation
   bool _showBotTyping = false;
   String _botTypingName = '';
@@ -118,6 +121,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       await _bgPlayer.setVolume(0.44);
       await _bgPlayer.play(_bgMusic);
     } catch (_) {}
+  }
+
+  void _syncMusicVolume(RoomModel room) {
+    final totalTiles = room.gridSize * room.gridSize;
+    final ratio = totalTiles > 0 ? room.placedPieces.length / totalTiles : 0.0;
+    final double target = ratio >= 0.75 ? 0.72 : ratio >= 0.50 ? 0.58 : 0.44;
+    if (target != _lastMusicVolume) {
+      _lastMusicVolume = target;
+      _bgPlayer.setVolume(target).ignore();
+    }
   }
 
   // Economy
@@ -249,7 +262,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (_lastBotTurnKey == key) return;
     _lastBotTurnKey = key;
 
-    final delayMs = 1000 + _random.nextInt(601);
+    final totalTiles = room.gridSize * room.gridSize;
+    final ratio = totalTiles > 0 ? room.placedPieces.length / totalTiles : 0.0;
+    final int delayMs;
+    if (ratio >= 0.75) {
+      delayMs = 400 + _random.nextInt(301);  // 400–700ms — endgame: racing
+    } else if (ratio >= 0.50) {
+      delayMs = 650 + _random.nextInt(351);  // 650–1000ms — midgame: pressure
+    } else {
+      delayMs = 1000 + _random.nextInt(601); // 1000–1600ms — early: realistic
+    }
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
       final snapshot = await ref.read(roomServiceProvider).watchRoom(room.id).first;
@@ -621,6 +643,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 }
 
                 _scheduleBotTurn(room);
+                _syncMusicVolume(room);
 
                 if (room.currentTurnIndex != _revealedAtTurnIndex &&
                     (_hasRevealedThisTurn || _hasGuessedThisTurn)) {
@@ -651,7 +674,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     } else if (!isCorrect) {
                       unawaited(_playWrongBuzz());
                     }
-                    Future.delayed(const Duration(milliseconds: 3500), () {
+                    Future.delayed(const Duration(milliseconds: 1800), () {
                       if (mounted) setState(() => _showBanner = false);
                     });
                   });

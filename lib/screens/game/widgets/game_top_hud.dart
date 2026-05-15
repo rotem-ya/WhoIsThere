@@ -10,6 +10,7 @@ class TopHud extends StatelessWidget {
   final String currentPlayerName;
   final String revealedText;
   final VoidCallback onBack;
+  final bool isMyTurn;
 
   const TopHud({
     required this.code,
@@ -18,6 +19,7 @@ class TopHud extends StatelessWidget {
     required this.currentPlayerName,
     required this.revealedText,
     required this.onBack,
+    required this.isMyTurn,
   });
 
   @override
@@ -41,7 +43,7 @@ class TopHud extends StatelessWidget {
                 children: [
                   _BackButton(onTap: onBack),
                   const SizedBox(width: 8),
-                  Expanded(child: _TurnInfo(name: currentPlayerName, revealedText: revealedText, code: code)),
+                  Expanded(child: _TurnInfo(name: currentPlayerName, revealedText: revealedText, code: code, isMyTurn: isMyTurn)),
                   const SizedBox(width: 8),
                   const CoinDisplay(compact: true),
                 ],
@@ -96,7 +98,8 @@ class _TurnInfo extends StatelessWidget {
   final String name;
   final String revealedText;
   final String code;
-  const _TurnInfo({required this.name, required this.revealedText, required this.code});
+  final bool isMyTurn;
+  const _TurnInfo({required this.name, required this.revealedText, required this.code, required this.isMyTurn});
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +107,17 @@ class _TurnInfo extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('עכשיו משחק', style: TextStyle(color: const Color(0xFFD4AF37).withOpacity(0.9), fontSize: 11, fontWeight: FontWeight.w900, height: 1)),
+        Text(
+          isMyTurn ? 'תורי' : 'המתחרה משחק',
+          style: TextStyle(
+            color: isMyTurn
+                ? const Color(0xFFD4AF37).withOpacity(0.9)
+                : const Color(0xFFFF6B35).withOpacity(0.95),
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            height: 1,
+          ),
+        ),
         const SizedBox(height: 3),
         Text(name.isEmpty ? 'ממתין לשחקן' : name, maxLines: 1, overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1)),

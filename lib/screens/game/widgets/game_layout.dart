@@ -60,11 +60,16 @@ class GameLayout extends StatelessWidget {
           currentPlayerName: currentPlayer?.name ?? '',
           revealedText: '$revealedCount/$total',
           onBack: onBack,
+          isMyTurn: isMyTurn,
         ),
         if (showBotTyping)
           BotTypingBanner(botName: botTypingName, typedSoFar: botTypingText)
         else if (showBanner && bannerEvent != null)
-          GuessBanner(event: bannerEvent!, players: room.players),
+          GuessBanner(
+            key: ValueKey('${bannerEvent!['playerId']}-${bannerEvent!['guess']}-${bannerEvent!['isCorrect']}'),
+            event: bannerEvent!,
+            players: room.players,
+          ),
         Expanded(
           child: Center(
             child: GameBoardView(

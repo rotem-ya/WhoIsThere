@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import '../../../utils/game_constants.dart';
 import '../../../widgets/game/aperture_tile.dart';
 
-const Duration _kApertureDuration = Duration(milliseconds: 800);
+const Duration _kApertureDuration = Duration(milliseconds: 600);
 
 class GameBoardView extends StatefulWidget {
   final int gridSize;
