@@ -147,4 +147,3 @@ final turnStateProvider =
     StateNotifierProvider<TurnStateNotifier, TurnState>(
   (ref) => TurnStateNotifier(),
 );
-
