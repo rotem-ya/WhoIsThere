@@ -129,7 +129,14 @@ class RoomService {
     final room = RoomModel.fromFirestore(doc);
 
     if (room.players.length >= GameConstants.maxPlayers) return null;
-    if (room.players.containsKey(userId)) return room;
+
+    if (room.players.containsKey(userId)) {
+      // Refresh name/photo in case user renamed since originally joining.
+      final updates = <String, dynamic>{'players.$userId.name': userName};
+      if (userPhotoUrl != null) updates['players.$userId.photoUrl'] = userPhotoUrl;
+      await doc.reference.update(updates);
+      return RoomModel.fromFirestore(await doc.reference.get());
+    }
 
     final newPlayer = PlayerModel(
       id: userId,

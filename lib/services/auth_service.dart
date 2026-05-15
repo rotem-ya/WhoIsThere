@@ -137,8 +137,14 @@ class AuthService {
     if (user == null) return null;
 
     final doc = await _firestore.collection('users').doc(user.uid).get();
-    if (!doc.exists) return _syncUser(user);
-    return UserModel.fromFirestore(doc);
+    if (doc.exists) return UserModel.fromFirestore(doc);
+
+    // Guard: give signInAnonymously() time to write the doc before falling back
+    // to _syncUser (which would write a guestFallback name).
+    await Future.delayed(const Duration(milliseconds: 500));
+    final recheck = await _firestore.collection('users').doc(user.uid).get();
+    if (recheck.exists) return UserModel.fromFirestore(recheck);
+    return _syncUser(user);
   }
 
   Stream<UserModel?> userModelStream() {
@@ -150,16 +156,18 @@ class AuthService {
           .snapshots()
           .asyncMap((doc) async {
             if (doc.exists) return UserModel.fromFirestore(doc);
-            // Doc not found. Two possible situations:
-            //   (a) signInAnonymously() is still writing it — wait 600 ms so it
-            //       finishes first and sets the correct display name.
-            //   (b) Session was restored but the Firestore doc is genuinely gone
-            //       (e.g. cleared data, reinstall) — we must create it ourselves.
-            // After the delay, re-fetch: if (a), return the real doc. If (b),
-            // call _syncUser as the recovery path.
-            await Future.delayed(const Duration(milliseconds: 600));
-            final recheck = await _firestore.collection('users').doc(user.uid).get();
-            if (recheck.exists) return UserModel.fromFirestore(recheck);
+            // Doc not found. Two scenarios:
+            //   (a) signInAnonymously() is still writing it — retry until it appears.
+            //   (b) Firestore doc is genuinely gone (reinstall, cleared data).
+            // Retry up to 5× at 350 ms intervals (max 1.75 s total). On a good
+            // network, case (a) resolves on the first or second retry (~350–700 ms).
+            // Only fall through to _syncUser if doc is still absent after all retries.
+            for (int attempt = 0; attempt < 5; attempt++) {
+              await Future.delayed(const Duration(milliseconds: 350));
+              final recheck = await _firestore.collection('users').doc(user.uid).get();
+              if (recheck.exists) return UserModel.fromFirestore(recheck);
+            }
+            // Genuine recovery (case b) or very slow network — create the doc now.
             return _syncUser(user);
           })
           .handleError((e) {
