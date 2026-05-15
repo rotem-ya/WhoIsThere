@@ -262,6 +262,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (_lastBotTurnKey == key) return;
     _lastBotTurnKey = key;
 
+    // Show "opponent thinking" banner immediately — before the delay expires.
+    // Previously this banner only appeared if the bot decided to guess (>50% board, rare).
+    // Now it shows for every bot turn, giving continuous opponent presence signal.
+    final botName = player.name.isNotEmpty ? player.name : 'בוט';
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _showBotTyping = true;
+        _botTypingName = botName;
+        _botTypingText = '';
+      });
+    });
+
     final totalTiles = room.gridSize * room.gridSize;
     final ratio = totalTiles > 0 ? room.placedPieces.length / totalTiles : 0.0;
     final int delayMs;
@@ -291,6 +304,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             pieceIndex: idx,
             difficulty: difficulty,
           );
+      unawaited(_playRevealSound());
+
+      // Dismiss "thinking" banner — _simulateBotTyping will re-show it if bot guesses.
+      if (mounted) setState(() => _showBotTyping = false);
 
       if (isLastTile) {
         if (mounted) {

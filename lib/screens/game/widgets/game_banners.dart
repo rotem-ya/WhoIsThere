@@ -14,31 +14,41 @@ class GuessBanner extends StatefulWidget {
 
 class _GuessBannerState extends State<GuessBanner>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _shake;
+  late final AnimationController _ctrl;
   late final Animation<double> _offsetX;
+  late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _shake = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 360),
-    );
-    _offsetX = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: -9.0), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -9.0, end: 9.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 9.0, end: -6.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -6.0, end: 6.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 6.0, end: 0.0), weight: 1),
-    ]).animate(CurvedAnimation(parent: _shake, curve: Curves.easeInOut));
-
     final isCorrect = widget.event['isCorrect'] as bool? ?? false;
-    if (!isCorrect) _shake.forward();
+
+    if (!isCorrect) {
+      // Wrong guess: horizontal shake
+      _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 360));
+      _offsetX = TweenSequence<double>([
+        TweenSequenceItem(tween: Tween(begin: 0.0, end: -9.0), weight: 1),
+        TweenSequenceItem(tween: Tween(begin: -9.0, end: 9.0), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 9.0, end: -6.0), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: -6.0, end: 6.0), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 6.0, end: 0.0), weight: 1),
+      ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+      _scale = AlwaysStoppedAnimation<double>(1.0);
+    } else {
+      // Correct guess: scale slam — punches in, settles
+      _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+      _offsetX = AlwaysStoppedAnimation<double>(0.0);
+      _scale = TweenSequence<double>([
+        TweenSequenceItem(tween: Tween(begin: 0.88, end: 1.05), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 1.05, end: 1.0), weight: 3),
+      ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    }
+    _ctrl.forward();
   }
 
   @override
   void dispose() {
-    _shake.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
@@ -51,10 +61,13 @@ class _GuessBannerState extends State<GuessBanner>
     final playerName = rawPlayerName.isNotEmpty ? rawPlayerName : 'שחקן';
 
     return AnimatedBuilder(
-      animation: _offsetX,
+      animation: _ctrl,
       builder: (context, child) => Transform.translate(
         offset: Offset(_offsetX.value, 0),
-        child: child,
+        child: Transform.scale(
+          scale: _scale.value,
+          child: child,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
