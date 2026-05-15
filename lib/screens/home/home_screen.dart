@@ -167,10 +167,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           body: Stack(
             children: [
               const Positioned.fill(child: _VaultBackground()),
-              const Positioned(
+              Positioned(
                 top: 12,
                 left: 16,
-                child: SafeArea(child: CoinDisplay()),
+                child: SafeArea(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CoinDisplay(),
+                      const SizedBox(width: 8),
+                      _ProfileIconButton(),
+                    ],
+                  ),
+                ),
               ),
               SafeArea(
                 child: LayoutBuilder(
@@ -596,6 +605,41 @@ class _DailyRewardButton extends ConsumerWidget {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Profile icon button (top-left, QA access) ─────────────────────────────
+
+class _ProfileIconButton extends StatelessWidget {
+  const _ProfileIconButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        QaLoggerService.instance.log('HOME', 'TAP_PROFILE');
+        context.push('/profile');
+      },
+      child: Container(
+        height: 40,
+        width: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFF050A14).withOpacity(0.60),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.15),
+            width: 1.0,
+          ),
+        ),
+        child: const Center(
+          child: Icon(
+            Icons.person_rounded,
+            color: Colors.white70,
+            size: 20,
+          ),
         ),
       ),
     );
