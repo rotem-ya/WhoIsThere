@@ -7,6 +7,7 @@ import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../core/utils/display_name_sanitizer.dart';
 import '../../providers/providers.dart';
+import '../../services/qa_logger_service.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_header.dart';
@@ -155,6 +156,28 @@ class ProfileScreen extends ConsumerWidget {
                 label: 'עבור לחנות',
                 icon: Icons.store_rounded,
                 onPressed: () => context.push('/store'),
+              ),
+              const SizedBox(height: 6),
+              TextButton.icon(
+                onPressed: () async {
+                  await QaLoggerService.instance.copyToClipboard();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                            'הועתקו ${QaLoggerService.instance.eventCount} אירועים ללוחית'),
+                        duration: const Duration(seconds: 2),
+                        backgroundColor: Colors.green.shade800,
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.content_copy_rounded, size: 16),
+                label: const Text('העתק לוג QA'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white38,
+                  textStyle: const TextStyle(fontSize: 12),
+                ),
               ),
             ],
           );
