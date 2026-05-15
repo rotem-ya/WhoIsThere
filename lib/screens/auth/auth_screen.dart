@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -107,41 +108,38 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Spacer(flex: 3),
+                        const Spacer(flex: 2),
 
-                        // ── Brand mark ───────────────────────────────────────
-                        const _HeroMark(),
-                        const SizedBox(height: 14),
-                        const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            'מה בתמונה?',
-                            maxLines: 1,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 40,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -1,
-                              height: 1,
-                            ),
-                          ),
-                        ),
-
-                        const Spacer(flex: 3),
-
-                        // ── Name field ───────────────────────────────────────
+                        // ── Aperture hero ────────────────────────────────────
+                        const _ApertureHero(),
+                        const SizedBox(height: 20),
                         const Text(
-                          'מה השם שלך במשחק?',
+                          'מה בתמונה?',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.2,
+                            color: Colors.white,
+                            fontSize: 52,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1,
+                            height: 1,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'חשוף חלקים · נחש את המקום',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.6,
+                            height: 1.4,
+                          ),
+                        ),
+
+                        const Spacer(flex: 2),
+
+                        // ── Name field ───────────────────────────────────────
                         _NameField(
                           controller: _nameController,
                           hasError: _nameError != null,
@@ -159,18 +157,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             ),
                           ),
                         ],
-                        const SizedBox(height: 6),
-                        const Text(
-                          'תוכל לשמור התקדמות גם בהמשך',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white38,
-                            fontSize: 12,
-                            height: 1.4,
-                          ),
-                        ),
 
-                        const Spacer(flex: 4),
+                        const Spacer(flex: 3),
 
                         // ── Action buttons ───────────────────────────────────
                         if (_isLoading)
@@ -185,7 +173,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           )
                         else ...[
                           _PrimaryButton(
-                            label: 'המשך כאורח',
+                            label: 'התחל לשחק',
                             onTap: _signInAnonymously,
                           ),
                           const SizedBox(height: 10),
@@ -202,7 +190,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           ],
                         ],
 
-                        const SizedBox(height: 36),
+                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
@@ -252,7 +240,7 @@ class _NameField extends StatelessWidget {
         letterSpacing: 0.5,
       ),
       decoration: InputDecoration(
-        hintText: 'שם מוצג (אופציונלי)',
+        hintText: 'השם שלי (אופציונלי)',
         hintStyle: const TextStyle(
           color: Colors.white30,
           fontSize: 18,
@@ -278,42 +266,96 @@ class _NameField extends StatelessWidget {
   }
 }
 
-// ── Hero mark ──────────────────────────────────────────────────────────────
+// ── Aperture hero ──────────────────────────────────────────────────────────
 
-class _HeroMark extends StatelessWidget {
-  const _HeroMark();
+class _ApertureHero extends StatelessWidget {
+  const _ApertureHero();
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: 108,
-        height: 108,
+        width: 160,
+        height: 160,
         decoration: BoxDecoration(
-          color: _AuthScreenState._navy.withOpacity(0.72),
-          borderRadius: BorderRadius.circular(36),
-          border: Border.all(
-            color: _AuthScreenState._gold.withOpacity(0.50),
-            width: 1.5,
-          ),
+          shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: _AuthScreenState._gold.withOpacity(0.14),
-              blurRadius: 36,
-              spreadRadius: 2,
+              color: _AuthScreenState._gold.withOpacity(0.16),
+              blurRadius: 48,
+              spreadRadius: 6,
             ),
           ],
         ),
-        child: const Center(
-          child: Icon(
-            Icons.auto_awesome_rounded,
-            color: _AuthScreenState._gold,
-            size: 52,
-          ),
+        child: CustomPaint(
+          painter: _AperturePainter(),
         ),
       ),
     );
   }
+}
+
+class _AperturePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r = size.width / 2;
+
+    // Background circle
+    canvas.drawCircle(
+      Offset(cx, cy),
+      r,
+      Paint()..color = const Color(0xFF060C1A),
+    );
+
+    // 6 aperture blades in gold
+    final bladePaint = Paint()
+      ..color = _AuthScreenState._gold
+      ..style = PaintingStyle.fill;
+
+    final outerR = r * 0.84;
+    final innerR = r * 0.26;
+
+    for (int i = 0; i < 6; i++) {
+      final a = i * pi / 3;
+      final outerA1 = a - pi / 9; // outer arc start (~−20°)
+      final outerA2 = a + pi / 9; // outer arc end   (~+20°)
+      final innerA = a + pi / 3;  // inner tip twisted to next blade's angle
+
+      final p1 = Offset(cx + outerR * cos(outerA1), cy + outerR * sin(outerA1));
+      final p2 = Offset(cx + outerR * cos(outerA2), cy + outerR * sin(outerA2));
+      final p3 = Offset(cx + innerR * cos(innerA), cy + innerR * sin(innerA));
+
+      final path = Path()
+        ..moveTo(p1.dx, p1.dy)
+        ..arcToPoint(p2, radius: Radius.circular(outerR), clockwise: true)
+        ..lineTo(p3.dx, p3.dy)
+        ..close();
+
+      canvas.drawPath(path, bladePaint);
+    }
+
+    // Center dark opening (lens)
+    canvas.drawCircle(
+      Offset(cx, cy),
+      innerR * 0.68,
+      Paint()..color = const Color(0xFF020407),
+    );
+
+    // Outer ring
+    canvas.drawCircle(
+      Offset(cx, cy),
+      r - 1,
+      Paint()
+        ..color = _AuthScreenState._gold.withOpacity(0.30)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_AperturePainter old) => false;
 }
 
 // ── Primary button (gold) ──────────────────────────────────────────────────
@@ -329,7 +371,7 @@ class _PrimaryButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 60,
+        height: 56,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [
@@ -378,7 +420,7 @@ class _SecondaryButton extends StatelessWidget {
     return OutlinedButton(
       onPressed: onTap,
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(50),
+        minimumSize: const Size.fromHeight(48),
         foregroundColor: Colors.white,
         side: BorderSide(color: _AuthScreenState._cyan.withOpacity(0.28)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
