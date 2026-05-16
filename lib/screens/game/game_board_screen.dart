@@ -651,12 +651,68 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     );
   }
 
+  Future<void> _showSystemBackConfirmation(BuildContext context) async {
+    QaLoggerService.instance.log('GAME', 'GAME_SYSTEM_BACK_CONFIRM_SHOWN');
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF07101F),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: Colors.white.withOpacity(0.12)),
+          ),
+          title: const Text(
+            'לעזוב את המשחק?',
+            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          content: const Text(
+            'המשחק עדיין פעיל. אם תצא עכשיו, תחזור למסך הבית.',
+            style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                QaLoggerService.instance.log('GAME', 'GAME_SYSTEM_BACK_CONFIRM_CANCELLED');
+                Navigator.pop(dialogContext);
+              },
+              child: const Text(
+                'המשך משחק',
+                style: TextStyle(color: Color(0xFF8B6FFF), fontWeight: FontWeight.w900),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                QaLoggerService.instance.log('GAME', 'GAME_SYSTEM_BACK_CONFIRM_ACCEPTED');
+                QaLoggerService.instance.log('GAME', 'GAME_NAV_HOME reason=system_back_confirmed phase=playing');
+                Navigator.pop(dialogContext);
+                context.go('/home');
+              },
+              child: const Text(
+                'עזוב משחק',
+                style: TextStyle(color: Color(0xFFFF6B35), fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
     final user = ref.watch(currentUserProvider).value;
 
-    return Directionality(
+    return PopScope(
+      canPop: _lastKnownPhase != GamePhase.playing,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        QaLoggerService.instance.log('GAME', 'GAME_SYSTEM_BACK_ATTEMPT');
+        _showSystemBackConfirmation(context);
+      },
+      child: Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppStyles.navyTop,
@@ -876,6 +932,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             ],
           ],
         ),
+      ),
       ),
     );
   }
