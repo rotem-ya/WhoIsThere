@@ -183,6 +183,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   }
 
   @override
+  Future<bool> didPopRoute() async {
+    if (_lastKnownPhase == GamePhase.playing && mounted) {
+      QaLoggerService.instance.log('GAME', 'GAME_SYSTEM_BACK_ATTEMPT');
+      _showSystemBackConfirmation(context);
+      return true;
+    }
+    return false;
+  }
+
+  @override
   void dispose() {
     final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
     QaLoggerService.instance.log('GAME', 'GAME_DISPOSE roomId=$shortId lastPhase=${_lastKnownPhase?.name ?? 'unknown'}');
@@ -705,14 +715,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
     final user = ref.watch(currentUserProvider).value;
 
-    return PopScope(
-      canPop: _lastKnownPhase != GamePhase.playing,
-      onPopInvoked: (didPop) {
-        if (didPop) return;
-        QaLoggerService.instance.log('GAME', 'GAME_SYSTEM_BACK_ATTEMPT');
-        _showSystemBackConfirmation(context);
-      },
-      child: Directionality(
+    return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppStyles.navyTop,
@@ -932,7 +935,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             ],
           ],
         ),
-      ),
       ),
     );
   }

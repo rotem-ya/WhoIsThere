@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/build_info.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
@@ -179,6 +180,12 @@ class ProfileScreen extends ConsumerWidget {
                   textStyle: const TextStyle(fontSize: 12),
                 ),
               ),
+              const SizedBox(height: 2),
+              const Text(
+                kBuildLabel,
+                style: TextStyle(color: Colors.white24, fontSize: 10, letterSpacing: 0.5),
+              ),
+              const SizedBox(height: 4),
             ],
           );
         },

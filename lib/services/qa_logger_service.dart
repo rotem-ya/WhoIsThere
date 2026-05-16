@@ -1,17 +1,32 @@
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-/// In-memory QA event log. Call [log] anywhere to record an event.
-/// Capped at [_maxEvents] entries (oldest dropped). No network, no files.
-/// Use [copyToClipboard] from the Profile screen to extract the log manually.
+/// Persistent QA event log. Events survive app restarts (up to [_maxEvents]).
+/// Call [init] once from main() before runApp. Call [log] anywhere.
+/// Use [copyToClipboard] from Profile screen to extract the log.
 class QaLoggerService {
   QaLoggerService._();
   static final instance = QaLoggerService._();
 
   static const int _maxEvents = 300;
+  static const String _prefKey = 'qa_log_events';
 
   final List<String> _events = [];
+  SharedPreferences? _prefs;
+  bool _initialized = false;
 
   int get eventCount => _events.length;
+
+  Future<void> init() async {
+    try {
+      _prefs = await SharedPreferences.getInstance();
+      final stored = _prefs!.getStringList(_prefKey) ?? [];
+      _events.addAll(stored);
+      while (_events.length > _maxEvents) _events.removeAt(0);
+    } catch (_) {}
+    _initialized = true;
+    log('QA', 'SESSION_START stored=${_events.length - 1}');
+  }
 
   void log(String tag, String message) {
     final now = DateTime.now();
@@ -19,6 +34,12 @@ class QaLoggerService {
     final entry = '[$ts] ${tag.padRight(16)} $message';
     if (_events.length >= _maxEvents) _events.removeAt(0);
     _events.add(entry);
+    _persist();
+  }
+
+  void _persist() {
+    if (!_initialized || _prefs == null) return;
+    _prefs!.setStringList(_prefKey, List.of(_events)).ignore();
   }
 
   Future<void> copyToClipboard() async {
@@ -28,7 +49,10 @@ class QaLoggerService {
     await Clipboard.setData(ClipboardData(text: text));
   }
 
-  void clear() => _events.clear();
+  void clear() {
+    _events.clear();
+    _prefs?.remove(_prefKey).ignore();
+  }
 
   static String _p2(int n) => n.toString().padLeft(2, '0');
   static String _p3(int n) => n.toString().padLeft(3, '0');
