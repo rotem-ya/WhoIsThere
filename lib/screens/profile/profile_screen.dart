@@ -166,40 +166,41 @@ class ProfileScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.lg),
+                      AppButton(
+                        label: 'עבור לחנות',
+                        icon: Icons.store_rounded,
+                        onPressed: () => context.push('/store'),
+                      ),
+                      const SizedBox(height: 6),
+                      TextButton.icon(
+                        onPressed: () async {
+                          await QaLoggerService.instance.copyToClipboard();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'הועתקו ${QaLoggerService.instance.eventCount} אירועים ללוחית'),
+                                duration: const Duration(seconds: 2),
+                                backgroundColor: Colors.green.shade800,
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.content_copy_rounded, size: 16),
+                        label: const Text('העתק לוג QA'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white38,
+                          textStyle: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _QABuildInfo(),
+                      const SizedBox(height: 4),
                     ],
                   ),
                 ),
               ),
-              AppButton(
-                label: 'עבור לחנות',
-                icon: Icons.store_rounded,
-                onPressed: () => context.push('/store'),
-              ),
-              const SizedBox(height: 6),
-              TextButton.icon(
-                onPressed: () async {
-                  await QaLoggerService.instance.copyToClipboard();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            'הועתקו ${QaLoggerService.instance.eventCount} אירועים ללוחית'),
-                        duration: const Duration(seconds: 2),
-                        backgroundColor: Colors.green.shade800,
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.content_copy_rounded, size: 16),
-                label: const Text('העתק לוג QA'),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.white38,
-                  textStyle: const TextStyle(fontSize: 12),
-                ),
-              ),
-              const SizedBox(height: 12),
-              _QABuildInfo(),
-              const SizedBox(height: 4),
             ],
           );
         },
