@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -234,29 +232,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 isLoading: _isCreating && _loadingPlayers == 2,
                                 onTap: _isCreating ? null : () => _startQuickGame(2),
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 10),
                               Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Expanded(
-                                    child: _GlassButton(
-                                      label: '3 שחקנים',
-                                      height: verySmall ? 50 : compact ? 54 : 58,
-                                      isLoading: _isCreating && _loadingPlayers == 3,
-                                      onTap: _isCreating ? null : () => _startQuickGame(3),
+                                  _PlayerCountChip(
+                                    label: '3 שחקנים',
+                                    isLoading: _isCreating && _loadingPlayers == 3,
+                                    onTap: _isCreating ? null : () => _startQuickGame(3),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    '•',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.40),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                      height: 1,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _GlassButton(
-                                      label: '4 שחקנים',
-                                      height: verySmall ? 50 : compact ? 54 : 58,
-                                      isLoading: _isCreating && _loadingPlayers == 4,
-                                      onTap: _isCreating ? null : () => _startQuickGame(4),
-                                    ),
+                                  _PlayerCountChip(
+                                    label: '4 שחקנים',
+                                    isLoading: _isCreating && _loadingPlayers == 4,
+                                    onTap: _isCreating ? null : () => _startQuickGame(4),
                                   ),
                                 ],
                               ),
-                              SizedBox(height: verySmall ? 16 : 22),
+                              SizedBox(height: verySmall ? 18 : 24),
                               _PrivateRoomButton(
                                 isLoading: _isCreating && _loadingPlayers == null,
                                 onTap: _isCreating ? null : _createPrivateRoom,
@@ -400,13 +403,12 @@ class _MainVaultButton extends StatelessWidget {
   }
 }
 
-class _GlassButton extends StatelessWidget {
+class _PlayerCountChip extends StatelessWidget {
   final String label;
-  final double height;
   final bool isLoading;
   final VoidCallback? onTap;
 
-  const _GlassButton({required this.label, required this.height, required this.isLoading, required this.onTap});
+  const _PlayerCountChip({required this.label, required this.isLoading, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -414,23 +416,33 @@ class _GlassButton extends StatelessWidget {
       onTap: onTap,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 160),
-        opacity: onTap == null ? 0.62 : 1,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-            child: Container(
-              height: height,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.065),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.34), width: 1.2),
-              ),
-              child: Center(
-                child: isLoading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4))
-                    : Text(label, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
-              ),
+        opacity: onTap == null ? 0.55 : 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 110, minHeight: 40),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.36), width: 1.1),
+            ),
+            child: Center(
+              widthFactor: 1,
+              child: isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(color: Colors.white70, strokeWidth: 2.2),
+                    )
+                  : Text(
+                      label,
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.82),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
             ),
           ),
         ),
