@@ -202,40 +202,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   maxLines: 1,
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 56,
+                                    fontSize: 44,
                                     fontWeight: FontWeight.w900,
-                                    letterSpacing: -1.7,
+                                    letterSpacing: -1.2,
                                     height: 1,
                                     shadows: [
-                                      Shadow(color: Color(0xFFD4AF37), blurRadius: 16),
-                                      Shadow(color: Colors.black87, offset: Offset(0, 4), blurRadius: 10),
+                                      Shadow(color: Color(0xFFD4AF37), blurRadius: 12),
+                                      Shadow(color: Colors.black87, offset: Offset(0, 3), blurRadius: 8),
                                     ],
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 8),
                               Text(
                                 'מי יזהה את המקום ראשון?',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: const Color(0xFF87CEEB).withOpacity(0.86),
-                                  fontSize: verySmall ? 16 : compact ? 18 : 20,
-                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF87CEEB).withOpacity(0.8),
+                                  fontSize: verySmall ? 14 : compact ? 16 : 18,
+                                  fontWeight: FontWeight.w700,
                                   height: 1.2,
                                 ),
                               ),
-                              SizedBox(height: verySmall ? 12 : compact ? 18 : 26),
-                              const Text(
-                                'בחר פורמט',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white30,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1.8,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
+                              SizedBox(height: verySmall ? 10 : compact ? 14 : 20),
                               _MainVaultButton(
                                 pulseController: _pulseController,
                                 label: 'שחק עכשיו',
@@ -244,7 +233,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 isLoading: _isCreating && _loadingPlayers == 2,
                                 onTap: _isCreating ? null : () => _startQuickGame(2),
                               ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 8),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -257,8 +246,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   Text(
                                     '•',
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.40),
-                                      fontSize: 18,
+                                      color: Colors.white.withOpacity(0.35),
+                                      fontSize: 16,
                                       fontWeight: FontWeight.w900,
                                       height: 1,
                                     ),
@@ -271,7 +260,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   ),
                                 ],
                               ),
-                              SizedBox(height: verySmall ? 14 : 20),
+                              SizedBox(height: verySmall ? 12 : compact ? 16 : 20),
                               _PrivateRoomButton(
                                 isLoading: _isCreating && _loadingPlayers == null,
                                 onTap: _isCreating ? null : _createPrivateRoom,
