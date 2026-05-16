@@ -139,7 +139,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                         // ── Aperture hero ────────────────────────────────────
                         const _ApertureHero(),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
                         const Text(
                           'מה בתמונה?',
                           textAlign: TextAlign.center,
@@ -151,12 +151,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             height: 1,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         const Text(
                           'חשוף חלקים · נחש את המקום',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.white54,
+                            color: Colors.white60,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                             letterSpacing: 0.6,
@@ -258,9 +258,9 @@ class _NameField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const borderRadius = BorderRadius.all(Radius.circular(16));
-    const baseBorder = OutlineInputBorder(
+    final baseBorder = OutlineInputBorder(
       borderRadius: borderRadius,
-      borderSide: BorderSide(color: Colors.white24),
+      borderSide: BorderSide(color: Colors.white.withOpacity(0.12)),
     );
 
     return TextField(
@@ -286,18 +286,19 @@ class _NameField extends StatelessWidget {
         ),
         counterText: '',
         filled: true,
-        fillColor: Colors.white.withOpacity(0.06),
+        fillColor: Colors.white.withOpacity(0.08),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         border: baseBorder,
         enabledBorder: hasError
             ? OutlineInputBorder(
                 borderRadius: borderRadius,
-                borderSide: BorderSide(color: Colors.red.shade400, width: 1.2),
+                borderSide: BorderSide(color: Colors.red.shade300, width: 1.3),
               )
             : baseBorder,
-        focusedBorder: const OutlineInputBorder(
+        focusedBorder: OutlineInputBorder(
           borderRadius: borderRadius,
-          borderSide: BorderSide(color: _AuthScreenState._cyan, width: 1.5),
+          borderSide: BorderSide(
+              color: _AuthScreenState._cyan.withOpacity(0.7), width: 1.5),
         ),
       ),
     );
@@ -313,15 +314,20 @@ class _ApertureHero extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: 160,
-        height: 160,
+        width: 180,
+        height: 180,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: _AuthScreenState._gold.withOpacity(0.16),
-              blurRadius: 48,
-              spreadRadius: 6,
+              color: _AuthScreenState._gold.withOpacity(0.22),
+              blurRadius: 56,
+              spreadRadius: 8,
+            ),
+            BoxShadow(
+              color: _AuthScreenState._cyan.withOpacity(0.08),
+              blurRadius: 32,
+              spreadRadius: 12,
             ),
           ],
         ),
@@ -344,22 +350,18 @@ class _AperturePainter extends CustomPainter {
     canvas.drawCircle(
       Offset(cx, cy),
       r,
-      Paint()..color = const Color(0xFF060C1A),
+      Paint()..color = const Color(0xFF050A14),
     );
 
-    // 6 aperture blades in gold
-    final bladePaint = Paint()
-      ..color = _AuthScreenState._gold
-      ..style = PaintingStyle.fill;
-
+    // 6 aperture blades in gold with gradient effect
     final outerR = r * 0.84;
     final innerR = r * 0.26;
 
     for (int i = 0; i < 6; i++) {
       final a = i * pi / 3;
-      final outerA1 = a - pi / 9; // outer arc start (~−20°)
-      final outerA2 = a + pi / 9; // outer arc end   (~+20°)
-      final innerA = a + pi / 3;  // inner tip twisted to next blade's angle
+      final outerA1 = a - pi / 9;
+      final outerA2 = a + pi / 9;
+      final innerA = a + pi / 3;
 
       final p1 = Offset(cx + outerR * cos(outerA1), cy + outerR * sin(outerA1));
       final p2 = Offset(cx + outerR * cos(outerA2), cy + outerR * sin(outerA2));
@@ -371,24 +373,38 @@ class _AperturePainter extends CustomPainter {
         ..lineTo(p3.dx, p3.dy)
         ..close();
 
-      canvas.drawPath(path, bladePaint);
+      // Main blade
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = _AuthScreenState._gold
+          ..style = PaintingStyle.fill,
+      );
+
+      // Subtle highlight on blade
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = _AuthScreenState._goldLight.withOpacity(0.15)
+          ..style = PaintingStyle.fill,
+      );
     }
 
     // Center dark opening (lens)
     canvas.drawCircle(
       Offset(cx, cy),
       innerR * 0.68,
-      Paint()..color = const Color(0xFF020407),
+      Paint()..color = const Color(0xFF010203),
     );
 
-    // Outer ring
+    // Outer ring - enhanced
     canvas.drawCircle(
       Offset(cx, cy),
       r - 1,
       Paint()
-        ..color = _AuthScreenState._gold.withOpacity(0.30)
+        ..color = _AuthScreenState._gold.withOpacity(0.40)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
+        ..strokeWidth = 1.8,
     );
   }
 
@@ -423,22 +439,46 @@ class _PrimaryButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           boxShadow: [
             BoxShadow(
-              color: _AuthScreenState._gold.withOpacity(0.30),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              color: _AuthScreenState._gold.withOpacity(0.40),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
+            ),
+            BoxShadow(
+              color: _AuthScreenState._gold.withOpacity(0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Center(
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: _AuthScreenState._navy,
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              height: 1,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.white.withOpacity(0.12),
+                      Colors.transparent,
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.center,
+                  ),
+                ),
+              ),
             ),
-          ),
+            Center(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: _AuthScreenState._navy,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -460,9 +500,12 @@ class _SecondaryButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         minimumSize: const Size.fromHeight(48),
         foregroundColor: Colors.white,
-        side: BorderSide(color: _AuthScreenState._cyan.withOpacity(0.28)),
+        side: BorderSide(
+          color: _AuthScreenState._cyan.withOpacity(0.35),
+          width: 1.2,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-        backgroundColor: _AuthScreenState._navy.withOpacity(0.30),
+        backgroundColor: _AuthScreenState._navy.withOpacity(0.22),
       ),
       child: Text(
         label,
