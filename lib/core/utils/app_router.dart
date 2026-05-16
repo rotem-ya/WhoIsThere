@@ -6,6 +6,10 @@ import '../../services/qa_logger_service.dart';
 import '../../screens/splash/splash_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/auth/auth_screen.dart';
+import '../../screens/auth_lab/auth_design_lab_screen.dart';
+import '../../screens/auth_lab/gpt_auth_screen.dart';
+import '../../screens/auth_lab/gemini_auth_screen.dart';
+import '../../screens/auth_lab/claude_auth_screen.dart';
 import '../../screens/room/create_room_screen.dart';
 import '../../screens/room/join_room_screen.dart';
 import '../../screens/room/lobby_screen.dart';
@@ -29,11 +33,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
       final onAuth = location == '/auth';
       final onSplash = location == '/splash';
+      final onAuthLab = location.startsWith('/auth_lab');
 
       if (onSplash) {
         final dest = isLoggedIn ? '/home' : '/auth';
         QaLoggerService.instance.log('ROUTER', 'ROUTER_REDIRECT from=$location to=$dest reason=splash');
         return dest;
+      }
+      if (onAuthLab) {
+        return null;
       }
       if (!isLoggedIn && !onAuth) {
         QaLoggerService.instance.log('ROUTER', 'ROUTER_REDIRECT from=$location to=/auth reason=not_logged_in');
@@ -58,6 +66,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/auth',
         builder: (context, state) => const AuthScreen(),
+      ),
+      GoRoute(
+        path: '/auth_lab',
+        builder: (context, state) => const AuthDesignLabScreen(),
+      ),
+      GoRoute(
+        path: '/auth_lab/gpt',
+        builder: (context, state) => const GptAuthScreen(),
+      ),
+      GoRoute(
+        path: '/auth_lab/gemini',
+        builder: (context, state) => const GeminiAuthScreen(),
+      ),
+      GoRoute(
+        path: '/auth_lab/claude',
+        builder: (context, state) => const ClaudeAuthScreen(),
       ),
       GoRoute(
         path: '/home',

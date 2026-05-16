@@ -196,6 +196,16 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                       _QABuildInfo(),
+                      const SizedBox(height: 12),
+                      TextButton.icon(
+                        onPressed: () => context.push('/auth_lab'),
+                        icon: const Icon(Icons.palette_rounded, size: 16),
+                        label: const Text('Auth Design Lab'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.accent,
+                          textStyle: const TextStyle(fontSize: 12),
+                        ),
+                      ),
                       const SizedBox(height: 4),
                     ],
                   ),
