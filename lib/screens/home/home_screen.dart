@@ -12,7 +12,6 @@ import '../../services/feedback_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
-import '../../widgets/game/vault_game_icon.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -184,7 +183,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   builder: (context, constraints) {
                     final verySmall = constraints.maxHeight < 640;
                     final compact = constraints.maxHeight < 760;
-                    final iconSize = verySmall ? 104.0 : compact ? 124.0 : 146.0;
+                    final iconSize = verySmall ? 156.0 : compact ? 188.0 : 218.0;
                     return SingleChildScrollView(
                       physics: const ClampingScrollPhysics(),
                       child: ConstrainedBox(
@@ -194,9 +193,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              SizedBox(height: verySmall ? 10 : compact ? 18 : 34),
-                              Center(child: VaultGameIcon(size: iconSize)),
-                              SizedBox(height: verySmall ? 14 : compact ? 20 : 26),
+                              SizedBox(height: verySmall ? 8 : compact ? 14 : 24),
+                              Center(child: _HomeHeroPeekGrid(size: iconSize)),
+                              SizedBox(height: verySmall ? 10 : compact ? 16 : 20),
                               const FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
@@ -849,6 +848,177 @@ class _JoinCodeDialogState extends ConsumerState<_JoinCodeDialog> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Home screen hero — peek grid ─────────────────────────────────────────────
+//
+// 3×3 dark tile grid over a real landmark image.
+// Tiles at indices 1, 3, 7 are "open" (transparent → image shows through).
+// Tile 5 breathes slowly, suggesting imminent reveal.
+// No board code, no ApertureTile, no image slicing math.
+
+class _HomeHeroPeekGrid extends StatefulWidget {
+  final double size;
+  const _HomeHeroPeekGrid({required this.size});
+
+  @override
+  State<_HomeHeroPeekGrid> createState() => _HomeHeroPeekGridState();
+}
+
+class _HomeHeroPeekGridState extends State<_HomeHeroPeekGrid>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _breath;
+
+  // Tile indices where the image shows through
+  static const Set<int> _open = {1, 3, 7};
+  // Tile that breathes (opacity pulse), hinting imminent reveal
+  static const int _breathIdx = 5;
+  // Landmark image shown behind the grid
+  static const String _image = 'assets/game_places/images/masada.jpg';
+
+  @override
+  void initState() {
+    super.initState();
+    _breath = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2700),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _breath.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.size;
+    final r = s * 0.115;
+    final gap = s * 0.030;
+
+    return Container(
+      width: s,
+      height: s,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(r),
+        border: Border.all(
+          color: const Color(0xFFD4AF37).withOpacity(0.58),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFD4AF37).withOpacity(0.20),
+            blurRadius: 30,
+            spreadRadius: 3,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.65),
+            blurRadius: 20,
+            offset: const Offset(0, 9),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(r - 1.5),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Real landmark image — masada.jpg (local asset, 1024×1024)
+            Image.asset(_image, fit: BoxFit.cover),
+            // Dark gradient so closed tiles read clearly against bright areas
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.08),
+                    Colors.black.withOpacity(0.48),
+                  ],
+                ),
+              ),
+            ),
+            // Tile grid
+            Padding(
+              padding: EdgeInsets.all(gap),
+              child: GridView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: gap,
+                  mainAxisSpacing: gap,
+                  childAspectRatio: 1.0,
+                ),
+                itemCount: 9,
+                itemBuilder: (_, idx) => _buildCell(idx),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCell(int idx) {
+    if (_open.contains(idx)) {
+      // Transparent — image shows through; thin cyan border marks the opening
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(
+            color: const Color(0xFF87CEEB).withOpacity(0.52),
+            width: 1.0,
+          ),
+        ),
+      );
+    }
+
+    final Widget tile = const _ClosedTile();
+
+    if (idx == _breathIdx) {
+      return AnimatedBuilder(
+        animation: _breath,
+        builder: (_, child) => Opacity(
+          opacity: 0.52 + 0.48 * Curves.easeInOut.transform(_breath.value),
+          child: child,
+        ),
+        child: tile,
+      );
+    }
+
+    return tile;
+  }
+}
+
+class _ClosedTile extends StatelessWidget {
+  const _ClosedTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(5),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0E1C30), Color(0xFF040C18)],
+        ),
+        border: Border.all(
+          color: const Color(0xFFD4AF37).withOpacity(0.42),
+          width: 0.9,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.55),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
     );
   }
