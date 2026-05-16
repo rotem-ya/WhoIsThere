@@ -225,7 +225,7 @@ class _GeminiAtmosphericGlow extends StatelessWidget {
         width: MediaQuery.of(context).size.width,
         height: 300,
         decoration: BoxDecoration(
-          radialGradient: RadialGradient(
+          gradient: RadialGradient(
             colors: [
               const Color(0xFF00FFFF).withOpacity(0.08),
               Colors.transparent,
