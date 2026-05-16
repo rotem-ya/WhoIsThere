@@ -79,6 +79,11 @@ class _WinScreenState extends ConsumerState<WinScreen> {
         final isWinner = currentUser?.id == room.winnerId;
         final sortedPlayers = room.sortedPlayers;
 
+        // Calculate score gap for competitive messaging
+        final scoreGap = sortedPlayers.length > 1
+            ? (sortedPlayers[0].score - sortedPlayers[1].score).abs()
+            : 0;
+
         return Stack(
           children: [
             AppScaffold(
@@ -94,16 +99,22 @@ class _WinScreenState extends ConsumerState<WinScreen> {
                     Text(
                       isWinner ? 'ניצחת!' : 'המשחק נגמר',
                       textAlign: TextAlign.center,
-                      style: AppTextStyles.titleLight.copyWith(fontSize: 34),
+                      style: AppTextStyles.titleLight.copyWith(fontSize: 44, fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       winner == null
                           ? 'הנה התוצאות'
                           : isWinner
-                              ? 'זיהית את המקום לפני כולם'
-                              : '${winner.name.isNotEmpty ? winner.name : 'שחקן'} ניצח/ה בסיבוב',
+                              ? scoreGap > 0
+                                  ? 'ניצחת ב־$scoreGap נק׳'
+                                  : 'ניצחת את כולם'
+                              : scoreGap > 0
+                                  ? '${winner.name.isNotEmpty ? winner.name : 'שחקן'} ניצח ב־$scoreGap נק׳'
+                                  : '${winner.name.isNotEmpty ? winner.name : 'שחקן'} ניצח',
                       textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.subtitleLight,
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -216,6 +227,7 @@ class _ScoreRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTopThree = rank <= 3;
     final medal = rank == 1
         ? '🥇'
         : rank == 2
@@ -224,11 +236,28 @@ class _ScoreRow extends StatelessWidget {
                 ? '🥉'
                 : '$rank.';
 
+    // Visual hierarchy: top 3 prominent, 4th+ muted
+    final medalFontSize = isTopThree ? 24.0 : 16.0;
+    final nameColor = isTopThree
+        ? (isWinner ? AppColors.primary : AppColors.darkBlue)
+        : (isWinner ? AppColors.primary : AppColors.darkBlue.withOpacity(0.80));
+    final scoreColor = isTopThree
+        ? (isWinner ? AppColors.primary : AppColors.darkBlue)
+        : (isWinner ? AppColors.primary : AppColors.darkBlue.withOpacity(0.60));
+    final scoreFontSize = isTopThree ? 16.0 : 14.0;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         children: [
-          Text(medal, style: const TextStyle(fontSize: 20)),
+          SizedBox(
+            width: 32,
+            child: Text(
+              medal,
+              style: TextStyle(fontSize: medalFontSize),
+              textAlign: TextAlign.center,
+            ),
+          ),
           const SizedBox(width: AppSpacing.sm),
           PlayerAvatar(
               name: player.name, photoUrl: player.photoUrl, radius: 16),
@@ -239,16 +268,17 @@ class _ScoreRow extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.body.copyWith(
-                color: isWinner ? AppColors.primary : AppColors.darkBlue,
-                fontWeight: FontWeight.w900,
+                color: nameColor,
+                fontWeight: isTopThree ? FontWeight.w900 : FontWeight.w700,
               ),
             ),
           ),
           Text(
             '${player.score} נק׳',
             style: AppTextStyles.body.copyWith(
-              color: isWinner ? AppColors.primary : AppColors.darkBlue,
-              fontWeight: FontWeight.w900,
+              fontSize: scoreFontSize,
+              color: scoreColor,
+              fontWeight: isTopThree ? FontWeight.w900 : FontWeight.w700,
             ),
           ),
         ],
