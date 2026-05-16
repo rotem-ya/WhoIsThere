@@ -50,9 +50,21 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_JKS_BASE64 }}
         run: |
-          if [ -n "$KEYSTORE_B64" ]; then
+          echo "=== Keystore Decode Diagnostic ==="
+          echo "KEYSTORE_B64 length: ${#KEYSTORE_B64}"
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "ERROR: KEYSTORE_B64 is EMPTY — secret KEYSTORE_JKS_BASE64 is missing or unavailable to this workflow"
+          else
+            echo "KEYSTORE_B64 is present (${#KEYSTORE_B64} bytes)"
             echo "$KEYSTORE_B64" | base64 -d > android/app/keystore.jks
+            if [ -f "android/app/keystore.jks" ]; then
+              echo "File created: android/app/keystore.jks"
+              ls -lh android/app/keystore.jks
+            else
+              echo "ERROR: File was not created"
+            fi
           fi
+          echo "=== End Diagnostic ==="
 
       - name: Extract release keystore SHA-1
         env:
