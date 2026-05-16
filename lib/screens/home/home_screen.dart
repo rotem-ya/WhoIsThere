@@ -217,7 +217,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                'חשוף חלקים ונחש את המקום',
+                                'מי יזהה את המקום ראשון?',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: const Color(0xFF87CEEB).withOpacity(0.86),
@@ -226,21 +226,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   height: 1.2,
                                 ),
                               ),
-                              SizedBox(height: verySmall ? 16 : compact ? 22 : 32),
+                              SizedBox(height: verySmall ? 12 : compact ? 18 : 26),
                               const Text(
-                                'משחק מהיר',
+                                'בחר פורמט',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 23,
-                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white30,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1.8,
                                 ),
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 10),
                               _MainVaultButton(
                                 pulseController: _pulseController,
-                                label: '2 שחקנים',
-                                subtitle: 'מהיר ופשוט',
+                                label: 'שחק עכשיו',
+                                subtitle: 'דו־קרב מהיר · 2 שחקנים',
                                 height: verySmall ? 62 : compact ? 66 : 72,
                                 isLoading: _isCreating && _loadingPlayers == 2,
                                 onTap: _isCreating ? null : () => _startQuickGame(2),
@@ -267,7 +268,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   ),
                                 ],
                               ),
-                              SizedBox(height: verySmall ? 16 : 22),
+                              SizedBox(height: verySmall ? 10 : 16),
                               _PrivateRoomButton(
                                 isLoading: _isCreating && _loadingPlayers == null,
                                 onTap: _isCreating ? null : _createPrivateRoom,
@@ -390,7 +391,10 @@ class _MainVaultButton extends StatelessWidget {
     return ScaleTransition(
       scale: Tween<double>(begin: 1.0, end: 1.04).animate(CurvedAnimation(parent: pulseController, curve: Curves.easeInOut)),
       child: GestureDetector(
-        onTap: onTap,
+        onTap: onTap == null ? null : () {
+          HapticFeedback.mediumImpact();
+          onTap!();
+        },
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 160),
           opacity: onTap == null ? 0.65 : 1,
@@ -439,7 +443,10 @@ class _GlassButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: onTap == null ? null : () {
+        HapticFeedback.lightImpact();
+        onTap!();
+      },
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 160),
         opacity: onTap == null ? 0.62 : 1,
@@ -477,12 +484,15 @@ class _PrivateRoomButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: GestureDetector(
-        onTap: onTap,
+        onTap: onTap == null ? null : () {
+          HapticFeedback.lightImpact();
+          onTap!();
+        },
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 160),
           opacity: onTap == null ? 0.58 : 1,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 11),
             decoration: BoxDecoration(
               color: const Color(0xFF050A14).withOpacity(0.50),
               borderRadius: BorderRadius.circular(999),
@@ -494,9 +504,16 @@ class _PrivateRoomButton extends StatelessWidget {
                 if (isLoading)
                   const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Color(0xFF87CEEB), strokeWidth: 2))
                 else
-                  const Icon(Icons.lock_outline_rounded, color: Color(0xFF87CEEB), size: 19),
-                const SizedBox(width: 8),
-                const Text('חדר פרטי עם קוד', style: TextStyle(color: Color(0xFF87CEEB), fontSize: 16, fontWeight: FontWeight.w800)),
+                  const Icon(Icons.people_rounded, color: Color(0xFF87CEEB), size: 19),
+                const SizedBox(width: 10),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('שחק עם חברים', style: TextStyle(color: Color(0xFF87CEEB), fontSize: 16, fontWeight: FontWeight.w800, height: 1.1)),
+                    Text('צור חדר ושתף קוד', style: TextStyle(color: const Color(0xFF87CEEB).withOpacity(0.60), fontSize: 11, fontWeight: FontWeight.w600, height: 1.2)),
+                  ],
+                ),
               ],
             ),
           ),
@@ -516,7 +533,10 @@ class _JoinRoomButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: GestureDetector(
-        onTap: onTap,
+        onTap: onTap == null ? null : () {
+          HapticFeedback.lightImpact();
+          onTap!();
+        },
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 160),
           opacity: onTap == null ? 0.58 : 1,
@@ -530,9 +550,9 @@ class _JoinRoomButton extends StatelessWidget {
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.group_add_rounded, color: Color(0xFF81C784), size: 19),
+                Icon(Icons.key_rounded, color: Color(0xFF81C784), size: 19),
                 SizedBox(width: 8),
-                Text('הצטרף עם קוד', style: TextStyle(color: Color(0xFF81C784), fontSize: 16, fontWeight: FontWeight.w800)),
+                Text('יש לי קוד', style: TextStyle(color: Color(0xFF81C784), fontSize: 16, fontWeight: FontWeight.w800)),
               ],
             ),
           ),
