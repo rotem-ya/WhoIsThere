@@ -5,12 +5,10 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/build_info.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
-import '../../core/ui/app_text_styles.dart';
 import '../../core/utils/display_name_sanitizer.dart';
 import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
 import '../../widgets/common/app_button.dart';
-import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
 
@@ -60,14 +58,30 @@ class ProfileScreen extends ConsumerWidget {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      AppCard(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
+                      _DarkPanel(
                         child: Column(
                           children: [
-                            PlayerAvatar(
-                              name: user.name,
-                              photoUrl: user.photoUrl,
-                              radius: 50,
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.primary.withOpacity(0.55),
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.accent.withOpacity(0.28),
+                                    blurRadius: 18,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                              child: PlayerAvatar(
+                                name: user.name,
+                                photoUrl: user.photoUrl,
+                                radius: 46,
+                              ),
                             ),
                             const SizedBox(height: AppSpacing.md),
                             Row(
@@ -80,7 +94,12 @@ class ProfileScreen extends ConsumerWidget {
                                     textAlign: TextAlign.center,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: AppTextStyles.titleDark,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w900,
+                                      height: 1.05,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: AppSpacing.xs),
@@ -93,15 +112,14 @@ class ProfileScreen extends ConsumerWidget {
                                     child: Icon(
                                       Icons.edit_rounded,
                                       size: 18,
-                                      color: AppColors.primary.withOpacity(0.75),
+                                      color: AppColors.accent.withOpacity(0.78),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text('שחקן פעיל',
-                                style: AppTextStyles.subtitleDark),
+                            const SizedBox(height: AppSpacing.sm + 2),
+                            _GoldPointsPill(points: user.totalPoints),
                           ],
                         ),
                       ),
@@ -109,43 +127,41 @@ class ProfileScreen extends ConsumerWidget {
                       Row(
                         children: [
                           Expanded(
-                              child: _StatCard(
-                                  label: 'נקודות',
-                                  value: '${user.totalPoints}',
-                                  icon: Icons.star_rounded)),
+                            child: _DarkStatTile(
+                              icon: Icons.image_rounded,
+                              value: '${user.purchasedImageIds.length}',
+                              label: 'התמונות שלי',
+                            ),
+                          ),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
-                              child: _StatCard(
-                                  label: 'תמונות',
-                                  value: '${user.purchasedImageIds.length}',
-                                  icon: Icons.image_rounded)),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Row(
-                        children: [
-                          Expanded(
-                              child: _StatCard(
-                                  label: 'ערכות',
-                                  value: '${user.purchasedThemeIds.length}',
-                                  icon: Icons.palette_rounded)),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                              child: _StatCard(
-                                  label: 'ניצחון',
-                                  value: '+10~40',
-                                  icon: Icons.emoji_events_rounded)),
+                            child: _DarkStatTile(
+                              icon: Icons.palette_rounded,
+                              value: '${user.purchasedThemeIds.length}',
+                              label: 'הערכות שלי',
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.lg),
-                      AppCard(
+                      _DarkPanel(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            _PointInfo('🧩 הנח חתיכה', '+1 עד +4 נק׳'),
-                            _PointInfo('🏆 ניחוש נכון', '+10 עד +40 נק׳'),
-                            _PointInfo('❌ ניחוש שגוי', '-1 עד -4 נק׳'),
-                            _PointInfo('👑 הצבעת מארח', '×2'),
+                          children: [
+                            Text(
+                              'אופן הניקוד',
+                              style: TextStyle(
+                                color: AppColors.accent.withOpacity(0.74),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.sm + 2),
+                            const _PointInfo('🧩 הנח חתיכה', '+1 עד +4 נק׳'),
+                            const _PointInfo('🏆 ניחוש נכון', '+10 עד +40 נק׳'),
+                            const _PointInfo('❌ ניחוש שגוי', '-1 עד -4 נק׳'),
+                            const _PointInfo('👑 הצבעת מארח', '×2'),
                           ],
                         ),
                       ),
@@ -192,7 +208,14 @@ class ProfileScreen extends ConsumerWidget {
         loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.accent)),
         error: (e, _) => Center(
-            child: Text('שגיאה: $e', style: AppTextStyles.subtitleLight)),
+            child: Text(
+              'שגיאה: $e',
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            )),
       ),
     );
   }
@@ -330,26 +353,134 @@ class _EditNameDialogState extends State<_EditNameDialog> {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
+class _DarkPanel extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
 
-  const _StatCard(
-      {required this.label, required this.value, required this.icon});
+  const _DarkPanel({
+    required this.child,
+    this.padding = const EdgeInsets.all(AppSpacing.lg),
+  });
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
+    return Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: const Color(0xFF0E1E35),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: AppColors.accent.withOpacity(0.22),
+          width: 1.1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.30),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _DarkStatTile extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+
+  const _DarkStatTile({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _DarkPanel(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.md,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.primary, size: 28),
+          Icon(icon, color: AppColors.accent, size: 26),
           const SizedBox(height: AppSpacing.sm),
-          Text(value,
-              textDirection: TextDirection.ltr, style: AppTextStyles.titleDark),
-          Text(label, style: AppTextStyles.subtitleDark),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              value,
+              textDirection: TextDirection.ltr,
+              maxLines: 1,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                height: 1,
+              ),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: AppColors.accent.withOpacity(0.78),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GoldPointsPill extends StatelessWidget {
+  final int points;
+
+  const _GoldPointsPill({required this.points});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        gradient: AppColors.goldGradient,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.30),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.star_rounded,
+            color: AppColors.primaryDark,
+            size: 16,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$points נק׳',
+            textDirection: TextDirection.ltr,
+            style: const TextStyle(
+              color: AppColors.primaryDark,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              height: 1,
+            ),
+          ),
         ],
       ),
     );
@@ -368,10 +499,27 @@ class _PointInfo extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: AppTextStyles.body)),
-          Text(value,
-              textDirection: TextDirection.ltr,
-              style: AppTextStyles.body.copyWith(color: AppColors.primary)),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.85),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                height: 1.3,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            textDirection: TextDirection.ltr,
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              height: 1.3,
+            ),
+          ),
         ],
       ),
     );
