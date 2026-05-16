@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
@@ -196,11 +197,8 @@ class ProfileScreen extends ConsumerWidget {
                   textStyle: const TextStyle(fontSize: 12),
                 ),
               ),
-              const SizedBox(height: 2),
-              const Text(
-                kBuildLabel,
-                style: TextStyle(color: Colors.white24, fontSize: 10, letterSpacing: 0.5),
-              ),
+              const SizedBox(height: 12),
+              _QABuildInfo(),
               const SizedBox(height: 4),
             ],
           );
@@ -518,6 +516,56 @@ class _PointInfo extends StatelessWidget {
               fontSize: 14,
               fontWeight: FontWeight.w900,
               height: 1.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QABuildInfo extends StatelessWidget {
+  const _QABuildInfo();
+
+  @override
+  Widget build(BuildContext context) {
+    final mode = kDebugMode ? 'DEBUG' : 'RELEASE';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black26,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white10, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Build Info',
+            style: TextStyle(
+              color: AppColors.accent.withOpacity(0.6),
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            kBuildLabel,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'monospace',
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Mode: $mode',
+            style: const TextStyle(
+              color: Colors.white54,
+              fontSize: 10,
             ),
           ),
         ],
