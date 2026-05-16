@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,6 +47,17 @@ void main() async {
 
   await QaLoggerService.instance.init();
   QaLoggerService.instance.log('APP', 'APP_START build=$kBuildLabel');
+  QaLoggerService.instance.log('DIAG', 'mode=${kDebugMode ? 'DEBUG' : 'RELEASE'}');
+  QaLoggerService.instance.log('DIAG', 'firebase_projectId=${DefaultFirebaseOptions.currentPlatform.projectId}');
+
+  // Diagnostic: get installer package (helps identify CI vs local vs Play)
+  try {
+    const platform = MethodChannel('com.whoisthere.app/app');
+    final installerPackage = await platform.invokeMethod<String>('getInstallerPackageName');
+    QaLoggerService.instance.log('DIAG', 'installer=$installerPackage');
+  } catch (_) {
+    QaLoggerService.instance.log('DIAG', 'installer=<unable_to_determine>');
+  }
 
   if (firebaseError != null) {
     runApp(_ErrorApp(error: firebaseError.toString()));
