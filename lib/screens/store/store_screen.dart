@@ -131,6 +131,7 @@ class StoreScreen extends ConsumerWidget {
                         ),
                       ],
                       const SizedBox(height: AppSpacing.lg),
+                      SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
                     ],
                   ),
                 );
