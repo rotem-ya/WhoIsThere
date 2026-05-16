@@ -183,6 +183,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               fontWeight: FontWeight.w500,
                             ),
                           ),
+                        ] else ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            'אתה יכול לשחק כאורח בלי לכניס שם',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white30,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
                         ],
 
                         const Spacer(flex: 3),
