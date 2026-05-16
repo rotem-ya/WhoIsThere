@@ -32,8 +32,14 @@ jobs:
           echo "flutter.sdk=$FLUTTER_SDK" > android/local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
 
-      - name: Write google-services.json
-        run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
+      - name: Verify google-services.json
+        run: |
+          if [ ! -f "android/app/google-services.json" ]; then
+            echo "ERROR: google-services.json missing from repo"
+            exit 1
+          fi
+          echo "✓ Using google-services.json from repo"
+          grep -q "oauth_client" android/app/google-services.json && echo "✓ OAuth clients present"
 
       - name: Write GoogleService-Info.plist
         env:
