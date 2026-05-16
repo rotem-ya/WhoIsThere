@@ -59,11 +59,19 @@ jobs:
           KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
           KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
         run: |
+          echo "=== Keystore Diagnostic ==="
           if [ -f "android/app/keystore.jks" ]; then
-            echo "=== RELEASE KEYSTORE SHA-1 ==="
-            keytool -list -v -keystore android/app/keystore.jks -storepass "$KEYSTORE_STORE_PASS" -alias "$KEYSTORE_ALIAS" 2>&1 | grep "SHA1:"
-            echo "=== END SHA-1 ==="
+            echo "keystore exists"
+            keytool -list -v -keystore android/app/keystore.jks -storepass "$KEYSTORE_STORE_PASS" -alias "$KEYSTORE_ALIAS"
+          else
+            echo "keystore missing"
           fi
+          echo "=== Directory listing ==="
+          ls -la android/app/
+          echo "=== Credential lengths ==="
+          echo "KEYSTORE_ALIAS length: ${#KEYSTORE_ALIAS}"
+          echo "KEYSTORE_STORE_PASS length: ${#KEYSTORE_STORE_PASS}"
+          echo "=== End diagnostic ==="
 
       - name: Clean Flutter and pub cache
         run: |
