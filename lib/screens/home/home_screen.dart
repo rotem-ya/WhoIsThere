@@ -449,10 +449,13 @@ class _PlayerCountChip extends StatelessWidget {
         HapticFeedback.lightImpact();
         onTap!();
       },
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 160),
-        opacity: onTap == null ? 0.55 : 1,
-        child: ConstrainedBox(
+      child: AnimatedScale(
+        scale: onTap == null ? 1.0 : 0.98,
+        duration: const Duration(milliseconds: 100),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 160),
+          opacity: onTap == null ? 0.55 : 1,
+          child: ConstrainedBox(
           constraints: const BoxConstraints(minWidth: 110, minHeight: 40),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
@@ -481,6 +484,7 @@ class _PlayerCountChip extends StatelessWidget {
             ),
           ),
         ),
+        ),
       ),
     );
   }
@@ -500,10 +504,13 @@ class _PrivateRoomButton extends StatelessWidget {
           HapticFeedback.lightImpact();
           onTap!();
         },
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 160),
-          opacity: onTap == null ? 0.58 : 1,
-          child: Container(
+        child: AnimatedScale(
+          scale: onTap == null ? 1.0 : 0.98,
+          duration: const Duration(milliseconds: 100),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 160),
+            opacity: onTap == null ? 0.58 : 1,
+            child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 11),
             decoration: BoxDecoration(
               color: const Color(0xFF050A14).withOpacity(0.50),
@@ -530,6 +537,7 @@ class _PrivateRoomButton extends StatelessWidget {
             ),
           ),
         ),
+        ),
       ),
     );
   }
@@ -549,23 +557,27 @@ class _JoinRoomButton extends StatelessWidget {
           HapticFeedback.lightImpact();
           onTap!();
         },
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 160),
-          opacity: onTap == null ? 0.58 : 1,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
-            decoration: BoxDecoration(
-              color: const Color(0xFF050A14).withOpacity(0.50),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFF81C784).withOpacity(0.40)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.key_rounded, color: Color(0xFF81C784), size: 19),
-                SizedBox(width: 8),
-                Text('יש לי קוד', style: TextStyle(color: Color(0xFF81C784), fontSize: 16, fontWeight: FontWeight.w800)),
-              ],
+        child: AnimatedScale(
+          scale: onTap == null ? 1.0 : 0.98,
+          duration: const Duration(milliseconds: 100),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 160),
+            opacity: onTap == null ? 0.58 : 1,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+              decoration: BoxDecoration(
+                color: const Color(0xFF050A14).withOpacity(0.50),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: const Color(0xFF81C784).withOpacity(0.40)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.key_rounded, color: Color(0xFF81C784), size: 19),
+                  SizedBox(width: 8),
+                  Text('יש לי קוד', style: TextStyle(color: Color(0xFF81C784), fontSize: 16, fontWeight: FontWeight.w800)),
+                ],
+              ),
             ),
           ),
         ),
@@ -587,6 +599,7 @@ class _DailyRewardButton extends ConsumerWidget {
     return GestureDetector(
       onTap: () {
         if (isAvailable) {
+          HapticFeedback.lightImpact();
           showDailyRewardSheet(context, ref);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -598,10 +611,13 @@ class _DailyRewardButton extends ConsumerWidget {
           );
         }
       },
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
-        opacity: isAvailable ? 1.0 : 0.38,
-        child: Stack(
+      child: AnimatedScale(
+        scale: isAvailable ? 1.0 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: isAvailable ? 1.0 : 0.38,
+          child: Stack(
           clipBehavior: Clip.none,
           children: [
             Container(
@@ -652,6 +668,7 @@ class _DailyRewardButton extends ConsumerWidget {
               ),
           ],
         ),
+        ),
       ),
     );
   }
@@ -670,6 +687,7 @@ class _ProfileIconButton extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () {
+          HapticFeedback.lightImpact();
           QaLoggerService.instance.log('HOME', 'TAP_PROFILE');
           context.push('/profile');
         },

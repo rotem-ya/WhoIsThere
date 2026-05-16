@@ -95,13 +95,13 @@ class _WinScreenState extends ConsumerState<WinScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: 12),
                     Text(
                       isWinner ? 'ניצחת!' : 'המשחק נגמר',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.titleLight.copyWith(fontSize: 44, fontWeight: FontWeight.w900),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: 8),
                     Text(
                       winner == null
                           ? 'הנה התוצאות'
@@ -117,7 +117,7 @@ class _WinScreenState extends ConsumerState<WinScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.subtitleLight,
                     ),
-                    const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: 20),
                     if (_gameImage != null)
                       AppCard(
                         padding: EdgeInsets.zero,
@@ -162,7 +162,7 @@ class _WinScreenState extends ConsumerState<WinScreen> {
                       child: Column(
                         children: [
                           Text('תוצאות', style: AppTextStyles.titleDark),
-                          const SizedBox(height: AppSpacing.md),
+                          const SizedBox(height: 12),
                           ...sortedPlayers.asMap().entries.map(
                                 (entry) => _ScoreRow(
                                   rank: entry.key + 1,
@@ -247,41 +247,46 @@ class _ScoreRow extends StatelessWidget {
     final scoreFontSize = isTopThree ? 16.0 : 14.0;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 32,
-            child: Text(
-              medal,
-              style: TextStyle(fontSize: medalFontSize),
-              textAlign: TextAlign.center,
+      padding: const EdgeInsets.only(bottom: 8),
+      child: SizedBox(
+        height: 44,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 32,
+              child: Center(
+                child: Text(
+                  medal,
+                  style: TextStyle(fontSize: medalFontSize),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          PlayerAvatar(
-              name: player.name, photoUrl: player.photoUrl, radius: 16),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              player.name + (isCurrentUser ? ' (את/ה)' : ''),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            const SizedBox(width: AppSpacing.sm),
+            PlayerAvatar(
+                name: player.name, photoUrl: player.photoUrl, radius: 16),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                player.name + (isCurrentUser ? ' (את/ה)' : ''),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.body.copyWith(
+                  color: nameColor,
+                  fontWeight: isTopThree ? FontWeight.w900 : FontWeight.w700,
+                ),
+              ),
+            ),
+            Text(
+              '${player.score} נק׳',
               style: AppTextStyles.body.copyWith(
-                color: nameColor,
+                fontSize: scoreFontSize,
+                color: scoreColor,
                 fontWeight: isTopThree ? FontWeight.w900 : FontWeight.w700,
               ),
             ),
-          ),
-          Text(
-            '${player.score} נק׳',
-            style: AppTextStyles.body.copyWith(
-              fontSize: scoreFontSize,
-              color: scoreColor,
-              fontWeight: isTopThree ? FontWeight.w900 : FontWeight.w700,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

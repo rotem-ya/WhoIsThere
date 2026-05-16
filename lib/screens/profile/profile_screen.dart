@@ -359,7 +359,7 @@ class _DarkPanel extends StatelessWidget {
 
   const _DarkPanel({
     required this.child,
-    this.padding = const EdgeInsets.all(AppSpacing.lg),
+    this.padding = const EdgeInsets.all(20),
   });
 
   @override
@@ -371,8 +371,8 @@ class _DarkPanel extends StatelessWidget {
         color: const Color(0xFF0E1E35),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: AppColors.accent.withOpacity(0.22),
-          width: 1.1,
+          color: AppColors.accent.withOpacity(0.14),
+          width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
@@ -408,8 +408,8 @@ class _DarkStatTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.accent, size: 26),
-          const SizedBox(height: AppSpacing.sm),
+          Icon(icon, color: AppColors.accent.withOpacity(0.88), size: 26),
+          const SizedBox(height: 8),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: AlignmentDirectional.centerStart,
@@ -425,13 +425,13 @@ class _DarkStatTile extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: AppColors.accent.withOpacity(0.78),
+              color: AppColors.accent.withOpacity(0.68),
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),

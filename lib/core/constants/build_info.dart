@@ -1,3 +1,3 @@
 /// Manually updated on each push. Check this label in Profile screen
 /// to verify which APK build is installed on a test device.
-const String kBuildLabel = 'build-20260516-4';
+const String kBuildLabel = 'build-20260516-5-winpolish';
