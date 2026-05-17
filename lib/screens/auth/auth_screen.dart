@@ -262,11 +262,9 @@ class _CosmicParticlesPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final random = Random();
-
     // Ultra-subtle dust particles - barely visible
     for (int i = 0; i < 35; i++) {
-      random.seed = i * 1237;
+      final random = Random(i * 1237);
       final x = (random.nextDouble() * size.width);
       final y = (random.nextDouble() * size.height);
 
@@ -285,7 +283,7 @@ class _CosmicParticlesPainter extends CustomPainter {
 
     // Minimal star particles
     for (int i = 35; i < 55; i++) {
-      random.seed = i * 1237;
+      final random = Random(i * 1237);
       final x = (random.nextDouble() * size.width);
       final y = (random.nextDouble() * size.height);
 
