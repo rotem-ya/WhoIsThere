@@ -4,6 +4,15 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
 
 # Phase 7F QA — 7C share link + 7D join paste + 7E daily reward session flag
 
@@ -42,25 +51,16 @@ jobs:
           IOS_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
         run: '[ -n "$IOS_PLIST" ] && echo "$IOS_PLIST" > ios/Runner/GoogleService-Info.plist || true'
 
-      - name: Decode release keystore
+      - name: Decode release keystore (if available)
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_JKS_BASE64 }}
         run: |
           if [ -n "$KEYSTORE_B64" ]; then
             echo "$KEYSTORE_B64" | base64 -d > android/app/keystore.jks
+            echo "✓ Keystore decoded"
+          else
+            echo "⚠ No keystore available - will build unsigned debug APK"
           fi
-
-      - name: "DIAGNOSTIC: Extract SHA-256 fingerprint"
-        env:
-          KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
-          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
-        run: |
-          echo "=== Release Keystore SHA-256 Fingerprint ==="
-          keytool -list -v -keystore android/app/keystore.jks \
-            -storepass "$KEYSTORE_STORE_PASS" \
-            -alias "$KEYSTORE_ALIAS" 2>/dev/null | grep "SHA256:"
-          echo "=== Alias ==="
-          echo "$KEYSTORE_ALIAS"
 
       - name: Clean Flutter and pub cache
         run: |
@@ -70,19 +70,62 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Analyze (non-blocking for QA builds)
+      - name: Flutter analyze (non-blocking)
         run: flutter analyze || true
 
+      - name: Determine build type
+        id: build_config
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            BUILD_TYPE="${{ github.event.inputs.build_type }}"
+          else
+            BUILD_TYPE="release"
+          fi
+
+          # Check if keystore exists for release builds
+          if [ "$BUILD_TYPE" == "release" ] && [ ! -f "android/app/keystore.jks" ]; then
+            echo "⚠ Release keystore not found - downgrading to debug build"
+            BUILD_TYPE="debug"
+          fi
+
+          echo "build_type=$BUILD_TYPE" >> $GITHUB_OUTPUT
+          echo "Building: $BUILD_TYPE APK"
+
+      - name: Build debug APK
+        if: steps.build_config.outputs.build_type == 'debug'
+        run: flutter build apk --debug
+
       - name: Build release APK
+        if: steps.build_config.outputs.build_type == 'release'
         env:
           KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
           KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
           KEYSTORE_KEY_PASS: ${{ secrets.KEYSTORE_KEY_PASS }}
         run: flutter build apk --release
 
+      - name: Upload debug APK
+        if: steps.build_config.outputs.build_type == 'debug'
+        uses: actions/upload-artifact@v4
+        with:
+          name: GuessThePlace-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
+
       - name: Upload release APK
+        if: steps.build_config.outputs.build_type == 'release'
         uses: actions/upload-artifact@v4
         with:
           name: GuessThePlace-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
+
+      - name: Build summary
+        run: |
+          echo "✓ Build completed successfully"
+          echo "Build type: ${{ steps.build_config.outputs.build_type }}"
+          if [ "${{ steps.build_config.outputs.build_type }}" == "debug" ]; then
+            ls -lh build/app/outputs/flutter-apk/app-debug.apk
+          else
+            ls -lh build/app/outputs/flutter-apk/app-release.apk
+          fi
+
