@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,20 +16,32 @@ class AuthScreen extends ConsumerStatefulWidget {
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends ConsumerState<AuthScreen> {
+class _AuthScreenState extends ConsumerState<AuthScreen>
+    with SingleTickerProviderStateMixin {
   static const _gold = Color(0xFFD4AF37);
   static const _goldLight = Color(0xFFFFE082);
   static const _goldDark = Color(0xFFA1811A);
   static const _navy = Color(0xFF050A14);
-  static const _cyan = Color(0xFF87CEEB);
+  static const _cyan = Color(0xFF00D4FF);
 
   final _nameController = TextEditingController();
   bool _isLoading = false;
   String? _nameError;
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    )..repeat();
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -91,9 +104,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         child: Scaffold(
           backgroundColor: AppStyles.navyTop,
           resizeToAvoidBottomInset: true,
-          body: DecoratedBox(
-            decoration: const BoxDecoration(gradient: AppStyles.backgroundGradient),
-            child: SafeArea(
+          body: Stack(
+            children: [
+              DecoratedBox(
+                decoration: const BoxDecoration(gradient: AppStyles.backgroundGradient),
+                child: const SizedBox.expand(),
+              ),
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (context, _) => CustomPaint(
+                    painter: _CosmicParticlesPainter(
+                      animationProgress: _pulseController.value,
+                    ),
+                  ),
+                ),
+              ),
+              SafeArea(
               child: SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -111,21 +138,58 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                         // ── Brand mark ───────────────────────────────────────
                         const _HeroMark(),
-                        const SizedBox(height: 14),
-                        const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            'מה בתמונה?',
-                            maxLines: 1,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 40,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -1,
-                              height: 1,
+                        const SizedBox(height: 18),
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Glow layer
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'מה בתמונה?',
+                                maxLines: 1,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: _AuthScreenState._cyan.withOpacity(0.12),
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -1,
+                                  height: 1,
+                                  shadows: [
+                                    Shadow(
+                                      color: _AuthScreenState._cyan
+                                          .withOpacity(0.18),
+                                      blurRadius: 28,
+                                      offset: Offset.zero,
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
+                            // Main text with shadow depth
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'מה בתמונה?',
+                                maxLines: 1,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -1,
+                                  height: 1,
+                                  shadows: [
+                                    Shadow(
+                                      color: Color(0xFF000000),
+                                      blurRadius: 14,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
 
                         const Spacer(flex: 3),
@@ -159,14 +223,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             ),
                           ),
                         ],
-                        const SizedBox(height: 6),
-                        const Text(
+                        const SizedBox(height: 8),
+                        Text(
                           'תוכל לשמור התקדמות גם בהמשך',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.white38,
-                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.52),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
                             height: 1.4,
+                            letterSpacing: 0.2,
+                            shadows: [
+                              Shadow(
+                                color: _AuthScreenState._cyan.withOpacity(0.1),
+                                blurRadius: 6,
+                                offset: Offset.zero,
+                              ),
+                            ],
                           ),
                         ),
 
@@ -209,11 +282,85 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 ),
               ),
             ),
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+// ── Cosmic particles background ────────────────────────────────────────────
+
+class _CosmicParticlesPainter extends CustomPainter {
+  final double animationProgress;
+
+  _CosmicParticlesPainter({this.animationProgress = 0.0});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final random = Random();
+
+    // Dust particles (cyan)
+    for (int i = 0; i < 100; i++) {
+      random.seed = i * 1237;
+      final x = (random.nextDouble() * size.width);
+      final y = (random.nextDouble() * size.height);
+
+      // Slow vertical drift
+      final driftY = (animationProgress % 1.0) * size.height * 0.3;
+      final offsetY = (y + driftY) % size.height;
+
+      final opacity = (random.nextDouble() * 0.2) + 0.05;
+      final radius = (random.nextDouble() * 1.5) + 0.5;
+
+      canvas.drawCircle(
+        Offset(x, offsetY),
+        radius,
+        Paint()
+          ..color = _AuthScreenState._cyan.withOpacity(opacity)
+          ..strokeWidth = 0,
+      );
+    }
+
+    // Stars (white)
+    for (int i = 100; i < 150; i++) {
+      random.seed = i * 1237;
+      final x = (random.nextDouble() * size.width);
+      final y = (random.nextDouble() * size.height);
+
+      // Twinkle effect
+      final twinkle = (sin((animationProgress * 2 * pi) + (i * 0.3)) + 1) / 2;
+      final opacity = ((random.nextDouble() * 0.3) + 0.1) * (twinkle * 0.5 + 0.5);
+      final radius = (random.nextDouble() * 0.8) + 0.3;
+
+      canvas.drawCircle(
+        Offset(x, y),
+        radius,
+        Paint()
+          ..color = Colors.white.withOpacity(opacity)
+          ..strokeWidth = 0,
+      );
+    }
+
+    // Atmospheric haze
+    final hazeGradient = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          const Color(0xFF00D4FF).withOpacity(0.08),
+          const Color(0xFF00D4FF).withOpacity(0.0),
+        ],
+        stops: const [0.3, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      hazeGradient,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CosmicParticlesPainter oldDelegate) => true;
 }
 
 // ── Name text field ────────────────────────────────────────────────────────
@@ -232,44 +379,65 @@ class _NameField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const borderRadius = BorderRadius.all(Radius.circular(16));
-    const baseBorder = OutlineInputBorder(
+    final baseBorder = OutlineInputBorder(
       borderRadius: borderRadius,
-      borderSide: BorderSide(color: Colors.white24),
+      borderSide: BorderSide(
+        color: Colors.white.withOpacity(0.16),
+        width: 1.2,
+      ),
     );
 
-    return TextField(
-      controller: controller,
-      onChanged: onChanged,
-      textDirection: TextDirection.rtl,
-      textAlign: TextAlign.center,
-      maxLength: 16,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.5,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      decoration: InputDecoration(
-        hintText: 'שם מוצג...',
-        hintStyle: const TextStyle(
-          color: Colors.white30,
-          fontSize: 18,
-          fontWeight: FontWeight.w500,
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        textDirection: TextDirection.rtl,
+        textAlign: TextAlign.center,
+        maxLength: 16,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
         ),
-        counterText: '',
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.06),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-        border: baseBorder,
-        enabledBorder: hasError
-            ? OutlineInputBorder(
-                borderRadius: borderRadius,
-                borderSide: BorderSide(color: Colors.red.shade400, width: 1.2),
-              )
-            : baseBorder,
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: borderRadius,
-          borderSide: BorderSide(color: _AuthScreenState._cyan, width: 1.5),
+        decoration: InputDecoration(
+          hintText: 'שם מוצג...',
+          hintStyle: TextStyle(
+            color: Colors.white.withOpacity(0.38),
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+          ),
+          counterText: '',
+          filled: true,
+          fillColor: Colors.white.withOpacity(0.08),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          border: baseBorder,
+          enabledBorder: hasError
+              ? OutlineInputBorder(
+                  borderRadius: borderRadius,
+                  borderSide: BorderSide(
+                    color: Colors.red.shade400,
+                    width: 1.4,
+                  ),
+                )
+              : baseBorder,
+          focusedBorder: OutlineInputBorder(
+            borderRadius: borderRadius,
+            borderSide: BorderSide(
+              color: _AuthScreenState._cyan,
+              width: 1.8,
+            ),
+          ),
         ),
       ),
     );
@@ -285,20 +453,30 @@ class _HeroMark extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: 108,
-        height: 108,
+        width: 110,
+        height: 110,
         decoration: BoxDecoration(
-          color: _AuthScreenState._navy.withOpacity(0.72),
+          color: _AuthScreenState._navy.withOpacity(0.75),
           borderRadius: BorderRadius.circular(36),
           border: Border.all(
-            color: _AuthScreenState._gold.withOpacity(0.50),
-            width: 1.5,
+            color: _AuthScreenState._gold.withOpacity(0.55),
+            width: 1.6,
           ),
           boxShadow: [
             BoxShadow(
-              color: _AuthScreenState._gold.withOpacity(0.14),
-              blurRadius: 36,
+              color: _AuthScreenState._cyan.withOpacity(0.18),
+              blurRadius: 48,
+              spreadRadius: 6,
+            ),
+            BoxShadow(
+              color: _AuthScreenState._gold.withOpacity(0.2),
+              blurRadius: 32,
               spreadRadius: 2,
+            ),
+            BoxShadow(
+              color: _AuthScreenState._gold.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -306,7 +484,7 @@ class _HeroMark extends StatelessWidget {
           child: Icon(
             Icons.auto_awesome_rounded,
             color: _AuthScreenState._gold,
-            size: 52,
+            size: 54,
           ),
         ),
       ),
@@ -316,45 +494,89 @@ class _HeroMark extends StatelessWidget {
 
 // ── Primary button (gold) ──────────────────────────────────────────────────
 
-class _PrimaryButton extends StatelessWidget {
+class _PrimaryButton extends StatefulWidget {
   final String label;
   final VoidCallback onTap;
 
   const _PrimaryButton({required this.label, required this.onTap});
 
   @override
+  State<_PrimaryButton> createState() => _PrimaryButtonState();
+}
+
+class _PrimaryButtonState extends State<_PrimaryButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pressController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pressController.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown() {
+    _pressController.forward();
+  }
+
+  void _onTapUp() {
+    _pressController.reverse();
+    widget.onTap();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 60,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              _AuthScreenState._goldLight,
-              _AuthScreenState._gold,
-              _AuthScreenState._goldDark,
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: [
-            BoxShadow(
-              color: _AuthScreenState._gold.withOpacity(0.30),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+      onTapDown: (_) => _onTapDown(),
+      onTapUp: (_) => _onTapUp(),
+      onTapCancel: () => _pressController.reverse(),
+      child: ScaleTransition(
+        scale: Tween<double>(begin: 1.0, end: 0.95).animate(_pressController),
+        child: Container(
+          height: 60,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [
+                _AuthScreenState._goldLight,
+                _AuthScreenState._gold,
+                _AuthScreenState._goldDark,
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-          ],
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: _AuthScreenState._navy,
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              height: 1,
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: _AuthScreenState._gold.withOpacity(0.42),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+                spreadRadius: 2,
+              ),
+              BoxShadow(
+                color: _AuthScreenState._gold.withOpacity(0.18),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(
+              widget.label,
+              style: const TextStyle(
+                color: _AuthScreenState._navy,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                height: 1,
+                letterSpacing: 0.4,
+              ),
             ),
           ),
         ),
@@ -365,26 +587,81 @@ class _PrimaryButton extends StatelessWidget {
 
 // ── Secondary button (outline) ─────────────────────────────────────────────
 
-class _SecondaryButton extends StatelessWidget {
+class _SecondaryButton extends StatefulWidget {
   final String label;
   final VoidCallback onTap;
 
   const _SecondaryButton({required this.label, required this.onTap});
 
   @override
+  State<_SecondaryButton> createState() => _SecondaryButtonState();
+}
+
+class _SecondaryButtonState extends State<_SecondaryButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pressController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pressController.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown() {
+    _pressController.forward();
+  }
+
+  void _onTapUp() {
+    _pressController.reverse();
+    widget.onTap();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(50),
-        foregroundColor: Colors.white,
-        side: BorderSide(color: _AuthScreenState._cyan.withOpacity(0.28)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-        backgroundColor: _AuthScreenState._navy.withOpacity(0.30),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+    return GestureDetector(
+      onTapDown: (_) => _onTapDown(),
+      onTapUp: (_) => _onTapUp(),
+      onTapCancel: () => _pressController.reverse(),
+      child: ScaleTransition(
+        scale: Tween<double>(begin: 1.0, end: 0.97).animate(_pressController),
+        child: Container(
+          height: 50,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: _AuthScreenState._cyan.withOpacity(0.32),
+              width: 1.3,
+            ),
+            color: _AuthScreenState._navy.withOpacity(0.32),
+            boxShadow: [
+              BoxShadow(
+                color: _AuthScreenState._cyan.withOpacity(0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(
+              widget.label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
