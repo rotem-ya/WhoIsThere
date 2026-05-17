@@ -142,7 +142,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         Stack(
                           alignment: Alignment.center,
                           children: [
-                            // Glow layer
+                            // Subtle glow layer
                             FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
@@ -150,23 +150,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                                 maxLines: 1,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: _AuthScreenState._cyan.withOpacity(0.12),
+                                  color: _AuthScreenState._cyan.withOpacity(0.08),
                                   fontSize: 48,
                                   fontWeight: FontWeight.w900,
-                                  letterSpacing: -1,
+                                  letterSpacing: -0.8,
                                   height: 1,
                                   shadows: [
                                     Shadow(
                                       color: _AuthScreenState._cyan
-                                          .withOpacity(0.18),
-                                      blurRadius: 28,
+                                          .withOpacity(0.14),
+                                      blurRadius: 24,
                                       offset: Offset.zero,
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-                            // Main text with shadow depth
+                            // Main text with clean shadow
                             FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
@@ -177,12 +177,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                                   color: Colors.white,
                                   fontSize: 48,
                                   fontWeight: FontWeight.w900,
-                                  letterSpacing: -1,
+                                  letterSpacing: -0.8,
                                   height: 1,
                                   shadows: [
                                     Shadow(
                                       color: Color(0xFF000000),
-                                      blurRadius: 14,
+                                      blurRadius: 12,
                                       offset: Offset(0, 2),
                                     ),
                                   ],
@@ -243,7 +243,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                           ),
                         ),
 
-                        const Spacer(flex: 4),
+                        const Spacer(flex: 3),
 
                         // ── Action buttons ───────────────────────────────────
                         if (_isLoading)
@@ -261,13 +261,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                             label: 'המשך כאורח',
                             onTap: _signInAnonymously,
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 12),
                           _SecondaryButton(
                             label: 'המשך עם Google',
                             onTap: _signInWithGoogle,
                           ),
                           if (Platform.isIOS) ...[
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 12),
                             _SecondaryButton(
                               label: 'המשך עם Apple',
                               onTap: _signInWithApple,
@@ -301,8 +301,8 @@ class _CosmicParticlesPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final random = Random();
 
-    // Dust particles (cyan)
-    for (int i = 0; i < 100; i++) {
+    // Dust particles (cyan) - optimized count
+    for (int i = 0; i < 40; i++) {
       random.seed = i * 1237;
       final x = (random.nextDouble() * size.width);
       final y = (random.nextDouble() * size.height);
@@ -311,46 +311,43 @@ class _CosmicParticlesPainter extends CustomPainter {
       final driftY = (animationProgress % 1.0) * size.height * 0.3;
       final offsetY = (y + driftY) % size.height;
 
-      final opacity = (random.nextDouble() * 0.2) + 0.05;
-      final radius = (random.nextDouble() * 1.5) + 0.5;
+      final opacity = (random.nextDouble() * 0.18) + 0.06;
+      final radius = (random.nextDouble() * 1.2) + 0.4;
 
       canvas.drawCircle(
         Offset(x, offsetY),
         radius,
         Paint()
-          ..color = _AuthScreenState._cyan.withOpacity(opacity)
-          ..strokeWidth = 0,
+          ..color = _AuthScreenState._cyan.withOpacity(opacity),
       );
     }
 
-    // Stars (white)
-    for (int i = 100; i < 150; i++) {
+    // Stars (white) - optimized count
+    for (int i = 40; i < 65; i++) {
       random.seed = i * 1237;
       final x = (random.nextDouble() * size.width);
       final y = (random.nextDouble() * size.height);
 
-      // Twinkle effect
+      // Gentle twinkle
       final twinkle = (sin((animationProgress * 2 * pi) + (i * 0.3)) + 1) / 2;
-      final opacity = ((random.nextDouble() * 0.3) + 0.1) * (twinkle * 0.5 + 0.5);
-      final radius = (random.nextDouble() * 0.8) + 0.3;
+      final opacity = ((random.nextDouble() * 0.25) + 0.12) * (twinkle * 0.4 + 0.6);
+      final radius = (random.nextDouble() * 0.6) + 0.2;
 
       canvas.drawCircle(
         Offset(x, y),
         radius,
-        Paint()
-          ..color = Colors.white.withOpacity(opacity)
-          ..strokeWidth = 0,
+        Paint()..color = Colors.white.withOpacity(opacity),
       );
     }
 
-    // Atmospheric haze
+    // Subtle atmospheric haze
     final hazeGradient = Paint()
       ..shader = RadialGradient(
         colors: [
-          const Color(0xFF00D4FF).withOpacity(0.08),
+          const Color(0xFF00D4FF).withOpacity(0.06),
           const Color(0xFF00D4FF).withOpacity(0.0),
         ],
-        stops: const [0.3, 1.0],
+        stops: const [0.35, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
     canvas.drawRect(
@@ -360,7 +357,8 @@ class _CosmicParticlesPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CosmicParticlesPainter oldDelegate) => true;
+  bool shouldRepaint(_CosmicParticlesPainter oldDelegate) =>
+      oldDelegate.animationProgress != animationProgress;
 }
 
 // ── Name text field ────────────────────────────────────────────────────────
@@ -413,13 +411,14 @@ class _NameField extends StatelessWidget {
         decoration: InputDecoration(
           hintText: 'שם מוצג...',
           hintStyle: TextStyle(
-            color: Colors.white.withOpacity(0.38),
+            color: Colors.white.withOpacity(0.42),
             fontSize: 18,
             fontWeight: FontWeight.w500,
+            letterSpacing: 0.2,
           ),
           counterText: '',
           filled: true,
-          fillColor: Colors.white.withOpacity(0.08),
+          fillColor: Colors.white.withOpacity(0.1),
           contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           border: baseBorder,
           enabledBorder: hasError
@@ -453,43 +452,112 @@ class _HeroMark extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: 110,
-        height: 110,
+        width: 120,
+        height: 120,
         decoration: BoxDecoration(
-          color: _AuthScreenState._navy.withOpacity(0.75),
-          borderRadius: BorderRadius.circular(36),
+          color: _AuthScreenState._navy.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(40),
           border: Border.all(
-            color: _AuthScreenState._gold.withOpacity(0.55),
-            width: 1.6,
+            color: _AuthScreenState._cyan.withOpacity(0.4),
+            width: 1.8,
           ),
           boxShadow: [
             BoxShadow(
-              color: _AuthScreenState._cyan.withOpacity(0.18),
-              blurRadius: 48,
-              spreadRadius: 6,
+              color: _AuthScreenState._cyan.withOpacity(0.2),
+              blurRadius: 56,
+              spreadRadius: 8,
             ),
             BoxShadow(
-              color: _AuthScreenState._gold.withOpacity(0.2),
-              blurRadius: 32,
-              spreadRadius: 2,
-            ),
-            BoxShadow(
-              color: _AuthScreenState._gold.withOpacity(0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: _AuthScreenState._gold.withOpacity(0.12),
+              blurRadius: 28,
+              spreadRadius: 1,
             ),
           ],
         ),
-        child: const Center(
-          child: Icon(
-            Icons.auto_awesome_rounded,
-            color: _AuthScreenState._gold,
-            size: 54,
-          ),
+        child: CustomPaint(
+          painter: _MapRevealPainter(),
         ),
       ),
     );
   }
+}
+
+class _MapRevealPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r = size.width / 2;
+
+    // Three concentric scanning rings
+    for (int ring = 3; ring >= 1; ring--) {
+      final ringR = (r * 0.65) * (ring / 3);
+      canvas.drawCircle(
+        Offset(cx, cy),
+        ringR,
+        Paint()
+          ..color = _AuthScreenState._cyan.withOpacity(0.15 - (ring * 0.03))
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1,
+      );
+    }
+
+    // Vertical and horizontal crosshairs
+    const crossSize = 24.0;
+    canvas.drawLine(
+      Offset(cx, cy - crossSize),
+      Offset(cx, cy + crossSize),
+      Paint()
+        ..color = _AuthScreenState._gold.withOpacity(0.5)
+        ..strokeWidth = 1.8
+        ..strokeCap = StrokeCap.round,
+    );
+    canvas.drawLine(
+      Offset(cx - crossSize, cy),
+      Offset(cx + crossSize, cy),
+      Paint()
+        ..color = _AuthScreenState._gold.withOpacity(0.5)
+        ..strokeWidth = 1.8
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Center point with cyan glow
+    canvas.drawCircle(
+      Offset(cx, cy),
+      4,
+      Paint()
+        ..color = _AuthScreenState._cyan.withOpacity(0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+    canvas.drawCircle(
+      Offset(cx, cy),
+      2.4,
+      Paint()..color = _AuthScreenState._cyan,
+    );
+
+    // Subtle corner markers (suggestion of location discovery)
+    const markerSize = 3.0;
+    final corners = [
+      Offset(cx - r * 0.55, cy - r * 0.55),
+      Offset(cx + r * 0.55, cy - r * 0.55),
+      Offset(cx - r * 0.55, cy + r * 0.55),
+      Offset(cx + r * 0.55, cy + r * 0.55),
+    ];
+
+    for (final corner in corners) {
+      canvas.drawCircle(
+        corner,
+        markerSize,
+        Paint()
+          ..color = _AuthScreenState._gold.withOpacity(0.35)
+          ..style = PaintingStyle.fill,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_MapRevealPainter oldDelegate) => false;
 }
 
 // ── Primary button (gold) ──────────────────────────────────────────────────
@@ -634,19 +702,19 @@ class _SecondaryButtonState extends State<_SecondaryButton>
       child: ScaleTransition(
         scale: Tween<double>(begin: 1.0, end: 0.97).animate(_pressController),
         child: Container(
-          height: 50,
+          height: 60,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: _AuthScreenState._cyan.withOpacity(0.32),
-              width: 1.3,
+              color: _AuthScreenState._cyan.withOpacity(0.35),
+              width: 1.4,
             ),
-            color: _AuthScreenState._navy.withOpacity(0.32),
+            color: _AuthScreenState._navy.withOpacity(0.35),
             boxShadow: [
               BoxShadow(
-                color: _AuthScreenState._cyan.withOpacity(0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 3),
+                color: _AuthScreenState._cyan.withOpacity(0.1),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -654,10 +722,11 @@ class _SecondaryButtonState extends State<_SecondaryButton>
             child: Text(
               widget.label,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
                 letterSpacing: 0.3,
+                height: 1,
               ),
             ),
           ),
