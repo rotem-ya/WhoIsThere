@@ -139,57 +139,27 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         // ── Brand mark ───────────────────────────────────────
                         const _HeroMark(),
                         const SizedBox(height: 18),
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Subtle glow layer
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                'מה בתמונה?',
-                                maxLines: 1,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: _AuthScreenState._cyan.withOpacity(0.08),
-                                  fontSize: 48,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.8,
-                                  height: 1,
-                                  shadows: [
-                                    Shadow(
-                                      color: _AuthScreenState._cyan
-                                          .withOpacity(0.14),
-                                      blurRadius: 24,
-                                      offset: Offset.zero,
-                                    ),
-                                  ],
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'מה בתמונה?',
+                            maxLines: 1,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 48,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.8,
+                              height: 1,
+                              shadows: [
+                                Shadow(
+                                  color: Color(0xFF000000),
+                                  blurRadius: 10,
+                                  offset: Offset(0, 2),
                                 ),
-                              ),
+                              ],
                             ),
-                            // Main text with clean shadow
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                'מה בתמונה?',
-                                maxLines: 1,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 48,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.8,
-                                  height: 1,
-                                  shadows: [
-                                    Shadow(
-                                      color: Color(0xFF000000),
-                                      blurRadius: 12,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
 
                         const Spacer(flex: 3),
@@ -228,18 +198,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                           'תוכל לשמור התקדמות גם בהמשך',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.52),
+                            color: Colors.white.withOpacity(0.56),
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                             height: 1.4,
-                            letterSpacing: 0.2,
-                            shadows: [
-                              Shadow(
-                                color: _AuthScreenState._cyan.withOpacity(0.1),
-                                blurRadius: 6,
-                                offset: Offset.zero,
-                              ),
-                            ],
+                            letterSpacing: 0.15,
                           ),
                         ),
 
@@ -301,37 +264,34 @@ class _CosmicParticlesPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final random = Random();
 
-    // Dust particles (cyan) - optimized count
-    for (int i = 0; i < 40; i++) {
+    // Ultra-subtle dust particles - barely visible
+    for (int i = 0; i < 35; i++) {
       random.seed = i * 1237;
       final x = (random.nextDouble() * size.width);
       final y = (random.nextDouble() * size.height);
 
-      // Slow vertical drift
-      final driftY = (animationProgress % 1.0) * size.height * 0.3;
+      final driftY = (animationProgress % 1.0) * size.height * 0.25;
       final offsetY = (y + driftY) % size.height;
 
-      final opacity = (random.nextDouble() * 0.18) + 0.06;
-      final radius = (random.nextDouble() * 1.2) + 0.4;
+      final opacity = (random.nextDouble() * 0.12) + 0.03;
+      final radius = (random.nextDouble() * 0.9) + 0.3;
 
       canvas.drawCircle(
         Offset(x, offsetY),
         radius,
-        Paint()
-          ..color = _AuthScreenState._cyan.withOpacity(opacity),
+        Paint()..color = _AuthScreenState._cyan.withOpacity(opacity),
       );
     }
 
-    // Stars (white) - optimized count
-    for (int i = 40; i < 65; i++) {
+    // Minimal star particles
+    for (int i = 35; i < 55; i++) {
       random.seed = i * 1237;
       final x = (random.nextDouble() * size.width);
       final y = (random.nextDouble() * size.height);
 
-      // Gentle twinkle
       final twinkle = (sin((animationProgress * 2 * pi) + (i * 0.3)) + 1) / 2;
-      final opacity = ((random.nextDouble() * 0.25) + 0.12) * (twinkle * 0.4 + 0.6);
-      final radius = (random.nextDouble() * 0.6) + 0.2;
+      final opacity = ((random.nextDouble() * 0.15) + 0.08) * (twinkle * 0.3 + 0.7);
+      final radius = (random.nextDouble() * 0.5) + 0.15;
 
       canvas.drawCircle(
         Offset(x, y),
@@ -340,14 +300,14 @@ class _CosmicParticlesPainter extends CustomPainter {
       );
     }
 
-    // Subtle atmospheric haze
+    // Extremely subtle haze - barely perceptible
     final hazeGradient = Paint()
       ..shader = RadialGradient(
         colors: [
-          const Color(0xFF00D4FF).withOpacity(0.06),
+          const Color(0xFF00D4FF).withOpacity(0.03),
           const Color(0xFF00D4FF).withOpacity(0.0),
         ],
-        stops: const [0.35, 1.0],
+        stops: const [0.4, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
     canvas.drawRect(
@@ -445,37 +405,63 @@ class _NameField extends StatelessWidget {
 
 // ── Hero mark ──────────────────────────────────────────────────────────────
 
-class _HeroMark extends StatelessWidget {
+class _HeroMark extends StatefulWidget {
   const _HeroMark();
 
   @override
+  State<_HeroMark> createState() => _HeroMarkState();
+}
+
+class _HeroMarkState extends State<_HeroMark> with SingleTickerProviderStateMixin {
+  late AnimationController _scanController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scanController = AnimationController(
+      duration: const Duration(seconds: 6),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _scanController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 120,
-        height: 120,
-        decoration: BoxDecoration(
-          color: _AuthScreenState._navy.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(40),
-          border: Border.all(
-            color: _AuthScreenState._cyan.withOpacity(0.4),
-            width: 1.8,
+    return AnimatedBuilder(
+      animation: _scanController,
+      builder: (context, child) => Center(
+        child: Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            color: _AuthScreenState._navy.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(40),
+            border: Border.all(
+              color: _AuthScreenState._cyan.withOpacity(0.3),
+              width: 1.6,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _AuthScreenState._cyan.withOpacity(0.12),
+                blurRadius: 48,
+                spreadRadius: 4,
+              ),
+              BoxShadow(
+                color: _AuthScreenState._gold.withOpacity(0.08),
+                blurRadius: 20,
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: _AuthScreenState._cyan.withOpacity(0.2),
-              blurRadius: 56,
-              spreadRadius: 8,
+          child: CustomPaint(
+            painter: _MapRevealPainter(
+              scanProgress: _scanController.value,
             ),
-            BoxShadow(
-              color: _AuthScreenState._gold.withOpacity(0.12),
-              blurRadius: 28,
-              spreadRadius: 1,
-            ),
-          ],
-        ),
-        child: CustomPaint(
-          painter: _MapRevealPainter(),
+          ),
         ),
       ),
     );
@@ -483,81 +469,90 @@ class _HeroMark extends StatelessWidget {
 }
 
 class _MapRevealPainter extends CustomPainter {
+  final double scanProgress;
+
+  _MapRevealPainter({required this.scanProgress});
+
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
     final cy = size.height / 2;
     final r = size.width / 2;
 
-    // Three concentric scanning rings
+    // Three concentric scanning rings (subtle)
     for (int ring = 3; ring >= 1; ring--) {
       final ringR = (r * 0.65) * (ring / 3);
       canvas.drawCircle(
         Offset(cx, cy),
         ringR,
         Paint()
-          ..color = _AuthScreenState._cyan.withOpacity(0.15 - (ring * 0.03))
+          ..color = _AuthScreenState._cyan
+              .withOpacity(0.10 - (ring * 0.02))
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1,
+          ..strokeWidth = 0.9,
       );
     }
 
-    // Vertical and horizontal crosshairs
-    const crossSize = 24.0;
+    // Ultra-subtle animated scan sweep (the WOW moment)
+    final scanAngle = (scanProgress * 2 * pi) - (pi / 2);
+    final sweepArc = pi / 8;
+
+    // Glow pass
+    canvas.drawArc(
+      Rect.fromCircle(center: Offset(cx, cy), radius: r * 0.65),
+      scanAngle - (sweepArc / 2),
+      sweepArc,
+      true,
+      Paint()
+        ..color = _AuthScreenState._cyan.withOpacity(0.08)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Sharp scan line (very subtle)
+    canvas.drawArc(
+      Rect.fromCircle(center: Offset(cx, cy), radius: r * 0.65),
+      scanAngle,
+      0.05,
+      true,
+      Paint()
+        ..color = _AuthScreenState._cyan.withOpacity(0.35)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Minimal crosshairs
+    const crossSize = 20.0;
     canvas.drawLine(
       Offset(cx, cy - crossSize),
       Offset(cx, cy + crossSize),
       Paint()
-        ..color = _AuthScreenState._gold.withOpacity(0.5)
-        ..strokeWidth = 1.8
+        ..color = _AuthScreenState._gold.withOpacity(0.4)
+        ..strokeWidth = 1.4
         ..strokeCap = StrokeCap.round,
     );
     canvas.drawLine(
       Offset(cx - crossSize, cy),
       Offset(cx + crossSize, cy),
       Paint()
-        ..color = _AuthScreenState._gold.withOpacity(0.5)
-        ..strokeWidth = 1.8
+        ..color = _AuthScreenState._gold.withOpacity(0.4)
+        ..strokeWidth = 1.4
         ..strokeCap = StrokeCap.round,
     );
 
-    // Center point with cyan glow
+    // Center point (premium, minimal)
     canvas.drawCircle(
       Offset(cx, cy),
-      4,
-      Paint()
-        ..color = _AuthScreenState._cyan.withOpacity(0.3)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
+      1.8,
+      Paint()..color = _AuthScreenState._cyan.withOpacity(0.6),
     );
-    canvas.drawCircle(
-      Offset(cx, cy),
-      2.4,
-      Paint()..color = _AuthScreenState._cyan,
-    );
-
-    // Subtle corner markers (suggestion of location discovery)
-    const markerSize = 3.0;
-    final corners = [
-      Offset(cx - r * 0.55, cy - r * 0.55),
-      Offset(cx + r * 0.55, cy - r * 0.55),
-      Offset(cx - r * 0.55, cy + r * 0.55),
-      Offset(cx + r * 0.55, cy + r * 0.55),
-    ];
-
-    for (final corner in corners) {
-      canvas.drawCircle(
-        corner,
-        markerSize,
-        Paint()
-          ..color = _AuthScreenState._gold.withOpacity(0.35)
-          ..style = PaintingStyle.fill,
-      );
-    }
   }
 
   @override
-  bool shouldRepaint(_MapRevealPainter oldDelegate) => false;
+  bool shouldRepaint(_MapRevealPainter oldDelegate) =>
+      oldDelegate.scanProgress != scanProgress;
 }
 
 // ── Primary button (gold) ──────────────────────────────────────────────────
@@ -607,7 +602,7 @@ class _PrimaryButtonState extends State<_PrimaryButton>
       onTapUp: (_) => _onTapUp(),
       onTapCancel: () => _pressController.reverse(),
       child: ScaleTransition(
-        scale: Tween<double>(begin: 1.0, end: 0.95).animate(_pressController),
+        scale: Tween<double>(begin: 1.0, end: 0.94).animate(_pressController),
         child: Container(
           height: 60,
           decoration: BoxDecoration(
@@ -623,29 +618,55 @@ class _PrimaryButtonState extends State<_PrimaryButton>
             borderRadius: BorderRadius.circular(999),
             boxShadow: [
               BoxShadow(
-                color: _AuthScreenState._gold.withOpacity(0.42),
-                blurRadius: 30,
-                offset: const Offset(0, 10),
-                spreadRadius: 2,
+                color: _AuthScreenState._gold.withOpacity(0.50),
+                blurRadius: 36,
+                offset: const Offset(0, 14),
+                spreadRadius: 3,
               ),
               BoxShadow(
-                color: _AuthScreenState._gold.withOpacity(0.18),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+                color: _AuthScreenState._gold.withOpacity(0.25),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: const Color(0xFF000000).withOpacity(0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: Center(
-            child: Text(
-              widget.label,
-              style: const TextStyle(
-                color: _AuthScreenState._navy,
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                height: 1,
-                letterSpacing: 0.4,
+          child: Stack(
+            children: [
+              // Subtle highlight
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.08),
+                        Colors.transparent,
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.center,
+                    ),
+                  ),
+                ),
               ),
-            ),
+              // Text
+              Center(
+                child: Text(
+                  widget.label,
+                  style: const TextStyle(
+                    color: _AuthScreenState._navy,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    height: 1,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -700,21 +721,21 @@ class _SecondaryButtonState extends State<_SecondaryButton>
       onTapUp: (_) => _onTapUp(),
       onTapCancel: () => _pressController.reverse(),
       child: ScaleTransition(
-        scale: Tween<double>(begin: 1.0, end: 0.97).animate(_pressController),
+        scale: Tween<double>(begin: 1.0, end: 0.96).animate(_pressController),
         child: Container(
           height: 60,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: _AuthScreenState._cyan.withOpacity(0.35),
-              width: 1.4,
+              color: _AuthScreenState._cyan.withOpacity(0.28),
+              width: 1.2,
             ),
-            color: _AuthScreenState._navy.withOpacity(0.35),
+            color: _AuthScreenState._navy.withOpacity(0.28),
             boxShadow: [
               BoxShadow(
-                color: _AuthScreenState._cyan.withOpacity(0.1),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
+                color: _AuthScreenState._cyan.withOpacity(0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
