@@ -439,21 +439,17 @@ class _HeroMarkState extends State<_HeroMark> with SingleTickerProviderStateMixi
           width: 120,
           height: 120,
           decoration: BoxDecoration(
-            color: _AuthScreenState._navy.withOpacity(0.8),
+            color: _AuthScreenState._navy.withOpacity(0.85),
             borderRadius: BorderRadius.circular(40),
             border: Border.all(
-              color: _AuthScreenState._cyan.withOpacity(0.3),
-              width: 1.6,
+              color: _AuthScreenState._cyan.withOpacity(0.25),
+              width: 1.4,
             ),
             boxShadow: [
               BoxShadow(
-                color: _AuthScreenState._cyan.withOpacity(0.12),
-                blurRadius: 48,
-                spreadRadius: 4,
-              ),
-              BoxShadow(
-                color: _AuthScreenState._gold.withOpacity(0.08),
-                blurRadius: 20,
+                color: const Color(0xFF000000).withOpacity(0.2),
+                blurRadius: 24,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -479,74 +475,51 @@ class _MapRevealPainter extends CustomPainter {
     final cy = size.height / 2;
     final r = size.width / 2;
 
-    // Three concentric scanning rings (subtle)
-    for (int ring = 3; ring >= 1; ring--) {
-      final ringR = (r * 0.65) * (ring / 3);
-      canvas.drawCircle(
-        Offset(cx, cy),
-        ringR,
-        Paint()
-          ..color = _AuthScreenState._cyan
-              .withOpacity(0.10 - (ring * 0.02))
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 0.9,
-      );
-    }
+    // Single subtle ring - atmospheric depth, not decoration
+    canvas.drawCircle(
+      Offset(cx, cy),
+      r * 0.65,
+      Paint()
+        ..color = _AuthScreenState._cyan.withOpacity(0.08)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8,
+    );
 
-    // Ultra-subtle animated scan sweep (the WOW moment)
+    // Organic scan sweep - soft, imperfect, atmospheric
     final scanAngle = (scanProgress * 2 * pi) - (pi / 2);
-    final sweepArc = pi / 8;
+    final sweepArc = pi / 6;
 
-    // Glow pass
+    // Soft fade glow (organic, not clean sci-fi)
     canvas.drawArc(
       Rect.fromCircle(center: Offset(cx, cy), radius: r * 0.65),
       scanAngle - (sweepArc / 2),
       sweepArc,
       true,
       Paint()
-        ..color = _AuthScreenState._cyan.withOpacity(0.08)
+        ..color = _AuthScreenState._cyan.withOpacity(0.06)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
+        ..strokeWidth = 3
         ..strokeCap = StrokeCap.round,
     );
 
-    // Sharp scan line (very subtle)
+    // Subtle sweep accent
     canvas.drawArc(
       Rect.fromCircle(center: Offset(cx, cy), radius: r * 0.65),
       scanAngle,
-      0.05,
+      0.08,
       true,
       Paint()
-        ..color = _AuthScreenState._cyan.withOpacity(0.35)
+        ..color = _AuthScreenState._cyan.withOpacity(0.25)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
+        ..strokeWidth = 1
         ..strokeCap = StrokeCap.round,
     );
 
-    // Minimal crosshairs
-    const crossSize = 20.0;
-    canvas.drawLine(
-      Offset(cx, cy - crossSize),
-      Offset(cx, cy + crossSize),
-      Paint()
-        ..color = _AuthScreenState._gold.withOpacity(0.4)
-        ..strokeWidth = 1.4
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.drawLine(
-      Offset(cx - crossSize, cy),
-      Offset(cx + crossSize, cy),
-      Paint()
-        ..color = _AuthScreenState._gold.withOpacity(0.4)
-        ..strokeWidth = 1.4
-        ..strokeCap = StrokeCap.round,
-    );
-
-    // Center point (premium, minimal)
+    // Minimal center point only
     canvas.drawCircle(
       Offset(cx, cy),
-      1.8,
-      Paint()..color = _AuthScreenState._cyan.withOpacity(0.6),
+      1.6,
+      Paint()..color = _AuthScreenState._cyan.withOpacity(0.5),
     );
   }
 
@@ -618,55 +591,28 @@ class _PrimaryButtonState extends State<_PrimaryButton>
             borderRadius: BorderRadius.circular(999),
             boxShadow: [
               BoxShadow(
-                color: _AuthScreenState._gold.withOpacity(0.50),
-                blurRadius: 36,
-                offset: const Offset(0, 14),
-                spreadRadius: 3,
+                color: const Color(0xFF000000).withOpacity(0.25),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
               BoxShadow(
-                color: _AuthScreenState._gold.withOpacity(0.25),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-              BoxShadow(
-                color: const Color(0xFF000000).withOpacity(0.15),
-                blurRadius: 8,
+                color: const Color(0xFF000000).withOpacity(0.08),
+                blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: Stack(
-            children: [
-              // Subtle highlight
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.white.withOpacity(0.08),
-                        Colors.transparent,
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.center,
-                    ),
-                  ),
-                ),
+          child: Center(
+            child: Text(
+              widget.label,
+              style: const TextStyle(
+                color: _AuthScreenState._navy,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                height: 1,
+                letterSpacing: 0.4,
               ),
-              // Text
-              Center(
-                child: Text(
-                  widget.label,
-                  style: const TextStyle(
-                    color: _AuthScreenState._navy,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    height: 1,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -727,15 +673,15 @@ class _SecondaryButtonState extends State<_SecondaryButton>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: _AuthScreenState._cyan.withOpacity(0.28),
+              color: _AuthScreenState._cyan.withOpacity(0.24),
               width: 1.2,
             ),
-            color: _AuthScreenState._navy.withOpacity(0.28),
+            color: _AuthScreenState._navy.withOpacity(0.25),
             boxShadow: [
               BoxShadow(
-                color: _AuthScreenState._cyan.withOpacity(0.06),
+                color: const Color(0xFF000000).withOpacity(0.12),
                 blurRadius: 12,
-                offset: const Offset(0, 3),
+                offset: const Offset(0, 2),
               ),
             ],
           ),
