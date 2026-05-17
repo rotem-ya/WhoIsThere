@@ -10,6 +10,7 @@ import '../../screens/auth_lab/auth_design_lab_screen.dart';
 import '../../screens/auth_lab/gpt_auth_screen.dart';
 import '../../screens/auth_lab/gemini_auth_screen.dart';
 import '../../screens/auth_lab/claude_auth_screen.dart';
+import '../../screens/auth_lab/production_candidate_auth_screen.dart';
 import '../../screens/room/create_room_screen.dart';
 import '../../screens/room/join_room_screen.dart';
 import '../../screens/room/lobby_screen.dart';
@@ -82,6 +83,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/auth_lab/claude',
         builder: (context, state) => const ClaudeAuthScreen(),
+      ),
+      GoRoute(
+        path: '/auth_lab/production',
+        builder: (context, state) => const ProductionCandidateAuthScreen(),
       ),
       GoRoute(
         path: '/home',

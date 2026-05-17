@@ -67,6 +67,13 @@ class AuthDesignLabScreen extends StatelessWidget {
                         color: const Color(0xFFD4AF37),
                         onTap: () => context.push('/auth_lab/claude'),
                       ),
+                      const SizedBox(height: 16),
+                      _DesignCard(
+                        title: 'Production Candidate',
+                        subtitle: 'Location Cards Hero',
+                        color: const Color(0xFF00E5FF),
+                        onTap: () => context.push('/auth_lab/production'),
+                      ),
                     ],
                   ),
                 ),
