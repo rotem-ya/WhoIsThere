@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, claude/audit-next-polish-u2vEL ]
   workflow_dispatch:
     inputs:
       build_type:
