@@ -45,11 +45,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     super.dispose();
   }
 
-  /// Returns the sanitized name to use, or null if field is empty (use guestFallback).
-  /// Sets [_nameError] and returns the sentinel 'invalid' if input is non-empty but invalid.
   String? _resolvedName() {
     final raw = _nameController.text.trim();
-    if (raw.isEmpty) return null; // caller uses guestFallback
+    if (raw.isEmpty) return null;
     final sanitized = DisplayNameSanitizer.sanitize(raw);
     if (sanitized == null) {
       setState(() => _nameError = '2–16 תווים, אותיות ומספרים בלבד');
@@ -86,8 +84,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   }
 
   Future<void> _signInWithGoogle() async {
-    // null = user cancelled picker — _runAuth stays on screen (no navigation).
-    // Exception = Google unavailable — _runAuth shows snackbar, user can tap Guest.
     await _runAuth(() => ref.read(authServiceProvider).signInWithGoogle());
   }
 
@@ -121,130 +117,121 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                 ),
               ),
               SafeArea(
-              child: SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: MediaQuery.of(context).size.height -
-                        MediaQuery.of(context).padding.top -
-                        MediaQuery.of(context).padding.bottom,
-                  ),
-                  child: IntrinsicHeight(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Spacer(flex: 3),
-
-                        // ── Brand mark ───────────────────────────────────────
-                        const _HeroMark(),
-                        const SizedBox(height: 18),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            'מה בתמונה?',
-                            maxLines: 1,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 48,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.8,
-                              height: 1,
-                              shadows: [
-                                Shadow(
-                                  color: Color(0xFF000000),
-                                  blurRadius: 10,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const Spacer(flex: 3),
-
-                        // ── Name field ───────────────────────────────────────
-                        const Text(
-                          'מה השם שלך במשחק?',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        _NameField(
-                          controller: _nameController,
-                          hasError: _nameError != null,
-                          onChanged: (_) => setState(() => _nameError = null),
-                        ),
-                        if (_nameError != null) ...[
-                          const SizedBox(height: 5),
-                          Text(
-                            _nameError!,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.red.shade300,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        Text(
-                          'תוכל לשמור התקדמות גם בהמשך',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.56),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            height: 1.4,
-                            letterSpacing: 0.15,
-                          ),
-                        ),
-
-                        const Spacer(flex: 3),
-
-                        // ── Action buttons ───────────────────────────────────
-                        if (_isLoading)
-                          const Center(
-                            child: Padding(
-                              padding: EdgeInsets.only(bottom: 16),
-                              child: CircularProgressIndicator(
-                                color: _gold,
-                                strokeWidth: 2.4,
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: MediaQuery.of(context).size.height -
+                          MediaQuery.of(context).padding.top -
+                          MediaQuery.of(context).padding.bottom,
+                    ),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Spacer(flex: 3),
+                          const _HeroMark(),
+                          const SizedBox(height: 18),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'מה בתמונה?',
+                              maxLines: 1,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 48,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.8,
+                                height: 1,
+                                shadows: [
+                                  Shadow(
+                                    color: Color(0xFF000000),
+                                    blurRadius: 10,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
                               ),
                             ),
-                          )
-                        else ...[
-                          _PrimaryButton(
-                            label: 'המשך כאורח',
-                            onTap: _signInAnonymously,
                           ),
-                          const SizedBox(height: 12),
-                          _SecondaryButton(
-                            label: 'המשך עם Google',
-                            onTap: _signInWithGoogle,
+                          const Spacer(flex: 3),
+                          const Text(
+                            'מה השם שלך במשחק?',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.2,
+                            ),
                           ),
-                          if (Platform.isIOS) ...[
-                            const SizedBox(height: 12),
-                            _SecondaryButton(
-                              label: 'המשך עם Apple',
-                              onTap: _signInWithApple,
+                          const SizedBox(height: 10),
+                          _NameField(
+                            controller: _nameController,
+                            hasError: _nameError != null,
+                            onChanged: (_) => setState(() => _nameError = null),
+                          ),
+                          if (_nameError != null) ...[
+                            const SizedBox(height: 5),
+                            Text(
+                              _nameError!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.red.shade300,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ],
+                          const SizedBox(height: 8),
+                          Text(
+                            'תוכל לשמור התקדמות גם בהמשך',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.56),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              height: 1.4,
+                              letterSpacing: 0.15,
+                            ),
+                          ),
+                          const Spacer(flex: 3),
+                          if (_isLoading)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.only(bottom: 16),
+                                child: CircularProgressIndicator(
+                                  color: _gold,
+                                  strokeWidth: 2.4,
+                                ),
+                              ),
+                            )
+                          else ...[
+                            _PrimaryButton(
+                              label: 'המשך כאורח',
+                              onTap: _signInAnonymously,
+                            ),
+                            const SizedBox(height: 12),
+                            _SecondaryButton(
+                              label: 'המשך עם Google',
+                              onTap: _signInWithGoogle,
+                            ),
+                            if (Platform.isIOS) ...[
+                              const SizedBox(height: 12),
+                              _SecondaryButton(
+                                label: 'המשך עם Apple',
+                                onTap: _signInWithApple,
+                              ),
+                            ],
+                          ],
+                          const SizedBox(height: 36),
                         ],
-
-                        const SizedBox(height: 36),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
             ],
           ),
         ),
@@ -253,8 +240,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   }
 }
 
-// ── Cosmic particles background ────────────────────────────────────────────
-
 class _CosmicParticlesPainter extends CustomPainter {
   final double animationProgress;
 
@@ -262,18 +247,14 @@ class _CosmicParticlesPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Ultra-subtle dust particles - barely visible
     for (int i = 0; i < 35; i++) {
       final random = Random(i * 1237);
-      final x = (random.nextDouble() * size.width);
-      final y = (random.nextDouble() * size.height);
-
+      final x = random.nextDouble() * size.width;
+      final y = random.nextDouble() * size.height;
       final driftY = (animationProgress % 1.0) * size.height * 0.25;
       final offsetY = (y + driftY) % size.height;
-
       final opacity = (random.nextDouble() * 0.12) + 0.03;
       final radius = (random.nextDouble() * 0.9) + 0.3;
-
       canvas.drawCircle(
         Offset(x, offsetY),
         radius,
@@ -281,16 +262,13 @@ class _CosmicParticlesPainter extends CustomPainter {
       );
     }
 
-    // Minimal star particles
     for (int i = 35; i < 55; i++) {
       final random = Random(i * 1237);
-      final x = (random.nextDouble() * size.width);
-      final y = (random.nextDouble() * size.height);
-
+      final x = random.nextDouble() * size.width;
+      final y = random.nextDouble() * size.height;
       final twinkle = (sin((animationProgress * 2 * pi) + (i * 0.3)) + 1) / 2;
       final opacity = ((random.nextDouble() * 0.15) + 0.08) * (twinkle * 0.3 + 0.7);
       final radius = (random.nextDouble() * 0.5) + 0.15;
-
       canvas.drawCircle(
         Offset(x, y),
         radius,
@@ -298,7 +276,6 @@ class _CosmicParticlesPainter extends CustomPainter {
       );
     }
 
-    // Extremely subtle haze - barely perceptible
     final hazeGradient = Paint()
       ..shader = RadialGradient(
         colors: [
@@ -308,18 +285,13 @@ class _CosmicParticlesPainter extends CustomPainter {
         stops: const [0.4, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      hazeGradient,
-    );
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), hazeGradient);
   }
 
   @override
   bool shouldRepaint(_CosmicParticlesPainter oldDelegate) =>
       oldDelegate.animationProgress != animationProgress;
 }
-
-// ── Name text field ────────────────────────────────────────────────────────
 
 class _NameField extends StatelessWidget {
   final TextEditingController controller;
@@ -401,8 +373,6 @@ class _NameField extends StatelessWidget {
   }
 }
 
-// ── Hero mark ──────────────────────────────────────────────────────────────
-
 class _HeroMark extends StatefulWidget {
   const _HeroMark();
 
@@ -452,9 +422,7 @@ class _HeroMarkState extends State<_HeroMark> with SingleTickerProviderStateMixi
             ],
           ),
           child: CustomPaint(
-            painter: _MapRevealPainter(
-              scanProgress: _scanController.value,
-            ),
+            painter: _MapRevealPainter(scanProgress: _scanController.value),
           ),
         ),
       ),
@@ -473,7 +441,6 @@ class _MapRevealPainter extends CustomPainter {
     final cy = size.height / 2;
     final r = size.width / 2;
 
-    // Single subtle ring - atmospheric depth, not decoration
     canvas.drawCircle(
       Offset(cx, cy),
       r * 0.65,
@@ -483,11 +450,9 @@ class _MapRevealPainter extends CustomPainter {
         ..strokeWidth = 0.8,
     );
 
-    // Organic scan sweep - soft, imperfect, atmospheric
     final scanAngle = (scanProgress * 2 * pi) - (pi / 2);
     final sweepArc = pi / 6;
 
-    // Soft fade glow (organic, not clean sci-fi)
     canvas.drawArc(
       Rect.fromCircle(center: Offset(cx, cy), radius: r * 0.65),
       scanAngle - (sweepArc / 2),
@@ -500,7 +465,6 @@ class _MapRevealPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
 
-    // Subtle sweep accent
     canvas.drawArc(
       Rect.fromCircle(center: Offset(cx, cy), radius: r * 0.65),
       scanAngle,
@@ -513,7 +477,6 @@ class _MapRevealPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
 
-    // Minimal center point only
     canvas.drawCircle(
       Offset(cx, cy),
       1.6,
@@ -525,8 +488,6 @@ class _MapRevealPainter extends CustomPainter {
   bool shouldRepaint(_MapRevealPainter oldDelegate) =>
       oldDelegate.scanProgress != scanProgress;
 }
-
-// ── Primary button (gold) ──────────────────────────────────────────────────
 
 class _PrimaryButton extends StatefulWidget {
   final String label;
@@ -557,20 +518,14 @@ class _PrimaryButtonState extends State<_PrimaryButton>
     super.dispose();
   }
 
-  void _onTapDown() {
-    _pressController.forward();
-  }
-
-  void _onTapUp() {
-    _pressController.reverse();
-    widget.onTap();
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => _onTapDown(),
-      onTapUp: (_) => _onTapUp(),
+      onTapDown: (_) => _pressController.forward(),
+      onTapUp: (_) {
+        _pressController.reverse();
+        widget.onTap();
+      },
       onTapCancel: () => _pressController.reverse(),
       child: ScaleTransition(
         scale: Tween<double>(begin: 1.0, end: 0.94).animate(_pressController),
@@ -618,8 +573,6 @@ class _PrimaryButtonState extends State<_PrimaryButton>
   }
 }
 
-// ── Secondary button (outline) ─────────────────────────────────────────────
-
 class _SecondaryButton extends StatefulWidget {
   final String label;
   final VoidCallback onTap;
@@ -649,20 +602,14 @@ class _SecondaryButtonState extends State<_SecondaryButton>
     super.dispose();
   }
 
-  void _onTapDown() {
-    _pressController.forward();
-  }
-
-  void _onTapUp() {
-    _pressController.reverse();
-    widget.onTap();
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => _onTapDown(),
-      onTapUp: (_) => _onTapUp(),
+      onTapDown: (_) => _pressController.forward(),
+      onTapUp: (_) {
+        _pressController.reverse();
+        widget.onTap();
+      },
       onTapCancel: () => _pressController.reverse(),
       child: ScaleTransition(
         scale: Tween<double>(begin: 1.0, end: 0.96).animate(_pressController),
