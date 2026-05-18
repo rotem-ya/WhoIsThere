@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 
-/// Single source of truth for the "Bright Studio" visual identity.
-/// Theme: Banano Banana / בננו בננה
+/// Single source of truth for the dark vault visual identity.
 ///
 /// Usage: import 'package:whois_there/core/theme/app_styles.dart';
 /// Then reference AppStyles.backgroundGradient, AppStyles.glassCard(), etc.
 abstract class AppStyles {
   // ── Core Palette ──────────────────────────────────────────────────────
 
-  /// Background top — deep navy blue
-  static const Color navyTop = Color(0xFF0D47A1);
+  /// Background top — dark vault navy
+  static const Color navyTop = Color(0xFF07101F);
 
-  /// Background mid — slightly darker navy
-  static const Color navyMid = Color(0xFF0A3880);
+  /// Background mid — dark vault mid
+  static const Color navyMid = Color(0xFF061426);
 
-  /// Background bottom — bright cyan
-  static const Color cyanBottom = Color(0xFF00B8D4);
+  /// Background bottom — deep vault black-navy
+  static const Color cyanBottom = Color(0xFF050A14);
 
   /// Primary action color — "Banana Yellow"
   static const Color bananaYellow = Color(0xFFFFE14D);
@@ -31,7 +30,7 @@ abstract class AppStyles {
 
   // ── Gradients ─────────────────────────────────────────────────────────
 
-  /// Full-screen background: Navy top → Cyan bottom.
+  /// Full-screen background: dark vault top → deep black-navy bottom.
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
@@ -54,11 +53,11 @@ abstract class AppStyles {
     colors: [cyanGlow, cyanBottom],
   );
 
-  /// Subtle navy card gradient.
+  /// Subtle vault card gradient.
   static const LinearGradient navyCardGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1565C0), Color(0xFF0D47A1)],
+    colors: [Color(0xFF0E1E35), Color(0xFF07101F)],
   );
 
   // ── Decorations ───────────────────────────────────────────────────────
