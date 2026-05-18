@@ -4,11 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../core/constants/app_constants.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/player_model.dart';
+import '../../services/qa_logger_service.dart';
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/player_avatar.dart';
 
@@ -23,9 +23,17 @@ class LobbyScreen extends ConsumerStatefulWidget {
 class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   bool _isStarting = false;
   bool _codeCopied = false;
+  bool _lobbyLogged = false;
+
+  @override
+  void initState() {
+    super.initState();
+    QaLoggerService.instance.log('LOBBY', 'LOBBY_SCREEN_OPENED roomId=${widget.roomId.substring(0, widget.roomId.length.clamp(0, 6))}');
+  }
 
   Future<void> _copyCode(String code) async {
     if (_codeCopied) return;
+    QaLoggerService.instance.log('LOBBY', 'COPY_ROOM_CODE_TAPPED code=$code');
     AppFeedback.success();
     await Clipboard.setData(ClipboardData(text: code));
     setState(() => _codeCopied = true);
@@ -34,30 +42,14 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 
   void _shareToWhatsApp(String code) {
-    final deepLink = 'whoisthere://join?code=$code';
-    final playUrl = AppConstants.googlePlayUrl;
-    final storeUrl = AppConstants.appStoreUrl;
-    final hasStoreUrls =
-        !playUrl.startsWith('TODO') && !storeUrl.startsWith('TODO');
-
+    QaLoggerService.instance.log('LOBBY', 'SHARE_ROOM_TAPPED code=$code');
     final msg = StringBuffer();
     msg.writeln('בואו לגלות מה בתמונה 📸');
     msg.writeln();
     msg.writeln('קוד חדר: $code');
     msg.writeln();
-
-    if (hasStoreUrls) {
-      msg.writeln('1. הורידו את המשחק:');
-      msg.writeln('Android: $playUrl');
-      msg.writeln('iPhone: $storeUrl');
-      msg.writeln();
-      msg.writeln('2. אחרי ההתקנה לחצו כאן להצטרפות:');
-      msg.write(deepLink);
-    } else {
-      msg.writeln('לחצו כאן להצטרפות:');
-      msg.write(deepLink);
-    }
-
+    msg.writeln('🎮 הצטרפות ישירה לחדר:');
+    msg.write('https://rotem-ya.github.io/apps-share-pages/whoisthere/join?code=$code');
     Share.share(msg.toString());
   }
 
@@ -73,6 +65,12 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           return const SizedBox();
         }
 
+        if (!_lobbyLogged) {
+          _lobbyLogged = true;
+          QaLoggerService.instance.log(
+              'LOBBY', 'LOBBY_ROOM_DATA code=${room.code} players=${room.players.length}');
+        }
+
         if (room.phase == GamePhase.playing) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted) context.go('/game/${room.id}');
@@ -81,7 +79,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         }
 
         final isHost = currentUser?.id == room.hostId;
-        final hostName = room.players[room.hostId]?.name ?? 'המארח';
+        final rawHostName = room.players[room.hostId]?.name ?? '';
+        final hostName = rawHostName.isEmpty ? 'המארח' : rawHostName;
         final canStart = room.players.length >= GameConstants.minPlayers;
 
         return Scaffold(
@@ -382,7 +381,7 @@ class _PlayerAvatarTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = isMe ? 'אני' : player.name;
+    final base = isMe ? 'אני' : (player.name.isNotEmpty ? player.name : 'שחקן');
     final label = player.isHost ? '$base 👑' : base;
 
     return Container(

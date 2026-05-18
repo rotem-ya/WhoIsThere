@@ -31,8 +31,26 @@ class AuthService {
   }
 
   Future<UserModel?> signInAnonymously({String? preferredName}) async {
-    final userCredential = await _auth.signInAnonymously();
-    return _syncUser(userCredential.user!, preferredName: preferredName);
+    User? firebaseUser;
+    try {
+      final cred = await _auth.signInAnonymously();
+      firebaseUser = cred.user;
+    } on TypeError {
+      // firebase_auth 4.16.x / firebase_core 2.32.x Pigeon version mismatch:
+      // The native Android plugin signs the user in and authStateChanges()
+      // fires, but the Dart-side Pigeon codec throws a type cast when
+      // deserializing the method-channel response.  currentUser is already
+      // set at this point — use it instead of treating this as auth failure.
+      debugPrint('[AuthService] Pigeon cast workaround — falling back to currentUser');
+      firebaseUser = _auth.currentUser;
+    }
+    if (firebaseUser == null) {
+      throw FirebaseAuthException(
+        code: 'sign-in-failed',
+        message: 'signInAnonymously returned no user',
+      );
+    }
+    return _syncUser(firebaseUser, preferredName: preferredName);
   }
 
   Future<UserModel?> signInWithGoogle() async {
@@ -137,8 +155,14 @@ class AuthService {
     if (user == null) return null;
 
     final doc = await _firestore.collection('users').doc(user.uid).get();
-    if (!doc.exists) return _syncUser(user);
-    return UserModel.fromFirestore(doc);
+    if (doc.exists) return UserModel.fromFirestore(doc);
+
+    // Guard: give signInAnonymously() time to write the doc before falling back
+    // to _syncUser (which would write a guestFallback name).
+    await Future.delayed(const Duration(milliseconds: 500));
+    final recheck = await _firestore.collection('users').doc(user.uid).get();
+    if (recheck.exists) return UserModel.fromFirestore(recheck);
+    return _syncUser(user);
   }
 
   Stream<UserModel?> userModelStream() {
@@ -150,6 +174,18 @@ class AuthService {
           .snapshots()
           .asyncMap((doc) async {
             if (doc.exists) return UserModel.fromFirestore(doc);
+            // Doc not found. Two scenarios:
+            //   (a) signInAnonymously() is still writing it — retry until it appears.
+            //   (b) Firestore doc is genuinely gone (reinstall, cleared data).
+            // Retry up to 5× at 350 ms intervals (max 1.75 s total). On a good
+            // network, case (a) resolves on the first or second retry (~350–700 ms).
+            // Only fall through to _syncUser if doc is still absent after all retries.
+            for (int attempt = 0; attempt < 5; attempt++) {
+              await Future.delayed(const Duration(milliseconds: 350));
+              final recheck = await _firestore.collection('users').doc(user.uid).get();
+              if (recheck.exists) return UserModel.fromFirestore(recheck);
+            }
+            // Genuine recovery (case b) or very slow network — create the doc now.
             return _syncUser(user);
           })
           .handleError((e) {

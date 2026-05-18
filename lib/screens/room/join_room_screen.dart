@@ -7,6 +7,7 @@ import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
+import '../../services/qa_logger_service.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_feedback.dart';
@@ -28,6 +29,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
   @override
   void initState() {
     super.initState();
+    QaLoggerService.instance.log('ROOM', 'JOIN_ROOM_SCREEN_OPENED initialCode=${widget.initialCode ?? 'none'}');
     final raw = widget.initialCode;
     if (raw != null) {
       final code = raw.trim().toUpperCase();
@@ -42,13 +44,15 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
   }
 
   Future<void> _joinRoom() async {
-    final code = _codeController.text.trim().toUpperCase();
+    final raw = _codeController.text.trim();
+    final code = raw.toUpperCase();
     if (code.length != 6) {
       AppFeedback.error();
       setState(() => _errorMessage = 'נא להזין קוד בן 6 תווים');
       return;
     }
 
+    QaLoggerService.instance.log('ROOM', 'JOIN_ROOM_ATTEMPT raw=$raw code=$code');
     AppFeedback.confirm();
     setState(() {
       _isLoading = true;
@@ -68,13 +72,19 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
 
       if (room == null) {
         AppFeedback.error();
+        QaLoggerService.instance.log('ROOM', 'JOIN_ROOM_ERROR code=$code reason=not_found_or_started');
         setState(() => _errorMessage = 'החדר לא נמצא או כבר התחיל');
         return;
       }
 
+      final shortId = room.id.substring(0, room.id.length.clamp(0, 6));
+      QaLoggerService.instance.log('ROOM', 'JOIN_ROOM_SUCCESS code=${room.code} id=$shortId');
       ref.read(currentRoomIdProvider.notifier).state = room.id;
       if (mounted) context.go('/lobby/${room.id}');
     } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log(
+          'ROOM', 'JOIN_ROOM_ERROR ${msg.length > 80 ? msg.substring(0, 80) : msg}');
       setState(() => _errorMessage = 'ההצטרפות נכשלה: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -83,8 +93,8 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
 
   Future<void> _pasteCode() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
-    final text = (data?.text ?? '').trim().toUpperCase();
-    if (text.isEmpty) {
+    final raw = (data?.text ?? '').trim();
+    if (raw.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('לא נמצא קוד להדבקה')),
@@ -92,8 +102,16 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
       }
       return;
     }
+    // Extract code from full deep link URI if the user copied the whole line
+    String code;
+    final uri = Uri.tryParse(raw);
+    if (uri != null && uri.queryParameters.containsKey('code')) {
+      code = uri.queryParameters['code']!.trim().toUpperCase();
+    } else {
+      code = raw.toUpperCase();
+    }
     setState(() {
-      _codeController.text = text.length > 6 ? text.substring(0, 6) : text;
+      _codeController.text = code.length > 6 ? code.substring(0, 6) : code;
       _codeController.selection = TextSelection.collapsed(
         offset: _codeController.text.length,
       );
@@ -155,6 +173,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
                         ),
                         counterText: '',
                         errorText: _errorMessage,
+                        errorMaxLines: 2,
                         filled: true,
                         fillColor: const Color(0xFF07101F).withOpacity(0.06),
                         contentPadding: const EdgeInsets.symmetric(

@@ -21,6 +21,7 @@ import '../../models/room_model.dart';
 import '../../models/economy/match_reward_breakdown.dart';
 import '../../providers/providers.dart';
 import '../../services/hint_economy_guard.dart';
+import '../../services/qa_logger_service.dart';
 import '../../widgets/game/animated_reward.dart';
 import '../../widgets/game/letter_bank_input.dart';
 import 'widgets/game_top_hud.dart';
@@ -50,10 +51,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int _revealedAtTurnIndex = -1;
   bool _hasGuessedThisTurn = false;
 
+  // Hint fact cycling
+  int _nextFactIndex = 0;
+
   // Guess-event banner
   int _lastShownGuessCount = -1;
   Map<String, dynamic>? _currentBanner;
   bool _showBanner = false;
+
+  // Dynamic music volume — escalates with board fill
+  double _lastMusicVolume = 0.44;
 
   // Bot typing simulation
   bool _showBotTyping = false;
@@ -66,7 +73,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   // Reveal sound — owned here, not by ApertureTile
   static final AudioPlayer _revealSoundPlayer = AudioPlayer(playerId: 'reveal-aperture');
-  static final AssetSource _revealSound = AssetSource('sounds/aperture_open.mp3');
+  static final AssetSource _revealSound = AssetSource('sounds/aperture_open.wav');
+
+  static Future<void> _primeRevealSound() async {
+    try {
+      await _revealSoundPlayer.setPlayerMode(PlayerMode.lowLatency);
+    } catch (_) {}
+    try {
+      await _revealSoundPlayer.setSource(_revealSound);
+    } catch (_) {}
+  }
 
   static Future<void> _playRevealSound() async {
     try {
@@ -75,18 +91,64 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     } catch (_) {}
   }
 
+  static Future<void> _primeGuessSounds() async {
+    try {
+      await _wrongBuzzPlayer.setPlayerMode(PlayerMode.lowLatency);
+      await _wrongBuzzPlayer.setSource(_wrongBuzzSound);
+    } catch (_) {}
+    try {
+      await _correctDingPlayer.setPlayerMode(PlayerMode.lowLatency);
+      await _correctDingPlayer.setSource(_correctDingSound);
+    } catch (_) {}
+  }
+
+  static Future<void> _playWrongBuzz() async {
+    try {
+      await _wrongBuzzPlayer.stop();
+      await _wrongBuzzPlayer.play(_wrongBuzzSound);
+    } catch (_) {}
+  }
+
+  static Future<void> _playCorrectDing() async {
+    try {
+      await _correctDingPlayer.stop();
+      await _correctDingPlayer.play(_correctDingSound);
+    } catch (_) {}
+  }
+
   static Future<void> _startBackgroundMusic() async {
     try {
       await _bgPlayer.setReleaseMode(ReleaseMode.loop);
-      await _bgPlayer.setVolume(0.30);
+      await _bgPlayer.setVolume(0.44);
       await _bgPlayer.play(_bgMusic);
     } catch (_) {}
   }
+
+  void _syncMusicVolume(RoomModel room) {
+    final totalTiles = room.gridSize * room.gridSize;
+    final ratio = totalTiles > 0 ? room.placedPieces.length / totalTiles : 0.0;
+    final double target = ratio >= 0.75 ? 0.72 : ratio >= 0.50 ? 0.58 : 0.44;
+    if (target != _lastMusicVolume) {
+      _lastMusicVolume = target;
+      _bgPlayer.setVolume(target).ignore();
+    }
+  }
+
+  // QA logging flags
+  bool _gameScreenLogged = false;
+  bool _gameDataLogged = false;
+  GamePhase? _lastKnownPhase;
 
   // Economy
   bool _rewardApplied = false;
   DateTime? _gameStartTime;
   MatchRewardBreakdown? _rewardBreakdown;
+
+  // Wrong / correct guess sounds
+  static final AudioPlayer _wrongBuzzPlayer = AudioPlayer(playerId: 'wrong-buzz');
+  static final AssetSource _wrongBuzzSound = AssetSource('sounds/wrong_buzz.wav');
+  static final AudioPlayer _correctDingPlayer = AudioPlayer(playerId: 'correct-ding');
+  static final AssetSource _correctDingSound = AssetSource('sounds/correct_ding.wav');
 
   // Correct-guess victory overlay
   bool _showCorrectGuess = false;
@@ -102,6 +164,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _confettiRight = ConfettiController(duration: const Duration(seconds: 2));
     WidgetsBinding.instance.addObserver(this);
     unawaited(_startBackgroundMusic());
+    unawaited(_primeRevealSound());
+    unawaited(_primeGuessSounds());
+    final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
+    QaLoggerService.instance.log('GAME', 'GAME_INIT roomId=$shortId');
   }
 
   @override
@@ -110,12 +176,26 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         state == AppLifecycleState.inactive) {
       _bgPlayer.stop().ignore();
       _revealSoundPlayer.stop().ignore();
+      _wrongBuzzPlayer.stop().ignore();
+      _correctDingPlayer.stop().ignore();
       _victoryPlayer.stop().ignore();
     }
   }
 
   @override
+  Future<bool> didPopRoute() async {
+    if (_lastKnownPhase == GamePhase.playing && mounted) {
+      QaLoggerService.instance.log('GAME', 'GAME_SYSTEM_BACK_ATTEMPT');
+      _showSystemBackConfirmation(context);
+      return true;
+    }
+    return false;
+  }
+
+  @override
   void dispose() {
+    final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
+    QaLoggerService.instance.log('GAME', 'GAME_DISPOSE roomId=$shortId lastPhase=${_lastKnownPhase?.name ?? 'unknown'}');
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
@@ -134,6 +214,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   Future<void> _loadImage(String imageId) async {
     if (imageId.isEmpty || imageId == _loadedImageId) return;
     _loadedImageId = imageId;
+    _nextFactIndex = 0;
     try {
       final image = await ref.read(roomServiceProvider).getImage(imageId);
       if (mounted) setState(() => _image = image);
@@ -153,7 +234,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final difficulty = room.selectedDifficulty ?? Difficulty.easy;
     final isLastTile = room.availablePieceIndices.length == 1;
 
-    unawaited(_playRevealSound());
     setState(() => _isBusy = true);
     try {
       await ref.read(roomServiceProvider).revealPiece(
@@ -162,6 +242,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             pieceIndex: index,
             difficulty: difficulty,
           );
+      unawaited(_playRevealSound());
       if (isLastTile) {
         await ref.read(roomServiceProvider).endGameNoWinner(room.id);
       } else {
@@ -201,7 +282,29 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (_lastBotTurnKey == key) return;
     _lastBotTurnKey = key;
 
-    final delayMs = 2000 + _random.nextInt(1201);
+    // Show "opponent thinking" banner immediately — before the delay expires.
+    // Previously this banner only appeared if the bot decided to guess (>50% board, rare).
+    // Now it shows for every bot turn, giving continuous opponent presence signal.
+    final botName = player.name.isNotEmpty ? player.name : 'בוט';
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _showBotTyping = true;
+        _botTypingName = botName;
+        _botTypingText = '';
+      });
+    });
+
+    final totalTiles = room.gridSize * room.gridSize;
+    final ratio = totalTiles > 0 ? room.placedPieces.length / totalTiles : 0.0;
+    final int delayMs;
+    if (ratio >= 0.75) {
+      delayMs = 400 + _random.nextInt(301);  // 400–700ms — endgame: racing
+    } else if (ratio >= 0.50) {
+      delayMs = 650 + _random.nextInt(351);  // 650–1000ms — midgame: pressure
+    } else {
+      delayMs = 1000 + _random.nextInt(601); // 1000–1600ms — early: realistic
+    }
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
       final snapshot = await ref.read(roomServiceProvider).watchRoom(room.id).first;
@@ -221,6 +324,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             pieceIndex: idx,
             difficulty: difficulty,
           );
+      unawaited(_playRevealSound());
+
+      // Dismiss "thinking" banner — _simulateBotTyping will re-show it if bot guesses.
+      if (mounted) setState(() => _showBotTyping = false);
 
       if (isLastTile) {
         if (mounted) {
@@ -352,6 +459,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             wrongGuessCount: 0,
             timeTaken: timeTaken,
             roomId: room.id,
+            imageId: _image?.id,
           );
       if (mounted) setState(() => _rewardBreakdown = breakdown);
     } catch (e) {
@@ -361,7 +469,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   Future<void> _useRevealHint(RoomModel room, String userId) async {
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
-    if (!isSolo) return;
+    if (!isSolo) return; // multiplayer: blocked
 
     final wallet = ref.read(walletProvider).valueOrNull;
     if (wallet == null) return;
@@ -377,11 +485,23 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     );
 
     if (!granted || !mounted) return;
-    if (room.availablePieceIndices.isEmpty) return;
 
-    final idx = room.availablePieceIndices[
-        _random.nextInt(room.availablePieceIndices.length)];
-    await _humanRevealTile(room: room, userId: userId, index: idx);
+    final facts = _image?.facts ?? const [];
+    if (facts.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (_) => const _FactDialog(fact: null),
+      );
+      return;
+    }
+
+    final fact = facts[_nextFactIndex % facts.length];
+    _nextFactIndex++;
+
+    showDialog(
+      context: context,
+      builder: (_) => _FactDialog(fact: fact),
+    );
   }
 
   Future<bool> _submitGuess(RoomModel room, String userId, String value) async {
@@ -492,6 +612,104 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     );
   }
 
+  Future<void> _showExitConfirmation(BuildContext context) async {
+    QaLoggerService.instance.log('GAME', 'GAME_BACK_CONFIRM_SHOWN');
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF07101F),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: Colors.white.withOpacity(0.12)),
+          ),
+          title: const Text(
+            'לעזוב את המשחק?',
+            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          content: const Text(
+            'המשחק עדיין פעיל. אם תצא עכשיו, תחזור למסך הבית.',
+            style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                QaLoggerService.instance.log('GAME', 'GAME_BACK_CONFIRM_CANCELLED');
+                Navigator.pop(dialogContext);
+              },
+              child: const Text(
+                'המשך משחק',
+                style: TextStyle(color: Color(0xFF8B6FFF), fontWeight: FontWeight.w900),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                QaLoggerService.instance.log('GAME', 'GAME_BACK_CONFIRM_ACCEPTED');
+                QaLoggerService.instance.log('GAME', 'GAME_NAV_HOME reason=back_confirmed phase=playing');
+                Navigator.pop(dialogContext);
+                context.go('/home');
+              },
+              child: const Text(
+                'עזוב משחק',
+                style: TextStyle(color: Color(0xFFFF6B35), fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showSystemBackConfirmation(BuildContext context) async {
+    QaLoggerService.instance.log('GAME', 'GAME_SYSTEM_BACK_CONFIRM_SHOWN');
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF07101F),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: Colors.white.withOpacity(0.12)),
+          ),
+          title: const Text(
+            'לעזוב את המשחק?',
+            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          content: const Text(
+            'המשחק עדיין פעיל. אם תצא עכשיו, תחזור למסך הבית.',
+            style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                QaLoggerService.instance.log('GAME', 'GAME_SYSTEM_BACK_CONFIRM_CANCELLED');
+                Navigator.pop(dialogContext);
+              },
+              child: const Text(
+                'המשך משחק',
+                style: TextStyle(color: Color(0xFF8B6FFF), fontWeight: FontWeight.w900),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                QaLoggerService.instance.log('GAME', 'GAME_SYSTEM_BACK_CONFIRM_ACCEPTED');
+                QaLoggerService.instance.log('GAME', 'GAME_NAV_HOME reason=system_back_confirmed phase=playing');
+                Navigator.pop(dialogContext);
+                context.go('/home');
+              },
+              child: const Text(
+                'עזוב משחק',
+                style: TextStyle(color: Color(0xFFFF6B35), fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
@@ -513,16 +731,41 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
               loading: () => const Center(
                 child: CircularProgressIndicator(color: Color(0xFF8B6FFF)),
               ),
-              error: (e, _) => Center(
-                child: Text('שגיאה: $e', style: const TextStyle(color: Colors.white70)),
-              ),
+              error: (e, _) {
+                final msg = e.toString();
+                QaLoggerService.instance.log('GAME', 'GAME_ERROR e=${msg.length > 80 ? msg.substring(0, 80) : msg}');
+                return Center(
+                  child: Text('שגיאה: $e', style: const TextStyle(color: Colors.white70)),
+                );
+              },
               data: (room) {
                 if (room == null) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) => context.go('/home'));
+                  final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
+                  QaLoggerService.instance.log('GAME', 'GAME_ROOM_NULL_OR_MISSING roomId=$shortId lastPhase=${_lastKnownPhase?.name ?? 'unknown'}');
+                  QaLoggerService.instance.log('GAME', 'GAME_NAV_HOME reason=room_null_or_deleted');
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) context.go('/home');
+                  });
                   return const SizedBox.shrink();
                 }
 
                 final currentUserId = user?.id;
+
+                if (!_gameScreenLogged) {
+                  _gameScreenLogged = true;
+                  final shortId = room.id.substring(0, room.id.length.clamp(0, 6));
+                  QaLoggerService.instance.log('GAME', 'GAME_SCREEN_OPENED code=${room.code} id=$shortId players=${room.players.length} phase=${room.phase.name}');
+                }
+                if (!_gameDataLogged) {
+                  _gameDataLogged = true;
+                  final turnName = room.players[room.currentTurnUserId]?.name ?? room.currentTurnUserId?.substring(0, (room.currentTurnUserId ?? '').length.clamp(0, 6)) ?? 'none';
+                  QaLoggerService.instance.log('GAME', 'GAME_ROOM_DATA phase=${room.phase.name} turn=$turnName revealed=${room.placedPieces.length}');
+                }
+
+                if (_lastKnownPhase != null && _lastKnownPhase != room.phase) {
+                  QaLoggerService.instance.log('GAME', 'GAME_PHASE_CHANGED from=${_lastKnownPhase!.name} to=${room.phase.name}');
+                }
+                _lastKnownPhase = room.phase;
 
                 if (room.imageId.isNotEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) => _loadImage(room.imageId));
@@ -543,21 +786,30 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   });
                   final hasWinner = room.winnerId != null && room.winnerId!.isNotEmpty;
                   if (hasWinner) {
-                    final winnerName = room.players[room.winnerId]?.name ?? 'שחקן';
+                    final rawName = room.players[room.winnerId]?.name ?? '';
+                    final winnerName = rawName.isEmpty ? 'שחקן' : rawName;
                     return GameWinnerView(
                       winnerName: winnerName,
+                      placeName: _image?.name,
                       rewardBreakdown: _rewardBreakdown,
-                      onHome: () => context.go('/home'),
+                      onHome: () {
+                        QaLoggerService.instance.log('GAME', 'GAME_RETURN_HOME phase=finished_winner');
+                        context.go('/home');
+                      },
                     );
                   }
                   return _NoWinnerView(
                     answer: _image?.answer ?? '',
                     imageUrl: _image?.imageUrl,
-                    onHome: () => context.go('/home'),
+                    onHome: () {
+                      QaLoggerService.instance.log('GAME', 'GAME_RETURN_HOME phase=finished_no_winner');
+                      context.go('/home');
+                    },
                   );
                 }
 
                 _scheduleBotTurn(room);
+                _syncMusicVolume(room);
 
                 if (room.currentTurnIndex != _revealedAtTurnIndex &&
                     (_hasRevealedThisTurn || _hasGuessedThisTurn)) {
@@ -575,12 +827,20 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   _lastShownGuessCount = room.guessCount;
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (!mounted) return;
+                    final event = room.lastGuessEvent!;
+                    final isCorrect = event['isCorrect'] as bool? ?? false;
+                    final isLocalGuess = (event['playerId'] as String?) == currentUserId;
                     setState(() {
-                      _currentBanner = room.lastGuessEvent;
+                      _currentBanner = event;
                       _showBanner = true;
                       _showBotTyping = false;
                     });
-                    Future.delayed(const Duration(milliseconds: 3500), () {
+                    if (isCorrect && !isLocalGuess) {
+                      unawaited(_playCorrectDing());
+                    } else if (!isCorrect) {
+                      unawaited(_playWrongBuzz());
+                    }
+                    Future.delayed(const Duration(milliseconds: 1800), () {
                       if (mounted) setState(() => _showBanner = false);
                     });
                   });
@@ -605,7 +865,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   showBotTyping: _showBotTyping,
                   botTypingName: _botTypingName,
                   botTypingText: _botTypingText,
-                  onBack: () => context.go('/home'),
+                  onBack: () {
+                    QaLoggerService.instance.log('GAME', 'GAME_BACK_BUTTON_TAPPED');
+                    if (room.phase == GamePhase.playing) {
+                      _showExitConfirmation(context);
+                    } else {
+                      QaLoggerService.instance.log('GAME', 'GAME_NAV_HOME reason=back_button phase=${room.phase.name}');
+                      context.go('/home');
+                    }
+                  },
                   onReveal: currentUserId == null
                       ? null
                       : (index) => _humanRevealTile(
@@ -881,6 +1149,59 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
           ),
         );
       },
+    );
+  }
+}
+
+class _FactDialog extends StatelessWidget {
+  final String? fact;
+  const _FactDialog({required this.fact});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF07101F),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.5)),
+      ),
+      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+      contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      title: const Row(
+        children: [
+          Icon(Icons.lightbulb_outline_rounded, color: Color(0xFF87CEEB), size: 20),
+          SizedBox(width: 8),
+          Text(
+            'רמז',
+            style: TextStyle(
+              color: Color(0xFF87CEEB),
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        fact ?? 'אין רמז זמין למקום הזה',
+        textAlign: TextAlign.right,
+        textDirection: TextDirection.rtl,
+        style: TextStyle(
+          color: fact != null ? Colors.white : Colors.white54,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          height: 1.55,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text(
+            'הבנתי',
+            style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.w900),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/game_constants.dart';
+import '../../core/theme/app_styles.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
@@ -89,7 +90,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
         const choices = [Difficulty.easy, Difficulty.medium, Difficulty.hard];
 
         return AppScaffold(
-          backgroundGradient: AppColors.pageBackground,
+          backgroundGradient: AppStyles.backgroundGradient,
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             children: [

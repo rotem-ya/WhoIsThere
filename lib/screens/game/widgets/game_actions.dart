@@ -144,7 +144,7 @@ class _HintButton extends StatelessWidget {
                   color: Color(0xFF87CEEB), size: 18),
               const SizedBox(width: 6),
               Text(
-                'רמז - גלה משבצת  (${EconomyConfig.hintRevealTilePrice} 🪙)',
+                'רמז  (${EconomyConfig.hintRevealTilePrice} 🪙)',
                 textDirection: TextDirection.rtl,
                 style: const TextStyle(
                   color: Color(0xFF87CEEB),

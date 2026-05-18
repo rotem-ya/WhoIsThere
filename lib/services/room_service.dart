@@ -63,6 +63,7 @@ class RoomService {
       name: name,
       answer: answer,
       acceptedAnswers: List<String>.from(place['aliases_he'] ?? const []),
+      facts: List<String>.from(place['facts'] ?? const []),
       category: ImageCategory.israeliLandmark,
       imageUrl: asset,
       thumbnailUrl: asset,
@@ -128,7 +129,14 @@ class RoomService {
     final room = RoomModel.fromFirestore(doc);
 
     if (room.players.length >= GameConstants.maxPlayers) return null;
-    if (room.players.containsKey(userId)) return room;
+
+    if (room.players.containsKey(userId)) {
+      // Refresh name/photo in case user renamed since originally joining.
+      final updates = <String, dynamic>{'players.$userId.name': userName};
+      if (userPhotoUrl != null) updates['players.$userId.photoUrl'] = userPhotoUrl;
+      await doc.reference.update(updates);
+      return RoomModel.fromFirestore(await doc.reference.get());
+    }
 
     final newPlayer = PlayerModel(
       id: userId,
@@ -192,9 +200,10 @@ class RoomService {
     final room = RoomModel.fromFirestore(doc);
     final images = await _loadLocalImages();
     if (images.isEmpty) return;
-    final image = images[Random().nextInt(images.length)];
+    final image = await _pickSmartImage(images, room.players);
     await _rooms.doc(roomId).update({'selectedImageId': image.id});
     await _startGame(roomId, room, Difficulty.easy);
+    _recordExposureForAll(room.players, image.id);
   }
 
   Future<void> castImageVote({
@@ -221,10 +230,10 @@ class RoomService {
     final images = await _loadLocalImages();
     if (images.isEmpty) return;
 
-    final selectedImageId = images[Random().nextInt(images.length)].id;
+    final image = await _pickSmartImage(images, room.players);
 
     await _rooms.doc(roomId).update({
-      'selectedImageId': selectedImageId,
+      'selectedImageId': image.id,
       'phase': GamePhase.votingDifficulty.name,
     });
   }
@@ -260,6 +269,66 @@ class RoomService {
     );
 
     await _startGame(roomId, room, difficulty);
+    final imageId = room.selectedImageId;
+    if (imageId != null && imageId.isNotEmpty) {
+      _recordExposureForAll(room.players, imageId);
+    }
+  }
+
+  // ── Exposure history helpers ──────────────────────────────────
+
+  Future<GameImageModel> _pickSmartImage(
+    List<GameImageModel> images,
+    Map<String, PlayerModel> players,
+  ) async {
+    final realIds = players.entries
+        .where((e) => !e.value.isBot)
+        .map((e) => e.key)
+        .toList();
+
+    if (realIds.isEmpty) return images[Random().nextInt(images.length)];
+
+    try {
+      final exposureMaps = await Future.wait(realIds.map(_getExposureCounts));
+
+      final totals = <String, int>{};
+      for (final map in exposureMaps) {
+        for (final entry in map.entries) {
+          totals[entry.key] = (totals[entry.key] ?? 0) + entry.value;
+        }
+      }
+
+      final unseen = images.where((img) => (totals[img.id] ?? 0) == 0).toList();
+      if (unseen.isNotEmpty) return unseen[Random().nextInt(unseen.length)];
+
+      final sorted = [...images]
+        ..sort((a, b) => (totals[a.id] ?? 0).compareTo(totals[b.id] ?? 0));
+      return sorted.first;
+    } catch (_) {
+      return images[Random().nextInt(images.length)];
+    }
+  }
+
+  Future<Map<String, int>> _getExposureCounts(String uid) async {
+    try {
+      final snap = await _firestore.doc('users/$uid/exposure_history').get();
+      if (!snap.exists) return {};
+      final data = snap.data() ?? {};
+      return data.map((k, v) => MapEntry(k, (v as num?)?.toInt() ?? 0));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  void _recordExposureForAll(Map<String, PlayerModel> players, String imageId) {
+    for (final entry in players.entries) {
+      if (!entry.value.isBot) {
+        _firestore.doc('users/${entry.key}/exposure_history').set(
+          {imageId: FieldValue.increment(1)},
+          SetOptions(merge: true),
+        ).ignore();
+      }
+    }
   }
 
   Future<void> _startGame(String roomId, RoomModel room, Difficulty difficulty) async {

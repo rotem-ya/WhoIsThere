@@ -7,7 +7,11 @@
     "city_he": "ירושלים",
     "image_asset": "assets/game_places/images/western_wall.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "אבן עתיקה שמחזיקה זיכרונות של אלפי שנים",
+      "מגיעים אליו ממרחקים רבים עם מילים שמבקשים לשמור"
+    ]
   },
   {
     "id": "dome_of_the_rock",
@@ -17,7 +21,11 @@
     "city_he": "ירושלים",
     "image_asset": "assets/game_places/images/dome_of_the_rock.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "הצבע המוזהב בולט מכל מקום בעיר",
+      "אחד המבנים הצבעוניים ביותר בנוף עתיק"
+    ]
   },
   {
     "id": "tower_of_david",
@@ -27,7 +35,11 @@
     "city_he": "ירושלים",
     "image_asset": "assets/game_places/images/tower_of_david.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "מגדל שמשקיף על שערי עיר עתיקה",
+      "בנייה שמחברת עידנים ושושלות שונות"
+    ]
   },
   {
     "id": "mahane_yehuda_market",
@@ -47,7 +59,11 @@
     "city_he": "ירושלים",
     "image_asset": "assets/game_places/images/knesset.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "בניין גדול עם חצר רחבה ואנשים רבים שעוברים",
+      "מקום שבו מתקבלות החלטות עבור הרבה אנשים"
+    ]
   },
   {
     "id": "israel_museum",
@@ -57,7 +73,11 @@
     "city_he": "ירושלים",
     "image_asset": "assets/game_places/images/israel_museum.jpg",
     "difficulty": "medium",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "כאן שומרים על דברים שחשוב שלא ייאבדו",
+      "מבנה לבן עם אוספים מכל תקופות הארץ"
+    ]
   },
   {
     "id": "yad_vashem",
@@ -67,7 +87,11 @@
     "city_he": "ירושלים",
     "image_asset": "assets/game_places/images/yad_vashem.jpg",
     "difficulty": "medium",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "מקום מוקדש לזיכרון ולא-שכחה",
+      "שקט, מכוון, ומעלה מחשבות כבדות על ההיסטוריה"
+    ]
   },
   {
     "id": "masada",
@@ -77,7 +101,11 @@
     "city_he": "ים המלח",
     "image_asset": "assets/game_places/images/masada.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "בניין על צוק מבודד עם נוף פתוח לכל עבר",
+      "הגישה קשה, המיקום — בלתי נשכח"
+    ]
   },
   {
     "id": "dead_sea",
@@ -87,7 +115,11 @@
     "city_he": "ים המלח",
     "image_asset": "assets/game_places/images/dead_sea.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "פני המים שקטים וזוהרים בצורה יוצאת דופן",
+      "הנוף מסביב יבשושי, המים — לא פשוטים לשחייה"
+    ]
   },
   {
     "id": "ein_gedi",
@@ -97,7 +129,11 @@
     "city_he": "ים המלח",
     "image_asset": "assets/game_places/images/ein_gedi.jpg",
     "difficulty": "medium",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "ירוק באמצע שטח יבש, עם מים שזורמים מטה",
+      "מקום שנראה לא אמיתי לצד השממה שמסביב"
+    ]
   },
   {
     "id": "ramon_crater",

@@ -20,6 +20,7 @@ class ApertureTile extends StatefulWidget {
 class _ApertureTileState extends State<ApertureTile> with SingleTickerProviderStateMixin {
   static const Color kGold = Color(0xFFD4AF37);
   static const Color kNavy = Color(0xFF07101F);
+  static const Color kCyan = Color(0xFF00F2FF);
 
   late final AnimationController _controller;
   late final Animation<double> _animation;
@@ -67,8 +68,8 @@ class _ApertureTileState extends State<ApertureTile> with SingleTickerProviderSt
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: widget.isFocused ? kGold : kGold.withOpacity(0.4),
-          width: widget.isFocused ? 2.5 : 1.2,
+          color: widget.isFocused ? kCyan : kGold.withOpacity(0.4),
+          width: widget.isFocused ? 2.0 : 1.2,
         ),
       ),
       child: ClipRRect(
@@ -132,9 +133,9 @@ class _ApertureTileState extends State<ApertureTile> with SingleTickerProviderSt
                       color: kNavy.withOpacity(0.5),
                     ),
                     child: const Icon(
-                      Icons.camera_rounded,
+                      Icons.lock_outline_rounded,
                       color: kGold,
-                      size: 32,
+                      size: 22,
                     ),
                   ),
                 );

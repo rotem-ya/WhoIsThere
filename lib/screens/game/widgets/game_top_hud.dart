@@ -10,6 +10,7 @@ class TopHud extends StatelessWidget {
   final String currentPlayerName;
   final String revealedText;
   final VoidCallback onBack;
+  final bool isMyTurn;
 
   const TopHud({
     required this.code,
@@ -18,6 +19,7 @@ class TopHud extends StatelessWidget {
     required this.currentPlayerName,
     required this.revealedText,
     required this.onBack,
+    required this.isMyTurn,
   });
 
   @override
@@ -41,19 +43,19 @@ class TopHud extends StatelessWidget {
                 children: [
                   _BackButton(onTap: onBack),
                   const SizedBox(width: 8),
-                  Expanded(child: _TurnInfo(name: currentPlayerName, revealedText: revealedText, code: code)),
+                  Expanded(child: _TurnInfo(name: currentPlayerName, revealedText: revealedText, code: code, isMyTurn: isMyTurn)),
                   const SizedBox(width: 8),
                   const CoinDisplay(compact: true),
                 ],
               ),
               if (players.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 SizedBox(
-                  height: 32,
+                  height: 28,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: players.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 6),
+                    separatorBuilder: (_, __) => const SizedBox(width: 5),
                     itemBuilder: (context, index) {
                       final player = players[index];
                       return _PlayerChip(player: player, active: player.id == currentPlayerId);
@@ -79,8 +81,8 @@ class _BackButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.06),
           borderRadius: BorderRadius.circular(14),
@@ -96,31 +98,39 @@ class _TurnInfo extends StatelessWidget {
   final String name;
   final String revealedText;
   final String code;
-  const _TurnInfo({required this.name, required this.revealedText, required this.code});
+  final bool isMyTurn;
+  const _TurnInfo({required this.name, required this.revealedText, required this.code, required this.isMyTurn});
 
   @override
   Widget build(BuildContext context) {
-    return FittedBox(
-      alignment: Alignment.centerRight,
-      fit: BoxFit.scaleDown,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('תור עכשיו', style: TextStyle(color: const Color(0xFFD4AF37).withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.w900, height: 1)),
-          const SizedBox(height: 4),
-          Text(name.isEmpty ? 'ממתין לשחקן' : name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900, height: 1)),
-          const SizedBox(height: 5),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('נחשפו $revealedText', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 13, fontWeight: FontWeight.w800)),
-              const SizedBox(width: 12),
-              Text(code, style: TextStyle(color: Colors.white.withOpacity(0.24), fontSize: 11, letterSpacing: 2.4, fontWeight: FontWeight.w900)),
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          isMyTurn ? 'תורי' : 'המתחרה משחק',
+          style: TextStyle(
+            color: isMyTurn
+                ? const Color(0xFFD4AF37).withOpacity(0.9)
+                : const Color(0xFFFF6B35).withOpacity(0.95),
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            height: 1,
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 3),
+        Text(name.isEmpty ? 'ממתין לשחקן' : name, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1)),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('נחשפו $revealedText', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12, fontWeight: FontWeight.w800)),
+            const SizedBox(width: 12),
+            Text(code, style: TextStyle(color: Colors.white.withOpacity(0.24), fontSize: 11, letterSpacing: 2.4, fontWeight: FontWeight.w900)),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -132,25 +142,60 @@ class _PlayerChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (active) {
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)]),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withOpacity(0.18)),
+          boxShadow: [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.28), blurRadius: 10)],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 72),
+              child: Text(player.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Color(0xFF07101F), fontSize: 12, fontWeight: FontWeight.w900)),
+            ),
+            const SizedBox(width: 4),
+            Text('${player.score}',
+                style: TextStyle(color: const Color(0xFF07101F).withOpacity(0.82), fontSize: 11, fontWeight: FontWeight.w900)),
+          ],
+        ),
+      );
+    }
+
+    // Inactive: compact initial circle + score only
+    final initial = player.name.isNotEmpty ? player.name[0].toUpperCase() : '?';
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
-        gradient: active ? const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)]) : null,
-        color: active ? null : Colors.white.withOpacity(0.055),
+        color: Colors.white.withOpacity(0.055),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: active ? Colors.white.withOpacity(0.18) : Colors.white.withOpacity(0.10)),
-        boxShadow: active ? [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.22), blurRadius: 10)] : const [],
+        border: Border.all(color: Colors.white.withOpacity(0.10)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 78),
-            child: Text(player.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: active ? const Color(0xFF07101F) : Colors.white.withOpacity(0.76), fontSize: 12, fontWeight: FontWeight.w900)),
+          Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.14),
+            ),
+            child: Center(
+              child: Text(initial,
+                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900, height: 1)),
+            ),
           ),
-          const SizedBox(width: 5),
-          Text('${player.score}', style: TextStyle(color: active ? const Color(0xFF07101F).withOpacity(0.82) : Colors.white.withOpacity(0.46), fontSize: 11, fontWeight: FontWeight.w900)),
+          const SizedBox(width: 4),
+          Text('${player.score}',
+              style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 11, fontWeight: FontWeight.w900)),
         ],
       ),
     );

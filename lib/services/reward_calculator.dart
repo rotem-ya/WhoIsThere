@@ -14,7 +14,9 @@ class RewardCalculator {
     required int totalTilesCount,
     required int wrongGuessCount,
     required Duration timeTaken,
+    int imageExposureCount = 0,
   }) {
+    final exposureMultiplier = _exposureMultiplier(imageExposureCount);
     final double revealRatio = totalTilesCount <= 0
         ? 1.0
         : (tilesRevealedCount / totalTilesCount).clamp(0.0, 1.0);
@@ -35,6 +37,7 @@ class RewardCalculator {
         totalTilesCount: totalTilesCount,
         revealRatio: revealRatio,
         wrongGuessCount: wrongGuessCount,
+        exposureMultiplier: exposureMultiplier,
       );
     }
 
@@ -63,7 +66,14 @@ class RewardCalculator {
       totalTilesCount: totalTilesCount,
       revealRatio: revealRatio,
       wrongGuessCount: wrongGuessCount,
+      exposureMultiplier: exposureMultiplier,
     );
+  }
+
+  static double _exposureMultiplier(int count) {
+    if (count <= 1) return 1.0;  // first exposure (recorded at game start)
+    if (count == 2) return 0.6;  // second exposure
+    return 0.25;                 // third+ exposure
   }
 
   // ── Prize potential (HUD preview, no speed / no penalty) ─────

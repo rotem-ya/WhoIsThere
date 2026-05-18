@@ -8,12 +8,14 @@ import '../../../models/economy/match_reward_breakdown.dart';
 
 class GameWinnerView extends StatefulWidget {
   final String winnerName;
+  final String? placeName;
   final MatchRewardBreakdown? rewardBreakdown;
   final VoidCallback onHome;
 
   const GameWinnerView({
     super.key,
     required this.winnerName,
+    this.placeName,
     this.rewardBreakdown,
     required this.onHome,
   });
@@ -76,6 +78,7 @@ class _GameWinnerViewState extends State<GameWinnerView> {
               duration: const Duration(milliseconds: 260),
               child: _WinnerCard(
                 winnerName: widget.winnerName,
+                placeName: widget.placeName,
                 rewardBreakdown: widget.rewardBreakdown,
                 showButton: _showButton,
                 onHome: widget.onHome,
@@ -103,12 +106,14 @@ class _WinnerBackground extends StatelessWidget {
 
 class _WinnerCard extends StatelessWidget {
   final String winnerName;
+  final String? placeName;
   final MatchRewardBreakdown? rewardBreakdown;
   final bool showButton;
   final VoidCallback onHome;
 
   const _WinnerCard({
     required this.winnerName,
+    this.placeName,
     required this.rewardBreakdown,
     required this.showButton,
     required this.onHome,
@@ -161,6 +166,21 @@ class _WinnerCard extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
+          if (placeName != null && placeName!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'המקום: $placeName',
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFFD4AF37),
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Text(
             'כל הכבוד. זה היה ניחוש מנצח.',
@@ -201,7 +221,7 @@ class _WinnerCard extends StatelessWidget {
                     textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: const Text('משחק חדש'),
+                  child: const Text('חזור לבית'),
                 ),
               ),
             ),

@@ -2,10 +2,8 @@ name: Build APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, claude/** ]
   workflow_dispatch:
-
-# Phase 7F QA — 7C share link + 7D join paste + 7E daily reward session flag
 
 jobs:
   build:
@@ -49,18 +47,6 @@ jobs:
           if [ -n "$KEYSTORE_B64" ]; then
             echo "$KEYSTORE_B64" | base64 -d > android/app/keystore.jks
           fi
-
-      - name: "DIAGNOSTIC: Extract SHA-256 fingerprint"
-        env:
-          KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
-          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
-        run: |
-          echo "=== Release Keystore SHA-256 Fingerprint ==="
-          keytool -list -v -keystore android/app/keystore.jks \
-            -storepass "$KEYSTORE_STORE_PASS" \
-            -alias "$KEYSTORE_ALIAS" 2>/dev/null | grep "SHA256:"
-          echo "=== Alias ==="
-          echo "$KEYSTORE_ALIAS"
 
       - name: Clean Flutter and pub cache
         run: |

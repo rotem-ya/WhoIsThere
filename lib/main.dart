@@ -6,11 +6,13 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:app_links/app_links.dart';
+import 'core/constants/build_info.dart';
 import 'core/theme/app_styles.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_router.dart';
 import 'firebase_options.dart';
 import 'providers/providers.dart';
+import 'services/qa_logger_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +43,9 @@ void main() async {
       statusBarBrightness: Brightness.dark, // iOS equivalent
     ),
   );
+
+  await QaLoggerService.instance.init();
+  QaLoggerService.instance.log('APP', 'APP_START build=$kBuildLabel');
 
   if (firebaseError != null) {
     runApp(_ErrorApp(error: firebaseError.toString()));
@@ -136,7 +141,11 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
   }
 
   void _handleDeepLink(Uri uri, {required bool coldStart}) {
-    if (uri.scheme != 'whoisthere' || uri.host != 'join') return;
+    final isCustomScheme = uri.scheme == 'whoisthere' && uri.host == 'join';
+    final isAppLink = uri.scheme == 'https' &&
+        uri.host == 'rotem-ya.github.io' &&
+        uri.path.startsWith('/apps-share-pages/whoisthere/join');
+    if (!isCustomScheme && !isAppLink) return;
 
     final raw = uri.queryParameters['code'] ?? '';
     final code = raw.trim().toUpperCase();
