@@ -182,12 +182,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             children: [
               const Positioned.fill(child: _VaultBackground()),
               const Positioned.fill(
-                child: AmbientBackground(
-                  showGrid: false,
-                  showOrbits: false,
-                  showParticles: true,
-                  goldAccent: true,
-                  intensity: 0.28,
+                child: RepaintBoundary(
+                  child: AmbientBackground(
+                    showGrid: false,
+                    showOrbits: false,
+                    showParticles: true,
+                    goldAccent: true,
+                    intensity: 0.28,
+                  ),
                 ),
               ),
               SafeArea(
@@ -206,9 +208,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               SizedBox(height: verySmall ? 8 : compact ? 14 : 24),
-                              Center(child: _HomeHeroPeekGrid(size: iconSize)),
+                              // Step 1 — hero board
+                              Center(
+                                child: RepaintBoundary(child: _HomeHeroPeekGrid(size: iconSize)),
+                              )
+                                  .animate()
+                                  .fadeIn(duration: 500.ms, curve: Curves.easeOut)
+                                  .moveY(begin: 14, end: 0, duration: 500.ms, curve: Curves.easeOut),
                               SizedBox(height: verySmall ? 10 : compact ? 16 : 20),
-                              const FittedBox(
+                              // Step 2 — title
+                              FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
                                   'מה בתמונה?',
@@ -220,14 +229,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: -1.7,
                                     height: 1,
-                                    shadows: [
+                                    shadows: const [
                                       Shadow(color: Color(0xFFD4AF37), blurRadius: 16),
                                       Shadow(color: Colors.black87, offset: Offset(0, 4), blurRadius: 10),
+                                      Shadow(color: Color(0x55D4AF37), blurRadius: 48, offset: Offset(0, 8)),
                                     ],
                                   ),
                                 ),
-                              ),
+                              )
+                                  .animate()
+                                  .fadeIn(delay: 120.ms, duration: 380.ms, curve: Curves.easeOut)
+                                  .moveY(begin: 8, end: 0, delay: 120.ms, duration: 380.ms, curve: Curves.easeOut),
                               const SizedBox(height: 10),
+                              // Step 3 — subtitle
                               Text(
                                 'מי יזהה את המקום ראשון?',
                                 textAlign: TextAlign.center,
@@ -237,8 +251,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   fontWeight: FontWeight.w800,
                                   height: 1.2,
                                 ),
-                              ),
+                              )
+                                  .animate()
+                                  .fadeIn(delay: 220.ms, duration: 320.ms, curve: Curves.easeOut),
                               SizedBox(height: verySmall ? 12 : compact ? 18 : 26),
+                              // Step 4 — format label
                               const Text(
                                 'בחר פורמט',
                                 textAlign: TextAlign.center,
@@ -248,8 +265,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 1.8,
                                 ),
-                              ),
+                              )
+                                  .animate()
+                                  .fadeIn(delay: 320.ms, duration: 280.ms, curve: Curves.easeOut),
                               const SizedBox(height: 10),
+                              // Step 5 — primary CTA
                               _MainVaultButton(
                                 pulseController: _pulseController,
                                 label: 'שחק עכשיו',
@@ -257,8 +277,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 height: verySmall ? 62 : compact ? 66 : 72,
                                 isLoading: _isCreating && _loadingPlayers == 2,
                                 onTap: _isCreating ? null : () => _startQuickGame(2),
-                              ),
+                              )
+                                  .animate()
+                                  .fadeIn(delay: 440.ms, duration: 300.ms, curve: Curves.easeOut)
+                                  .moveY(begin: 8, end: 0, delay: 440.ms, duration: 300.ms, curve: Curves.easeOut),
                               const SizedBox(height: 14),
+                              // Step 6 — 3/4 player buttons
                               Row(
                                 children: [
                                   Expanded(
@@ -279,16 +303,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                     ),
                                   ),
                                 ],
-                              ),
+                              )
+                                  .animate()
+                                  .fadeIn(delay: 540.ms, duration: 280.ms, curve: Curves.easeOut),
                               SizedBox(height: verySmall ? 10 : 16),
+                              // Step 7 — private room
                               _PrivateRoomButton(
                                 isLoading: _isCreating && _loadingPlayers == null,
                                 onTap: _isCreating ? null : _createPrivateRoom,
-                              ),
+                              )
+                                  .animate()
+                                  .fadeIn(delay: 640.ms, duration: 260.ms, curve: Curves.easeOut),
                               const SizedBox(height: 10),
+                              // Step 8 — join room
                               _JoinRoomButton(
                                 onTap: _isCreating ? null : _showJoinDialog,
-                              ),
+                              )
+                                  .animate()
+                                  .fadeIn(delay: 720.ms, duration: 260.ms, curve: Curves.easeOut),
                               SizedBox(height: verySmall ? 14 : compact ? 20 : 30),
                             ],
                           ),

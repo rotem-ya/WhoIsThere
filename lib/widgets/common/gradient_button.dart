@@ -28,15 +28,26 @@ class GradientButton extends StatefulWidget {
 class _GradientButtonState extends State<GradientButton> {
   bool _pressed = false;
 
+  void _onDown(_) => setState(() => _pressed = true);
+  void _onUp(_) => setState(() => _pressed = false);
+  void _onCancel() => setState(() => _pressed = false);
+
   @override
   Widget build(BuildContext context) {
     final enabled = widget.onPressed != null;
 
+    // Press: 90 ms down, 140 ms up — no bounce.
     return AnimatedScale(
-      scale: _pressed ? 0.965 : 1,
-      duration: const Duration(milliseconds: 90),
+      scale: _pressed ? 0.985 : 1.0,
+      duration: _pressed
+          ? const Duration(milliseconds: 90)
+          : const Duration(milliseconds: 140),
       curve: Curves.easeOut,
-      child: Container(
+      child: AnimatedContainer(
+        duration: _pressed
+            ? const Duration(milliseconds: 90)
+            : const Duration(milliseconds: 140),
+        curve: Curves.easeOut,
         width: widget.width ?? double.infinity,
         height: widget.height,
         decoration: BoxDecoration(
@@ -45,19 +56,28 @@ class _GradientButtonState extends State<GradientButton> {
               : const LinearGradient(colors: [Colors.grey, Colors.grey]),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.white.withOpacity(0.16), width: 1),
+          // Shadow compresses on press, expands on release.
           boxShadow: enabled
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.35),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
-                  ),
-                  BoxShadow(
-                    color: Colors.white.withOpacity(0.20),
-                    blurRadius: 8,
-                    offset: const Offset(0, -2),
-                  ),
-                ]
+              ? _pressed
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.14),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.35),
+                        blurRadius: 18,
+                        offset: const Offset(0, 10),
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.20),
+                        blurRadius: 8,
+                        offset: const Offset(0, -2),
+                      ),
+                    ]
               : [],
         ),
         child: Material(
@@ -69,17 +89,17 @@ class _GradientButtonState extends State<GradientButton> {
                     AppFeedback.primary();
                     widget.onPressed?.call();
                   },
-            onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
-            onTapCancel:
-                enabled ? () => setState(() => _pressed = false) : null,
-            onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
+            onTapDown: enabled ? _onDown : null,
+            onTapCancel: enabled ? _onCancel : null,
+            onTapUp: enabled ? _onUp : null,
             borderRadius: BorderRadius.circular(20),
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (enabled)
+                // Shine pauses during press.
+                if (enabled && !_pressed)
                   const _ButtonShine()
-                      .animate(onPlay: (controller) => controller.repeat())
+                      .animate(onPlay: (c) => c.repeat())
                       .slideX(begin: -1.4, end: 1.4, duration: 2200.ms),
                 Center(
                   child: Row(
@@ -105,12 +125,13 @@ class _GradientButtonState extends State<GradientButton> {
             ),
           ),
         ),
-      ).animate().scale(
-            begin: const Offset(0.96, 0.96),
-            duration: 450.ms,
-            curve: Curves.easeOutBack,
-          ),
-    );
+      ),
+      // Entrance scale — easeOut, no bounce.
+    ).animate().scale(
+          begin: const Offset(0.96, 0.96),
+          duration: 450.ms,
+          curve: Curves.easeOut,
+        );
   }
 }
 
@@ -131,7 +152,7 @@ class _ButtonShine extends StatelessWidget {
               gradient: LinearGradient(
                 colors: [
                   Colors.white.withOpacity(0),
-                  Colors.white.withOpacity(0.20),
+                  Colors.white.withOpacity(0.18),
                   Colors.white.withOpacity(0),
                 ],
                 begin: Alignment.topCenter,

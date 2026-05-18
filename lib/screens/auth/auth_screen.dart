@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -123,7 +124,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             decoration: const BoxDecoration(gradient: AppStyles.backgroundGradient),
             child: Stack(
               children: [
-                const Positioned.fill(child: AmbientBackground()),
+                const Positioned.fill(
+                  child: RepaintBoundary(
+                    child: AmbientBackground(intensity: 0.60),
+                  ),
+                ),
                 SafeArea(
               child: SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
@@ -140,8 +145,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       children: [
                         const Spacer(flex: 2),
 
-                        const AppLogo(size: 160),
+                        // Step 1 — logo
+                        const RepaintBoundary(child: AppLogo(size: 160))
+                            .animate()
+                            .fadeIn(duration: 500.ms, curve: Curves.easeOut)
+                            .moveY(begin: 12, end: 0, duration: 500.ms, curve: Curves.easeOut),
                         const SizedBox(height: 20),
+
+                        // Step 2 — title
                         const Text(
                           'מה בתמונה?',
                           textAlign: TextAlign.center,
@@ -152,19 +163,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             letterSpacing: -1,
                             height: 1,
                             shadows: [
-                              Shadow(
-                                color: Color(0xCC000000),
-                                blurRadius: 18,
-                              ),
-                              Shadow(
-                                color: Color(0xFF07101F),
-                                blurRadius: 32,
-                                offset: Offset(0, 4),
-                              ),
+                              Shadow(color: Color(0xCC000000), blurRadius: 18),
+                              Shadow(color: Color(0xFF07101F), blurRadius: 32, offset: Offset(0, 4)),
+                              Shadow(color: Color(0x66D4AF37), blurRadius: 48, offset: Offset(0, 8)),
                             ],
                           ),
-                        ),
+                        )
+                            .animate()
+                            .fadeIn(delay: 120.ms, duration: 400.ms, curve: Curves.easeOut)
+                            .moveY(begin: 8, end: 0, delay: 120.ms, duration: 400.ms, curve: Curves.easeOut),
+
                         const SizedBox(height: 8),
+
+                        // Step 3 — subtitle
                         const Text(
                           'חשוף חלקים · נחש את המקום',
                           textAlign: TextAlign.center,
@@ -175,16 +186,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             letterSpacing: 0.6,
                             height: 1.4,
                           ),
-                        ),
+                        )
+                            .animate()
+                            .fadeIn(delay: 220.ms, duration: 350.ms, curve: Curves.easeOut),
 
                         const Spacer(flex: 2),
 
-                        // ── Name field ───────────────────────────────────────
+                        // Step 4 — name field
                         _NameField(
                           controller: _nameController,
                           hasError: _nameError != null,
                           onChanged: (_) => setState(() => _nameError = null),
-                        ),
+                        )
+                            .animate()
+                            .fadeIn(delay: 340.ms, duration: 350.ms, curve: Curves.easeOut)
+                            .moveY(begin: 8, end: 0, delay: 340.ms, duration: 350.ms, curve: Curves.easeOut),
                         if (_nameError != null) ...[
                           const SizedBox(height: 5),
                           Text(
@@ -212,22 +228,31 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             ),
                           )
                         else ...[
+                          // Step 5 — primary CTA
                           GradientButton(
                             text: 'התחל לשחק',
                             onPressed: _signInAnonymously,
                             height: 56,
-                          ),
+                          )
+                              .animate()
+                              .fadeIn(delay: 480.ms, duration: 300.ms, curve: Curves.easeOut)
+                              .moveY(begin: 8, end: 0, delay: 480.ms, duration: 300.ms, curve: Curves.easeOut),
                           const SizedBox(height: 10),
+                          // Step 6 — secondary CTAs
                           _SecondaryButton(
                             label: 'המשך עם Google',
                             onTap: _signInWithGoogle,
-                          ),
+                          )
+                              .animate()
+                              .fadeIn(delay: 600.ms, duration: 280.ms, curve: Curves.easeOut),
                           if (Platform.isIOS) ...[
                             const SizedBox(height: 10),
                             _SecondaryButton(
                               label: 'המשך עם Apple',
                               onTap: _signInWithApple,
-                            ),
+                            )
+                                .animate()
+                                .fadeIn(delay: 700.ms, duration: 280.ms, curve: Curves.easeOut),
                           ],
                         ],
 

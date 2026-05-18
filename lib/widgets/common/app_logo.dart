@@ -28,8 +28,8 @@ class AppLogo extends StatelessWidget {
           shape: BoxShape.circle,
           gradient: RadialGradient(
             colors: [
-              AppColors.accent.withOpacity(0.34 * intensity),
-              AppColors.primary.withOpacity(0.08 * intensity),
+              AppColors.accent.withOpacity(0.22 * intensity),
+              AppColors.primary.withOpacity(0.06 * intensity),
               Colors.transparent,
             ],
             stops: const [0.0, 0.5, 1.0],
@@ -105,8 +105,8 @@ class AppLogo extends StatelessWidget {
             halo
                 .animate(onPlay: (c) => c.repeat(reverse: true))
                 .scaleXY(
-                  begin: 0.88,
-                  end: 1.12,
+                  begin: 0.93,
+                  end: 1.07,
                   duration: 2400.ms,
                   curve: Curves.easeInOut,
                 )
@@ -121,7 +121,7 @@ class AppLogo extends StatelessWidget {
 
     return logo
         .animate(onPlay: (c) => c.repeat(reverse: true))
-        .moveY(begin: -3.5, end: 3.5, duration: 3200.ms, curve: Curves.easeInOut);
+        .moveY(begin: -2.0, end: 2.0, duration: 3200.ms, curve: Curves.easeInOut);
   }
 }
 
@@ -144,7 +144,7 @@ class _TileShine extends StatelessWidget {
               gradient: LinearGradient(
                 colors: [
                   Colors.white.withOpacity(0),
-                  Colors.white.withOpacity(0.22),
+                  Colors.white.withOpacity(0.15),
                   Colors.white.withOpacity(0),
                 ],
                 begin: Alignment.topCenter,
