@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 
 /// Single source of truth for the dark vault visual identity.
 ///
@@ -8,13 +9,13 @@ abstract class AppStyles {
   // ── Core Palette ──────────────────────────────────────────────────────
 
   /// Background top — dark vault navy
-  static const Color navyTop = Color(0xFF07101F);
+  static const Color navyTop = AppColors.background;
 
   /// Background mid — dark vault mid
   static const Color navyMid = Color(0xFF061426);
 
   /// Background bottom — deep vault black-navy
-  static const Color cyanBottom = Color(0xFF050A14);
+  static const Color cyanBottom = AppColors.backgroundBottom;
 
   /// Primary action color — "Banana Yellow"
   static const Color bananaYellow = Color(0xFFFFE14D);
@@ -23,9 +24,9 @@ abstract class AppStyles {
   static const Color cyanGlow = Color(0xFF00F2FF);
 
   static const Color white = Colors.white;
-  static const Color darkText = Color(0xFF07101F);
-  static const Color errorRed = Color(0xFFE53E3E);
-  static const Color successGreen = Color(0xFF22C55E);
+  static const Color darkText = AppColors.background;
+  static const Color errorRed = AppColors.error;
+  static const Color successGreen = AppColors.success;
   static const Color warningAmber = Color(0xFFFFA726);
 
   // ── Gradients ─────────────────────────────────────────────────────────
