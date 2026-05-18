@@ -109,7 +109,14 @@ class _RouterNotifier extends ChangeNotifier {
   _RouterNotifier(this._ref) {
     _ref.listen<AsyncValue<User?>>(
       firebaseUserProvider,
-      (_, __) => notifyListeners(),
+      (previous, next) {
+        // Firebase can re-emit the same User on token refresh. Only refresh
+        // the router when the actual login status changes (null <-> User).
+        if (next.isLoading) return;
+        final wasLoggedIn = previous?.valueOrNull != null;
+        final isLoggedIn = next.valueOrNull != null;
+        if (wasLoggedIn != isLoggedIn) notifyListeners();
+      },
     );
   }
 
