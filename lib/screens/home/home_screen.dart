@@ -538,7 +538,7 @@ class _GoldShine extends StatelessWidget {
   }
 }
 
-class _GlassButton extends StatelessWidget {
+class _GlassButton extends StatefulWidget {
   final String label;
   final double height;
   final bool isLoading;
@@ -547,30 +547,51 @@ class _GlassButton extends StatelessWidget {
   const _GlassButton({required this.label, required this.height, required this.isLoading, required this.onTap});
 
   @override
+  State<_GlassButton> createState() => _GlassButtonState();
+}
+
+class _GlassButtonState extends State<_GlassButton> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap == null ? null : () {
-        HapticFeedback.lightImpact();
-        onTap!();
+      onTapDown: (_) {
+        if (widget.onTap != null) setState(() => _pressed = true);
       },
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 160),
-        opacity: onTap == null ? 0.62 : 1,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-            child: Container(
-              height: height,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.065),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.34), width: 1.2),
-              ),
-              child: Center(
-                child: isLoading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4))
-                    : Text(label, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        if (widget.onTap != null) {
+          HapticFeedback.lightImpact();
+          widget.onTap!();
+        }
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: _pressed
+            ? const Duration(milliseconds: 90)
+            : const Duration(milliseconds: 140),
+        curve: Curves.easeOut,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 160),
+          opacity: widget.onTap == null ? 0.62 : 1,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: Container(
+                height: widget.height,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.065),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.34), width: 1.2),
+                ),
+                child: Center(
+                  child: widget.isLoading
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4))
+                      : Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+                ),
               ),
             ),
           ),
@@ -580,47 +601,68 @@ class _GlassButton extends StatelessWidget {
   }
 }
 
-class _PrivateRoomButton extends StatelessWidget {
+class _PrivateRoomButton extends StatefulWidget {
   final bool isLoading;
   final VoidCallback? onTap;
 
   const _PrivateRoomButton({required this.isLoading, required this.onTap});
 
   @override
+  State<_PrivateRoomButton> createState() => _PrivateRoomButtonState();
+}
+
+class _PrivateRoomButtonState extends State<_PrivateRoomButton> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     return Center(
       child: GestureDetector(
-        onTap: onTap == null ? null : () {
-          HapticFeedback.lightImpact();
-          onTap!();
+        onTapDown: (_) {
+          if (widget.onTap != null) setState(() => _pressed = true);
         },
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 160),
-          opacity: onTap == null ? 0.58 : 1,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 11),
-            decoration: BoxDecoration(
-              color: const Color(0xFF050A14).withOpacity(0.50),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.26)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isLoading)
-                  const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Color(0xFF87CEEB), strokeWidth: 2))
-                else
-                  const Icon(Icons.people_rounded, color: Color(0xFF87CEEB), size: 19),
-                const SizedBox(width: 10),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('שחק עם חברים', style: TextStyle(color: Color(0xFF87CEEB), fontSize: 16, fontWeight: FontWeight.w800, height: 1.1)),
-                    Text('צור חדר ושתף קוד', style: TextStyle(color: const Color(0xFF87CEEB).withOpacity(0.60), fontSize: 11, fontWeight: FontWeight.w600, height: 1.2)),
-                  ],
-                ),
-              ],
+        onTapUp: (_) {
+          setState(() => _pressed = false);
+          if (widget.onTap != null) {
+            HapticFeedback.lightImpact();
+            widget.onTap!();
+          }
+        },
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.96 : 1.0,
+          duration: _pressed
+              ? const Duration(milliseconds: 90)
+              : const Duration(milliseconds: 140),
+          curve: Curves.easeOut,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 160),
+            opacity: widget.onTap == null ? 0.58 : 1,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 11),
+              decoration: BoxDecoration(
+                color: const Color(0xFF050A14).withOpacity(0.50),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.26)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.isLoading)
+                    const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Color(0xFF87CEEB), strokeWidth: 2))
+                  else
+                    const Icon(Icons.people_rounded, color: Color(0xFF87CEEB), size: 19),
+                  const SizedBox(width: 10),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('שחק עם חברים', style: TextStyle(color: Color(0xFF87CEEB), fontSize: 16, fontWeight: FontWeight.w800, height: 1.1)),
+                      Text('צור חדר ושתף קוד', style: TextStyle(color: const Color(0xFF87CEEB).withOpacity(0.60), fontSize: 11, fontWeight: FontWeight.w600, height: 1.2)),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -631,35 +673,56 @@ class _PrivateRoomButton extends StatelessWidget {
 
 // ── Join by code button ────────────────────────────────────────────────────
 
-class _JoinRoomButton extends StatelessWidget {
+class _JoinRoomButton extends StatefulWidget {
   final VoidCallback? onTap;
   const _JoinRoomButton({required this.onTap});
+
+  @override
+  State<_JoinRoomButton> createState() => _JoinRoomButtonState();
+}
+
+class _JoinRoomButtonState extends State<_JoinRoomButton> {
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: GestureDetector(
-        onTap: onTap == null ? null : () {
-          HapticFeedback.lightImpact();
-          onTap!();
+        onTapDown: (_) {
+          if (widget.onTap != null) setState(() => _pressed = true);
         },
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 160),
-          opacity: onTap == null ? 0.58 : 1,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
-            decoration: BoxDecoration(
-              color: const Color(0xFF050A14).withOpacity(0.50),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFF81C784).withOpacity(0.40)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.key_rounded, color: Color(0xFF81C784), size: 19),
-                SizedBox(width: 8),
-                Text('יש לי קוד', style: TextStyle(color: Color(0xFF81C784), fontSize: 16, fontWeight: FontWeight.w800)),
-              ],
+        onTapUp: (_) {
+          setState(() => _pressed = false);
+          if (widget.onTap != null) {
+            HapticFeedback.lightImpact();
+            widget.onTap!();
+          }
+        },
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.96 : 1.0,
+          duration: _pressed
+              ? const Duration(milliseconds: 90)
+              : const Duration(milliseconds: 140),
+          curve: Curves.easeOut,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 160),
+            opacity: widget.onTap == null ? 0.58 : 1,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+              decoration: BoxDecoration(
+                color: const Color(0xFF050A14).withOpacity(0.50),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: const Color(0xFF81C784).withOpacity(0.40)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.key_rounded, color: Color(0xFF81C784), size: 19),
+                  SizedBox(width: 8),
+                  Text('יש לי קוד', style: TextStyle(color: Color(0xFF81C784), fontSize: 16, fontWeight: FontWeight.w800)),
+                ],
+              ),
             ),
           ),
         ),
