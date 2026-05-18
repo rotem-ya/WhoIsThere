@@ -10,6 +10,7 @@ import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
 import '../../widgets/common/ambient_background.dart';
 import '../../widgets/common/app_logo.dart';
+import '../../widgets/common/gradient_button.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -20,8 +21,6 @@ class AuthScreen extends ConsumerStatefulWidget {
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   static const _gold = Color(0xFFD4AF37);
-  static const _goldLight = Color(0xFFFFE082);
-  static const _goldDark = Color(0xFFA1811A);
   static const _navy = Color(0xFF050A14);
   static const _cyan = Color(0xFF87CEEB);
 
@@ -152,6 +151,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             fontWeight: FontWeight.w900,
                             letterSpacing: -1,
                             height: 1,
+                            shadows: [
+                              Shadow(
+                                color: Color(0xCC000000),
+                                blurRadius: 18,
+                              ),
+                              Shadow(
+                                color: Color(0xFF07101F),
+                                blurRadius: 32,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -202,9 +212,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             ),
                           )
                         else ...[
-                          _PrimaryButton(
-                            label: 'התחל לשחק',
-                            onTap: _signInAnonymously,
+                          GradientButton(
+                            text: 'התחל לשחק',
+                            onPressed: _signInAnonymously,
+                            height: 56,
                           ),
                           const SizedBox(height: 10),
                           _SecondaryButton(
@@ -280,7 +291,7 @@ class _NameField extends StatelessWidget {
         ),
         counterText: '',
         filled: true,
-        fillColor: Colors.white.withOpacity(0.06),
+        fillColor: Colors.white.withOpacity(0.10),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         border: baseBorder,
         enabledBorder: hasError
@@ -292,55 +303,6 @@ class _NameField extends StatelessWidget {
         focusedBorder: const OutlineInputBorder(
           borderRadius: borderRadius,
           borderSide: BorderSide(color: _AuthScreenState._cyan, width: 1.5),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Primary button (gold) ──────────────────────────────────────────────────
-
-class _PrimaryButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _PrimaryButton({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 56,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              _AuthScreenState._goldLight,
-              _AuthScreenState._gold,
-              _AuthScreenState._goldDark,
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: [
-            BoxShadow(
-              color: _AuthScreenState._gold.withOpacity(0.30),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: _AuthScreenState._navy,
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              height: 1,
-            ),
-          ),
         ),
       ),
     );

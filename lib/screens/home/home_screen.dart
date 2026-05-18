@@ -5,11 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:flutter_animate/flutter_animate.dart';
+
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../services/feedback_service.dart';
 import '../../services/qa_logger_service.dart';
+import '../../widgets/common/ambient_background.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
 
@@ -178,6 +181,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           body: Stack(
             children: [
               const Positioned.fill(child: _VaultBackground()),
+              const Positioned.fill(
+                child: AmbientBackground(
+                  showGrid: false,
+                  showOrbits: false,
+                  showParticles: true,
+                  goldAccent: true,
+                  intensity: 0.28,
+                ),
+              ),
               SafeArea(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -400,30 +412,71 @@ class _MainVaultButton extends StatelessWidget {
           opacity: onTap == null ? 0.65 : 1,
           child: Container(
             height: height,
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
               borderRadius: BorderRadius.circular(22),
               boxShadow: [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.42), blurRadius: 25, offset: const Offset(0, 10))],
             ),
-            child: Center(
-              child: isLoading
-                  ? const SizedBox(width: 25, height: 25, child: CircularProgressIndicator(color: Color(0xFF07101F), strokeWidth: 2.7))
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.bolt_rounded, color: Color(0xFF07101F), size: 30),
-                        const SizedBox(width: 10),
-                        Column(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (onTap != null)
+                  const _GoldShine()
+                      .animate(onPlay: (c) => c.repeat())
+                      .slideX(begin: -1.4, end: 1.4, duration: 2200.ms),
+                Center(
+                  child: isLoading
+                      ? const SizedBox(width: 25, height: 25, child: CircularProgressIndicator(color: Color(0xFF07101F), strokeWidth: 2.7))
+                      : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(label, style: const TextStyle(color: Color(0xFF07101F), fontSize: 28, fontWeight: FontWeight.w900, height: 1)),
-                            const SizedBox(height: 4),
-                            Text(subtitle, style: TextStyle(color: const Color(0xFF07101F).withOpacity(0.68), fontSize: 14, fontWeight: FontWeight.w800, height: 1)),
+                            const Icon(Icons.bolt_rounded, color: Color(0xFF07101F), size: 30),
+                            const SizedBox(width: 10),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(label, style: const TextStyle(color: Color(0xFF07101F), fontSize: 28, fontWeight: FontWeight.w900, height: 1)),
+                                const SizedBox(height: 4),
+                                Text(subtitle, style: TextStyle(color: const Color(0xFF07101F).withOpacity(0.68), fontSize: 14, fontWeight: FontWeight.w800, height: 1)),
                           ],
                         ),
                       ],
                     ),
+                  ),
+                ],
+              ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GoldShine extends StatelessWidget {
+  const _GoldShine();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: FractionallySizedBox(
+        widthFactor: 0.30,
+        heightFactor: 1.0,
+        child: Transform.rotate(
+          angle: -0.30,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.white.withOpacity(0),
+                  Colors.white.withOpacity(0.18),
+                  Colors.white.withOpacity(0),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
             ),
           ),
         ),
