@@ -51,7 +51,9 @@ class _AmbientBackgroundState extends State<AmbientBackground>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _controller,
-      builder: (context, _) => CustomPaint(
+      // child is built once and passed through; painter controls all animation.
+      child: const SizedBox.expand(),
+      builder: (context, child) => CustomPaint(
         painter: _CosmicPainter(
           progress: _controller.value,
           intensity: widget.intensity,
@@ -60,6 +62,7 @@ class _AmbientBackgroundState extends State<AmbientBackground>
           showParticles: widget.showParticles,
           goldAccent: widget.goldAccent,
         ),
+        child: child,
       ),
     );
   }

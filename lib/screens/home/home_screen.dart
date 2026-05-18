@@ -19,6 +19,9 @@ import '../../widgets/economy/daily_reward_sheet.dart';
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
+  // Persists across route remounts — intro plays only on first visit per session.
+  static bool _introPlayed = false;
+
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
@@ -26,6 +29,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseController;
+  late final bool _doIntro;
   bool _isCreating = false;
   int? _loadingPlayers;
   DateTime? _lastBackPressedAt;
@@ -33,6 +37,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void initState() {
     super.initState();
+    _doIntro = !HomeScreen._introPlayed;
+    HomeScreen._introPlayed = true;
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -144,6 +150,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 
+  /// Wraps [w] with a fade+rise entrance only on first visit.
+  Widget _step(Widget w, {required int delayMs, required int durationMs, double dy = 0}) {
+    if (!_doIntro) return w;
+    var a = w.animate().fadeIn(
+      delay: Duration(milliseconds: delayMs),
+      duration: Duration(milliseconds: durationMs),
+      curve: Curves.easeOut,
+    );
+    if (dy != 0) {
+      a = a.moveY(
+        begin: dy,
+        end: 0,
+        delay: Duration(milliseconds: delayMs),
+        duration: Duration(milliseconds: durationMs),
+        curve: Curves.easeOut,
+      );
+    }
+    return a;
+  }
+
   void _handleHomeBack() {
     final now = DateTime.now();
     final shouldExit = _lastBackPressedAt != null &&
@@ -208,119 +234,114 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               SizedBox(height: verySmall ? 8 : compact ? 14 : 24),
-                              // Step 1 — hero board
-                              Center(
-                                child: RepaintBoundary(child: _HomeHeroPeekGrid(size: iconSize)),
-                              )
-                                  .animate()
-                                  .fadeIn(duration: 500.ms, curve: Curves.easeOut)
-                                  .moveY(begin: 14, end: 0, duration: 500.ms, curve: Curves.easeOut),
+                              _step(
+                                Center(child: RepaintBoundary(child: _HomeHeroPeekGrid(size: iconSize))),
+                                delayMs: 0, durationMs: 500, dy: 14,
+                              ),
                               SizedBox(height: verySmall ? 10 : compact ? 16 : 20),
-                              // Step 2 — title
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  'מה בתמונה?',
+                              _step(
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    'מה בתמונה?',
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 56,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -1.7,
+                                      height: 1,
+                                      shadows: const [
+                                        Shadow(color: Color(0xFFD4AF37), blurRadius: 16),
+                                        Shadow(color: Colors.black87, offset: Offset(0, 4), blurRadius: 10),
+                                        Shadow(color: Color(0x55D4AF37), blurRadius: 48, offset: Offset(0, 8)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                delayMs: 120, durationMs: 380, dy: 8,
+                              ),
+                              const SizedBox(height: 10),
+                              _step(
+                                Text(
+                                  'מי יזהה את המקום ראשון?',
                                   textAlign: TextAlign.center,
-                                  maxLines: 1,
                                   style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 56,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: -1.7,
-                                    height: 1,
-                                    shadows: const [
-                                      Shadow(color: Color(0xFFD4AF37), blurRadius: 16),
-                                      Shadow(color: Colors.black87, offset: Offset(0, 4), blurRadius: 10),
-                                      Shadow(color: Color(0x55D4AF37), blurRadius: 48, offset: Offset(0, 8)),
-                                    ],
+                                    color: const Color(0xFF87CEEB).withOpacity(0.86),
+                                    fontSize: verySmall ? 16 : compact ? 18 : 20,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.2,
                                   ),
                                 ),
-                              )
-                                  .animate()
-                                  .fadeIn(delay: 120.ms, duration: 380.ms, curve: Curves.easeOut)
-                                  .moveY(begin: 8, end: 0, delay: 120.ms, duration: 380.ms, curve: Curves.easeOut),
-                              const SizedBox(height: 10),
-                              // Step 3 — subtitle
-                              Text(
-                                'מי יזהה את המקום ראשון?',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: const Color(0xFF87CEEB).withOpacity(0.86),
-                                  fontSize: verySmall ? 16 : compact ? 18 : 20,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.2,
-                                ),
-                              )
-                                  .animate()
-                                  .fadeIn(delay: 220.ms, duration: 320.ms, curve: Curves.easeOut),
+                                delayMs: 220, durationMs: 320,
+                              ),
                               SizedBox(height: verySmall ? 12 : compact ? 18 : 26),
-                              // Step 4 — format label
-                              const Text(
-                                'בחר פורמט',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white30,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1.8,
+                              _step(
+                                const Text(
+                                  'בחר פורמט',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white30,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1.8,
+                                  ),
                                 ),
-                              )
-                                  .animate()
-                                  .fadeIn(delay: 320.ms, duration: 280.ms, curve: Curves.easeOut),
+                                delayMs: 320, durationMs: 280,
+                              ),
                               const SizedBox(height: 10),
-                              // Step 5 — primary CTA
-                              _MainVaultButton(
-                                pulseController: _pulseController,
-                                label: 'שחק עכשיו',
-                                subtitle: 'דו־קרב מהיר · 2 שחקנים',
-                                height: verySmall ? 62 : compact ? 66 : 72,
-                                isLoading: _isCreating && _loadingPlayers == 2,
-                                onTap: _isCreating ? null : () => _startQuickGame(2),
-                              )
-                                  .animate()
-                                  .fadeIn(delay: 440.ms, duration: 300.ms, curve: Curves.easeOut)
-                                  .moveY(begin: 8, end: 0, delay: 440.ms, duration: 300.ms, curve: Curves.easeOut),
+                              _step(
+                                _MainVaultButton(
+                                  pulseController: _pulseController,
+                                  label: 'שחק עכשיו',
+                                  subtitle: 'דו־קרב מהיר · 2 שחקנים',
+                                  height: verySmall ? 62 : compact ? 66 : 72,
+                                  isLoading: _isCreating && _loadingPlayers == 2,
+                                  onTap: _isCreating ? null : () => _startQuickGame(2),
+                                ),
+                                delayMs: 440, durationMs: 300, dy: 8,
+                              ),
                               const SizedBox(height: 14),
-                              // Step 6 — 3/4 player buttons
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _GlassButton(
-                                      label: '3 שחקנים',
-                                      height: verySmall ? 50 : compact ? 54 : 58,
-                                      isLoading: _isCreating && _loadingPlayers == 3,
-                                      onTap: _isCreating ? null : () => _startQuickGame(3),
+                              _step(
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _GlassButton(
+                                        label: '3 שחקנים',
+                                        height: verySmall ? 50 : compact ? 54 : 58,
+                                        isLoading: _isCreating && _loadingPlayers == 3,
+                                        onTap: _isCreating ? null : () => _startQuickGame(3),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _GlassButton(
-                                      label: '4 שחקנים',
-                                      height: verySmall ? 50 : compact ? 54 : 58,
-                                      isLoading: _isCreating && _loadingPlayers == 4,
-                                      onTap: _isCreating ? null : () => _startQuickGame(4),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _GlassButton(
+                                        label: '4 שחקנים',
+                                        height: verySmall ? 50 : compact ? 54 : 58,
+                                        isLoading: _isCreating && _loadingPlayers == 4,
+                                        onTap: _isCreating ? null : () => _startQuickGame(4),
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              )
-                                  .animate()
-                                  .fadeIn(delay: 540.ms, duration: 280.ms, curve: Curves.easeOut),
+                                  ],
+                                ),
+                                delayMs: 540, durationMs: 280,
+                              ),
                               SizedBox(height: verySmall ? 10 : 16),
-                              // Step 7 — private room
-                              _PrivateRoomButton(
-                                isLoading: _isCreating && _loadingPlayers == null,
-                                onTap: _isCreating ? null : _createPrivateRoom,
-                              )
-                                  .animate()
-                                  .fadeIn(delay: 640.ms, duration: 260.ms, curve: Curves.easeOut),
+                              _step(
+                                _PrivateRoomButton(
+                                  isLoading: _isCreating && _loadingPlayers == null,
+                                  onTap: _isCreating ? null : _createPrivateRoom,
+                                ),
+                                delayMs: 640, durationMs: 260,
+                              ),
                               const SizedBox(height: 10),
-                              // Step 8 — join room
-                              _JoinRoomButton(
-                                onTap: _isCreating ? null : _showJoinDialog,
-                              )
-                                  .animate()
-                                  .fadeIn(delay: 720.ms, duration: 260.ms, curve: Curves.easeOut),
+                              _step(
+                                _JoinRoomButton(
+                                  onTap: _isCreating ? null : _showJoinDialog,
+                                ),
+                                delayMs: 720, durationMs: 260,
+                              ),
                               SizedBox(height: verySmall ? 14 : compact ? 20 : 30),
                             ],
                           ),

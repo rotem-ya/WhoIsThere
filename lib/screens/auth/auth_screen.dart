@@ -16,6 +16,9 @@ import '../../widgets/common/gradient_button.dart';
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
 
+  // Intro plays only on first open per session (e.g. not replayed after sign-out/sign-in).
+  static bool _introPlayed = false;
+
   @override
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
@@ -26,13 +29,35 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   static const _cyan = Color(0xFF87CEEB);
 
   final _nameController = TextEditingController();
+  late final bool _doIntro;
   bool _isLoading = false;
   String? _nameError;
 
   @override
   void initState() {
     super.initState();
+    _doIntro = !AuthScreen._introPlayed;
+    AuthScreen._introPlayed = true;
     QaLoggerService.instance.log('AUTH', 'AUTH_SCREEN_OPENED');
+  }
+
+  Widget _step(Widget w, {required int delayMs, required int durationMs, double dy = 0}) {
+    if (!_doIntro) return w;
+    var a = w.animate().fadeIn(
+      delay: Duration(milliseconds: delayMs),
+      duration: Duration(milliseconds: durationMs),
+      curve: Curves.easeOut,
+    );
+    if (dy != 0) {
+      a = a.moveY(
+        begin: dy,
+        end: 0,
+        delay: Duration(milliseconds: delayMs),
+        duration: Duration(milliseconds: durationMs),
+        curve: Curves.easeOut,
+      );
+    }
+    return a;
   }
 
   @override
@@ -146,61 +171,62 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         const Spacer(flex: 2),
 
                         // Step 1 — logo
-                        const RepaintBoundary(child: AppLogo(size: 160))
-                            .animate()
-                            .fadeIn(duration: 500.ms, curve: Curves.easeOut)
-                            .moveY(begin: 12, end: 0, duration: 500.ms, curve: Curves.easeOut),
+                        _step(
+                          const RepaintBoundary(child: AppLogo(size: 160)),
+                          delayMs: 0, durationMs: 500, dy: 12,
+                        ),
                         const SizedBox(height: 20),
 
                         // Step 2 — title
-                        const Text(
-                          'מה בתמונה?',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 52,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1,
-                            height: 1,
-                            shadows: [
-                              Shadow(color: Color(0xCC000000), blurRadius: 18),
-                              Shadow(color: Color(0xFF07101F), blurRadius: 32, offset: Offset(0, 4)),
-                              Shadow(color: Color(0x66D4AF37), blurRadius: 48, offset: Offset(0, 8)),
-                            ],
+                        _step(
+                          const Text(
+                            'מה בתמונה?',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 52,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -1,
+                              height: 1,
+                              shadows: [
+                                Shadow(color: Color(0xCC000000), blurRadius: 18),
+                                Shadow(color: Color(0xFF07101F), blurRadius: 32, offset: Offset(0, 4)),
+                                Shadow(color: Color(0x66D4AF37), blurRadius: 48, offset: Offset(0, 8)),
+                              ],
+                            ),
                           ),
-                        )
-                            .animate()
-                            .fadeIn(delay: 120.ms, duration: 400.ms, curve: Curves.easeOut)
-                            .moveY(begin: 8, end: 0, delay: 120.ms, duration: 400.ms, curve: Curves.easeOut),
+                          delayMs: 120, durationMs: 400, dy: 8,
+                        ),
 
                         const SizedBox(height: 8),
 
                         // Step 3 — subtitle
-                        const Text(
-                          'חשוף חלקים · נחש את המקום',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white54,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 0.6,
-                            height: 1.4,
+                        _step(
+                          const Text(
+                            'חשוף חלקים · נחש את המקום',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.6,
+                              height: 1.4,
+                            ),
                           ),
-                        )
-                            .animate()
-                            .fadeIn(delay: 220.ms, duration: 350.ms, curve: Curves.easeOut),
+                          delayMs: 220, durationMs: 350,
+                        ),
 
                         const Spacer(flex: 2),
 
                         // Step 4 — name field
-                        _NameField(
-                          controller: _nameController,
-                          hasError: _nameError != null,
-                          onChanged: (_) => setState(() => _nameError = null),
-                        )
-                            .animate()
-                            .fadeIn(delay: 340.ms, duration: 350.ms, curve: Curves.easeOut)
-                            .moveY(begin: 8, end: 0, delay: 340.ms, duration: 350.ms, curve: Curves.easeOut),
+                        _step(
+                          _NameField(
+                            controller: _nameController,
+                            hasError: _nameError != null,
+                            onChanged: (_) => setState(() => _nameError = null),
+                          ),
+                          delayMs: 340, durationMs: 350, dy: 8,
+                        ),
                         if (_nameError != null) ...[
                           const SizedBox(height: 5),
                           Text(
@@ -229,30 +255,32 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           )
                         else ...[
                           // Step 5 — primary CTA
-                          GradientButton(
-                            text: 'התחל לשחק',
-                            onPressed: _signInAnonymously,
-                            height: 56,
-                          )
-                              .animate()
-                              .fadeIn(delay: 480.ms, duration: 300.ms, curve: Curves.easeOut)
-                              .moveY(begin: 8, end: 0, delay: 480.ms, duration: 300.ms, curve: Curves.easeOut),
+                          _step(
+                            GradientButton(
+                              text: 'התחל לשחק',
+                              onPressed: _signInAnonymously,
+                              height: 56,
+                            ),
+                            delayMs: 480, durationMs: 300, dy: 8,
+                          ),
                           const SizedBox(height: 10),
                           // Step 6 — secondary CTAs
-                          _SecondaryButton(
-                            label: 'המשך עם Google',
-                            onTap: _signInWithGoogle,
-                          )
-                              .animate()
-                              .fadeIn(delay: 600.ms, duration: 280.ms, curve: Curves.easeOut),
+                          _step(
+                            _SecondaryButton(
+                              label: 'המשך עם Google',
+                              onTap: _signInWithGoogle,
+                            ),
+                            delayMs: 600, durationMs: 280,
+                          ),
                           if (Platform.isIOS) ...[
                             const SizedBox(height: 10),
-                            _SecondaryButton(
-                              label: 'המשך עם Apple',
-                              onTap: _signInWithApple,
-                            )
-                                .animate()
-                                .fadeIn(delay: 700.ms, duration: 280.ms, curve: Curves.easeOut),
+                            _step(
+                              _SecondaryButton(
+                                label: 'המשך עם Apple',
+                                onTap: _signInWithApple,
+                              ),
+                              delayMs: 700, durationMs: 280,
+                            ),
                           ],
                         ],
 
