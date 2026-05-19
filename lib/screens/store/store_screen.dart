@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -65,8 +66,8 @@ class StoreScreen extends ConsumerWidget {
                           Expanded(
                             child: _HintCard(
                               icon: Icons.lightbulb_outline_rounded,
-                              title: 'גלה משבצת',
-                              description: 'פתח חלק נסתר של התמונה',
+                              title: 'חשוף משבצת',
+                              description: 'חשוף אזור נסתר בתמונה',
                               price: EconomyConfig.hintRevealTilePrice,
                               coins: coins,
                               onBuy: () => _buyHint(
@@ -78,7 +79,7 @@ class StoreScreen extends ConsumerWidget {
                             child: _HintCard(
                               icon: Icons.casino_outlined,
                               title: 'ניחוש נוסף',
-                              description: 'קבל הזדמנות ניחוש נוספת',
+                              description: 'הזדמנות ניחוש נוספת',
                               price: EconomyConfig.hintExtraGuessPrice,
                               coins: coins,
                               onBuy: () => _buyHint(
@@ -108,7 +109,7 @@ class StoreScreen extends ConsumerWidget {
                                 crossAxisSpacing: AppSpacing.md,
                                 mainAxisSpacing: AppSpacing.md,
                                 childAspectRatio:
-                                    columns == 1 ? 1.35 : 0.78,
+                                    columns == 1 ? 1.65 : 1.05,
                               ),
                               itemCount: premiumImages.length,
                               itemBuilder: (context, index) {
@@ -133,7 +134,9 @@ class StoreScreen extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.lg),
                     ],
                   ),
-                );
+                )
+                    .animate()
+                    .fadeIn(duration: 320.ms, curve: Curves.easeOut);
               },
               loading: () => const Center(
                   child:

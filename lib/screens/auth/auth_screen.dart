@@ -257,7 +257,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           // Step 5 — primary CTA
                           _step(
                             GradientButton(
-                              text: 'התחל לשחק',
+                              text: 'כנס לזירה',
                               onPressed: _signInAnonymously,
                               height: 56,
                             ),
@@ -267,7 +267,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           // Step 6 — secondary CTAs
                           _step(
                             _SecondaryButton(
-                              label: 'המשך עם Google',
+                              label: 'כניסה עם Google',
                               onTap: _signInWithGoogle,
                             ),
                             delayMs: 600, durationMs: 280,
@@ -276,7 +276,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             const SizedBox(height: 10),
                             _step(
                               _SecondaryButton(
-                                label: 'המשך עם Apple',
+                                label: 'כניסה עם Apple',
                                 onTap: _signInWithApple,
                               ),
                               delayMs: 700, durationMs: 280,

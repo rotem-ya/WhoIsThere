@@ -280,7 +280,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               SizedBox(height: verySmall ? 12 : compact ? 18 : 26),
                               _step(
                                 const Text(
-                                  'בחר פורמט',
+                                  'בחר מצב',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: Colors.white30,

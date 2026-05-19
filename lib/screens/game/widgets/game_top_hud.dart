@@ -4,7 +4,6 @@ import '../../../models/player_model.dart';
 import '../../../widgets/economy/coin_display.dart';
 
 class TopHud extends StatelessWidget {
-  final String code;
   final List<PlayerModel> players;
   final String? currentPlayerId;
   final String currentPlayerName;
@@ -13,7 +12,6 @@ class TopHud extends StatelessWidget {
   final bool isMyTurn;
 
   const TopHud({
-    required this.code,
     required this.players,
     required this.currentPlayerId,
     required this.currentPlayerName,
@@ -43,7 +41,7 @@ class TopHud extends StatelessWidget {
                 children: [
                   _BackButton(onTap: onBack),
                   const SizedBox(width: 8),
-                  Expanded(child: _TurnInfo(name: currentPlayerName, revealedText: revealedText, code: code, isMyTurn: isMyTurn)),
+                  Expanded(child: _TurnInfo(name: currentPlayerName, revealedText: revealedText, isMyTurn: isMyTurn)),
                   const SizedBox(width: 8),
                   const CoinDisplay(compact: true),
                 ],
@@ -97,9 +95,8 @@ class _BackButton extends StatelessWidget {
 class _TurnInfo extends StatelessWidget {
   final String name;
   final String revealedText;
-  final String code;
   final bool isMyTurn;
-  const _TurnInfo({required this.name, required this.revealedText, required this.code, required this.isMyTurn});
+  const _TurnInfo({required this.name, required this.revealedText, required this.isMyTurn});
 
   @override
   Widget build(BuildContext context) {
@@ -108,7 +105,7 @@ class _TurnInfo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          isMyTurn ? 'תורי' : 'המתחרה משחק',
+          isMyTurn ? 'התור שלי' : 'תור היריב',
           style: TextStyle(
             color: isMyTurn
                 ? const Color(0xFFD4AF37).withOpacity(0.9)
@@ -122,14 +119,7 @@ class _TurnInfo extends StatelessWidget {
         Text(name.isEmpty ? 'ממתין לשחקן' : name, maxLines: 1, overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1)),
         const SizedBox(height: 4),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('נחשפו $revealedText', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12, fontWeight: FontWeight.w800)),
-            const SizedBox(width: 12),
-            Text(code, style: TextStyle(color: Colors.white.withOpacity(0.24), fontSize: 11, letterSpacing: 2.4, fontWeight: FontWeight.w900)),
-          ],
-        ),
+        Text('גלויות $revealedText', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12, fontWeight: FontWeight.w800)),
       ],
     );
   }
