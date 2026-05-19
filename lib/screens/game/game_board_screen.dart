@@ -846,6 +846,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     if (currentUserId != null && room.guessOpportunityPlayerId == currentUserId) {
                       QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_VISIBLE msLeft=$msLeft');
                     }
+                    QaLoggerService.instance.log('BOARD', 'BOARD_LOCKED_PHASE phase=guessOpportunity');
+                    QaLoggerService.instance.log('BOARD', 'ANSWER_SLOTS_HIDDEN phase=guessOpportunity');
                   }
 
                   if (room.turnPhase == TurnPhase.guessMode) {
@@ -855,6 +857,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                         ? room.guessModeDeadlineMs! - DateTime.now().millisecondsSinceEpoch
                         : -1;
                     QaLoggerService.instance.log('TURN', 'GUESS_MODE_STARTED guesserId=$shortGuesserId msLeft=$msLeft');
+                    QaLoggerService.instance.log('BOARD', 'BOARD_LOCKED_PHASE phase=guessMode');
+                    final isMyGuessMode = currentUserId != null && room.guessModePlayerId == currentUserId;
+                    if (isMyGuessMode) {
+                      QaLoggerService.instance.log('BOARD', 'ANSWER_SLOTS_VISIBLE_GUESS_MODE');
+                    } else {
+                      QaLoggerService.instance.log('BOARD', 'ANSWER_SLOTS_HIDDEN phase=guessMode_spectator');
+                    }
                   }
 
                   if (room.turnPhase == TurnPhase.revealTurn) {
@@ -864,6 +873,22 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                         ? room.revealDeadlineMs! - DateTime.now().millisecondsSinceEpoch
                         : -1;
                     QaLoggerService.instance.log('TURN', 'REVEAL_DEADLINE_SET turnId=$shortTurnId msLeft=$msLeft');
+                    final amCurrentPlayer = currentUserId != null && room.currentTurnUserId == currentUserId;
+                    if (amCurrentPlayer) {
+                      QaLoggerService.instance.log('BOARD', 'BOARD_UNLOCKED_REVEAL_TURN');
+                    } else {
+                      QaLoggerService.instance.log('BOARD', 'BOARD_LOCKED_PHASE phase=revealTurn_spectator');
+                    }
+                    QaLoggerService.instance.log('BOARD', 'ANSWER_SLOTS_HIDDEN phase=revealTurn');
+                  }
+
+                  if (room.turnPhase == TurnPhase.resolvingGuess) {
+                    QaLoggerService.instance.log('BOARD', 'BOARD_LOCKED_PHASE phase=resolvingGuess');
+                    QaLoggerService.instance.log('BOARD', 'ANSWER_SLOTS_HIDDEN phase=resolvingGuess');
+                  }
+
+                  if (room.turnPhase == TurnPhase.roundOver) {
+                    QaLoggerService.instance.log('BOARD', 'BOARD_LOCKED_PHASE phase=roundOver');
                   }
                 }
                 // First stream delivery after game start: log initial revealDeadlineMs

@@ -70,6 +70,9 @@ class GameLayout extends StatelessWidget {
     final isGuessModeActive = room.turnPhase == TurnPhase.guessMode;
     final guessModePlayerName = room.players[room.guessModePlayerId]?.name ?? '';
 
+    // Answer slots are visible only when this player is actively guessing, or after round ends.
+    final showAnswerSlots = isMyGuessModeActive || room.turnPhase == TurnPhase.roundOver;
+
     return Column(
       children: [
         TopHud(
@@ -117,7 +120,16 @@ class GameLayout extends StatelessWidget {
             ),
           ),
         ),
-        AnswerSlots(answer: image?.answer ?? '', isMyTurn: isMyTurn),
+        Visibility(
+          visible: showAnswerSlots,
+          maintainSize: true,
+          maintainAnimation: true,
+          maintainState: true,
+          child: AnswerSlots(
+            answer: image?.answer ?? '',
+            isMyTurn: isMyGuessModeActive || isMyTurn,
+          ),
+        ),
         GameActions(
           isMyTurn: isMyTurn,
           isBusy: isBusy,
