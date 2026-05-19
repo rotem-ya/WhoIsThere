@@ -14,7 +14,7 @@ class AnswerSlots extends StatelessWidget {
     if (chars.isEmpty) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 6),
+      padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
       child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Row(
@@ -23,13 +23,13 @@ class AnswerSlots extends StatelessWidget {
           children: [
             for (final char in chars)
               if (char.trim().isEmpty)
-                const SizedBox(width: 12)
+                const SizedBox(width: 14)
               else
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 280),
                   curve: Curves.easeOut,
-                  width: 28,
-                  height: 34,
+                  width: 30,
+                  height: 38,
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   decoration: BoxDecoration(
                     color: isMyTurn

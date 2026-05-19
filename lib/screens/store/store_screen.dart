@@ -53,11 +53,11 @@ class StoreScreen extends ConsumerWidget {
                     children: [
                       // ── Starter Pack ──────────────────────────────────
                       _StarterPackCard(coins: coins),
-                      const SizedBox(height: AppSpacing.lg),
+                      const SizedBox(height: AppSpacing.md),
 
                       // ── Rewarded ad ───────────────────────────────────
                       _RewardedAdTile(ref: ref),
-                      const SizedBox(height: AppSpacing.lg),
+                      const SizedBox(height: AppSpacing.md),
 
                       // ── Hint packs ────────────────────────────────────
                       Text('רמזים', style: AppTextStyles.titleLight),
@@ -92,7 +92,7 @@ class StoreScreen extends ConsumerWidget {
 
                       // ── Premium images ────────────────────────────────
                       if (premiumImages.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.lg),
+                        const SizedBox(height: AppSpacing.md),
                         Text('חבילות פרמיום',
                             style: AppTextStyles.titleLight),
                         const SizedBox(height: AppSpacing.sm),
@@ -195,7 +195,7 @@ class _StarterPackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF1A1060), Color(0xFF0D0730)],

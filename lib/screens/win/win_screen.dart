@@ -113,7 +113,7 @@ class _WinScreenState extends ConsumerState<WinScreen>
         if (isWinner && !_cosmicFired) {
           _cosmicFired = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            Future.delayed(const Duration(milliseconds: 460), () {
+            Future.delayed(const Duration(milliseconds: 200), () {
               if (mounted) {
                 _confetti.play();
                 _burstController.forward();
@@ -150,15 +150,18 @@ class _WinScreenState extends ConsumerState<WinScreen>
                         Text(
                           isWinner ? 'ניצחון!' : 'המשחק נגמר',
                           textAlign: TextAlign.center,
-                          style: AppTextStyles.titleLight.copyWith(fontSize: 34),
+                          style: AppTextStyles.titleLight.copyWith(
+                            fontSize: isWinner ? 52 : 36,
+                            letterSpacing: isWinner ? -0.5 : 0,
+                          ),
                         )
                             .animate()
-                            .fadeIn(duration: 280.ms, curve: Curves.easeOut)
+                            .fadeIn(duration: 260.ms, curve: Curves.easeOut)
                             .scaleXY(
-                                begin: 0.96,
+                                begin: isWinner ? 0.82 : 0.94,
                                 end: 1.0,
-                                duration: 280.ms,
-                                curve: Curves.easeOut),
+                                duration: 340.ms,
+                                curve: Curves.easeOutBack),
 
                         const SizedBox(height: AppSpacing.sm),
 
@@ -467,16 +470,17 @@ class _TotalRewardBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
       decoration: BoxDecoration(
         color: const Color(0xFF12100A),
         borderRadius: BorderRadius.circular(16),
         border:
-            Border.all(color: AppColors.primary.withOpacity(0.36), width: 1),
+            Border.all(color: AppColors.primary.withOpacity(0.55), width: 1.4),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.18),
-            blurRadius: 22,
+            color: AppColors.primary.withOpacity(0.28),
+            blurRadius: 28,
+            spreadRadius: 1,
             offset: const Offset(0, 6),
           ),
         ],
@@ -543,7 +547,7 @@ class _TotalRewardBox extends StatelessWidget {
                     '+$displayed',
                     style: const TextStyle(
                       color: AppColors.primary,
-                      fontSize: 22,
+                      fontSize: 32,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0.5,
                     ),

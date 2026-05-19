@@ -31,8 +31,17 @@ class TopHud extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF07101F).withOpacity(0.82),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.30)),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 16, offset: const Offset(0, 7))],
+            border: Border.all(
+              color: isMyTurn
+                  ? const Color(0xFFD4AF37).withOpacity(0.72)
+                  : const Color(0xFF87CEEB).withOpacity(0.16),
+              width: isMyTurn ? 1.8 : 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 16, offset: const Offset(0, 7)),
+              if (isMyTurn)
+                BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.22), blurRadius: 18, spreadRadius: 1),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -110,14 +119,14 @@ class _TurnInfo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          isMyTurn ? 'התור שלי' : 'תור היריב',
+          isMyTurn ? '● התור שלי' : '● תור היריב',
           style: TextStyle(
             color: isMyTurn
-                ? const Color(0xFFD4AF37).withOpacity(0.75)
-                : const Color(0xFFFF6B35).withOpacity(0.80),
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.4,
+                ? const Color(0xFFD4AF37)
+                : const Color(0xFFFF6B35),
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.5,
             height: 1,
           ),
         ),
