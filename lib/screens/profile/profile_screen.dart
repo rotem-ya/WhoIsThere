@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
@@ -13,6 +14,7 @@ import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
+import '../../widgets/common/pressable_scale.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -68,7 +70,7 @@ class ProfileScreen extends ConsumerWidget {
                               name: user.name,
                               photoUrl: user.photoUrl,
                               radius: 50,
-                            ),
+                            ).animate().fadeIn(duration: 300.ms).scaleXY(begin: 0.93, duration: 300.ms, curve: Curves.easeOut),
                             const SizedBox(height: AppSpacing.md),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -112,13 +114,17 @@ class ProfileScreen extends ConsumerWidget {
                               child: _StatCard(
                                   label: 'נקודות',
                                   value: '${user.totalPoints}',
-                                  icon: Icons.star_rounded)),
+                                  icon: Icons.star_rounded)
+                                  .animate().fadeIn(delay: 60.ms, duration: 250.ms)
+                                  .scaleXY(begin: 0.96, delay: 60.ms, duration: 250.ms, curve: Curves.easeOut)),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
                               child: _StatCard(
                                   label: 'תמונות',
                                   value: '${user.purchasedImageIds.length}',
-                                  icon: Icons.image_rounded)),
+                                  icon: Icons.image_rounded)
+                                  .animate().fadeIn(delay: 110.ms, duration: 250.ms)
+                                  .scaleXY(begin: 0.96, delay: 110.ms, duration: 250.ms, curve: Curves.easeOut)),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -128,13 +134,17 @@ class ProfileScreen extends ConsumerWidget {
                               child: _StatCard(
                                   label: 'ערכות',
                                   value: '${user.purchasedThemeIds.length}',
-                                  icon: Icons.palette_rounded)),
+                                  icon: Icons.palette_rounded)
+                                  .animate().fadeIn(delay: 160.ms, duration: 250.ms)
+                                  .scaleXY(begin: 0.96, delay: 160.ms, duration: 250.ms, curve: Curves.easeOut)),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
                               child: _StatCard(
                                   label: 'ניצחון',
                                   value: '+10~40',
-                                  icon: Icons.emoji_events_rounded)),
+                                  icon: Icons.emoji_events_rounded)
+                                  .animate().fadeIn(delay: 210.ms, duration: 250.ms)
+                                  .scaleXY(begin: 0.96, delay: 210.ms, duration: 250.ms, curve: Curves.easeOut)),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.lg),
@@ -149,41 +159,65 @@ class ProfileScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.sm),
+                      // ── QA tools (inside scroll — no sticky overlap) ──
+                      TextButton.icon(
+                        onPressed: () async {
+                          await QaLoggerService.instance.copyToClipboard();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'הועתקו ${QaLoggerService.instance.eventCount} אירועים ללוחית'),
+                                duration: const Duration(seconds: 2),
+                                backgroundColor: Colors.green.shade800,
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.content_copy_rounded, size: 16),
+                        label: const Text('העתק לוג QA'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white38,
+                          textStyle: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      const Text(
+                        kBuildLabel,
+                        style: TextStyle(color: Colors.white24, fontSize: 10, letterSpacing: 0.5),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
                     ],
                   ),
                 ),
               ),
-              AppButton(
-                label: 'עבור לחנות',
-                icon: Icons.store_rounded,
-                onPressed: () => context.push('/store'),
-              ),
-              const SizedBox(height: 6),
-              TextButton.icon(
-                onPressed: () async {
-                  await QaLoggerService.instance.copyToClipboard();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            'הועתקו ${QaLoggerService.instance.eventCount} אירועים ללוחית'),
-                        duration: const Duration(seconds: 2),
-                        backgroundColor: Colors.green.shade800,
+              Stack(
+                children: [
+                  Positioned.fill(
+                    child: SoftPulse(
+                      minOpacity: 0.0,
+                      maxOpacity: 0.20,
+                      period: const Duration(milliseconds: 2800),
+                      child: const DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.all(Radius.circular(16)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0xFFD4AF37),
+                              blurRadius: 24,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
                       ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.content_copy_rounded, size: 16),
-                label: const Text('העתק לוג QA'),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.white38,
-                  textStyle: const TextStyle(fontSize: 12),
-                ),
-              ),
-              const SizedBox(height: 2),
-              const Text(
-                kBuildLabel,
-                style: TextStyle(color: Colors.white24, fontSize: 10, letterSpacing: 0.5),
+                    ),
+                  ),
+                  AppButton(
+                    label: 'עבור לחנות',
+                    icon: Icons.store_rounded,
+                    onPressed: () => context.push('/store'),
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
             ],

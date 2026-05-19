@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -13,6 +14,7 @@ import '../../services/hint_economy_guard.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/app_header.dart';
+import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/economy/coin_display.dart';
 
 class StoreScreen extends ConsumerWidget {
@@ -65,8 +67,8 @@ class StoreScreen extends ConsumerWidget {
                           Expanded(
                             child: _HintCard(
                               icon: Icons.lightbulb_outline_rounded,
-                              title: 'גלה משבצת',
-                              description: 'פתח חלק נסתר של התמונה',
+                              title: 'חשוף משבצת',
+                              description: 'חשוף אזור נסתר בתמונה',
                               price: EconomyConfig.hintRevealTilePrice,
                               coins: coins,
                               onBuy: () => _buyHint(
@@ -78,7 +80,7 @@ class StoreScreen extends ConsumerWidget {
                             child: _HintCard(
                               icon: Icons.casino_outlined,
                               title: 'ניחוש נוסף',
-                              description: 'קבל הזדמנות ניחוש נוספת',
+                              description: 'הזדמנות ניחוש נוספת',
                               price: EconomyConfig.hintExtraGuessPrice,
                               coins: coins,
                               onBuy: () => _buyHint(
@@ -108,7 +110,7 @@ class StoreScreen extends ConsumerWidget {
                                 crossAxisSpacing: AppSpacing.md,
                                 mainAxisSpacing: AppSpacing.md,
                                 childAspectRatio:
-                                    columns == 1 ? 1.35 : 0.78,
+                                    columns == 1 ? 1.65 : 1.05,
                               ),
                               itemCount: premiumImages.length,
                               itemBuilder: (context, index) {
@@ -133,7 +135,9 @@ class StoreScreen extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.lg),
                     ],
                   ),
-                );
+                )
+                    .animate()
+                    .fadeIn(duration: 320.ms, curve: Curves.easeOut);
               },
               loading: () => const Center(
                   child:
@@ -247,30 +251,35 @@ class _StarterPackCard extends StatelessWidget {
           _PackFeature(text: 'כל תמונות הפרמיום לחודש'),
           _PackFeature(text: 'הסרת פרסומות'),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+          PressableScale(
+            onTap: () {},
+            child: SizedBox(
+              width: double.infinity,
+              child: AbsorbPointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: FilledButton(
+                    onPressed: () {},
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      foregroundColor: const Color(0xFF07101F),
+                      textStyle: const TextStyle(
+                          fontSize: 17, fontWeight: FontWeight.w900),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    child: const Text('רכישה — 9.99₪'),
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: FilledButton(
-                onPressed: () {},
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  foregroundColor: const Color(0xFF07101F),
-                  textStyle: const TextStyle(
-                      fontSize: 17, fontWeight: FontWeight.w900),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                child: const Text('רכישה — 9.99₪'),
               ),
             ),
           ),
@@ -290,7 +299,7 @@ class _PackFeature extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_outline_rounded,
+          const Icon(Icons.check_circle_rounded,
               color: Color(0xFFD4AF37), size: 16),
           const SizedBox(width: 8),
           Text(
@@ -455,11 +464,16 @@ class _HintCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.subtitleDark),
           const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: canAfford ? onBuy : null,
-              child: Text('🪙 $price'),
+          PressableScale(
+            onTap: canAfford ? onBuy : null,
+            child: SizedBox(
+              width: double.infinity,
+              child: AbsorbPointer(
+                child: ElevatedButton(
+                  onPressed: canAfford ? onBuy : null,
+                  child: Text('🪙 $price'),
+                ),
+              ),
             ),
           ),
         ],

@@ -10,6 +10,7 @@ class AppColors {
   static const background = Color(0xFF07101F);
   static const darkBlue = Color(0xFF07101F);
   static const surface = Color(0xFFFFFFFF);
+  static const vaultSurface = Color(0xFF0C1624);
   static const error = Color(0xFFE53E3E);
 
   static const backgroundTop = Color(0xFF07101F);
