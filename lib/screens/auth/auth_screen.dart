@@ -12,6 +12,7 @@ import '../../services/qa_logger_service.dart';
 import '../../widgets/common/ambient_background.dart';
 import '../../widgets/common/app_logo.dart';
 import '../../widgets/common/gradient_button.dart';
+import '../../widgets/common/pressable_scale.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -256,10 +257,33 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         else ...[
                           // Step 5 — primary CTA
                           _step(
-                            GradientButton(
-                              text: 'כנס לזירה',
-                              onPressed: _signInAnonymously,
-                              height: 56,
+                            Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: SoftPulse(
+                                    minOpacity: 0.0,
+                                    maxOpacity: 0.26,
+                                    period: const Duration(milliseconds: 2600),
+                                    child: const DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.all(Radius.circular(999)),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Color(0xFFD4AF37),
+                                            blurRadius: 28,
+                                            spreadRadius: 2,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                GradientButton(
+                                  text: 'כנס לזירה',
+                                  onPressed: _signInAnonymously,
+                                  height: 56,
+                                ),
+                              ],
                             ),
                             delayMs: 480, durationMs: 300, dy: 8,
                           ),

@@ -14,6 +14,7 @@ import '../../services/hint_economy_guard.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/app_header.dart';
+import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/economy/coin_display.dart';
 
 class StoreScreen extends ConsumerWidget {
@@ -250,30 +251,35 @@ class _StarterPackCard extends StatelessWidget {
           _PackFeature(text: 'כל תמונות הפרמיום לחודש'),
           _PackFeature(text: 'הסרת פרסומות'),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+          PressableScale(
+            onTap: () {},
+            child: SizedBox(
+              width: double.infinity,
+              child: AbsorbPointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: FilledButton(
+                    onPressed: () {},
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      foregroundColor: const Color(0xFF07101F),
+                      textStyle: const TextStyle(
+                          fontSize: 17, fontWeight: FontWeight.w900),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    child: const Text('רכישה — 9.99₪'),
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: FilledButton(
-                onPressed: () {},
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  foregroundColor: const Color(0xFF07101F),
-                  textStyle: const TextStyle(
-                      fontSize: 17, fontWeight: FontWeight.w900),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                child: const Text('רכישה — 9.99₪'),
               ),
             ),
           ),
@@ -293,7 +299,7 @@ class _PackFeature extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_outline_rounded,
+          const Icon(Icons.check_circle_rounded,
               color: Color(0xFFD4AF37), size: 16),
           const SizedBox(width: 8),
           Text(
@@ -458,11 +464,16 @@ class _HintCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.subtitleDark),
           const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: canAfford ? onBuy : null,
-              child: Text('🪙 $price'),
+          PressableScale(
+            onTap: canAfford ? onBuy : null,
+            child: SizedBox(
+              width: double.infinity,
+              child: AbsorbPointer(
+                child: ElevatedButton(
+                  onPressed: canAfford ? onBuy : null,
+                  child: Text('🪙 $price'),
+                ),
+              ),
             ),
           ),
         ],

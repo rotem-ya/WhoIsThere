@@ -289,7 +289,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                     letterSpacing: 1.8,
                                   ),
                                 ),
-                                delayMs: 320, durationMs: 280,
+                                delayMs: 300, durationMs: 260,
                               ),
                               const SizedBox(height: 10),
                               _step(
@@ -301,7 +301,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   isLoading: _isCreating && _loadingPlayers == 2,
                                   onTap: _isCreating ? null : () => _startQuickGame(2),
                                 ),
-                                delayMs: 440, durationMs: 300, dy: 8,
+                                delayMs: 380, durationMs: 260, dy: 5,
                               ),
                               const SizedBox(height: 14),
                               _step(
@@ -326,7 +326,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                     ),
                                   ],
                                 ),
-                                delayMs: 540, durationMs: 280,
+                                delayMs: 450, durationMs: 240, dy: 5,
                               ),
                               SizedBox(height: verySmall ? 10 : 16),
                               _step(
@@ -334,14 +334,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   isLoading: _isCreating && _loadingPlayers == null,
                                   onTap: _isCreating ? null : _createPrivateRoom,
                                 ),
-                                delayMs: 640, durationMs: 260,
+                                delayMs: 520, durationMs: 240,
                               ),
                               const SizedBox(height: 10),
                               _step(
                                 _JoinRoomButton(
                                   onTap: _isCreating ? null : _showJoinDialog,
                                 ),
-                                delayMs: 720, durationMs: 260,
+                                delayMs: 590, durationMs: 240,
                               ),
                               SizedBox(height: verySmall ? 14 : compact ? 20 : 30),
                             ],
