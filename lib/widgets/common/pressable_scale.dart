@@ -9,7 +9,7 @@ class PressableScale extends StatefulWidget {
   const PressableScale({
     super.key,
     required this.child,
-    this.scale = 0.96,
+    this.scale = 0.93,
     this.onTap,
   });
 
@@ -35,7 +35,7 @@ class _PressableScaleState extends State<PressableScale> {
         scale: _pressed ? widget.scale : 1.0,
         duration: _pressed
             ? const Duration(milliseconds: 90)
-            : const Duration(milliseconds: 140),
+            : const Duration(milliseconds: 100),
         curve: Curves.easeOut,
         child: widget.child,
       ),

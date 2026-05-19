@@ -996,8 +996,9 @@ class _HomeHeroPeekGrid extends StatefulWidget {
 }
 
 class _HomeHeroPeekGridState extends State<_HomeHeroPeekGrid>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _breath;
+  late final AnimationController _float;
 
   // Tile indices where the image shows through
   static const Set<int> _open = {1, 3, 7};
@@ -1013,11 +1014,16 @@ class _HomeHeroPeekGridState extends State<_HomeHeroPeekGrid>
       vsync: this,
       duration: const Duration(milliseconds: 2700),
     )..repeat(reverse: true);
+    _float = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3500),
+    )..repeat(reverse: true);
   }
 
   @override
   void dispose() {
     _breath.dispose();
+    _float.dispose();
     super.dispose();
   }
 
@@ -1027,9 +1033,15 @@ class _HomeHeroPeekGridState extends State<_HomeHeroPeekGrid>
     final r = s * 0.115;
     final gap = s * 0.030;
 
-    return Container(
-      width: s,
-      height: s,
+    return AnimatedBuilder(
+      animation: _float,
+      builder: (_, child) => Transform.translate(
+        offset: Offset(0, -5.0 + 10.0 * Curves.easeInOut.transform(_float.value)),
+        child: child,
+      ),
+      child: Container(
+        width: s,
+        height: s,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(r),
         border: Border.all(
@@ -1088,6 +1100,7 @@ class _HomeHeroPeekGridState extends State<_HomeHeroPeekGrid>
           ],
         ),
       ),
+    ),
     );
   }
 

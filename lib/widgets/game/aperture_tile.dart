@@ -17,13 +17,18 @@ class ApertureTile extends StatefulWidget {
   State<ApertureTile> createState() => _ApertureTileState();
 }
 
-class _ApertureTileState extends State<ApertureTile> with SingleTickerProviderStateMixin {
+class _ApertureTileState extends State<ApertureTile> with TickerProviderStateMixin {
   static const Color kGold = Color(0xFFD4AF37);
   static const Color kNavy = Color(0xFF07101F);
   static const Color kCyan = Color(0xFF00F2FF);
 
   late final AnimationController _controller;
   late final Animation<double> _animation;
+
+  // Reveal impact: scale punch + cyan flash
+  late final AnimationController _punch;
+  late final Animation<double> _punchScale;
+  late final Animation<double> _punchFlash;
 
   @override
   void initState() {
@@ -37,6 +42,27 @@ class _ApertureTileState extends State<ApertureTile> with SingleTickerProviderSt
       curve: Curves.easeInOutCubic,
     );
 
+    _punch = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+    _punchScale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.045)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 35,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.045, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 65,
+      ),
+    ]).animate(_punch);
+    _punchFlash = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.35), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 0.35, end: 0.0), weight: 70),
+    ]).animate(_punch);
+
     if (widget.isRevealed) {
       _controller.value = 1.0;
     }
@@ -49,6 +75,7 @@ class _ApertureTileState extends State<ApertureTile> with SingleTickerProviderSt
     if (widget.isRevealed != oldWidget.isRevealed) {
       if (widget.isRevealed) {
         _controller.forward(from: 0.0);
+        _punch.forward(from: 0.0);
       } else {
         _controller.reverse();
       }
@@ -58,90 +85,106 @@ class _ApertureTileState extends State<ApertureTile> with SingleTickerProviderSt
   @override
   void dispose() {
     _controller.dispose();
+    _punch.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: widget.isFocused ? kCyan : kGold.withOpacity(0.4),
-          width: widget.isFocused ? 2.0 : 1.2,
+    return ScaleTransition(
+      scale: _punchScale,
+      child: Container(
+        margin: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: widget.isFocused ? kCyan : kGold.withOpacity(0.4),
+            width: widget.isFocused ? 2.0 : 1.2,
+          ),
         ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            widget.child,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              widget.child,
 
-            // Iris aperture overlay
-            AnimatedBuilder(
-              animation: _animation,
-              builder: (context, _) {
-                if (_animation.value >= 0.99) return const SizedBox.shrink();
+              // Iris aperture overlay
+              AnimatedBuilder(
+                animation: _animation,
+                builder: (context, _) {
+                  if (_animation.value >= 0.99) return const SizedBox.shrink();
 
-                return CustomPaint(
-                  painter: ApertureIrisPainter(
-                    progress: _animation.value,
-                  ),
-                );
-              },
-            ),
+                  return CustomPaint(
+                    painter: ApertureIrisPainter(
+                      progress: _animation.value,
+                    ),
+                  );
+                },
+              ),
 
-            // Light leak glow when fully open
-            AnimatedBuilder(
-              animation: _animation,
-              builder: (context, _) {
-                final glowOpacity = ((_animation.value - 0.85) / 0.15).clamp(0.0, 1.0);
-                if (glowOpacity <= 0) return const SizedBox.shrink();
+              // Light leak glow when fully open
+              AnimatedBuilder(
+                animation: _animation,
+                builder: (context, _) {
+                  final glowOpacity = ((_animation.value - 0.85) / 0.15).clamp(0.0, 1.0);
+                  if (glowOpacity <= 0) return const SizedBox.shrink();
 
-                return Opacity(
-                  opacity: glowOpacity * 0.35,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: RadialGradient(
-                        colors: [
-                          Colors.white,
-                          Colors.white.withOpacity(0.0),
-                        ],
-                        stops: const [0.0, 1.0],
-                        radius: 0.6,
+                  return Opacity(
+                    opacity: glowOpacity * 0.35,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          colors: [
+                            Colors.white,
+                            Colors.white.withOpacity(0.0),
+                          ],
+                          stops: const [0.0, 1.0],
+                          radius: 0.6,
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
 
-            // Lock icon fades out at start of animation
-            AnimatedBuilder(
-              animation: _animation,
-              builder: (context, _) {
-                final lockOpacity = (1.0 - _animation.value * 4.0).clamp(0.0, 1.0);
-                if (lockOpacity <= 0) return const SizedBox.shrink();
+              // Lock icon fades out at start of animation
+              AnimatedBuilder(
+                animation: _animation,
+                builder: (context, _) {
+                  final lockOpacity = (1.0 - _animation.value * 4.0).clamp(0.0, 1.0);
+                  if (lockOpacity <= 0) return const SizedBox.shrink();
 
-                return Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: kNavy.withOpacity(0.5),
+                  return Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: kNavy.withOpacity(0.5),
+                      ),
+                      child: const Icon(
+                        Icons.lock_outline_rounded,
+                        color: kGold,
+                        size: 22,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.lock_outline_rounded,
-                      color: kGold,
-                      size: 22,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
+                  );
+                },
+              ),
+
+              // Cyan impact flash on reveal
+              AnimatedBuilder(
+                animation: _punch,
+                builder: (_, __) {
+                  final opacity = _punchFlash.value;
+                  if (opacity <= 0) return const SizedBox.shrink();
+                  return ColoredBox(
+                    color: kCyan.withOpacity(opacity),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

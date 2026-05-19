@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/economy_config.dart';
+import '../../../widgets/common/pressable_scale.dart';
 import '../../../providers/providers.dart';
 import '../../../services/feedback_service.dart';
 import '../../../services/hint_economy_guard.dart';
@@ -116,7 +117,7 @@ class _HintButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return PressableScale(
       onTap: onTap == null
           ? null
           : () {
@@ -181,7 +182,7 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasReward = reward != null;
 
-    return GestureDetector(
+    return PressableScale(
       onTap: onTap == null
           ? null
           : () {

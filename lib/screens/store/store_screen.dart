@@ -253,31 +253,60 @@ class _StarterPackCard extends StatelessWidget {
           const SizedBox(height: 16),
           PressableScale(
             onTap: () {},
-            child: SizedBox(
-              width: double.infinity,
-              child: AbsorbPointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: FilledButton(
-                    onPressed: () {},
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      foregroundColor: const Color(0xFF07101F),
-                      textStyle: const TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w900),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                      minimumSize: const Size.fromHeight(48),
-                    ),
-                    child: const Text('רכישה — 9.99₪'),
+            child: AbsorbPointer(
+              child: SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Center(
+                        child: Text(
+                          'רכישה — 9.99₪',
+                          style: TextStyle(
+                            color: Color(0xFF07101F),
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          widthFactor: 0.28,
+                          heightFactor: 1.0,
+                          child: Transform.rotate(
+                            angle: -0.30,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.white.withOpacity(0),
+                                    Colors.white.withOpacity(0.20),
+                                    Colors.white.withOpacity(0),
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ).animate(onPlay: (c) => c.repeat())
+                       .slideX(begin: -1.6, end: 1.6, delay: 2800.ms, duration: 1200.ms),
+                    ],
                   ),
                 ),
               ),
