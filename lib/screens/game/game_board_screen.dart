@@ -583,12 +583,26 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final image = _image;
     if (image == null) return;
 
-    // Transition from guessOpportunity → guessMode before opening dialog.
-    final entered = await ref.read(roomServiceProvider).enterGuessMode(
-      roomId: room.id,
-      userId: userId,
-    );
-    if (!entered || !mounted) return;
+    QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED phase=${room.turnPhase.name}');
+
+    // If already in guessMode (e.g. re-opened after dialog dismiss), skip enterGuessMode.
+    final alreadyInGuessMode = room.turnPhase == TurnPhase.guessMode &&
+        room.guessModePlayerId == userId;
+
+    if (!alreadyInGuessMode) {
+      // Transition from guessOpportunity → guessMode before opening dialog.
+      final entered = await ref.read(roomServiceProvider).enterGuessMode(
+        roomId: room.id,
+        userId: userId,
+      );
+      if (!entered) {
+        QaLoggerService.instance.log('GUESS', 'ENTER_GUESS_MODE_REJECTED phase=${room.turnPhase.name}');
+        return;
+      }
+      QaLoggerService.instance.log('GUESS', 'ENTER_GUESS_MODE_SUCCESS');
+    }
+
+    if (!mounted) return;
 
     await showDialog<void>(
       context: context,
@@ -829,6 +843,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                         ? room.guessOpportunityDeadlineMs! - DateTime.now().millisecondsSinceEpoch
                         : -1;
                     QaLoggerService.instance.log('TURN', 'GUESS_OPPORTUNITY_STARTED oppId=$shortOppId msLeft=$msLeft');
+                    if (currentUserId != null && room.guessOpportunityPlayerId == currentUserId) {
+                      QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_VISIBLE msLeft=$msLeft');
+                    }
                   }
 
                   if (room.turnPhase == TurnPhase.guessMode) {
@@ -985,6 +1002,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       ? null
                       : () => _useRevealHint(room, currentUserId),
                   onGuess: canGuessNow ? () => _openGuessDialog(room, currentUserId!) : null,
+                  onGuessMode: (currentUserId != null &&
+                          room.turnPhase == TurnPhase.guessMode &&
+                          room.guessModePlayerId == currentUserId)
+                      ? () => _openGuessDialog(room, currentUserId!)
+                      : null,
                   onSkip: canGuessNow ? () => _skipTurn(room) : null,
                 );
               },

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/game_constants.dart';
@@ -28,6 +29,7 @@ class GameLayout extends StatelessWidget {
   final void Function(int)? onReveal;
   final VoidCallback? onRevealHint;
   final VoidCallback? onGuess;
+  final VoidCallback? onGuessMode;
   final VoidCallback? onSkip;
 
   const GameLayout({
@@ -47,6 +49,7 @@ class GameLayout extends StatelessWidget {
     required this.onReveal,
     required this.onRevealHint,
     required this.onGuess,
+    required this.onGuessMode,
     required this.onSkip,
   });
 
@@ -63,6 +66,9 @@ class GameLayout extends StatelessWidget {
     final isMyGuessModeActive = currentUserId != null &&
         room.turnPhase == TurnPhase.guessMode &&
         room.guessModePlayerId == currentUserId;
+
+    final isGuessModeActive = room.turnPhase == TurnPhase.guessMode;
+    final guessModePlayerName = room.players[room.guessModePlayerId]?.name ?? '';
 
     return Column(
       children: [
@@ -83,6 +89,13 @@ class GameLayout extends StatelessWidget {
           guessOpportunityDeadlineMs: room.guessOpportunityDeadlineMs,
           guessModeDeadlineMs: room.guessModeDeadlineMs,
         ),
+        if (kDebugMode)
+          _DebugPhaseBadge(
+            turnPhase: room.turnPhase,
+            guessOpportunityPlayerId: room.guessOpportunityPlayerId,
+            guessModePlayerId: room.guessModePlayerId,
+            currentUserId: currentUserId,
+          ),
         if (showBotTyping)
           BotTypingBanner(botName: botTypingName, typedSoFar: botTypingText)
         else if (showBanner && bannerEvent != null)
@@ -112,11 +125,55 @@ class GameLayout extends StatelessWidget {
           isSolo: isSolo,
           revealedCount: revealedCount,
           totalTiles: total,
+          isGuessModeActive: isGuessModeActive,
+          isMyGuessModeActive: isMyGuessModeActive,
+          guessModePlayerName: guessModePlayerName,
           onRevealHint: onRevealHint,
           onGuess: onGuess,
+          onGuessMode: onGuessMode,
           onSkip: onSkip,
         ),
       ],
+    );
+  }
+}
+
+class _DebugPhaseBadge extends StatelessWidget {
+  final TurnPhase turnPhase;
+  final String? guessOpportunityPlayerId;
+  final String? guessModePlayerId;
+  final String? currentUserId;
+
+  const _DebugPhaseBadge({
+    required this.turnPhase,
+    required this.guessOpportunityPlayerId,
+    required this.guessModePlayerId,
+    required this.currentUserId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    String detail = '';
+    if (turnPhase == TurnPhase.guessOpportunity && guessOpportunityPlayerId != null) {
+      final id = guessOpportunityPlayerId!;
+      final short = id.length > 6 ? id.substring(0, 6) : id;
+      final isMe = id == currentUserId;
+      detail = ' opp=$short${isMe ? '(ME)' : ''}';
+    } else if (turnPhase == TurnPhase.guessMode && guessModePlayerId != null) {
+      final id = guessModePlayerId!;
+      final short = id.length > 6 ? id.substring(0, 6) : id;
+      final isMe = id == currentUserId;
+      detail = ' guesser=$short${isMe ? '(ME)' : ''}';
+    }
+
+    return Container(
+      width: double.infinity,
+      color: Colors.black54,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      child: Text(
+        '[DBG] turnPhase=${turnPhase.name}$detail',
+        style: const TextStyle(color: Color(0xFFFFE082), fontSize: 10, fontFamily: 'monospace'),
+      ),
     );
   }
 }

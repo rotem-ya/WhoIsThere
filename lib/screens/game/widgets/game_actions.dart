@@ -15,8 +15,13 @@ class GameActions extends ConsumerWidget {
   final bool isSolo;
   final int revealedCount;
   final int totalTiles;
+  // Phase B2: guess mode state
+  final bool isGuessModeActive;
+  final bool isMyGuessModeActive;
+  final String guessModePlayerName;
   final VoidCallback? onRevealHint;
   final VoidCallback? onGuess;
+  final VoidCallback? onGuessMode;
   final VoidCallback? onSkip;
 
   const GameActions({
@@ -26,8 +31,12 @@ class GameActions extends ConsumerWidget {
     required this.isSolo,
     required this.revealedCount,
     required this.totalTiles,
+    required this.isGuessModeActive,
+    required this.isMyGuessModeActive,
+    required this.guessModePlayerName,
     required this.onRevealHint,
     required this.onGuess,
+    required this.onGuessMode,
     required this.onSkip,
   });
 
@@ -47,6 +56,33 @@ class GameActions extends ConsumerWidget {
         guard != null &&
         guard.canAfford(wallet, HintType.revealTile);
 
+    // Primary button label driven by state machine phase
+    final String primaryLabel;
+    if (isMyGuessModeActive) {
+      primaryLabel = 'הזן תשובה';
+    } else if (canGuessNow) {
+      primaryLabel = 'נחש עכשיו!';
+    } else if (isGuessModeActive) {
+      final name = guessModePlayerName.isEmpty ? 'יריב' : guessModePlayerName;
+      primaryLabel = '$name מנחש!';
+    } else if (isMyTurn) {
+      primaryLabel = 'בחר משבצת';
+    } else {
+      primaryLabel = 'ממתין לתור';
+    }
+
+    final primaryIsActive =
+        isMyGuessModeActive || guessActive || (isMyTurn && !canGuessNow && !isGuessModeActive);
+    final primaryGlow = guessActive || isMyGuessModeActive;
+    final primaryOnTap = isMyGuessModeActive
+        ? onGuessMode
+        : guessActive
+            ? onGuess
+            : null;
+
+    // Show reward chip on the guess opportunity CTA only
+    final showReward = canGuessNow && prize != null;
+
     return SafeArea(
       top: false,
       child: Padding(
@@ -61,16 +97,12 @@ class GameActions extends ConsumerWidget {
                   Expanded(
                     flex: 7,
                     child: _ActionButton(
-                      label: canGuessNow
-                          ? 'נחש'
-                          : isMyTurn
-                              ? 'בחר משבצת'
-                              : 'ממתין לתור',
+                      label: primaryLabel,
                       isPrimary: true,
-                      isActive: guessActive || (isMyTurn && !canGuessNow),
-                      glow: guessActive,
-                      onTap: guessActive ? onGuess : null,
-                      reward: canGuessNow ? prize : null,
+                      isActive: primaryIsActive,
+                      glow: primaryGlow,
+                      onTap: primaryOnTap,
+                      reward: showReward ? prize : null,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -229,14 +261,15 @@ class _ActionButton extends StatelessWidget {
                     : [],
           ),
           child: Center(
-            child: isPrimary && label == 'נחש' && hasReward
+            child: isPrimary && hasReward
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'נחש',
-                        style: TextStyle(
+                      Text(
+                        label,
+                        textDirection: TextDirection.rtl,
+                        style: const TextStyle(
                           color: Color(0xFF07101F),
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
