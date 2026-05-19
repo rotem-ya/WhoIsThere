@@ -138,6 +138,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   bool _gameScreenLogged = false;
   bool _gameDataLogged = false;
   GamePhase? _lastKnownPhase;
+  TurnPhase? _lastKnownTurnPhase;
+  int? _lastKnownRevealDeadlineMs; // detect first revealDeadlineMs (game start)
 
   // Economy
   bool _rewardApplied = false;
@@ -752,18 +754,59 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 if (!_gameScreenLogged) {
                   _gameScreenLogged = true;
                   final shortId = room.id.substring(0, room.id.length.clamp(0, 6));
-                  QaLoggerService.instance.log('GAME', 'GAME_SCREEN_OPENED code=${room.code} id=$shortId players=${room.players.length} phase=${room.phase.name}');
+                  QaLoggerService.instance.log('GAME', 'GAME_SCREEN_OPENED code=${room.code} id=$shortId players=${room.players.length} phase=${room.phase.name} turnPhase=${room.turnPhase.name}');
                 }
                 if (!_gameDataLogged) {
                   _gameDataLogged = true;
                   final turnName = room.players[room.currentTurnUserId]?.name ?? room.currentTurnUserId?.substring(0, (room.currentTurnUserId ?? '').length.clamp(0, 6)) ?? 'none';
-                  QaLoggerService.instance.log('GAME', 'GAME_ROOM_DATA phase=${room.phase.name} turn=$turnName revealed=${room.placedPieces.length}');
+                  QaLoggerService.instance.log('GAME', 'GAME_ROOM_DATA phase=${room.phase.name} turnPhase=${room.turnPhase.name} turn=$turnName revealed=${room.placedPieces.length}');
                 }
 
                 if (_lastKnownPhase != null && _lastKnownPhase != room.phase) {
                   QaLoggerService.instance.log('GAME', 'GAME_PHASE_CHANGED from=${_lastKnownPhase!.name} to=${room.phase.name}');
                 }
                 _lastKnownPhase = room.phase;
+
+                // TurnPhase change detection — fires on every stream update after first
+                if (_lastKnownTurnPhase != null && _lastKnownTurnPhase != room.turnPhase) {
+                  QaLoggerService.instance.log('TURN', 'TURN_PHASE_CHANGED from=${_lastKnownTurnPhase!.name} to=${room.turnPhase.name}');
+
+                  if (room.turnPhase == TurnPhase.guessOpportunity) {
+                    final oppId = room.guessOpportunityPlayerId ?? 'null';
+                    final shortOppId = oppId.length > 6 ? oppId.substring(0, 6) : oppId;
+                    final msLeft = room.guessOpportunityDeadlineMs != null
+                        ? room.guessOpportunityDeadlineMs! - DateTime.now().millisecondsSinceEpoch
+                        : -1;
+                    QaLoggerService.instance.log('TURN', 'GUESS_OPPORTUNITY_STARTED oppId=$shortOppId msLeft=$msLeft');
+                  }
+
+                  if (room.turnPhase == TurnPhase.guessMode) {
+                    final guesserId = room.guessModePlayerId ?? 'null';
+                    final shortGuesserId = guesserId.length > 6 ? guesserId.substring(0, 6) : guesserId;
+                    final msLeft = room.guessModeDeadlineMs != null
+                        ? room.guessModeDeadlineMs! - DateTime.now().millisecondsSinceEpoch
+                        : -1;
+                    QaLoggerService.instance.log('TURN', 'GUESS_MODE_STARTED guesserId=$shortGuesserId msLeft=$msLeft');
+                  }
+
+                  if (room.turnPhase == TurnPhase.revealTurn) {
+                    final turnId = room.currentTurnUserId ?? 'null';
+                    final shortTurnId = turnId.length > 6 ? turnId.substring(0, 6) : turnId;
+                    final msLeft = room.revealDeadlineMs != null
+                        ? room.revealDeadlineMs! - DateTime.now().millisecondsSinceEpoch
+                        : -1;
+                    QaLoggerService.instance.log('TURN', 'REVEAL_DEADLINE_SET turnId=$shortTurnId msLeft=$msLeft');
+                  }
+                }
+                // First stream delivery after game start: log initial revealDeadlineMs
+                if (_lastKnownRevealDeadlineMs == null && room.revealDeadlineMs != null) {
+                  final turnId = room.currentTurnUserId ?? 'null';
+                  final shortTurnId = turnId.length > 6 ? turnId.substring(0, 6) : turnId;
+                  final msLeft = room.revealDeadlineMs! - DateTime.now().millisecondsSinceEpoch;
+                  QaLoggerService.instance.log('TURN', 'REVEAL_DEADLINE_SET turnId=$shortTurnId msLeft=$msLeft');
+                  _lastKnownRevealDeadlineMs = room.revealDeadlineMs;
+                }
+                _lastKnownTurnPhase = room.turnPhase;
 
                 if (room.imageId.isNotEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) => _loadImage(room.imageId));
