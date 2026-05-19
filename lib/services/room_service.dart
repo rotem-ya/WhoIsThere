@@ -509,6 +509,30 @@ class RoomService {
     });
   }
 
+  /// Called when the guess opportunity timer expires without anyone entering guess mode.
+  /// Advances the turn and resets to revealTurn.
+  Future<void> expireGuessOpportunity({required String roomId}) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    await _firestore.runTransaction((tx) async {
+      final doc = await tx.get(_rooms.doc(roomId));
+      if (!doc.exists) return;
+      final room = RoomModel.fromFirestore(doc);
+
+      if (room.turnPhase != TurnPhase.guessOpportunity) return;
+      final deadline = room.guessOpportunityDeadlineMs;
+      if (deadline == null || now < deadline) return;
+
+      tx.update(_rooms.doc(roomId), {
+        'currentTurnIndex': room.currentTurnIndex + 1,
+        'turnPhase': TurnPhase.revealTurn.name,
+        'revealDeadlineMs': now + 8000,
+        'guessOpportunityPlayerId': null,
+        'guessOpportunityDeadlineMs': null,
+      });
+    });
+  }
+
   /// Called when the guess mode timer expires without a submission.
   /// Applies a penalty (Phase D), advances the turn, resets to revealTurn.
   Future<void> expireGuessMode({required String roomId}) async {

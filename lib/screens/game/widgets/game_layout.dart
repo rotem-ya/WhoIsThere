@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/game_constants.dart';
 import '../../../models/game_image_model.dart';
 import '../../../models/room_model.dart';
 import 'answer_slots.dart';
@@ -11,6 +14,7 @@ import 'game_top_hud.dart';
 class GameLayout extends StatelessWidget {
   final RoomModel room;
   final GameImageModel? image;
+  final String? currentUserId;
   final bool isMyTurn;
   final bool isBusy;
   final bool canGuessNow;
@@ -29,6 +33,7 @@ class GameLayout extends StatelessWidget {
   const GameLayout({
     required this.room,
     required this.image,
+    required this.currentUserId,
     required this.isMyTurn,
     required this.isBusy,
     required this.canGuessNow,
@@ -51,6 +56,14 @@ class GameLayout extends StatelessWidget {
     final revealedCount = room.placedPieces.length;
     final total = room.gridSize * room.gridSize;
 
+    final isMyGuessOpportunity = currentUserId != null &&
+        room.turnPhase == TurnPhase.guessOpportunity &&
+        room.guessOpportunityPlayerId == currentUserId;
+
+    final isMyGuessModeActive = currentUserId != null &&
+        room.turnPhase == TurnPhase.guessMode &&
+        room.guessModePlayerId == currentUserId;
+
     return Column(
       children: [
         TopHud(
@@ -60,6 +73,15 @@ class GameLayout extends StatelessWidget {
           revealedText: '$revealedCount/$total',
           onBack: onBack,
           isMyTurn: isMyTurn,
+          turnPhase: room.turnPhase,
+          isMyGuessOpportunity: isMyGuessOpportunity,
+          isMyGuessModeActive: isMyGuessModeActive,
+        ),
+        _TurnPhaseCountdownBar(
+          turnPhase: room.turnPhase,
+          revealDeadlineMs: room.revealDeadlineMs,
+          guessOpportunityDeadlineMs: room.guessOpportunityDeadlineMs,
+          guessModeDeadlineMs: room.guessModeDeadlineMs,
         ),
         if (showBotTyping)
           BotTypingBanner(botName: botTypingName, typedSoFar: botTypingText)
@@ -95,6 +117,105 @@ class GameLayout extends StatelessWidget {
           onSkip: onSkip,
         ),
       ],
+    );
+  }
+}
+
+// Isolated countdown bar — has its own 1s timer so only this widget rebuilds per-second.
+class _TurnPhaseCountdownBar extends StatefulWidget {
+  final TurnPhase turnPhase;
+  final int? revealDeadlineMs;
+  final int? guessOpportunityDeadlineMs;
+  final int? guessModeDeadlineMs;
+
+  const _TurnPhaseCountdownBar({
+    required this.turnPhase,
+    this.revealDeadlineMs,
+    this.guessOpportunityDeadlineMs,
+    this.guessModeDeadlineMs,
+  });
+
+  @override
+  State<_TurnPhaseCountdownBar> createState() => _TurnPhaseCountdownBarState();
+}
+
+class _TurnPhaseCountdownBarState extends State<_TurnPhaseCountdownBar> {
+  Timer? _t;
+  int _nowMs = DateTime.now().millisecondsSinceEpoch;
+
+  @override
+  void initState() {
+    super.initState();
+    _t = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _nowMs = DateTime.now().millisecondsSinceEpoch);
+    });
+  }
+
+  @override
+  void dispose() {
+    _t?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    int? deadlineMs;
+    int totalMs;
+    Color barColor;
+
+    switch (widget.turnPhase) {
+      case TurnPhase.revealTurn:
+        deadlineMs = widget.revealDeadlineMs;
+        totalMs = 8000;
+        barColor = const Color(0xFF87CEEB); // cyan
+      case TurnPhase.guessOpportunity:
+        deadlineMs = widget.guessOpportunityDeadlineMs;
+        totalMs = 7000;
+        barColor = const Color(0xFFD4AF37); // gold
+      case TurnPhase.guessMode:
+        deadlineMs = widget.guessModeDeadlineMs;
+        totalMs = 20000;
+        barColor = const Color(0xFFFF6B35); // orange
+      default:
+        return const SizedBox(height: 3);
+    }
+
+    if (deadlineMs == null) return const SizedBox(height: 3);
+
+    final remainingMs = (deadlineMs - _nowMs).clamp(0, totalMs);
+    final fraction = remainingMs / totalMs;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        return SizedBox(
+          height: 3,
+          child: Stack(
+            children: [
+              // Track
+              Container(
+                width: maxWidth,
+                height: 3,
+                color: Colors.white.withOpacity(0.06),
+              ),
+              // Fill — AnimatedContainer gives smooth linear shrink between 1s ticks
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 900),
+                curve: Curves.linear,
+                width: maxWidth * fraction,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: barColor,
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(2),
+                    bottomRight: Radius.circular(2),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

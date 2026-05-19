@@ -141,6 +141,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   TurnPhase? _lastKnownTurnPhase;
   int? _lastKnownRevealDeadlineMs; // detect first revealDeadlineMs (game start)
 
+  // Passive expiry detection — updated each build, read by _expiryTimer
+  RoomModel? _latestRoom;
+  String? _currentUserIdForTimer;
+  Timer? _expiryTimer;
+
   // Economy
   bool _rewardApplied = false;
   DateTime? _gameStartTime;
@@ -170,6 +175,51 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     unawaited(_primeGuessSounds());
     final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
     QaLoggerService.instance.log('GAME', 'GAME_INIT roomId=$shortId');
+    _startExpiryTimer();
+  }
+
+  void _startExpiryTimer() {
+    _expiryTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      final room = _latestRoom;
+      final uid = _currentUserIdForTimer;
+      if (room == null || room.phase != GamePhase.playing) return;
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+
+      // Reveal turn timeout: only the current turn player drives this transition.
+      if (room.turnPhase == TurnPhase.revealTurn &&
+          room.revealDeadlineMs != null &&
+          now >= room.revealDeadlineMs! &&
+          uid != null &&
+          room.currentTurnUserId == uid) {
+        QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_EXPIRED');
+        ref.read(roomServiceProvider).advanceTurnOnTimeout(
+          roomId: room.id,
+          userId: uid,
+        ).ignore();
+      }
+
+      // Guess opportunity timeout: any client may call; transaction prevents double-execution.
+      if (room.turnPhase == TurnPhase.guessOpportunity &&
+          room.guessOpportunityDeadlineMs != null &&
+          now >= room.guessOpportunityDeadlineMs!) {
+        QaLoggerService.instance.log('TURN', 'GUESS_OPPORTUNITY_TIMER_EXPIRED');
+        ref.read(roomServiceProvider).expireGuessOpportunity(
+          roomId: room.id,
+        ).ignore();
+      }
+
+      // Guess mode timeout: any client may call; transaction prevents double-execution.
+      if (room.turnPhase == TurnPhase.guessMode &&
+          room.guessModeDeadlineMs != null &&
+          now >= room.guessModeDeadlineMs!) {
+        QaLoggerService.instance.log('TURN', 'GUESS_MODE_TIMER_EXPIRED');
+        ref.read(roomServiceProvider).expireGuessMode(
+          roomId: room.id,
+        ).ignore();
+      }
+    });
   }
 
   @override
@@ -198,6 +248,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   void dispose() {
     final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
     QaLoggerService.instance.log('GAME', 'GAME_DISPOSE roomId=$shortId lastPhase=${_lastKnownPhase?.name ?? 'unknown'}');
+    _expiryTimer?.cancel();
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
@@ -849,6 +900,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   );
                 }
 
+                // Cache room + userId for the expiry timer (no setState needed)
+                _latestRoom = room;
+                _currentUserIdForTimer = currentUserId;
+
                 _scheduleBotTurn(room);
                 _syncMusicVolume(room);
 
@@ -900,6 +955,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 return GameLayout(
                   room: room,
                   image: _image,
+                  currentUserId: currentUserId,
                   isMyTurn: isMyTurn,
                   isBusy: _isBusy,
                   canGuessNow: canGuessNow,

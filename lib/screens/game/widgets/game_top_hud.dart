@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/game_constants.dart';
 import '../../../models/player_model.dart';
 import '../../../widgets/economy/coin_display.dart';
 
@@ -10,6 +11,9 @@ class TopHud extends StatelessWidget {
   final String revealedText;
   final VoidCallback onBack;
   final bool isMyTurn;
+  final TurnPhase turnPhase;
+  final bool isMyGuessOpportunity;
+  final bool isMyGuessModeActive;
 
   const TopHud({
     required this.players,
@@ -18,6 +22,9 @@ class TopHud extends StatelessWidget {
     required this.revealedText,
     required this.onBack,
     required this.isMyTurn,
+    required this.turnPhase,
+    required this.isMyGuessOpportunity,
+    required this.isMyGuessModeActive,
   });
 
   @override
@@ -41,7 +48,16 @@ class TopHud extends StatelessWidget {
                 children: [
                   _BackButton(onTap: onBack),
                   const SizedBox(width: 8),
-                  Expanded(child: _TurnInfo(name: currentPlayerName, revealedText: revealedText, isMyTurn: isMyTurn)),
+                  Expanded(
+                    child: _TurnInfo(
+                      name: currentPlayerName,
+                      revealedText: revealedText,
+                      isMyTurn: isMyTurn,
+                      turnPhase: turnPhase,
+                      isMyGuessOpportunity: isMyGuessOpportunity,
+                      isMyGuessModeActive: isMyGuessModeActive,
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   const CoinDisplay(compact: true),
                 ],
@@ -96,32 +112,70 @@ class _TurnInfo extends StatelessWidget {
   final String name;
   final String revealedText;
   final bool isMyTurn;
-  const _TurnInfo({required this.name, required this.revealedText, required this.isMyTurn});
+  final TurnPhase turnPhase;
+  final bool isMyGuessOpportunity;
+  final bool isMyGuessModeActive;
+
+  const _TurnInfo({
+    required this.name,
+    required this.revealedText,
+    required this.isMyTurn,
+    required this.turnPhase,
+    required this.isMyGuessOpportunity,
+    required this.isMyGuessModeActive,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final (label, labelColor) = _phaseLabel();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          isMyTurn ? 'התור שלי' : 'תור היריב',
+          label,
           style: TextStyle(
-            color: isMyTurn
-                ? const Color(0xFFD4AF37).withOpacity(0.9)
-                : const Color(0xFFFF6B35).withOpacity(0.95),
+            color: labelColor,
             fontSize: 11,
             fontWeight: FontWeight.w900,
             height: 1,
           ),
         ),
         const SizedBox(height: 3),
-        Text(name.isEmpty ? 'ממתין לשחקן' : name, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1)),
+        Text(
+          name.isEmpty ? 'ממתין לשחקן' : name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1),
+        ),
         const SizedBox(height: 4),
-        Text('גלויות $revealedText', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12, fontWeight: FontWeight.w800)),
+        Text(
+          'גלויות $revealedText',
+          style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12, fontWeight: FontWeight.w800),
+        ),
       ],
     );
+  }
+
+  (String, Color) _phaseLabel() {
+    switch (turnPhase) {
+      case TurnPhase.revealTurn:
+        return isMyTurn
+            ? ('גלה קלף', const Color(0xFFD4AF37))
+            : ('${name.isEmpty ? 'יריב' : name} מגלה', const Color(0xFF87CEEB).withOpacity(0.85));
+      case TurnPhase.guessOpportunity:
+        return isMyGuessOpportunity
+            ? ('האם אתה יודע?', const Color(0xFFFFE082))
+            : ('${name.isEmpty ? 'יריב' : name} מחליט...', const Color(0xFF87CEEB).withOpacity(0.80));
+      case TurnPhase.guessMode:
+        return isMyGuessModeActive
+            ? ('הזן תשובה', const Color(0xFF00F2FF))
+            : ('${name.isEmpty ? 'יריב' : name} מנחש...', const Color(0xFFFF6B35).withOpacity(0.90));
+      case TurnPhase.resolvingGuess:
+      case TurnPhase.roundOver:
+        return ('סיום סיבוב', Colors.white54);
+    }
   }
 }
 
