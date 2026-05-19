@@ -114,6 +114,14 @@ enum GamePhase {
   finished,
 }
 
+enum TurnPhase {
+  revealTurn,
+  guessOpportunity,
+  guessMode,
+  resolvingGuess,
+  roundOver,
+}
+
 enum ImageCategory {
   singer,
   actor,

@@ -270,6 +270,26 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   }
 
   void _scheduleBotTurn(RoomModel room) {
+    // Phase A: handle bot's guess opportunity first.
+    // After a tile reveal, guessOpportunityPlayerId may point to a bot.
+    // That bot should skip immediately so the turn advances.
+    final guessOppId = room.guessOpportunityPlayerId;
+    if (room.turnPhase == TurnPhase.guessOpportunity && guessOppId != null) {
+      final guessOppPlayer = room.players[guessOppId];
+      if (guessOppPlayer != null && guessOppPlayer.isBot) {
+        final guessKey = '${room.id}-guess-opp-${room.currentTurnIndex}';
+        if (_lastBotTurnKey != guessKey) {
+          _lastBotTurnKey = guessKey;
+          Future.delayed(const Duration(milliseconds: 600), () async {
+            if (!mounted) return;
+            await ref.read(roomServiceProvider).skipPiecePlacement(roomId: room.id);
+          });
+        }
+      }
+      // Either bot is handling it or it's a human's turn to decide; don't schedule reveal.
+      return;
+    }
+
     final currentId = room.currentTurnUserId;
     if (currentId == null) return;
 
@@ -283,8 +303,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _lastBotTurnKey = key;
 
     // Show "opponent thinking" banner immediately — before the delay expires.
-    // Previously this banner only appeared if the bot decided to guess (>50% board, rare).
-    // Now it shows for every bot turn, giving continuous opponent presence signal.
     final botName = player.name.isNotEmpty ? player.name : 'בוט';
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -326,7 +344,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
           );
       unawaited(_playRevealSound());
 
-      // Dismiss "thinking" banner — _simulateBotTyping will re-show it if bot guesses.
       if (mounted) setState(() => _showBotTyping = false);
 
       if (isLastTile) {
@@ -338,35 +355,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
       if (!mounted) return;
 
-      final afterReveal = await ref.read(roomServiceProvider).watchRoom(room.id).first;
-      if (afterReveal == null || afterReveal.phase == GamePhase.finished) return;
-
-      final afterTotal = afterReveal.gridSize * afterReveal.gridSize;
-      final afterRevealed = afterReveal.placedPieces.length;
-      final afterRatio = afterTotal > 0 ? afterRevealed / afterTotal : 0.0;
-
-      double attemptChance;
-      double correctChance;
-      if (afterRevealed < 5 || afterRatio < 0.50) {
-        attemptChance = 0.0;
-        correctChance = 0.0;
-      } else if (afterRatio >= 0.75) {
-        attemptChance = 0.45;
-        correctChance = 0.55;
-      } else {
-        attemptChance = 0.25;
-        correctChance = 0.30;
-      }
-
-      final shouldGuess = _image != null && _random.nextDouble() < attemptChance;
-
-      if (shouldGuess) {
-        await _performBotGuess(afterReveal, currentId, correctChance);
-      } else {
-        if (mounted) {
-          await ref.read(roomServiceProvider).skipPiecePlacement(roomId: afterReveal.id);
-        }
-      }
+      // Phase A: after bot reveals, the guess opportunity goes to the next player.
+      // The bot that just revealed is not the guess opportunity player, so we
+      // don't attempt to guess here — _scheduleBotTurn handles the next state.
     });
   }
 
@@ -538,6 +529,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   Future<void> _openGuessDialog(RoomModel room, String userId) async {
     final image = _image;
     if (image == null) return;
+
+    // Transition from guessOpportunity → guessMode before opening dialog.
+    final entered = await ref.read(roomServiceProvider).enterGuessMode(
+      roomId: room.id,
+      userId: userId,
+    );
+    if (!entered || !mounted) return;
 
     await showDialog<void>(
       context: context,
@@ -846,11 +844,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   });
                 }
 
-                final isMyTurn = currentUserId != null && room.currentTurnUserId == currentUserId;
-                final canGuessNow = isMyTurn &&
-                    _hasRevealedThisTurn &&
-                    !_hasGuessedThisTurn &&
-                    room.currentTurnIndex == _revealedAtTurnIndex;
+                // isMyTurn: it's my reveal turn (revealTurn phase, I'm the current turn player)
+                final isMyTurn = currentUserId != null &&
+                    room.currentTurnUserId == currentUserId &&
+                    room.turnPhase == TurnPhase.revealTurn;
+                // canGuessNow: I have the guess opportunity window
+                final canGuessNow = currentUserId != null &&
+                    room.turnPhase == TurnPhase.guessOpportunity &&
+                    room.guessOpportunityPlayerId == currentUserId;
                 final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
 
                 return GameLayout(
@@ -885,7 +886,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       ? null
                       : () => _useRevealHint(room, currentUserId),
                   onGuess: canGuessNow ? () => _openGuessDialog(room, currentUserId!) : null,
-                  onSkip: (isMyTurn && canGuessNow) ? () => _skipTurn(room) : null,
+                  onSkip: canGuessNow ? () => _skipTurn(room) : null,
                 );
               },
             ),

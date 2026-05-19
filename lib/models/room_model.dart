@@ -23,6 +23,14 @@ class RoomModel extends Equatable {
   final Map<String, dynamic>? lastGuessEvent;
   final int guessCount;
   final DateTime createdAt;
+  final TurnPhase turnPhase;
+  final String? guessOpportunityPlayerId;
+  final String? guessModePlayerId;
+  final String? lastRevealedByPlayerId;
+  final int? revealDeadlineMs;
+  final int? guessOpportunityDeadlineMs;
+  final int? guessModeDeadlineMs;
+  final Map<String, int> wrongGuessCounts;
 
   const RoomModel({
     required this.id,
@@ -44,6 +52,14 @@ class RoomModel extends Equatable {
     this.lastGuessEvent,
     this.guessCount = 0,
     required this.createdAt,
+    this.turnPhase = TurnPhase.revealTurn,
+    this.guessOpportunityPlayerId,
+    this.guessModePlayerId,
+    this.lastRevealedByPlayerId,
+    this.revealDeadlineMs,
+    this.guessOpportunityDeadlineMs,
+    this.guessModeDeadlineMs,
+    this.wrongGuessCounts = const {},
   });
 
   String? get currentTurnUserId {
@@ -80,6 +96,11 @@ class RoomModel extends Equatable {
       (k, v) => MapEntry(int.parse(k), v as String),
     );
 
+    final wrongGuessCountsRaw =
+        data['wrongGuessCounts'] as Map<String, dynamic>? ?? {};
+    final wrongGuessCounts =
+        wrongGuessCountsRaw.map((k, v) => MapEntry(k, (v as num).toInt()));
+
     return RoomModel(
       id: doc.id,
       code: data['code'] ?? '',
@@ -109,6 +130,18 @@ class RoomModel extends Equatable {
       lastGuessEvent: data['lastGuessEvent'] as Map<String, dynamic>?,
       guessCount: data['guessCount'] as int? ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      turnPhase: TurnPhase.values.firstWhere(
+        (e) => e.name == data['turnPhase'],
+        orElse: () => TurnPhase.revealTurn,
+      ),
+      guessOpportunityPlayerId: data['guessOpportunityPlayerId'] as String?,
+      guessModePlayerId: data['guessModePlayerId'] as String?,
+      lastRevealedByPlayerId: data['lastRevealedByPlayerId'] as String?,
+      revealDeadlineMs: (data['revealDeadlineMs'] as num?)?.toInt(),
+      guessOpportunityDeadlineMs:
+          (data['guessOpportunityDeadlineMs'] as num?)?.toInt(),
+      guessModeDeadlineMs: (data['guessModeDeadlineMs'] as num?)?.toInt(),
+      wrongGuessCounts: wrongGuessCounts,
     );
   }
 
@@ -131,6 +164,14 @@ class RoomModel extends Equatable {
         'lastGuessEvent': lastGuessEvent,
         'guessCount': guessCount,
         'createdAt': Timestamp.fromDate(createdAt),
+        'turnPhase': turnPhase.name,
+        'guessOpportunityPlayerId': guessOpportunityPlayerId,
+        'guessModePlayerId': guessModePlayerId,
+        'lastRevealedByPlayerId': lastRevealedByPlayerId,
+        'revealDeadlineMs': revealDeadlineMs,
+        'guessOpportunityDeadlineMs': guessOpportunityDeadlineMs,
+        'guessModeDeadlineMs': guessModeDeadlineMs,
+        'wrongGuessCounts': wrongGuessCounts,
       };
 
   RoomModel copyWith({
@@ -149,6 +190,14 @@ class RoomModel extends Equatable {
     String? winnerId,
     Map<String, dynamic>? lastGuessEvent,
     int? guessCount,
+    TurnPhase? turnPhase,
+    String? guessOpportunityPlayerId,
+    String? guessModePlayerId,
+    String? lastRevealedByPlayerId,
+    int? revealDeadlineMs,
+    int? guessOpportunityDeadlineMs,
+    int? guessModeDeadlineMs,
+    Map<String, int>? wrongGuessCounts,
   }) =>
       RoomModel(
         id: id,
@@ -171,6 +220,17 @@ class RoomModel extends Equatable {
         lastGuessEvent: lastGuessEvent ?? this.lastGuessEvent,
         guessCount: guessCount ?? this.guessCount,
         createdAt: createdAt,
+        turnPhase: turnPhase ?? this.turnPhase,
+        guessOpportunityPlayerId:
+            guessOpportunityPlayerId ?? this.guessOpportunityPlayerId,
+        guessModePlayerId: guessModePlayerId ?? this.guessModePlayerId,
+        lastRevealedByPlayerId:
+            lastRevealedByPlayerId ?? this.lastRevealedByPlayerId,
+        revealDeadlineMs: revealDeadlineMs ?? this.revealDeadlineMs,
+        guessOpportunityDeadlineMs:
+            guessOpportunityDeadlineMs ?? this.guessOpportunityDeadlineMs,
+        guessModeDeadlineMs: guessModeDeadlineMs ?? this.guessModeDeadlineMs,
+        wrongGuessCounts: wrongGuessCounts ?? this.wrongGuessCounts,
       );
 
   @override
@@ -190,5 +250,13 @@ class RoomModel extends Equatable {
         letterCardGrantedPlayerIds,
         winnerId,
         guessCount,
+        turnPhase,
+        guessOpportunityPlayerId,
+        guessModePlayerId,
+        lastRevealedByPlayerId,
+        revealDeadlineMs,
+        guessOpportunityDeadlineMs,
+        guessModeDeadlineMs,
+        wrongGuessCounts,
       ];
 }
