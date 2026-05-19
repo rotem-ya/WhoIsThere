@@ -23,6 +23,8 @@ class RoomModel extends Equatable {
   final Map<String, dynamic>? lastGuessEvent;
   final int guessCount;
   final DateTime createdAt;
+  // Set to the userId who revealed a tile this turn; null when turn advances.
+  final String? currentTurnRevealedBy;
 
   const RoomModel({
     required this.id,
@@ -44,6 +46,7 @@ class RoomModel extends Equatable {
     this.lastGuessEvent,
     this.guessCount = 0,
     required this.createdAt,
+    this.currentTurnRevealedBy,
   });
 
   String? get currentTurnUserId {
@@ -109,6 +112,7 @@ class RoomModel extends Equatable {
       lastGuessEvent: data['lastGuessEvent'] as Map<String, dynamic>?,
       guessCount: data['guessCount'] as int? ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      currentTurnRevealedBy: data['currentTurnRevealedBy'] as String?,
     );
   }
 
@@ -131,6 +135,7 @@ class RoomModel extends Equatable {
         'lastGuessEvent': lastGuessEvent,
         'guessCount': guessCount,
         'createdAt': Timestamp.fromDate(createdAt),
+        'currentTurnRevealedBy': currentTurnRevealedBy,
       };
 
   RoomModel copyWith({
@@ -171,6 +176,7 @@ class RoomModel extends Equatable {
         lastGuessEvent: lastGuessEvent ?? this.lastGuessEvent,
         guessCount: guessCount ?? this.guessCount,
         createdAt: createdAt,
+        currentTurnRevealedBy: currentTurnRevealedBy ?? this.currentTurnRevealedBy,
       );
 
   @override
@@ -190,5 +196,6 @@ class RoomModel extends Equatable {
         letterCardGrantedPlayerIds,
         winnerId,
         guessCount,
+        currentTurnRevealedBy,
       ];
 }

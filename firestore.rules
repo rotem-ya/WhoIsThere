@@ -2,32 +2,79 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users: only the user can write their own doc
+    // ── Users ─────────────────────────────────────────────────────────────────
+    // Each user owns their doc and every subcollection beneath it.
     match /users/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == userId;
+
+      // Subcollections: economy/wallet, economy_transactions, exposure_history,
+      // room_claims (reward dedup), and any future additions.
+      match /{subcollection}/{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
-    // Rooms: authenticated users can read; write is restricted
+    // ── Rooms ─────────────────────────────────────────────────────────────────
     match /rooms/{roomId} {
       allow read: if request.auth != null;
-      // Create: must be auth'd, hostId must match uid, phase must be waiting
+
+      // Create: caller must be the host, room starts in waiting phase.
       allow create: if request.auth != null
         && request.resource.data.hostId == request.auth.uid
         && request.resource.data.phase == 'waiting';
-      // Update: any authenticated player in the room can update
+
+      // Update: must be a participant; core fields are protected.
       allow update: if request.auth != null
-        && (request.auth.uid in resource.data.players.keys()
-            || request.auth.uid == resource.data.hostId);
-      // Delete: only the host can delete
+        && isParticipant()
+        && codeIsImmutable()
+        && phaseIsLegal()
+        && winnerIsLegal();
+
+      // Delete: host only.
       allow delete: if request.auth != null
         && request.auth.uid == resource.data.hostId;
+
+      // ── Helper functions ───────────────────────────────────────────────────
+
+      // Caller must be listed in players OR be the current host.
+      function isParticipant() {
+        return request.auth.uid in resource.data.players.keys()
+            || request.auth.uid == resource.data.hostId;
+      }
+
+      // Room code is permanent and must never change.
+      function codeIsImmutable() {
+        return request.resource.data.code == resource.data.code;
+      }
+
+      // Phase may only advance, never roll back.
+      // finished → finished only; playing → playing | finished only.
+      // Earlier phases (waiting, votingImage, votingDifficulty) are unrestricted
+      // because the host drives those transitions legitimately from the client.
+      function phaseIsLegal() {
+        let oldPhase = resource.data.phase;
+        let newPhase = request.resource.data.phase;
+        return !(oldPhase == 'finished' && newPhase != 'finished')
+            && !(oldPhase == 'playing'
+                 && newPhase != 'playing'
+                 && newPhase != 'finished');
+      }
+
+      // Once a winner is recorded it cannot be overwritten.
+      // Allows null → value (first winner set) but blocks value → different value.
+      function winnerIsLegal() {
+        let oldWinner = resource.data.winnerId;
+        let newWinner = request.resource.data.winnerId;
+        return oldWinner == null || oldWinner == newWinner;
+      }
     }
 
-    // Images: anyone authenticated can read; only admin can write
+    // ── Images ────────────────────────────────────────────────────────────────
+    // Read-only for authenticated clients; managed via Admin SDK / console.
     match /images/{imageId} {
       allow read: if request.auth != null;
-      allow write: if false; // managed via Firebase Console / Admin SDK
+      allow write: if false;
     }
   }
 }

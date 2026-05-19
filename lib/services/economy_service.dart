@@ -97,11 +97,18 @@ class EconomyService {
     );
 
     if (breakdown.total > 0) {
+      // Dedup: claim doc lives at users/{uid}/room_claims/{roomId}.
+      // If the doc already exists this reward was already granted → skip.
+      final claimRef = roomId != null
+          ? _db.doc('users/$uid/room_claims/$roomId')
+          : null;
+
       await _applyDelta(
         uid: uid,
         delta: breakdown.total,
         type: isWin ? TransactionType.matchWin : TransactionType.matchParticipation,
         roomId: roomId,
+        claimRef: claimRef,
         meta: {
           'earlyGuessBonus': breakdown.earlyGuessBonus,
           'speedBonus': breakdown.speedBonus,
@@ -291,11 +298,32 @@ class EconomyService {
     required int delta,
     required TransactionType type,
     String? roomId,
+    // When provided, the transaction atomically creates this doc as a
+    // one-time claim marker. If the doc already exists the entire delta
+    // is silently skipped (idempotent reward grant).
+    DocumentReference<Map<String, dynamic>>? claimRef,
     Map<String, dynamic> meta = const {},
     UserEconomyModel Function(UserEconomyModel)? statUpdater,
   }) async {
     final now = DateTime.now().toUtc();
+    bool skipped = false;
+
     await _db.runTransaction((tx) async {
+      // Dedup check: if claim doc already exists, skip the entire reward.
+      if (claimRef != null) {
+        final claimSnap = await tx.get(claimRef);
+        if (claimSnap.exists) {
+          skipped = true;
+          return;
+        }
+        // Atomically mark this reward as claimed.
+        tx.set(claimRef, {
+          'uid': uid,
+          'roomId': roomId,
+          'claimedAt': Timestamp.fromDate(now),
+        });
+      }
+
       final snap = await tx.get(_walletRef(uid));
       UserEconomyModel wallet = snap.exists
           ? UserEconomyModel.fromFirestore(uid, snap.data()!)
@@ -322,7 +350,7 @@ class EconomyService {
       ).toFirestore());
     });
 
-    await _syncCache(uid);
+    if (!skipped) await _syncCache(uid);
   }
 
   Future<void> _syncCache(String uid) async {

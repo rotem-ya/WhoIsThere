@@ -143,6 +143,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   bool _rewardApplied = false;
   DateTime? _gameStartTime;
   MatchRewardBreakdown? _rewardBreakdown;
+  int _wrongGuessCount = 0;
+
+  // AFK auto-skip timer — fires after 90 s of inactivity on my turn.
+  Timer? _afkTimer;
+  int _afkTurnIndex = -1;
 
   // Wrong / correct guess sounds
   static final AudioPlayer _wrongBuzzPlayer = AudioPlayer(playerId: 'wrong-buzz');
@@ -196,6 +201,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   void dispose() {
     final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
     QaLoggerService.instance.log('GAME', 'GAME_DISPOSE roomId=$shortId lastPhase=${_lastKnownPhase?.name ?? 'unknown'}');
+    _afkTimer?.cancel();
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
@@ -230,6 +236,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   }) async {
     if (_isBusy) return;
     if (!room.availablePieceIndices.contains(index)) return;
+    _afkTimer?.cancel(); // Player is active — suspend auto-skip.
 
     final difficulty = room.selectedDifficulty ?? Difficulty.easy;
     final isLastTile = room.availablePieceIndices.length == 1;
@@ -258,11 +265,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     }
   }
 
-  Future<void> _skipTurn(RoomModel room) async {
+  Future<void> _skipTurn(RoomModel room, String userId) async {
     if (_isBusy) return;
+    _afkTimer?.cancel();
     setState(() => _isBusy = true);
     try {
-      await ref.read(roomServiceProvider).skipPiecePlacement(roomId: room.id);
+      await ref.read(roomServiceProvider).skipPiecePlacement(
+            roomId: room.id,
+            userId: userId,
+          );
       if (mounted) setState(() => _hasRevealedThisTurn = false);
     } finally {
       if (mounted) setState(() => _isBusy = false);
@@ -364,7 +375,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         await _performBotGuess(afterReveal, currentId, correctChance);
       } else {
         if (mounted) {
-          await ref.read(roomServiceProvider).skipPiecePlacement(roomId: afterReveal.id);
+          await ref.read(roomServiceProvider).skipPiecePlacement(
+                roomId: afterReveal.id,
+                userId: currentId,
+              );
         }
       }
     });
@@ -456,7 +470,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             isSolo: isSolo,
             tilesRevealedCount: room.placedPieces.length,
             totalTilesCount: totalTilesCount,
-            wrongGuessCount: 0,
+            wrongGuessCount: _wrongGuessCount,
             timeTaken: timeTaken,
             roomId: room.id,
             imageId: _image?.id,
@@ -508,6 +522,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final image = _image;
     if (image == null || value.trim().isEmpty) return false;
 
+    _afkTimer?.cancel(); // Player is active — suspend auto-skip.
     setState(() => _hasGuessedThisTurn = true);
 
     final correct = await ref.read(roomServiceProvider).submitAnswer(
@@ -517,6 +532,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
           image: image,
           difficulty: room.selectedDifficulty ?? Difficulty.easy,
         );
+
+    if (!correct && mounted) {
+      setState(() => _wrongGuessCount++);
+    }
 
     if (!mounted) return correct;
     if (correct) {
@@ -611,6 +630,42 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       ),
     );
   }
+
+  // ── AFK auto-skip ─────────────────────────────────────────────────────────
+
+  void _resetAfkTimer(RoomModel room, String userId) {
+    // Not my turn — cancel any lingering timer.
+    if (room.currentTurnUserId != userId) {
+      _afkTimer?.cancel();
+      return;
+    }
+    // Already running for this turn index.
+    if (room.currentTurnIndex == _afkTurnIndex) return;
+    _afkTimer?.cancel();
+    _afkTurnIndex = room.currentTurnIndex;
+    _afkTimer = Timer(const Duration(seconds: 90), () {
+      _autoSkipIfStillMyTurn(room, userId);
+    });
+  }
+
+  Future<void> _autoSkipIfStillMyTurn(RoomModel room, String userId) async {
+    if (!mounted) return;
+    try {
+      final snap = await ref.read(roomServiceProvider).watchRoom(room.id).first;
+      if (snap == null || snap.phase != GamePhase.playing) return;
+      if (snap.currentTurnUserId != userId) return; // turn already moved
+      QaLoggerService.instance.log('GAME',
+          'GAME_AFK_AUTO_SKIP userId=$userId turnIndex=${room.currentTurnIndex}');
+      await ref.read(roomServiceProvider).skipPiecePlacement(
+            roomId: room.id,
+            userId: userId,
+          );
+    } catch (e) {
+      debugPrint('AFK timer auto-skip error: $e');
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
 
   Future<void> _showExitConfirmation(BuildContext context) async {
     QaLoggerService.instance.log('GAME', 'GAME_BACK_CONFIRM_SHOWN');
@@ -853,6 +908,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     room.currentTurnIndex == _revealedAtTurnIndex;
                 final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
 
+                // Start/reset AFK auto-skip timer on each turn change.
+                if (currentUserId != null) {
+                  final _afkUid = currentUserId;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) _resetAfkTimer(room, _afkUid);
+                  });
+                }
+
                 return GameLayout(
                   room: room,
                   image: _image,
@@ -885,7 +948,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       ? null
                       : () => _useRevealHint(room, currentUserId),
                   onGuess: canGuessNow ? () => _openGuessDialog(room, currentUserId!) : null,
-                  onSkip: (isMyTurn && canGuessNow) ? () => _skipTurn(room) : null,
+                  onSkip: (isMyTurn && canGuessNow && currentUserId != null)
+                      ? () => _skipTurn(room, currentUserId!)
+                      : null,
                 );
               },
             ),

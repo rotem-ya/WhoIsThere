@@ -9,6 +9,7 @@ import '../models/player_model.dart';
 import '../models/game_image_model.dart';
 import '../core/constants/game_constants.dart';
 import '../core/utils/room_code_generator.dart';
+import 'qa_logger_service.dart';
 
 class RoomService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -355,6 +356,7 @@ class RoomService {
       'availablePieceIndices': allCells,
       'solvedLetters': [],
       'letterCardGrantedPlayerIds': [],
+      'currentTurnRevealedBy': null,
     });
   }
 
@@ -373,6 +375,20 @@ class RoomService {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
 
+    // Turn ownership: only the current turn player may reveal.
+    if (room.currentTurnUserId != userId) {
+      QaLoggerService.instance.log('SECURITY',
+          'REVEAL_BLOCKED_NOT_YOUR_TURN userId=$userId currentTurn=${room.currentTurnUserId}');
+      return;
+    }
+
+    // Per-turn reveal limit: one reveal per turn only.
+    if (room.currentTurnRevealedBy != null) {
+      QaLoggerService.instance.log('SECURITY',
+          'REVEAL_BLOCKED_ALREADY_REVEALED userId=$userId alreadyBy=${room.currentTurnRevealedBy}');
+      return;
+    }
+
     if (!room.availablePieceIndices.contains(pieceIndex)) return;
 
     final player = room.players[userId];
@@ -389,6 +405,7 @@ class RoomService {
       'placedPieces.${pieceIndex.toString()}': userId,
       'availablePieceIndices': newHidden,
       'players.$userId.score': newScore,
+      'currentTurnRevealedBy': userId,
     };
 
     if (shouldGrantLetterCard) {
@@ -399,11 +416,23 @@ class RoomService {
     await _rooms.doc(roomId).update(updates);
   }
 
-  Future<void> skipPiecePlacement({required String roomId}) async {
+  Future<void> skipPiecePlacement({
+    required String roomId,
+    required String userId,
+  }) async {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
+
+    // Turn ownership: only the current turn player may skip.
+    if (room.currentTurnUserId != userId) {
+      QaLoggerService.instance.log('SECURITY',
+          'SKIP_BLOCKED_NOT_YOUR_TURN userId=$userId currentTurn=${room.currentTurnUserId}');
+      return;
+    }
+
     await _rooms.doc(roomId).update({
       'currentTurnIndex': room.currentTurnIndex + 1,
+      'currentTurnRevealedBy': null,
     });
   }
 
@@ -414,6 +443,15 @@ class RoomService {
     required GameImageModel image,
     required Difficulty difficulty,
   }) async {
+    // Turn ownership: only the current turn player may guess.
+    final preDoc = await _rooms.doc(roomId).get();
+    final preRoom = RoomModel.fromFirestore(preDoc);
+    if (preRoom.currentTurnUserId != userId) {
+      QaLoggerService.instance.log('SECURITY',
+          'GUESS_BLOCKED_NOT_YOUR_TURN userId=$userId currentTurn=${preRoom.currentTurnUserId}');
+      return false;
+    }
+
     final isCorrect = image.isCorrectAnswer(guess);
 
     if (isCorrect) {
@@ -438,6 +476,7 @@ class RoomService {
         'players.$userId.score': 0,
         'players.$userId.isEliminated': true,
         'currentTurnIndex': nextTurnIndex,
+        'currentTurnRevealedBy': null,
         'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
         'guessCount': FieldValue.increment(1),
       });
@@ -446,6 +485,7 @@ class RoomService {
       await _rooms.doc(roomId).update({
         'players.$userId.score': newScore,
         'currentTurnIndex': nextTurnIndex,
+        'currentTurnRevealedBy': null,
         'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
         'guessCount': FieldValue.increment(1),
       });
