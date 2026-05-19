@@ -13,7 +13,7 @@ class AppTextStyles {
       );
 
   static TextStyle get titleDark => titleLight.copyWith(
-        color: AppColors.darkBlue,
+        color: Colors.white,
       );
 
   static TextStyle get subtitleLight => GoogleFonts.nunito(
@@ -24,14 +24,14 @@ class AppTextStyles {
       );
 
   static TextStyle get subtitleDark => subtitleLight.copyWith(
-        color: AppColors.darkBlue.withOpacity(0.72),
+        color: Colors.white.withOpacity(0.65),
       );
 
   static TextStyle get body => GoogleFonts.nunito(
         fontSize: 14,
         fontWeight: FontWeight.w700,
         height: 1.3,
-        color: AppColors.darkBlue,
+        color: Colors.white.withOpacity(0.85),
       );
 
   static TextStyle get button => GoogleFonts.nunito(

@@ -8,9 +8,10 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
+        brightness: Brightness.dark,
         primary: AppColors.primary,
         secondary: AppColors.secondary,
-        surface: AppColors.surface,
+        surface: AppColors.vaultSurface,
         background: AppColors.background,
         error: AppColors.error,
       ),
@@ -88,11 +89,11 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        color: AppColors.surface,
+        color: AppColors.vaultSurface,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppColors.vaultSurface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.pieceSlotEmpty),
@@ -114,9 +115,9 @@ class AppTheme {
         titleTextStyle: GoogleFonts.nunito(
           fontSize: 20,
           fontWeight: FontWeight.w800,
-          color: AppColors.darkBlue,
+          color: Colors.white,
         ),
-        iconTheme: const IconThemeData(color: AppColors.darkBlue),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,

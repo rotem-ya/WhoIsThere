@@ -9,8 +9,11 @@ import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/player_model.dart';
 import '../../services/qa_logger_service.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/player_avatar.dart';
+import '../../widgets/common/pressable_scale.dart';
 
 class LobbyScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -290,12 +293,16 @@ class _GlossyRoomCode extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // WhatsApp share
-                IconButton(
-                  onPressed: onShare,
-                  icon: const Icon(
-                    Icons.share_rounded,
-                    color: Color(0xFF25D366),
-                    size: 26,
+                PressableScale(
+                  onTap: onShare,
+                  scale: 0.88,
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(
+                      Icons.share_rounded,
+                      color: Color(0xFF25D366),
+                      size: 26,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -335,7 +342,10 @@ class _GlossyRoomCode extends StatelessWidget {
           ),
         ],
       ),
-    );
+    )
+        .animate()
+        .fadeIn(duration: 350.ms, curve: Curves.easeOut)
+        .scaleXY(begin: 0.94, end: 1.0, duration: 350.ms, curve: Curves.easeOut);
   }
 }
 
@@ -364,6 +374,7 @@ class _PlayerGrid extends StatelessWidget {
           return _PlayerAvatarTile(
             player: players[index],
             isMe: players[index].id == currentUserId,
+            delay: Duration(milliseconds: 120 + index * 55),
           );
         }
         return const _EmptyPlayerTile();
@@ -377,7 +388,13 @@ class _PlayerGrid extends StatelessWidget {
 class _PlayerAvatarTile extends StatelessWidget {
   final PlayerModel player;
   final bool isMe;
-  const _PlayerAvatarTile({required this.player, required this.isMe});
+  final Duration delay;
+
+  const _PlayerAvatarTile({
+    required this.player,
+    required this.isMe,
+    this.delay = Duration.zero,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -427,7 +444,10 @@ class _PlayerAvatarTile extends StatelessWidget {
           ),
         ],
       ),
-    );
+    )
+        .animate()
+        .fadeIn(delay: delay, duration: 280.ms, curve: Curves.easeOut)
+        .slideX(begin: -0.06, end: 0, delay: delay, duration: 280.ms, curve: Curves.easeOut);
   }
 }
 
@@ -462,9 +482,13 @@ class _EmptyPlayerTile extends StatelessWidget {
             child: const Icon(Icons.add, color: Colors.white24, size: 20),
           ),
           const SizedBox(width: 10),
-          Text(
-            'ממתין...',
-            style: AppStyles.bodySmall.copyWith(color: Colors.white24),
+          SoftPulse(
+            minOpacity: 0.35,
+            maxOpacity: 0.70,
+            child: Text(
+              'ממתין...',
+              style: AppStyles.bodySmall.copyWith(color: Colors.white24),
+            ),
           ),
         ],
       ),
@@ -474,7 +498,7 @@ class _EmptyPlayerTile extends StatelessWidget {
 
 // ── Start game button (host only) ──────────────────────────────────────────
 
-class _GlossyActionButton extends StatelessWidget {
+class _GlossyActionButton extends StatefulWidget {
   final String label;
   final bool enabled;
   final VoidCallback onTap;
@@ -485,28 +509,44 @@ class _GlossyActionButton extends StatelessWidget {
   });
 
   @override
+  State<_GlossyActionButton> createState() => _GlossyActionButtonState();
+}
+
+class _GlossyActionButtonState extends State<_GlossyActionButton> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(20),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: double.infinity,
-          decoration: enabled
-              ? AppStyles.glossyButton(radius: 20)
-              : BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  color: Colors.white10,
-                  border: Border.all(color: Colors.white12),
+    return AnimatedScale(
+      scale: _pressed && widget.enabled ? 0.97 : 1.0,
+      duration: _pressed
+          ? const Duration(milliseconds: 90)
+          : const Duration(milliseconds: 140),
+      curve: Curves.easeOut,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: widget.enabled ? widget.onTap : null,
+          onHighlightChanged:
+              widget.enabled ? (h) => setState(() => _pressed = h) : null,
+          borderRadius: BorderRadius.circular(20),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: double.infinity,
+            decoration: widget.enabled
+                ? AppStyles.glossyButton(radius: 20)
+                : BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.white10,
+                    border: Border.all(color: Colors.white12),
+                  ),
+            child: Center(
+              child: Text(
+                widget.label,
+                style: AppStyles.labelButton.copyWith(
+                  fontSize: 20,
+                  color: widget.enabled ? AppStyles.darkText : Colors.white24,
                 ),
-          child: Center(
-            child: Text(
-              label,
-              style: AppStyles.labelButton.copyWith(
-                fontSize: 20,
-                color: enabled ? AppStyles.darkText : Colors.white24,
               ),
             ),
           ),
@@ -527,9 +567,13 @@ class _WaitingFooter extends StatelessWidget {
       width: double.infinity,
       alignment: Alignment.center,
       decoration: AppStyles.glassCard(radius: 20, opacity: 0.10),
-      child: Text(
-        'ממתין למארח שיתחיל...',
-        style: AppStyles.bodyMedium.copyWith(color: Colors.white54),
+      child: SoftPulse(
+        minOpacity: 0.50,
+        maxOpacity: 1.0,
+        child: Text(
+          'ממתין למארח שיתחיל...',
+          style: AppStyles.bodyMedium.copyWith(color: Colors.white54),
+        ),
       ),
     );
   }

@@ -54,7 +54,6 @@ class GameLayout extends StatelessWidget {
     return Column(
       children: [
         TopHud(
-          code: room.code,
           players: room.sortedPlayers,
           currentPlayerId: room.currentTurnUserId,
           currentPlayerName: currentPlayer?.name ?? '',

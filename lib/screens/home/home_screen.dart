@@ -5,16 +5,23 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:flutter_animate/flutter_animate.dart';
+
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../services/feedback_service.dart';
 import '../../services/qa_logger_service.dart';
+import '../../widgets/common/ambient_background.dart';
+import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
+
+  // Persists across route remounts — intro plays only on first visit per session.
+  static bool _introPlayed = false;
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -23,6 +30,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseController;
+  late final bool _doIntro;
   bool _isCreating = false;
   int? _loadingPlayers;
   DateTime? _lastBackPressedAt;
@@ -30,6 +38,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void initState() {
     super.initState();
+    _doIntro = !HomeScreen._introPlayed;
+    HomeScreen._introPlayed = true;
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -141,6 +151,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 
+  /// Wraps [w] with a fade+rise entrance only on first visit.
+  Widget _step(Widget w, {required int delayMs, required int durationMs, double dy = 0}) {
+    if (!_doIntro) return w;
+    var a = w.animate().fadeIn(
+      delay: Duration(milliseconds: delayMs),
+      duration: Duration(milliseconds: durationMs),
+      curve: Curves.easeOut,
+    );
+    if (dy != 0) {
+      a = a.moveY(
+        begin: dy,
+        end: 0,
+        delay: Duration(milliseconds: delayMs),
+        duration: Duration(milliseconds: durationMs),
+        curve: Curves.easeOut,
+      );
+    }
+    return a;
+  }
+
   void _handleHomeBack() {
     final now = DateTime.now();
     final shouldExit = _lastBackPressedAt != null &&
@@ -178,6 +208,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           body: Stack(
             children: [
               const Positioned.fill(child: _VaultBackground()),
+              const Positioned.fill(
+                child: RepaintBoundary(
+                  child: AmbientBackground(
+                    showGrid: false,
+                    showOrbits: false,
+                    showParticles: true,
+                    goldAccent: true,
+                    intensity: 0.28,
+                  ),
+                ),
+              ),
               SafeArea(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -194,88 +235,113 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               SizedBox(height: verySmall ? 8 : compact ? 14 : 24),
-                              Center(child: _HomeHeroPeekGrid(size: iconSize)),
+                              _step(
+                                Center(child: RepaintBoundary(child: _HomeHeroPeekGrid(size: iconSize))),
+                                delayMs: 0, durationMs: 500, dy: 14,
+                              ),
                               SizedBox(height: verySmall ? 10 : compact ? 16 : 20),
-                              const FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  'מה בתמונה?',
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 56,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: -1.7,
-                                    height: 1,
-                                    shadows: [
-                                      Shadow(color: Color(0xFFD4AF37), blurRadius: 16),
-                                      Shadow(color: Colors.black87, offset: Offset(0, 4), blurRadius: 10),
-                                    ],
+                              _step(
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    'מה בתמונה?',
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 56,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -1.7,
+                                      height: 1,
+                                      shadows: const [
+                                        Shadow(color: Color(0xFFD4AF37), blurRadius: 16),
+                                        Shadow(color: Colors.black87, offset: Offset(0, 4), blurRadius: 10),
+                                        Shadow(color: Color(0x55D4AF37), blurRadius: 48, offset: Offset(0, 8)),
+                                      ],
+                                    ),
                                   ),
                                 ),
+                                delayMs: 120, durationMs: 380, dy: 8,
                               ),
                               const SizedBox(height: 10),
-                              Text(
-                                'מי יזהה את המקום ראשון?',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: const Color(0xFF87CEEB).withOpacity(0.86),
-                                  fontSize: verySmall ? 16 : compact ? 18 : 20,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.2,
+                              _step(
+                                Text(
+                                  'מי יזהה את המקום ראשון?',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: const Color(0xFF87CEEB).withOpacity(0.86),
+                                    fontSize: verySmall ? 16 : compact ? 18 : 20,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.2,
+                                  ),
                                 ),
+                                delayMs: 220, durationMs: 320,
                               ),
                               SizedBox(height: verySmall ? 12 : compact ? 18 : 26),
-                              const Text(
-                                'בחר פורמט',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white30,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1.8,
+                              _step(
+                                const Text(
+                                  'בחר מצב',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white30,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1.8,
+                                  ),
                                 ),
+                                delayMs: 300, durationMs: 260,
                               ),
                               const SizedBox(height: 10),
-                              _MainVaultButton(
-                                pulseController: _pulseController,
-                                label: 'שחק עכשיו',
-                                subtitle: 'דו־קרב מהיר · 2 שחקנים',
-                                height: verySmall ? 62 : compact ? 66 : 72,
-                                isLoading: _isCreating && _loadingPlayers == 2,
-                                onTap: _isCreating ? null : () => _startQuickGame(2),
+                              _step(
+                                _MainVaultButton(
+                                  pulseController: _pulseController,
+                                  label: 'שחק עכשיו',
+                                  subtitle: 'דו־קרב מהיר · 2 שחקנים',
+                                  height: verySmall ? 62 : compact ? 66 : 72,
+                                  isLoading: _isCreating && _loadingPlayers == 2,
+                                  onTap: _isCreating ? null : () => _startQuickGame(2),
+                                ),
+                                delayMs: 380, durationMs: 260, dy: 5,
                               ),
                               const SizedBox(height: 14),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _GlassButton(
-                                      label: '3 שחקנים',
-                                      height: verySmall ? 50 : compact ? 54 : 58,
-                                      isLoading: _isCreating && _loadingPlayers == 3,
-                                      onTap: _isCreating ? null : () => _startQuickGame(3),
+                              _step(
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _GlassButton(
+                                        label: '3 שחקנים',
+                                        height: verySmall ? 50 : compact ? 54 : 58,
+                                        isLoading: _isCreating && _loadingPlayers == 3,
+                                        onTap: _isCreating ? null : () => _startQuickGame(3),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _GlassButton(
-                                      label: '4 שחקנים',
-                                      height: verySmall ? 50 : compact ? 54 : 58,
-                                      isLoading: _isCreating && _loadingPlayers == 4,
-                                      onTap: _isCreating ? null : () => _startQuickGame(4),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _GlassButton(
+                                        label: '4 שחקנים',
+                                        height: verySmall ? 50 : compact ? 54 : 58,
+                                        isLoading: _isCreating && _loadingPlayers == 4,
+                                        onTap: _isCreating ? null : () => _startQuickGame(4),
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                                delayMs: 450, durationMs: 240, dy: 5,
                               ),
                               SizedBox(height: verySmall ? 10 : 16),
-                              _PrivateRoomButton(
-                                isLoading: _isCreating && _loadingPlayers == null,
-                                onTap: _isCreating ? null : _createPrivateRoom,
+                              _step(
+                                _PrivateRoomButton(
+                                  isLoading: _isCreating && _loadingPlayers == null,
+                                  onTap: _isCreating ? null : _createPrivateRoom,
+                                ),
+                                delayMs: 520, durationMs: 240,
                               ),
                               const SizedBox(height: 10),
-                              _JoinRoomButton(
-                                onTap: _isCreating ? null : _showJoinDialog,
+                              _step(
+                                _JoinRoomButton(
+                                  onTap: _isCreating ? null : _showJoinDialog,
+                                ),
+                                delayMs: 590, durationMs: 240,
                               ),
                               SizedBox(height: verySmall ? 14 : compact ? 20 : 30),
                             ],
@@ -400,30 +466,71 @@ class _MainVaultButton extends StatelessWidget {
           opacity: onTap == null ? 0.65 : 1,
           child: Container(
             height: height,
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
               borderRadius: BorderRadius.circular(22),
               boxShadow: [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.42), blurRadius: 25, offset: const Offset(0, 10))],
             ),
-            child: Center(
-              child: isLoading
-                  ? const SizedBox(width: 25, height: 25, child: CircularProgressIndicator(color: Color(0xFF07101F), strokeWidth: 2.7))
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.bolt_rounded, color: Color(0xFF07101F), size: 30),
-                        const SizedBox(width: 10),
-                        Column(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (onTap != null)
+                  const _GoldShine()
+                      .animate(onPlay: (c) => c.repeat())
+                      .slideX(begin: -1.4, end: 1.4, duration: 2200.ms),
+                Center(
+                  child: isLoading
+                      ? const SizedBox(width: 25, height: 25, child: CircularProgressIndicator(color: Color(0xFF07101F), strokeWidth: 2.7))
+                      : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(label, style: const TextStyle(color: Color(0xFF07101F), fontSize: 28, fontWeight: FontWeight.w900, height: 1)),
-                            const SizedBox(height: 4),
-                            Text(subtitle, style: TextStyle(color: const Color(0xFF07101F).withOpacity(0.68), fontSize: 14, fontWeight: FontWeight.w800, height: 1)),
+                            const Icon(Icons.bolt_rounded, color: Color(0xFF07101F), size: 30),
+                            const SizedBox(width: 10),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(label, style: const TextStyle(color: Color(0xFF07101F), fontSize: 28, fontWeight: FontWeight.w900, height: 1)),
+                                const SizedBox(height: 4),
+                                Text(subtitle, style: TextStyle(color: const Color(0xFF07101F).withOpacity(0.68), fontSize: 14, fontWeight: FontWeight.w800, height: 1)),
                           ],
                         ),
                       ],
                     ),
+                  ),
+                ],
+              ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GoldShine extends StatelessWidget {
+  const _GoldShine();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: FractionallySizedBox(
+        widthFactor: 0.30,
+        heightFactor: 1.0,
+        child: Transform.rotate(
+          angle: -0.30,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.white.withOpacity(0),
+                  Colors.white.withOpacity(0.18),
+                  Colors.white.withOpacity(0),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
             ),
           ),
         ),
@@ -442,7 +549,7 @@ class _GlassButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return PressableScale(
       onTap: onTap == null ? null : () {
         HapticFeedback.lightImpact();
         onTap!();
@@ -483,7 +590,7 @@ class _PrivateRoomButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: GestureDetector(
+      child: PressableScale(
         onTap: onTap == null ? null : () {
           HapticFeedback.lightImpact();
           onTap!();
@@ -532,7 +639,7 @@ class _JoinRoomButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: GestureDetector(
+      child: PressableScale(
         onTap: onTap == null ? null : () {
           HapticFeedback.lightImpact();
           onTap!();
