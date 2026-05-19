@@ -18,6 +18,42 @@ import '../../screens/voting/vote_difficulty_screen.dart';
 import '../../screens/voting/vote_image_screen.dart';
 import '../../screens/win/win_screen.dart';
 
+// Standard fade+slight-scale transition (290ms in, 220ms out)
+Page<void> _defaultPage(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 290),
+    reverseTransitionDuration: const Duration(milliseconds: 220),
+    transitionsBuilder: (_, animation, __, child) => FadeTransition(
+      opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+      child: ScaleTransition(
+        scale: Tween<double>(begin: 0.97, end: 1.0)
+            .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+        child: child,
+      ),
+    ),
+  );
+}
+
+// More dramatic entrance for game screen (scale from 0.92)
+Page<void> _gamePage(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 320),
+    reverseTransitionDuration: const Duration(milliseconds: 240),
+    transitionsBuilder: (_, animation, __, child) => FadeTransition(
+      opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+      child: ScaleTransition(
+        scale: Tween<double>(begin: 0.92, end: 1.0)
+            .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+        child: child,
+      ),
+    ),
+  );
+}
+
 /// Created exactly once. Auth changes are handled via [_RouterNotifier] +
 /// [GoRouter.refreshListenable] — the router instance is never recreated.
 final routerProvider = Provider<GoRouter>((ref) {
@@ -32,58 +68,69 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/splash',
-        builder: (context, state) => const SplashScreen(),
+        pageBuilder: (context, state) => _defaultPage(state, const SplashScreen()),
       ),
       GoRoute(
         path: '/auth',
-        builder: (context, state) => const AuthScreen(),
+        pageBuilder: (context, state) => _defaultPage(state, const AuthScreen()),
       ),
       GoRoute(
         path: '/home',
-        builder: (context, state) => const HomeScreen(),
+        pageBuilder: (context, state) => _defaultPage(state, const HomeScreen()),
       ),
       GoRoute(
         path: '/create-room',
-        builder: (context, state) => const CreateRoomScreen(),
+        pageBuilder: (context, state) => _defaultPage(state, const CreateRoomScreen()),
       ),
       GoRoute(
         path: '/join-room',
-        builder: (context, state) => JoinRoomScreen(
-          initialCode: state.uri.queryParameters['initialCode'],
+        pageBuilder: (context, state) => _defaultPage(
+          state,
+          JoinRoomScreen(initialCode: state.uri.queryParameters['initialCode']),
         ),
       ),
       GoRoute(
         path: '/lobby/:roomId',
-        builder: (context, state) =>
-            LobbyScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _defaultPage(
+          state,
+          LobbyScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/vote-image/:roomId',
-        builder: (context, state) =>
-            VoteImageScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _defaultPage(
+          state,
+          VoteImageScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/vote-difficulty/:roomId',
-        builder: (context, state) =>
-            VoteDifficultyScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _defaultPage(
+          state,
+          VoteDifficultyScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/game/:roomId',
-        builder: (context, state) =>
-            GameBoardScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _gamePage(
+          state,
+          GameBoardScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/win/:roomId',
-        builder: (context, state) =>
-            WinScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _gamePage(
+          state,
+          WinScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/profile',
-        builder: (context, state) => const ProfileScreen(),
+        pageBuilder: (context, state) => _defaultPage(state, const ProfileScreen()),
       ),
       GoRoute(
         path: '/store',
-        builder: (context, state) => const StoreScreen(),
+        pageBuilder: (context, state) => _defaultPage(state, const StoreScreen()),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

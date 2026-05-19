@@ -195,10 +195,12 @@ class _ActionButton extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           height: 54,
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             gradient: isPrimary
                 ? const LinearGradient(
-                    colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
+                    colors: [Color(0xFFFFF4B0), Color(0xFFD4AF37), Color(0xFFD4AF37), Color(0xFF8B6914)],
+                    stops: [0.0, 0.35, 0.65, 1.0],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   )
@@ -207,14 +209,14 @@ class _ActionButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: isPrimary
-                  ? Colors.white.withOpacity(0.16)
+                  ? Colors.white.withOpacity(0.22)
                   : const Color(0xFF87CEEB).withOpacity(isActive ? 0.40 : 0.16),
               width: 1.2,
             ),
             boxShadow: glow
                 ? [
                     BoxShadow(
-                      color: const Color(0xFFD4AF37).withOpacity(0.42),
+                      color: const Color(0xFFD4AF37).withOpacity(0.48),
                       blurRadius: 22,
                       offset: const Offset(0, 7),
                     ),
@@ -222,14 +224,41 @@ class _ActionButton extends StatelessWidget {
                 : isPrimary
                     ? [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.28),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
+                          color: Colors.black.withOpacity(0.34),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
                         ),
                       ]
                     : [],
           ),
-          child: Center(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Top metallic sheen
+              if (isPrimary) Positioned(
+                top: 0, left: 0, right: 0, height: 22,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.white.withOpacity(0.26), Colors.transparent],
+                      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                    ),
+                  ),
+                ),
+              ),
+              // Bottom inner shadow
+              if (isPrimary) Positioned(
+                bottom: 0, left: 0, right: 0, height: 16,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.black.withOpacity(0.30), Colors.transparent],
+                      begin: Alignment.bottomCenter, end: Alignment.topCenter,
+                    ),
+                  ),
+                ),
+              ),
+              Center(
             child: isPrimary && label == 'נחש' && hasReward
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -269,6 +298,8 @@ class _ActionButton extends StatelessWidget {
                       ),
                     ),
                   ),
+              ),
+            ],
           ),
         ),
       ),

@@ -113,18 +113,19 @@ class _TurnInfo extends StatelessWidget {
           isMyTurn ? 'התור שלי' : 'תור היריב',
           style: TextStyle(
             color: isMyTurn
-                ? const Color(0xFFD4AF37).withOpacity(0.9)
-                : const Color(0xFFFF6B35).withOpacity(0.95),
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
+                ? const Color(0xFFD4AF37).withOpacity(0.75)
+                : const Color(0xFFFF6B35).withOpacity(0.80),
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
             height: 1,
           ),
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 2),
         Text(name.isEmpty ? 'ממתין לשחקן' : name, maxLines: 1, overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1)),
-        const SizedBox(height: 4),
-        Text('גלויות $revealedText', style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 3),
+        Text('גלויות $revealedText', style: TextStyle(color: Colors.white.withOpacity(0.38), fontSize: 11, fontWeight: FontWeight.w700)),
       ],
     );
   }

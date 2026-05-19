@@ -57,6 +57,7 @@ class _GameBoardViewState extends State<GameBoardView> {
             width: side,
             height: side,
             padding: const EdgeInsets.all(1),
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: kNavyBlack,
               borderRadius: BorderRadius.circular(14),
@@ -64,6 +65,21 @@ class _GameBoardViewState extends State<GameBoardView> {
                 color: widget.enabled ? kCyan.withOpacity(0.15) : Colors.transparent,
                 width: 1,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.65),
+                  blurRadius: 36,
+                  spreadRadius: 4,
+                  offset: const Offset(0, 16),
+                ),
+                BoxShadow(
+                  color: widget.enabled
+                      ? kCyan.withOpacity(0.13)
+                      : const Color(0xFFD4AF37).withOpacity(0.07),
+                  blurRadius: 44,
+                  spreadRadius: 2,
+                ),
+              ],
             ),
             child: ColorFiltered(
               colorFilter: widget.enabled

@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -5,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../core/constants/game_constants.dart';
@@ -28,7 +30,10 @@ class _WinScreenState extends ConsumerState<WinScreen>
     with TickerProviderStateMixin {
   late final AnimationController _counterController;
   late final AnimationController _shineController;
+  late final AnimationController _burstController;
+  late final ConfettiController _confetti;
   GameImageModel? _gameImage;
+  bool _cosmicFired = false;
 
   @override
   void initState() {
@@ -41,6 +46,11 @@ class _WinScreenState extends ConsumerState<WinScreen>
       vsync: this,
       duration: const Duration(milliseconds: 560),
     );
+    _burstController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _confetti = ConfettiController(duration: const Duration(seconds: 3));
     _loadImage();
     _awardPoints();
     // Counter + shine fire once after entrance stagger settles.
@@ -76,6 +86,8 @@ class _WinScreenState extends ConsumerState<WinScreen>
   void dispose() {
     _counterController.dispose();
     _shineController.dispose();
+    _burstController.dispose();
+    _confetti.dispose();
     super.dispose();
   }
 
@@ -97,139 +109,209 @@ class _WinScreenState extends ConsumerState<WinScreen>
                     ?.score ??
                 0;
 
-        return AppScaffold(
-          backgroundGradient:
-              isWinner ? AppColors.primaryGradient : AppColors.pageBackground,
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: AppSpacing.md),
+        // Fire burst + confetti once when winner state is known
+        if (isWinner && !_cosmicFired) {
+          _cosmicFired = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Future.delayed(const Duration(milliseconds: 460), () {
+              if (mounted) {
+                _confetti.play();
+                _burstController.forward();
+              }
+            });
+          });
+        }
 
-                // ── 1. Title entrance: fade + scale 0.96 → 1.0 ────────
-                Text(
-                  isWinner ? 'ניצחון!' : 'המשחק נגמר',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.titleLight.copyWith(fontSize: 34),
-                )
-                    .animate()
-                    .fadeIn(duration: 280.ms, curve: Curves.easeOut)
-                    .scaleXY(
-                        begin: 0.96,
-                        end: 1.0,
-                        duration: 280.ms,
-                        curve: Curves.easeOut),
-
-                const SizedBox(height: AppSpacing.sm),
-
-                // ── 2. Winner text fades in after title ────────────────
-                Text(
-                  winner == null
-                      ? 'הנה התוצאות'
-                      : isWinner
-                          ? 'זיהית את המקום לפני כולם'
-                          : '${winner.name.isNotEmpty ? winner.name : 'שחקן'} ניצח/ה בסיבוב',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.subtitleLight,
-                )
-                    .animate()
-                    .fadeIn(
-                        delay: 160.ms,
-                        duration: 260.ms,
-                        curve: Curves.easeOut),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                if (_gameImage != null)
-                  AppCard(
-                    padding: EdgeInsets.zero,
+        return Scaffold(
+          backgroundColor: const Color(0xFF050A14),
+          body: Stack(
+            children: [
+              // Background gradient
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: isWinner
+                        ? AppColors.primaryGradient
+                        : AppColors.pageBackground,
+                  ),
+                ),
+              ),
+              // Content
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: SingleChildScrollView(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(24)),
-                          child: CachedNetworkImage(
-                            imageUrl: _gameImage!.imageUrl,
-                            height: 220,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
+                        const SizedBox(height: AppSpacing.md),
+
+                        // ── 1. Title entrance ────────────────────────────
+                        Text(
+                          isWinner ? 'ניצחון!' : 'המשחק נגמר',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.titleLight.copyWith(fontSize: 34),
+                        )
+                            .animate()
+                            .fadeIn(duration: 280.ms, curve: Curves.easeOut)
+                            .scaleXY(
+                                begin: 0.96,
+                                end: 1.0,
+                                duration: 280.ms,
+                                curve: Curves.easeOut),
+
+                        const SizedBox(height: AppSpacing.sm),
+
+                        // ── 2. Winner text ───────────────────────────────
+                        Text(
+                          winner == null
+                              ? 'הנה התוצאות'
+                              : isWinner
+                                  ? 'זיהית את המקום לפני כולם'
+                                  : '${winner.name.isNotEmpty ? winner.name : 'שחקן'} ניצח/ה בסיבוב',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.subtitleLight,
+                        )
+                            .animate()
+                            .fadeIn(
+                                delay: 160.ms,
+                                duration: 260.ms,
+                                curve: Curves.easeOut),
+
+                        const SizedBox(height: AppSpacing.lg),
+
+                        if (_gameImage != null)
+                          AppCard(
+                            padding: EdgeInsets.zero,
+                            child: Column(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(24)),
+                                  child: CachedNetworkImage(
+                                    imageUrl: _gameImage!.imageUrl,
+                                    height: 220,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.all(AppSpacing.md),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        _gameImage!.answer,
+                                        textAlign: TextAlign.center,
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppTextStyles.titleDark,
+                                      ),
+                                      const SizedBox(height: AppSpacing.xs),
+                                      Text(
+                                        _gameImage!.category.label,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppTextStyles.subtitleDark,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(AppSpacing.md),
+
+                        const SizedBox(height: AppSpacing.lg),
+
+                        // ── 3. Score card ────────────────────────────────
+                        AppCard(
                           child: Column(
                             children: [
-                              Text(
-                                _gameImage!.answer,
-                                textAlign: TextAlign.center,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.titleDark,
-                              ),
-                              const SizedBox(height: AppSpacing.xs),
-                              Text(
-                                _gameImage!.category.label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.subtitleDark,
-                              ),
+                              Text('תוצאות', style: AppTextStyles.titleDark)
+                                  .animate()
+                                  .fadeIn(
+                                      delay: 240.ms,
+                                      duration: 260.ms,
+                                      curve: Curves.easeOut),
+                              const SizedBox(height: AppSpacing.md),
+                              ...sortedPlayers.asMap().entries.map(
+                                    (entry) => _ScoreRow(
+                                      rank: entry.key + 1,
+                                      player: entry.value,
+                                      isWinner:
+                                          entry.value.id == room.winnerId,
+                                      isCurrentUser:
+                                          entry.value.id == currentUser?.id,
+                                      delay: Duration(
+                                          milliseconds:
+                                              320 + entry.key * 60),
+                                    ),
+                                  ),
                             ],
                           ),
+                        ),
+
+                        // ── 4. Total reward box ──────────────────────────
+                        if (myScore > 0) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          _TotalRewardBox(
+                            score: myScore,
+                            counterController: _counterController,
+                            shineController: _shineController,
+                          ),
+                        ],
+
+                        const SizedBox(height: AppSpacing.lg),
+
+                        // ── 5. Home button ───────────────────────────────
+                        _HomeButton(
+                          onTap: () {
+                            ref
+                                .read(currentRoomIdProvider.notifier)
+                                .state = null;
+                            context.go('/home');
+                          },
                         ),
                       ],
                     ),
                   ),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                // ── 3. Score card with staggered rows ─────────────────
-                AppCard(
-                  child: Column(
-                    children: [
-                      Text('תוצאות', style: AppTextStyles.titleDark)
-                          .animate()
-                          .fadeIn(
-                              delay: 240.ms,
-                              duration: 260.ms,
-                              curve: Curves.easeOut),
-                      const SizedBox(height: AppSpacing.md),
-                      ...sortedPlayers.asMap().entries.map(
-                            (entry) => _ScoreRow(
-                              rank: entry.key + 1,
-                              player: entry.value,
-                              isWinner: entry.value.id == room.winnerId,
-                              isCurrentUser:
-                                  entry.value.id == currentUser?.id,
-                              delay: Duration(
-                                  milliseconds: 320 + entry.key * 60),
-                            ),
-                          ),
+                ),
+              ),
+              // Gold burst rings (winner only)
+              if (isWinner)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: AnimatedBuilder(
+                      animation: _burstController,
+                      builder: (_, __) {
+                        final t = Curves.easeOut
+                            .transform(_burstController.value);
+                        if (t <= 0) return const SizedBox.shrink();
+                        return Center(child: _BurstRings(progress: t));
+                      },
+                    ),
+                  ),
+                ),
+              // Confetti (winner only)
+              if (isWinner)
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: ConfettiWidget(
+                    confettiController: _confetti,
+                    blastDirection: math.pi / 2,
+                    emissionFrequency: 0.05,
+                    numberOfParticles: 22,
+                    gravity: 0.14,
+                    colors: const [
+                      Color(0xFFD4AF37),
+                      Color(0xFFFFE082),
+                      Color(0xFF87CEEB),
+                      Colors.white,
                     ],
+                    shouldLoop: false,
                   ),
                 ),
-
-                // ── 4. Total reward box (current user's score) ─────────
-                if (myScore > 0) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  _TotalRewardBox(
-                    score: myScore,
-                    counterController: _counterController,
-                    shineController: _shineController,
-                  ),
-                ],
-
-                const SizedBox(height: AppSpacing.lg),
-
-                // ── 6. Tactile home button ─────────────────────────────
-                _HomeButton(
-                  onTap: () {
-                    ref.read(currentRoomIdProvider.notifier).state = null;
-                    context.go('/home');
-                  },
-                ),
-              ],
-            ),
+            ],
           ),
         );
       },
@@ -240,7 +322,57 @@ class _WinScreenState extends ConsumerState<WinScreen>
   }
 }
 
-// ── Score row — stagger fade + moveY, coin icon scale pulse ───────────────
+// ── Expanding gold burst rings ─────────────────────────────────────────────
+
+class _BurstRings extends StatelessWidget {
+  final double progress;
+  const _BurstRings({required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        _Ring(progress: progress, maxOpacity: 0.62),
+        _Ring(progress: math.max(0.0, progress - 0.22), maxOpacity: 0.44),
+        _Ring(progress: math.max(0.0, progress - 0.44), maxOpacity: 0.28),
+      ],
+    );
+  }
+}
+
+class _Ring extends StatelessWidget {
+  final double progress;
+  final double maxOpacity;
+  const _Ring({required this.progress, required this.maxOpacity});
+
+  @override
+  Widget build(BuildContext context) {
+    if (progress <= 0) return const SizedBox.shrink();
+    final opacity = maxOpacity * (1.0 - progress);
+    final size = 60.0 + 320.0 * progress;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: const Color(0xFFD4AF37).withOpacity(opacity),
+          width: (2.0 * (1.0 - progress)).clamp(0.3, 2.0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFD4AF37).withOpacity(opacity * 0.5),
+            blurRadius: 16 * (1.0 - progress),
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Score row ──────────────────────────────────────────────────────────────
 
 class _ScoreRow extends StatelessWidget {
   final int rank;
@@ -289,7 +421,6 @@ class _ScoreRow extends StatelessWidget {
               ),
             ),
           ),
-          // ── 5. Coin icon: scale pulse once on row entrance ──────────
           const Icon(Icons.monetization_on_rounded,
                   color: AppColors.primary, size: 16)
               .animate(delay: delay + const Duration(milliseconds: 50))
@@ -320,7 +451,7 @@ class _ScoreRow extends StatelessWidget {
   }
 }
 
-// ── Total reward box: counter 0 → score, one-shot gold shine sweep ─────────
+// ── Total reward box ───────────────────────────────────────────────────────
 
 class _TotalRewardBox extends StatelessWidget {
   final int score;
@@ -344,8 +475,8 @@ class _TotalRewardBox extends StatelessWidget {
             Border.all(color: AppColors.primary.withOpacity(0.36), width: 1),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.12),
-            blurRadius: 16,
+            color: AppColors.primary.withOpacity(0.18),
+            blurRadius: 22,
             offset: const Offset(0, 6),
           ),
         ],
@@ -405,7 +536,8 @@ class _TotalRewardBox extends StatelessWidget {
               AnimatedBuilder(
                 animation: counterController,
                 builder: (context, _) {
-                  final t = Curves.easeOut.transform(counterController.value);
+                  final t =
+                      Curves.easeOut.transform(counterController.value);
                   final displayed = (t * score).round();
                   return Text(
                     '+$displayed',
@@ -434,7 +566,7 @@ class _TotalRewardBox extends StatelessWidget {
   }
 }
 
-// ── Tactile "חזור לבית" button: 0.985 press, shadow compression, no bounce ─
+// ── Home button ────────────────────────────────────────────────────────────
 
 class _HomeButton extends StatefulWidget {
   final VoidCallback onTap;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/game_image_model.dart';
 import '../../../models/room_model.dart';
+import '../../../widgets/common/ambient_background.dart';
 import 'answer_slots.dart';
 import 'game_actions.dart';
 import 'game_banners.dart';
@@ -70,16 +71,49 @@ class GameLayout extends StatelessWidget {
             players: room.players,
           ),
         Expanded(
-          child: Center(
-            child: GameBoardView(
-              gridSize: room.gridSize,
-              revealedCells: room.revealedCells,
-              availableCells: room.availablePieceIndices,
-              imageUrl: image?.imageUrl,
-              enabled: isMyTurn && !isBusy && !canGuessNow,
-              glowEnabled: isMyTurn && !isBusy && !canGuessNow,
-              onReveal: onReveal,
-            ),
+          child: Stack(
+            children: [
+              // Subtle ambient atmosphere behind the board
+              const Positioned.fill(
+                child: RepaintBoundary(
+                  child: AmbientBackground(
+                    showGrid: false,
+                    showOrbits: false,
+                    showParticles: true,
+                    goldAccent: true,
+                    intensity: 0.10,
+                  ),
+                ),
+              ),
+              // Soft radial vignette — darkens edges, keeps board focal
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment.center,
+                        radius: 0.85,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.42),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Center(
+                child: GameBoardView(
+                  gridSize: room.gridSize,
+                  revealedCells: room.revealedCells,
+                  availableCells: room.availablePieceIndices,
+                  imageUrl: image?.imageUrl,
+                  enabled: isMyTurn && !isBusy && !canGuessNow,
+                  glowEnabled: isMyTurn && !isBusy && !canGuessNow,
+                  onReveal: onReveal,
+                ),
+              ),
+            ],
           ),
         ),
         AnswerSlots(answer: image?.answer ?? '', isMyTurn: isMyTurn),
