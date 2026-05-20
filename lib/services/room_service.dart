@@ -376,6 +376,7 @@ class RoomService {
       'guessOpportunityDeadlineMs': null,
       'guessModeDeadlineMs': null,
       'wrongGuessCounts': {},
+      'revealCycleId': 1,
     });
   }
 
@@ -391,60 +392,98 @@ class RoomService {
     required int pieceIndex,
     required Difficulty difficulty,
   }) async {
-    final doc = await _rooms.doc(roomId).get();
-    final room = RoomModel.fromFirestore(doc);
+    final now = DateTime.now().millisecondsSinceEpoch;
 
-    if (!room.availablePieceIndices.contains(pieceIndex)) return;
+    await _firestore.runTransaction((tx) async {
+      final doc = await tx.get(_rooms.doc(roomId));
+      if (!doc.exists) return;
+      final room = RoomModel.fromFirestore(doc);
+      final cycleId = room.revealCycleId;
+      final shortUid = userId.length > 6 ? userId.substring(0, 6) : userId;
 
-    final player = room.players[userId];
-    if (player == null) return;
+      QaLoggerService.instance.log('REVEAL',
+          'REVEAL_TX_BEGIN cycleId=$cycleId pieceIndex=$pieceIndex uid=$shortUid');
 
-    final newHidden = room.availablePieceIndices.where((i) => i != pieceIndex).toList();
-    final newScore = player.score + difficulty.placePiecePoints;
-    final shouldGrantLetterCard =
-        player.letterCards == 0 &&
-        !room.letterCardGrantedPlayerIds.contains(userId) &&
-        Random().nextDouble() < _letterCardBonusChance;
-
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
-
-    // Determine who gets the guess opportunity.
-    // Solo (1 human player): revealer gets their own guess opportunity.
-    // Multiplayer: next active player in turn order gets the opportunity.
-    final humanCount = room.players.values.where((p) => !p.isBot).length;
-    final isSolo = humanCount == 1;
-    final String guessOpportunityPlayerId;
-    if (isSolo) {
-      guessOpportunityPlayerId = userId;
-    } else {
-      final activeTurnOrder = room.turnOrder
-          .where((id) => !(room.players[id]?.isEliminated ?? false))
-          .toList();
-      final revealerIdx = activeTurnOrder.indexOf(userId);
-      if (revealerIdx >= 0 && activeTurnOrder.isNotEmpty) {
-        guessOpportunityPlayerId =
-            activeTurnOrder[(revealerIdx + 1) % activeTurnOrder.length];
-      } else {
-        guessOpportunityPlayerId = userId;
+      // Duplicate / phase guard: must still be in revealTurn
+      if (room.turnPhase != TurnPhase.revealTurn) {
+        QaLoggerService.instance.log('REVEAL',
+            'REVEAL_TX_ABORT reason=REVEAL_REJECTED_DUPLICATE cycleId=$cycleId phase=${room.turnPhase.name}');
+        return;
       }
-    }
 
-    final updates = <String, dynamic>{
-      'placedPieces.${pieceIndex.toString()}': userId,
-      'availablePieceIndices': newHidden,
-      'players.$userId.score': newScore,
-      'turnPhase': TurnPhase.guessOpportunity.name,
-      'guessOpportunityPlayerId': guessOpportunityPlayerId,
-      'guessOpportunityDeadlineMs': nowMs + 7000,
-      'lastRevealedByPlayerId': userId,
-    };
+      // Authorization guard: must be the current turn player
+      final currentUser = room.currentTurnUserId;
+      if (currentUser != userId) {
+        QaLoggerService.instance.log('REVEAL',
+            'REVEAL_TX_ABORT reason=REVEAL_REJECTED_UNAUTHORIZED cycleId=$cycleId');
+        return;
+      }
 
-    if (shouldGrantLetterCard) {
-      updates['players.$userId.letterCards'] = 1;
-      updates['letterCardGrantedPlayerIds'] = FieldValue.arrayUnion([userId]);
-    }
+      // Deadline guard: no late reveals accepted
+      final deadline = room.revealDeadlineMs;
+      if (deadline != null && now > deadline) {
+        QaLoggerService.instance.log('REVEAL',
+            'REVEAL_TX_ABORT reason=REVEAL_REJECTED_EXPIRED cycleId=$cycleId deadline=$deadline now=$now');
+        return;
+      }
 
-    await _rooms.doc(roomId).update(updates);
+      // Piece availability guard: piece must not already be open
+      if (!room.availablePieceIndices.contains(pieceIndex)) {
+        QaLoggerService.instance.log('REVEAL',
+            'REVEAL_TX_ABORT reason=REVEAL_REJECTED_ALREADY_OPEN cycleId=$cycleId pieceIndex=$pieceIndex');
+        return;
+      }
+
+      final player = room.players[userId];
+      if (player == null) return;
+
+      // Compute reveal outcome
+      final newHidden = room.availablePieceIndices.where((i) => i != pieceIndex).toList();
+      final newScore = player.score + difficulty.placePiecePoints;
+      final shouldGrantLetterCard =
+          player.letterCards == 0 &&
+          !room.letterCardGrantedPlayerIds.contains(userId) &&
+          Random().nextDouble() < _letterCardBonusChance;
+
+      // Determine guess opportunity recipient
+      final humanCount = room.players.values.where((p) => !p.isBot).length;
+      final isSolo = humanCount == 1;
+      final String guessOpportunityPlayerId;
+      if (isSolo) {
+        guessOpportunityPlayerId = userId;
+      } else {
+        final activeTurnOrder = room.turnOrder
+            .where((id) => !(room.players[id]?.isEliminated ?? false))
+            .toList();
+        final revealerIdx = activeTurnOrder.indexOf(userId);
+        if (revealerIdx >= 0 && activeTurnOrder.isNotEmpty) {
+          guessOpportunityPlayerId =
+              activeTurnOrder[(revealerIdx + 1) % activeTurnOrder.length];
+        } else {
+          guessOpportunityPlayerId = userId;
+        }
+      }
+
+      final updates = <String, dynamic>{
+        'placedPieces.${pieceIndex.toString()}': userId,
+        'availablePieceIndices': newHidden,
+        'players.$userId.score': newScore,
+        'turnPhase': TurnPhase.guessOpportunity.name,
+        'guessOpportunityPlayerId': guessOpportunityPlayerId,
+        'guessOpportunityDeadlineMs': now + 7000,
+        'lastRevealedByPlayerId': userId,
+      };
+
+      if (shouldGrantLetterCard) {
+        updates['players.$userId.letterCards'] = 1;
+        updates['letterCardGrantedPlayerIds'] = FieldValue.arrayUnion([userId]);
+      }
+
+      tx.update(_rooms.doc(roomId), updates);
+
+      QaLoggerService.instance.log('REVEAL',
+          'REVEAL_TX_COMMIT cycleId=$cycleId pieceIndex=$pieceIndex');
+    });
   }
 
   Future<void> skipPiecePlacement({required String roomId}) async {
@@ -459,6 +498,7 @@ class RoomService {
       'guessModePlayerId': null,
       'guessOpportunityDeadlineMs': null,
       'guessModeDeadlineMs': null,
+      'revealCycleId': FieldValue.increment(1),
     });
   }
 
@@ -518,6 +558,7 @@ class RoomService {
         'guessModePlayerId': null,
         'guessOpportunityDeadlineMs': null,
         'guessModeDeadlineMs': null,
+        'revealCycleId': FieldValue.increment(1),
       });
     });
   }
@@ -542,6 +583,7 @@ class RoomService {
         'revealDeadlineMs': now + 8000,
         'guessOpportunityPlayerId': null,
         'guessOpportunityDeadlineMs': null,
+        'revealCycleId': FieldValue.increment(1),
       });
     });
   }
@@ -600,6 +642,7 @@ class RoomService {
         'guessOpportunityPlayerId': null,
         'guessOpportunityDeadlineMs': null,
         'guessModeDeadlineMs': null,
+        'revealCycleId': FieldValue.increment(1),
       });
     });
   }
@@ -694,6 +737,7 @@ class RoomService {
         'guessOpportunityDeadlineMs': null,
         'guessModeDeadlineMs': null,
         'wrongGuessCounts.$userId': currentWrongCount + 1,
+        'revealCycleId': FieldValue.increment(1),
       };
 
       if (newScore <= 0) {
