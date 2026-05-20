@@ -839,7 +839,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 _lastKnownPhase = room.phase;
 
                 // TurnPhase change detection — fires on every stream update after first
-                if (_lastKnownTurnPhase != null && _lastKnownTurnPhase != room.turnPhase) {
+                // Suppress stale phase changes when game is already finished
+                if (_lastKnownTurnPhase != null && _lastKnownTurnPhase != room.turnPhase &&
+                    room.phase != GamePhase.finished) {
                   QaLoggerService.instance.log('TURN', 'TURN_PHASE_CHANGED from=${_lastKnownTurnPhase!.name} to=${room.turnPhase.name}');
 
                   if (room.turnPhase == TurnPhase.guessOpportunity) {
@@ -978,12 +980,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   });
                 }
 
+                final _isFinished = room.phase == GamePhase.finished;
                 // isMyTurn: it's my reveal turn (revealTurn phase, I'm the current turn player)
-                final isMyTurn = currentUserId != null &&
+                final isMyTurn = !_isFinished &&
+                    currentUserId != null &&
                     room.currentTurnUserId == currentUserId &&
                     room.turnPhase == TurnPhase.revealTurn;
                 // canGuessNow: I have the guess opportunity window
-                final canGuessNow = currentUserId != null &&
+                final canGuessNow = !_isFinished &&
+                    currentUserId != null &&
                     room.turnPhase == TurnPhase.guessOpportunity &&
                     room.guessOpportunityPlayerId == currentUserId;
                 final isSolo = room.players.values.where((p) => !p.isBot).length == 1;

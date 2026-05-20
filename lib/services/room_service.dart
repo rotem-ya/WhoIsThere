@@ -445,6 +445,31 @@ class RoomService {
           !room.letterCardGrantedPlayerIds.contains(userId) &&
           Random().nextDouble() < _letterCardBonusChance;
 
+      // Last tile revealed with no winner — close game immediately
+      if (newHidden.isEmpty) {
+        final finishUpdates = <String, dynamic>{
+          'placedPieces.${pieceIndex.toString()}': userId,
+          'availablePieceIndices': newHidden,
+          'players.$userId.score': newScore,
+          'phase': GamePhase.finished.name,
+          'turnPhase': TurnPhase.roundOver.name,
+          'guessOpportunityPlayerId': null,
+          'guessModePlayerId': null,
+          'guessOpportunityDeadlineMs': null,
+          'guessModeDeadlineMs': null,
+          'lastRevealedByPlayerId': userId,
+        };
+        if (shouldGrantLetterCard) {
+          finishUpdates['players.$userId.letterCards'] = 1;
+          finishUpdates['letterCardGrantedPlayerIds'] = FieldValue.arrayUnion([userId]);
+        }
+        tx.update(_rooms.doc(roomId), finishUpdates);
+        QaLoggerService.instance.log('GAME', 'ROUND_OVER_SET_NO_WINNER cycleId=$cycleId');
+        QaLoggerService.instance.log('REVEAL',
+            'REVEAL_TX_COMMIT cycleId=$cycleId pieceIndex=$pieceIndex');
+        return;
+      }
+
       // Determine guess opportunity recipient
       final humanCount = room.players.values.where((p) => !p.isBot).length;
       final isSolo = humanCount == 1;
@@ -489,6 +514,10 @@ class RoomService {
   Future<void> skipPiecePlacement({required String roomId}) async {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
+    if (room.phase == GamePhase.finished) {
+      QaLoggerService.instance.log('TURN', 'TURN_ADVANCE_SKIPPED_FINISHED method=skipPiecePlacement');
+      return;
+    }
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     await _rooms.doc(roomId).update({
       'currentTurnIndex': room.currentTurnIndex + 1,
@@ -545,6 +574,10 @@ class RoomService {
       if (!doc.exists) return;
       final room = RoomModel.fromFirestore(doc);
 
+      if (room.phase == GamePhase.finished) {
+        QaLoggerService.instance.log('TURN', 'TURN_ADVANCE_SKIPPED_FINISHED method=advanceTurnOnTimeout');
+        return;
+      }
       if (room.turnPhase != TurnPhase.revealTurn) return;
       if (room.currentTurnUserId != userId) return;
       final deadline = room.revealDeadlineMs;
@@ -573,6 +606,10 @@ class RoomService {
       if (!doc.exists) return;
       final room = RoomModel.fromFirestore(doc);
 
+      if (room.phase == GamePhase.finished) {
+        QaLoggerService.instance.log('TURN', 'TURN_ADVANCE_SKIPPED_FINISHED method=expireGuessOpportunity');
+        return;
+      }
       if (room.turnPhase != TurnPhase.guessOpportunity) return;
       final deadline = room.guessOpportunityDeadlineMs;
       if (deadline == null || now < deadline) return;
@@ -598,6 +635,10 @@ class RoomService {
       if (!doc.exists) return;
       final room = RoomModel.fromFirestore(doc);
 
+      if (room.phase == GamePhase.finished) {
+        QaLoggerService.instance.log('TURN', 'TURN_ADVANCE_SKIPPED_FINISHED method=expireGuessMode');
+        return;
+      }
       if (room.turnPhase != TurnPhase.guessMode) return;
       final deadline = room.guessModeDeadlineMs;
       if (deadline == null || now < deadline) return;
