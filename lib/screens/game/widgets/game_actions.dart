@@ -16,6 +16,7 @@ class GameActions extends ConsumerWidget {
   final int revealedCount;
   final int totalTiles;
   final bool isGuessModeActive;
+  final bool isScoreCliff;
   final String guessModePlayerName;
   final VoidCallback? onRevealHint;
   final VoidCallback? onGuess;
@@ -33,6 +34,7 @@ class GameActions extends ConsumerWidget {
     required this.onRevealHint,
     required this.onGuess,
     required this.onSkip,
+    this.isScoreCliff = false,
   });
 
   @override
@@ -81,6 +83,19 @@ class GameActions extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (isScoreCliff && canGuessNow)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    'פרס הניצחון מחכה!',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFFFFE082),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
               Row(
                 children: [
                   Expanded(

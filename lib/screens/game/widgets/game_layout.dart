@@ -73,6 +73,10 @@ class GameLayout extends StatelessWidget {
 
     final isGuessModeActive = room.turnPhase == TurnPhase.guessMode;
     final guessModePlayerName = room.players[room.guessModePlayerId]?.name ?? '';
+    final isLastTile = room.availablePieceIndices.length == 1;
+    final myScore = currentUserId != null ? (room.players[currentUserId]?.score ?? 0) : 0;
+    final leaderScore = room.sortedPlayers.isNotEmpty ? room.sortedPlayers.first.score : 0;
+    final isScoreCliff = canGuessNow && (leaderScore - myScore) <= 1;
 
     return Column(
       children: [
@@ -91,9 +95,11 @@ class GameLayout extends StatelessWidget {
           isSolo: isSolo,
           revealedCount: revealedCount,
           totalTiles: total,
+          guessOpportunityDeadlineMs: room.guessOpportunityDeadlineMs,
+          isLastTile: isLastTile,
         ),
-        // During guessMode: hide the 3px bar — inline countdown replaces it
-        if (isGuessModeActive)
+        // During my guessMode: hide the 3px bar — inline countdown replaces it
+        if (isMyGuessModeActive)
           const SizedBox(height: 3)
         else
           _TurnPhaseCountdownBar(
@@ -153,6 +159,7 @@ class GameLayout extends StatelessWidget {
             revealedCount: revealedCount,
             totalTiles: total,
             isGuessModeActive: isGuessModeActive,
+            isScoreCliff: isScoreCliff,
             guessModePlayerName: guessModePlayerName,
             onRevealHint: onRevealHint,
             onGuess: onGuess,

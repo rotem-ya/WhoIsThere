@@ -184,6 +184,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int _lastRevealedCountForLog = -1;
   String? _lastPressureStateForLog;
 
+  // B9: One-shot QA log flags
+  bool _finalTileDramaLogged = false;
+  bool _spectatorGuessClockLogged = false;
+  bool _scoreCliffSignalLogged = false;
+  String? _lastDreadStateForLog;
+
   static Future<void> _primeTickSounds() async {
     try {
       await _revealTickPlayer.setPlayerMode(PlayerMode.lowLatency);
@@ -274,6 +280,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         final tickRemaining = room.guessModeDeadlineMs! - now;
         if (tickRemaining > 0 && tickRemaining <= 5500) {
           unawaited(_playGuessModeTick(volume: isEndgame ? 0.23 : 0.17));
+        }
+      }
+
+      // B9: Opponent guess dread state — log transitions during opponent's guessOpportunity
+      if (room.turnPhase == TurnPhase.guessOpportunity &&
+          uid != null &&
+          room.guessOpportunityPlayerId != uid &&
+          room.guessOpportunityDeadlineMs != null) {
+        final dreadRemaining = room.guessOpportunityDeadlineMs! - now;
+        final dreadState = dreadRemaining <= 2000 ? 'final' : dreadRemaining <= 3500 ? 'thinking' : 'normal';
+        if (dreadState != _lastDreadStateForLog) {
+          _lastDreadStateForLog = dreadState;
+          QaLoggerService.instance.log('GAME', 'OPPONENT_GUESS_DREAD_STATE state=$dreadState');
         }
       }
 
@@ -479,17 +498,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (_lastBotTurnKey == key) return;
     _lastBotTurnKey = key;
 
-    // Show "opponent thinking" banner immediately — before the delay expires.
     final botName = player.name.isNotEmpty ? player.name : 'בוט';
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() {
-        _showBotTyping = true;
-        _botTypingName = botName;
-        _botTypingText = '';
-      });
-    });
-
     final totalTiles = room.gridSize * room.gridSize;
     final ratio = totalTiles > 0 ? room.placedPieces.length / totalTiles : 0.0;
     final int baseDelayMs;
@@ -500,17 +509,32 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     } else {
       baseDelayMs = 1000 + _random.nextInt(601); // 1000–1600ms — early: realistic
     }
-    // B8: Reveal hesitation — bot simulates prize-potential anxiety by pausing before tile flip
+    // B8/B9: Reveal hesitation — bot simulates prize-potential anxiety; B9 shows tell text
     int delayMs = baseDelayMs;
     final double hesitationChance = ratio >= 0.75 ? 0.50 : ratio >= 0.50 ? 0.30 : 0.0;
+    bool isHesitating = false;
     if (hesitationChance > 0 && _random.nextDouble() < hesitationChance) {
       final extraMs = ratio >= 0.75
-          ? 2000 + _random.nextInt(2001) // 2000–4000ms — severe hesitation
-          : 1500 + _random.nextInt(1001); // 1500–2500ms — moderate hesitation
+          ? 2000 + _random.nextInt(2001)
+          : 1500 + _random.nextInt(1001);
       delayMs += extraMs;
+      isHesitating = true;
       QaLoggerService.instance.log('BOT',
           'BOT_HESITATION_ACTIVE ratio=${ratio.toStringAsFixed(2)} delay=$delayMs');
     }
+    final hesitationText = isHesitating ? (_random.nextBool() ? '...לא בטוח' : '...חושב') : '';
+    // Show "opponent thinking" banner — with hesitation text when hesitating
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _showBotTyping = true;
+        _botTypingName = botName;
+        _botTypingText = hesitationText;
+      });
+      if (isHesitating) {
+        QaLoggerService.instance.log('BOT', 'BOT_HESITATION_TELL_VISIBLE text=$hesitationText');
+      }
+    });
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
       final snapshot = await ref.read(roomServiceProvider).watchRoom(room.id).first;
@@ -1180,6 +1204,28 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
                 final _totalTiles = room.gridSize * room.gridSize;
                 final revealRatio = _totalTiles > 0 ? room.placedPieces.length / _totalTiles : 0.0;
+
+                // B9: One-shot QA logs
+                if (room.phase == GamePhase.playing) {
+                  if (!_finalTileDramaLogged && room.availablePieceIndices.length == 1) {
+                    _finalTileDramaLogged = true;
+                    QaLoggerService.instance.log('GAME', 'FINAL_TILE_DRAMA_ACTIVE');
+                  }
+                  final _b9GuessModeActive = room.turnPhase == TurnPhase.guessMode;
+                  final _b9IsMyGuessMode = currentUserId != null && room.guessModePlayerId == currentUserId;
+                  if (!_spectatorGuessClockLogged && _b9GuessModeActive && !_b9IsMyGuessMode) {
+                    _spectatorGuessClockLogged = true;
+                    QaLoggerService.instance.log('GAME', 'SPECTATOR_GUESS_CLOCK_VISIBLE');
+                  }
+                  if (!_scoreCliffSignalLogged && canGuessNow) {
+                    final _b9MyScore = currentUserId != null ? (room.players[currentUserId]?.score ?? 0) : 0;
+                    final _b9LeaderScore = room.sortedPlayers.isNotEmpty ? room.sortedPlayers.first.score : 0;
+                    if ((_b9LeaderScore - _b9MyScore) <= 1) {
+                      _scoreCliffSignalLogged = true;
+                      QaLoggerService.instance.log('GAME', 'SCORE_CLIFF_SIGNAL_VISIBLE');
+                    }
+                  }
+                }
 
                 return GameLayout(
                   room: room,

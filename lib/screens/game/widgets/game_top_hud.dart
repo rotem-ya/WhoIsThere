@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/game_constants.dart';
@@ -27,6 +29,8 @@ class TopHud extends StatelessWidget {
   final bool isSolo;
   final int revealedCount;
   final int totalTiles;
+  final int? guessOpportunityDeadlineMs;
+  final bool isLastTile;
 
   const TopHud({
     required this.players,
@@ -43,6 +47,8 @@ class TopHud extends StatelessWidget {
     this.isSolo = false,
     this.revealedCount = 0,
     this.totalTiles = 1,
+    this.guessOpportunityDeadlineMs,
+    this.isLastTile = false,
   });
 
   @override
@@ -93,6 +99,8 @@ class TopHud extends StatelessWidget {
                       isMyGuessOpportunity: isMyGuessOpportunity,
                       isMyGuessModeActive: isMyGuessModeActive,
                       guessModePlayerName: guessModePlayerName,
+                      guessOpportunityDeadlineMs: guessOpportunityDeadlineMs,
+                      isLastTile: isLastTile,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -157,7 +165,7 @@ class _BackButton extends StatelessWidget {
   }
 }
 
-class _TurnInfo extends StatelessWidget {
+class _TurnInfo extends StatefulWidget {
   final String name;
   final String revealedText;
   final bool isMyTurn;
@@ -165,6 +173,8 @@ class _TurnInfo extends StatelessWidget {
   final bool isMyGuessOpportunity;
   final bool isMyGuessModeActive;
   final String guessModePlayerName;
+  final int? guessOpportunityDeadlineMs;
+  final bool isLastTile;
 
   const _TurnInfo({
     required this.name,
@@ -174,12 +184,36 @@ class _TurnInfo extends StatelessWidget {
     required this.isMyGuessOpportunity,
     required this.isMyGuessModeActive,
     required this.guessModePlayerName,
+    this.guessOpportunityDeadlineMs,
+    this.isLastTile = false,
   });
+
+  @override
+  State<_TurnInfo> createState() => _TurnInfoState();
+}
+
+class _TurnInfoState extends State<_TurnInfo> {
+  Timer? _t;
+  int _nowMs = DateTime.now().millisecondsSinceEpoch;
+
+  @override
+  void initState() {
+    super.initState();
+    _t = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _nowMs = DateTime.now().millisecondsSinceEpoch);
+    });
+  }
+
+  @override
+  void dispose() {
+    _t?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final (label, labelColor) = _phaseLabel();
-    final isGuessMode = turnPhase == TurnPhase.guessMode;
+    final isGuessMode = widget.turnPhase == TurnPhase.guessMode;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -196,7 +230,7 @@ class _TurnInfo extends StatelessWidget {
         ),
         const SizedBox(height: 3),
         Text(
-          name.isEmpty ? 'ממתין לשחקן' : name,
+          widget.name.isEmpty ? 'ממתין לשחקן' : widget.name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1),
@@ -204,7 +238,7 @@ class _TurnInfo extends StatelessWidget {
         if (!isGuessMode) ...[
           const SizedBox(height: 4),
           Text(
-            'גלויות $revealedText',
+            'גלויות ${widget.revealedText}',
             style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12, fontWeight: FontWeight.w800),
           ),
         ],
@@ -213,18 +247,32 @@ class _TurnInfo extends StatelessWidget {
   }
 
   (String, Color) _phaseLabel() {
-    switch (turnPhase) {
+    switch (widget.turnPhase) {
       case TurnPhase.revealTurn:
-        return isMyTurn
+        if (widget.isLastTile) {
+          return widget.isMyTurn
+              ? ('גילוי אחרון!', const Color(0xFFFF3B30))
+              : ('ממתין לגילוי האחרון', const Color(0xFFFF6B35));
+        }
+        return widget.isMyTurn
             ? ('גלה קלף', const Color(0xFFD4AF37))
-            : ('${name.isEmpty ? 'יריב' : name} מגלה', const Color(0xFF87CEEB).withOpacity(0.85));
+            : ('${widget.name.isEmpty ? 'יריב' : widget.name} מגלה', const Color(0xFF87CEEB).withOpacity(0.85));
       case TurnPhase.guessOpportunity:
-        return isMyGuessOpportunity
-            ? ('האם אתה יודע?', const Color(0xFFFFE082))
-            : ('${name.isEmpty ? 'יריב' : name} מחליט...', const Color(0xFF87CEEB).withOpacity(0.80));
+        if (widget.isMyGuessOpportunity) {
+          return ('האם אתה יודע?', const Color(0xFFFFE082));
+        }
+        if (widget.guessOpportunityDeadlineMs != null) {
+          final remaining = widget.guessOpportunityDeadlineMs! - _nowMs;
+          if (remaining <= 2000) {
+            return ('ייתכן שינחש!', const Color(0xFFFF3B30));
+          } else if (remaining <= 3500) {
+            return ('יריב שוקל...', const Color(0xFFFF9F43));
+          }
+        }
+        return ('${widget.name.isEmpty ? 'יריב' : widget.name} מחליט...', const Color(0xFF87CEEB).withOpacity(0.80));
       case TurnPhase.guessMode:
-        final gName = guessModePlayerName.isEmpty ? 'יריב' : guessModePlayerName;
-        return isMyGuessModeActive
+        final gName = widget.guessModePlayerName.isEmpty ? 'יריב' : widget.guessModePlayerName;
+        return widget.isMyGuessModeActive
             ? ('אתה מנחש!', const Color(0xFF00F2FF))
             : ('$gName מנחש!', const Color(0xFFFF6B35));
       case TurnPhase.resolvingGuess:
