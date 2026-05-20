@@ -43,6 +43,10 @@ class EconomyConfig {
   static const int wrongGuessPenaltyPerGuess = 10;
   static const int maxWrongGuessPenalty = 25;
 
+  // ── Live in-game guess penalties (guessMode phase) ─────────────
+  static const int wrongGuessLivePenalty = 3;
+  static const int guessTimeoutLivePenalty = 3;
+
   // ── Efficiency bonus (deprecated — kept for schema compat) ────
   // @deprecated Use earlyGuessBonus ratio-based constants instead.
   static const int efficiencyBonusTier1 = 25;

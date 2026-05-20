@@ -3,17 +3,30 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:uuid/uuid.dart';
 
+import '../models/economy/economy_transaction_model.dart';
+import '../models/economy/user_economy_model.dart';
 import '../models/room_model.dart';
 import '../models/player_model.dart';
 import '../models/game_image_model.dart';
+import '../core/constants/economy_config.dart';
 import '../core/constants/game_constants.dart';
 import '../core/utils/room_code_generator.dart';
+import 'qa_logger_service.dart';
 
 class RoomService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   CollectionReference get _rooms => _firestore.collection('rooms');
+
+  static const _uuid = Uuid();
+
+  DocumentReference _walletRef(String uid) =>
+      _firestore.doc('users/$uid/economy/wallet');
+
+  DocumentReference _txRef(String uid, String txId) =>
+      _firestore.doc('users/$uid/economy_transactions/$txId');
 
   static const double _letterCardBonusChance = 0.12;
 
@@ -534,7 +547,7 @@ class RoomService {
   }
 
   /// Called when the guess mode timer expires without a submission.
-  /// Applies a penalty (Phase D), advances the turn, resets to revealTurn.
+  /// Deducts a timeout penalty from the guesser's wallet and advances the turn.
   Future<void> expireGuessMode({required String roomId}) async {
     final now = DateTime.now().millisecondsSinceEpoch;
 
@@ -547,7 +560,37 @@ class RoomService {
       final deadline = room.guessModeDeadlineMs;
       if (deadline == null || now < deadline) return;
 
-      // TODO Phase D: apply wallet penalty for room.guessModePlayerId
+      final guesserUid = room.guessModePlayerId;
+      if (guesserUid != null) {
+        final walletDoc = await tx.get(_walletRef(guesserUid));
+        final wallet = walletDoc.exists
+            ? UserEconomyModel.fromFirestore(
+                guesserUid, walletDoc.data() as Map<String, dynamic>)
+            : null;
+        final before = wallet?.coins ?? 0;
+        final deduct = before > 0
+            ? EconomyConfig.guessTimeoutLivePenalty.clamp(0, before)
+            : 0;
+        final after = before - deduct;
+
+        if (deduct > 0) {
+          tx.set(_walletRef(guesserUid), {'coins': after}, SetOptions(merge: true));
+          final txId = _uuid.v4();
+          tx.set(_txRef(guesserUid, txId), EconomyTransactionModel(
+            id: txId,
+            type: TransactionType.guessTimeoutPenalty,
+            delta: -deduct,
+            balanceAfter: after,
+            roomId: roomId,
+            createdAt: DateTime.now().toUtc(),
+          ).toFirestore());
+          QaLoggerService.instance.log('ECONOMY',
+              'GUESS_TIMEOUT_PENALTY_APPLIED amount=$deduct before=$before after=$after');
+        } else {
+          QaLoggerService.instance.log('ECONOMY',
+              'GUESS_TIMEOUT_PENALTY_SKIPPED reason=zero_balance');
+        }
+      }
 
       tx.update(_rooms.doc(roomId), {
         'currentTurnIndex': room.currentTurnIndex + 1,
@@ -568,59 +611,106 @@ class RoomService {
     required GameImageModel image,
     required Difficulty difficulty,
   }) async {
-    // Read current room state for guard and score lookup
-    final roomDoc = await _rooms.doc(roomId).get();
-    final room = RoomModel.fromFirestore(roomDoc);
-
-    // Guard: only the designated guesser in guessMode may submit
-    if (room.turnPhase != TurnPhase.guessMode || room.guessModePlayerId != userId) {
-      return false;
-    }
-
-    final isCorrect = image.isCorrectAnswer(guess);
     final nowMs = DateTime.now().millisecondsSinceEpoch;
+    bool isCorrect = false;
+    bool needsEliminationCheck = false;
 
-    if (isCorrect) {
-      await _rooms.doc(roomId).update({
-        'phase': GamePhase.finished.name,
-        'winnerId': userId,
-        'players.$userId.score': FieldValue.increment(difficulty.winReward),
-        'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': true},
+    await _firestore.runTransaction((tx) async {
+      final roomDoc = await tx.get(_rooms.doc(roomId));
+      if (!roomDoc.exists) return;
+      final room = RoomModel.fromFirestore(roomDoc);
+
+      // Authorization guard: only the designated guesser in guessMode may submit
+      if (room.turnPhase != TurnPhase.guessMode) {
+        QaLoggerService.instance.log('GUESS', 'GUESS_SUBMIT_DUPLICATE_REJECTED phase=${room.turnPhase.name}');
+        return;
+      }
+      if (room.guessModePlayerId != userId) {
+        QaLoggerService.instance.log('GUESS', 'GUESS_SUBMIT_REJECTED_UNAUTHORIZED');
+        return;
+      }
+
+      isCorrect = image.isCorrectAnswer(guess);
+
+      if (isCorrect) {
+        tx.update(_rooms.doc(roomId), {
+          'phase': GamePhase.finished.name,
+          'winnerId': userId,
+          'players.$userId.score': FieldValue.increment(difficulty.winReward),
+          'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': true},
+          'guessCount': FieldValue.increment(1),
+          'turnPhase': TurnPhase.roundOver.name,
+          'guessModePlayerId': null,
+          'guessOpportunityPlayerId': null,
+          'guessOpportunityDeadlineMs': null,
+          'guessModeDeadlineMs': null,
+        });
+        return;
+      }
+
+      // Wrong guess — deduct live penalty from wallet within same transaction
+      final walletDoc = await tx.get(_walletRef(userId));
+      final wallet = walletDoc.exists
+          ? UserEconomyModel.fromFirestore(
+              userId, walletDoc.data() as Map<String, dynamic>)
+          : null;
+      final before = wallet?.coins ?? 0;
+      final deduct = before > 0
+          ? EconomyConfig.wrongGuessLivePenalty.clamp(0, before)
+          : 0;
+      final after = before - deduct;
+
+      if (deduct > 0) {
+        tx.set(_walletRef(userId), {'coins': after}, SetOptions(merge: true));
+        final txId = _uuid.v4();
+        tx.set(_txRef(userId, txId), EconomyTransactionModel(
+          id: txId,
+          type: TransactionType.wrongGuessPenalty,
+          delta: -deduct,
+          balanceAfter: after,
+          roomId: roomId,
+          createdAt: DateTime.now().toUtc(),
+        ).toFirestore());
+        QaLoggerService.instance.log('ECONOMY',
+            'WRONG_GUESS_PENALTY_APPLIED amount=$deduct before=$before after=$after');
+      } else {
+        QaLoggerService.instance.log('ECONOMY',
+            'WRONG_GUESS_PENALTY_SKIPPED reason=zero_balance');
+      }
+
+      final currentScore = room.players[userId]?.score ?? 0;
+      final newScore = currentScore - difficulty.wrongGuessPenalty;
+      final nextTurnIndex = room.currentTurnIndex + 1;
+      final currentWrongCount = room.wrongGuessCounts[userId] ?? 0;
+
+      final updates = <String, dynamic>{
+        'currentTurnIndex': nextTurnIndex,
+        'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
         'guessCount': FieldValue.increment(1),
-        'turnPhase': TurnPhase.roundOver.name,
+        'turnPhase': TurnPhase.revealTurn.name,
+        'revealDeadlineMs': nowMs + 8000,
         'guessModePlayerId': null,
-      });
-      return true;
-    }
+        'guessOpportunityPlayerId': null,
+        'guessOpportunityDeadlineMs': null,
+        'guessModeDeadlineMs': null,
+        'wrongGuessCounts.$userId': currentWrongCount + 1,
+      };
 
-    final currentScore = room.players[userId]?.score ?? 0;
-    final newScore = currentScore - difficulty.wrongGuessPenalty;
-    final nextTurnIndex = room.currentTurnIndex + 1;
-    final currentWrongCount = room.wrongGuessCounts[userId] ?? 0;
+      if (newScore <= 0) {
+        updates['players.$userId.score'] = 0;
+        updates['players.$userId.isEliminated'] = true;
+        needsEliminationCheck = true;
+      } else {
+        updates['players.$userId.score'] = newScore;
+      }
 
-    final updates = <String, dynamic>{
-      'currentTurnIndex': nextTurnIndex,
-      'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
-      'guessCount': FieldValue.increment(1),
-      'turnPhase': TurnPhase.revealTurn.name,
-      'revealDeadlineMs': nowMs + 8000,
-      'guessModePlayerId': null,
-      'guessOpportunityPlayerId': null,
-      'guessOpportunityDeadlineMs': null,
-      'guessModeDeadlineMs': null,
-      'wrongGuessCounts.$userId': currentWrongCount + 1,
-    };
+      tx.update(_rooms.doc(roomId), updates);
+    });
 
-    if (newScore <= 0) {
-      updates['players.$userId.score'] = 0;
-      updates['players.$userId.isEliminated'] = true;
-      await _rooms.doc(roomId).update(updates);
+    if (!isCorrect && needsEliminationCheck) {
       await _checkLastPlayerStanding(roomId);
-    } else {
-      updates['players.$userId.score'] = newScore;
-      await _rooms.doc(roomId).update(updates);
     }
-    return false;
+    return isCorrect;
   }
 
   Future<void> endGameNoWinner(String roomId) async {

@@ -144,12 +144,31 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
                             const SizedBox(height: 8),
 
+                            // ── Min-players hint (host only, when not enough players) ──
+                            if (isHost && !canStart) ...[
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Text(
+                                  'צריך לפחות 2 שחקנים כדי להתחיל',
+                                  textAlign: TextAlign.center,
+                                  style: AppStyles.bodySmall.copyWith(
+                                    color: const Color(0xFFFFE082).withOpacity(0.85),
+                                  ),
+                                ),
+                              ),
+                            ],
+
                             // ── Action button / waiting footer ─────────────────
                             SizedBox(
                               height: 52,
                               width: double.infinity,
                               child: isHost
-                                  ? _GlossyActionButton(
+                                  ? GestureDetector(
+                                      onTap: !canStart
+                                          ? () => QaLoggerService.instance.log(
+                                              'LOBBY', 'START_GAME_BLOCKED_MIN_PLAYERS players=${room.players.length}')
+                                          : null,
+                                      child: _GlossyActionButton(
                                       label: _isStarting ? 'מכין צמצמים...' : 'התחל משחק',
                                       enabled: canStart && !_isStarting,
                                       onTap: () async {
@@ -170,6 +189,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                           }
                                         }
                                       },
+                                    ),
                                     )
                                   : const _WaitingFooter(),
                             ),
