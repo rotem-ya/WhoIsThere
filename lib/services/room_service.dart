@@ -603,42 +603,83 @@ class RoomService {
   }
 
   /// Called by the current-turn player when the reveal timer expires.
-  /// Advances the turn and resets to revealTurn.
-  Future<void> advanceTurnOnTimeout({
+  /// Returns true only when the transaction actually writes the next turn.
+  /// Returns false on any no-op or error so the caller can schedule a retry.
+  Future<bool> advanceTurnOnTimeout({
     required String roomId,
     required String userId,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
+    bool committed = false;
 
-    await _firestore.runTransaction((tx) async {
-      final doc = await tx.get(_rooms.doc(roomId));
-      if (!doc.exists) return;
-      final room = RoomModel.fromFirestore(doc);
+    try {
+      await _firestore.runTransaction((tx) async {
+        final doc = await tx.get(_rooms.doc(roomId));
+        if (!doc.exists) {
+          QaLoggerService.instance.log('TURN', 'REVEAL_TIMEOUT_ADVANCE_NOOP reason=missing_room');
+          return;
+        }
+        final room = RoomModel.fromFirestore(doc);
 
-      if (room.phase == GamePhase.finished) {
-        QaLoggerService.instance.log('TURN', 'TURN_ADVANCE_SKIPPED_FINISHED method=advanceTurnOnTimeout');
-        return;
-      }
-      if (room.turnPhase != TurnPhase.revealTurn) return;
-      if (room.currentTurnUserId != userId) return;
-      final deadline = room.revealDeadlineMs;
-      if (deadline == null || now < deadline) return;
+        QaLoggerService.instance.log('TURN',
+            'REVEAL_TIMEOUT_ADVANCE_ATTEMPT deadline=${room.revealDeadlineMs} actor=$userId');
 
-      final _advTotalTiles = room.gridSize * room.gridSize;
-      final _advRevealMs = _revealTimerMs(room.placedPieces.length, _advTotalTiles);
-      QaLoggerService.instance.log('TURN',
-          'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / _advTotalTiles).toStringAsFixed(2)} durationMs=$_advRevealMs');
-      tx.update(_rooms.doc(roomId), {
-        'currentTurnIndex': room.currentTurnIndex + 1,
-        'turnPhase': TurnPhase.revealTurn.name,
-        'revealDeadlineMs': now + _advRevealMs,
-        'guessOpportunityPlayerId': null,
-        'guessModePlayerId': null,
-        'guessOpportunityDeadlineMs': null,
-        'guessModeDeadlineMs': null,
-        'revealCycleId': FieldValue.increment(1),
+        if (room.phase == GamePhase.finished) {
+          QaLoggerService.instance.log('TURN', 'TURN_ADVANCE_SKIPPED_FINISHED method=advanceTurnOnTimeout');
+          QaLoggerService.instance.log('TURN', 'REVEAL_TIMEOUT_ADVANCE_NOOP reason=game_finished');
+          return;
+        }
+        if (room.turnPhase != TurnPhase.revealTurn) {
+          QaLoggerService.instance.log('TURN', 'REVEAL_TIMEOUT_ADVANCE_NOOP reason=wrong_phase');
+          return;
+        }
+        if (room.currentTurnUserId != userId) {
+          QaLoggerService.instance.log('TURN', 'REVEAL_TIMEOUT_ADVANCE_NOOP reason=unauthorized_current_turn');
+          return;
+        }
+        final deadline = room.revealDeadlineMs;
+        if (deadline == null) {
+          QaLoggerService.instance.log('TURN', 'REVEAL_TIMEOUT_ADVANCE_NOOP reason=deadline_null');
+          return;
+        }
+        if (now < deadline) {
+          QaLoggerService.instance.log('TURN', 'REVEAL_TIMEOUT_ADVANCE_NOOP reason=deadline_not_expired');
+          return;
+        }
+
+        final advTotalTiles = room.gridSize * room.gridSize;
+        final advRevealMs = _revealTimerMs(room.placedPieces.length, advTotalTiles);
+        QaLoggerService.instance.log('TURN',
+            'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / advTotalTiles).toStringAsFixed(2)} durationMs=$advRevealMs');
+
+        final activePlayerIds = room.turnOrder
+            .where((id) => !(room.players[id]?.isEliminated ?? false))
+            .toList();
+        final newTurnUid = activePlayerIds.isEmpty
+            ? userId
+            : activePlayerIds[(room.currentTurnIndex + 1) % activePlayerIds.length];
+
+        tx.update(_rooms.doc(roomId), {
+          'currentTurnIndex': room.currentTurnIndex + 1,
+          'turnPhase': TurnPhase.revealTurn.name,
+          'revealDeadlineMs': now + advRevealMs,
+          'guessOpportunityPlayerId': null,
+          'guessModePlayerId': null,
+          'guessOpportunityDeadlineMs': null,
+          'guessModeDeadlineMs': null,
+          'revealCycleId': FieldValue.increment(1),
+        });
+
+        QaLoggerService.instance.log('TURN',
+            'REVEAL_TIMEOUT_ADVANCE_COMMIT oldCycle=${room.revealCycleId} newCycle=${room.revealCycleId + 1} newTurnUid=$newTurnUid');
+        committed = true;
       });
-    });
+    } catch (e) {
+      QaLoggerService.instance.log('TURN', 'REVEAL_TIMEOUT_ADVANCE_ERROR error=$e');
+      return false;
+    }
+
+    return committed;
   }
 
   /// Called when the guess opportunity timer expires without anyone entering guess mode.

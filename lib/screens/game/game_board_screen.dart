@@ -148,10 +148,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   String? _currentUserIdForTimer;
   Timer? _expiryTimer;
 
-  // Expiry deduplication — fire handler at most once per unique phase+deadline pair
+  // Expiry deduplication — permanent marker set only after confirmed commit
   int? _lastExpiredRevealDeadline;
   int? _lastExpiredGuessOpportunityDeadline;
   int? _lastExpiredGuessModeDeadline;
+  // Reveal retry cooldown — prevents 1s-tick spam while waiting for transaction result
+  int? _revealTimeoutLastAttemptMs;
+  // Non-owner observation dedup — log once per expired deadline
+  int? _lastObservedNotOwnerRevealDeadline;
 
   // Economy
   bool _rewardApplied = false;
@@ -246,7 +250,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   }
 
   void _startExpiryTimer() {
-    _expiryTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    _expiryTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
       if (!mounted) return;
       final room = _latestRoom;
       final uid = _currentUserIdForTimer;
@@ -305,24 +309,42 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         }
       }
 
-      // Reveal turn timeout — frozen during guessOpportunity/guessMode.
-      // Only the current-turn player drives this transition; transaction is the authority.
+      // Reveal turn timeout — only the current-turn player drives this transition.
+      // Dedup is set ONLY after the transaction confirms the advance; on failure a
+      // 2-second cooldown prevents spam while allowing automatic retry.
       if (room.turnPhase == TurnPhase.revealTurn &&
           room.revealDeadlineMs != null &&
           now >= room.revealDeadlineMs! &&
-          uid != null &&
-          room.currentTurnUserId == uid) {
-        if (_lastExpiredRevealDeadline == room.revealDeadlineMs) {
-          QaLoggerService.instance.log('TURN', 'EXPIRY_DEDUP_SKIP phase=revealTurn deadline=${room.revealDeadlineMs}');
-        } else {
-          _lastExpiredRevealDeadline = room.revealDeadlineMs;
-          QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=revealTurn');
-          QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=reveal_timeout');
-          QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_EXPIRED');
-          ref.read(roomServiceProvider).advanceTurnOnTimeout(
-            roomId: room.id,
-            userId: uid,
-          ).ignore();
+          uid != null) {
+        if (room.currentTurnUserId == uid) {
+          if (_lastExpiredRevealDeadline == room.revealDeadlineMs) {
+            QaLoggerService.instance.log('TURN', 'EXPIRY_DEDUP_SKIP phase=revealTurn deadline=${room.revealDeadlineMs}');
+          } else {
+            final lastAttempt = _revealTimeoutLastAttemptMs;
+            if (lastAttempt != null && now - lastAttempt < 2000) {
+              // within cooldown — wait for retry window
+            } else {
+              _revealTimeoutLastAttemptMs = now;
+              QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=revealTurn');
+              QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=reveal_timeout');
+              QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_EXPIRED');
+              final committed = await ref.read(roomServiceProvider).advanceTurnOnTimeout(
+                roomId: room.id,
+                userId: uid,
+              );
+              if (!mounted) return;
+              if (committed) {
+                _lastExpiredRevealDeadline = room.revealDeadlineMs;
+              } else {
+                QaLoggerService.instance.log('TURN',
+                    'EXPIRY_RETRY_ALLOWED phase=revealTurn deadline=${room.revealDeadlineMs}');
+              }
+            }
+          }
+        } else if (_lastObservedNotOwnerRevealDeadline != room.revealDeadlineMs) {
+          _lastObservedNotOwnerRevealDeadline = room.revealDeadlineMs;
+          QaLoggerService.instance.log('TURN',
+              'REVEAL_TIMEOUT_OBSERVED_NOT_OWNER deadline=${room.revealDeadlineMs} owner=${room.currentTurnUserId} observer=$uid');
         }
       }
 
