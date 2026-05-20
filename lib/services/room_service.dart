@@ -535,26 +535,40 @@ class RoomService {
   }
 
   Future<void> skipPiecePlacement({required String roomId}) async {
-    final doc = await _rooms.doc(roomId).get();
-    final room = RoomModel.fromFirestore(doc);
-    if (room.phase == GamePhase.finished) {
-      QaLoggerService.instance.log('TURN', 'TURN_ADVANCE_SKIPPED_FINISHED method=skipPiecePlacement');
-      return;
-    }
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final _skipTotalTiles = room.gridSize * room.gridSize;
-    final _skipRevealMs = _revealTimerMs(room.placedPieces.length, _skipTotalTiles);
-    QaLoggerService.instance.log('TURN',
-        'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / _skipTotalTiles).toStringAsFixed(2)} durationMs=$_skipRevealMs');
-    await _rooms.doc(roomId).update({
-      'currentTurnIndex': room.currentTurnIndex + 1,
-      'turnPhase': TurnPhase.revealTurn.name,
-      'revealDeadlineMs': nowMs + _skipRevealMs,
-      'guessOpportunityPlayerId': null,
-      'guessModePlayerId': null,
-      'guessOpportunityDeadlineMs': null,
-      'guessModeDeadlineMs': null,
-      'revealCycleId': FieldValue.increment(1),
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await _firestore.runTransaction((tx) async {
+      final doc = await tx.get(_rooms.doc(roomId));
+      if (!doc.exists) return;
+      final room = RoomModel.fromFirestore(doc);
+      QaLoggerService.instance.log('TURN', 'SKIP_TX_BEGIN');
+      if (room.phase == GamePhase.finished) {
+        QaLoggerService.instance.log('TURN', 'TURN_ADVANCE_SKIPPED_FINISHED method=skipPiecePlacement');
+        QaLoggerService.instance.log('TURN', 'SKIP_TX_ABORT reason=game_finished');
+        return;
+      }
+      if (room.turnPhase != TurnPhase.guessOpportunity) {
+        QaLoggerService.instance.log('TURN', 'SKIP_TX_ABORT reason=wrong_phase phase=${room.turnPhase.name}');
+        return;
+      }
+      if (room.guessOpportunityDeadlineMs == null) {
+        QaLoggerService.instance.log('TURN', 'SKIP_TX_ABORT reason=null_deadline');
+        return;
+      }
+      final skipTotalTiles = room.gridSize * room.gridSize;
+      final skipRevealMs = _revealTimerMs(room.placedPieces.length, skipTotalTiles);
+      QaLoggerService.instance.log('TURN',
+          'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / skipTotalTiles).toStringAsFixed(2)} durationMs=$skipRevealMs');
+      tx.update(_rooms.doc(roomId), {
+        'currentTurnIndex': room.currentTurnIndex + 1,
+        'turnPhase': TurnPhase.revealTurn.name,
+        'revealDeadlineMs': now + skipRevealMs,
+        'guessOpportunityPlayerId': null,
+        'guessModePlayerId': null,
+        'guessOpportunityDeadlineMs': null,
+        'guessModeDeadlineMs': null,
+        'revealCycleId': FieldValue.increment(1),
+      });
+      QaLoggerService.instance.log('TURN', 'SKIP_TX_COMMIT');
     });
   }
 
