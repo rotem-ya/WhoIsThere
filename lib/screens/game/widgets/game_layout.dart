@@ -33,6 +33,7 @@ class GameLayout extends StatelessWidget {
   final VoidCallback? onGuess;
   final Future<bool> Function(String)? onGuessSubmit;
   final VoidCallback? onSkip;
+  final double revealRatio;
 
   const GameLayout({
     required this.room,
@@ -53,6 +54,7 @@ class GameLayout extends StatelessWidget {
     required this.onGuess,
     required this.onGuessSubmit,
     required this.onSkip,
+    this.revealRatio = 0.0,
   });
 
   @override
@@ -85,6 +87,7 @@ class GameLayout extends StatelessWidget {
           isMyGuessOpportunity: isMyGuessOpportunity,
           isMyGuessModeActive: isMyGuessModeActive,
           guessModePlayerName: guessModePlayerName,
+          revealRatio: revealRatio,
         ),
         // During guessMode: hide the 3px bar — inline countdown replaces it
         if (isGuessModeActive)
@@ -95,6 +98,7 @@ class GameLayout extends StatelessWidget {
             revealDeadlineMs: room.revealDeadlineMs,
             guessOpportunityDeadlineMs: room.guessOpportunityDeadlineMs,
             guessModeDeadlineMs: room.guessModeDeadlineMs,
+            revealRatio: revealRatio,
           ),
         if (kDebugMode)
           _DebugPhaseBadge(
@@ -203,12 +207,14 @@ class _TurnPhaseCountdownBar extends StatefulWidget {
   final int? revealDeadlineMs;
   final int? guessOpportunityDeadlineMs;
   final int? guessModeDeadlineMs;
+  final double revealRatio;
 
   const _TurnPhaseCountdownBar({
     required this.turnPhase,
     this.revealDeadlineMs,
     this.guessOpportunityDeadlineMs,
     this.guessModeDeadlineMs,
+    this.revealRatio = 0.0,
   });
 
   @override
@@ -239,14 +245,26 @@ class _TurnPhaseCountdownBarState extends State<_TurnPhaseCountdownBar> {
     int totalMs;
     Color barColor;
 
+    final ratio = widget.revealRatio;
+    final isEndgame = ratio >= 0.75;
+
     switch (widget.turnPhase) {
       case TurnPhase.revealTurn:
         deadlineMs = widget.revealDeadlineMs;
-        totalMs = 8000;
-        barColor = const Color(0xFF87CEEB); // cyan
+        // Match server-side _revealTimerMs formula for accurate bar fraction
+        if (ratio <= 0.25) totalMs = 8000;
+        else if (ratio <= 0.50) totalMs = 6500;
+        else if (ratio <= 0.75) totalMs = 5000;
+        else totalMs = 3500;
+        barColor = isEndgame
+            ? const Color(0xFFFF9F43) // amber-orange at endgame
+            : const Color(0xFF87CEEB); // cyan
       case TurnPhase.guessOpportunity:
         deadlineMs = widget.guessOpportunityDeadlineMs;
-        totalMs = 7000;
+        // Match server-side _guessOppTimerMs formula
+        if (ratio <= 0.50) totalMs = 7000;
+        else if (ratio <= 0.75) totalMs = 5000;
+        else totalMs = 3500;
         barColor = const Color(0xFFD4AF37); // gold
       case TurnPhase.guessMode:
         deadlineMs = widget.guessModeDeadlineMs;

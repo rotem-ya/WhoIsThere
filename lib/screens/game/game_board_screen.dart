@@ -11,6 +11,7 @@ import '../../core/theme/app_styles.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -174,6 +175,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static final AudioPlayer _guessModeTickPlayer = AudioPlayer(playerId: 'guess-tick');
   static final AssetSource _tickSound = AssetSource('sounds/correct_ding.wav');
 
+  // Endgame pressure tracking
+  bool _endgamePressureLogged = false;
+  int _lastHapticAvailableCount = -1;
+
   static Future<void> _primeTickSounds() async {
     try {
       await _revealTickPlayer.setPlayerMode(PlayerMode.lowLatency);
@@ -183,18 +188,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     } catch (_) {}
   }
 
-  static Future<void> _playRevealTick() async {
+  static Future<void> _playRevealTick({double volume = 0.07}) async {
     try {
       await _revealTickPlayer.stop();
-      await _revealTickPlayer.setVolume(0.07);
+      await _revealTickPlayer.setVolume(volume);
       await _revealTickPlayer.play(_tickSound);
     } catch (_) {}
   }
 
-  static Future<void> _playGuessModeTick() async {
+  static Future<void> _playGuessModeTick({double volume = 0.17}) async {
     try {
       await _guessModeTickPlayer.stop();
-      await _guessModeTickPlayer.setVolume(0.17);
+      await _guessModeTickPlayer.setVolume(volume);
       await _guessModeTickPlayer.play(_tickSound);
     } catch (_) {}
   }
@@ -222,23 +227,42 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (room == null || room.phase != GamePhase.playing) return;
 
       final now = DateTime.now().millisecondsSinceEpoch;
+      final totalTiles = room.gridSize * room.gridSize;
+      final ratio = totalTiles > 0 ? room.placedPieces.length / totalTiles : 0.0;
+      final isEndgame = ratio >= 0.75;
 
-      // Reveal soft tick — last 3s of reveal phase
+      // Log endgame pressure once per game when threshold crossed
+      if (isEndgame && !_endgamePressureLogged) {
+        _endgamePressureLogged = true;
+        QaLoggerService.instance.log('GAME',
+            'ENDGAME_PRESSURE_ACTIVE ratio=${ratio.toStringAsFixed(2)}');
+      }
+
+      // Reveal soft tick — last 3s; volume escalates at endgame (+40%)
       if (room.turnPhase == TurnPhase.revealTurn && room.revealDeadlineMs != null) {
         final tickRemaining = room.revealDeadlineMs! - now;
         if (tickRemaining > 0 && tickRemaining <= 3500) {
-          unawaited(_playRevealTick());
+          unawaited(_playRevealTick(volume: isEndgame ? 0.10 : 0.07));
         }
       }
 
-      // GuessMode stronger tick — last 5s, only for the active guesser
+      // GuessMode stronger tick — last 5s, only for the active guesser; volume +35% at endgame
       if (room.turnPhase == TurnPhase.guessMode &&
           room.guessModeDeadlineMs != null &&
           uid != null &&
           room.guessModePlayerId == uid) {
         final tickRemaining = room.guessModeDeadlineMs! - now;
         if (tickRemaining > 0 && tickRemaining <= 5500) {
-          unawaited(_playGuessModeTick());
+          unawaited(_playGuessModeTick(volume: isEndgame ? 0.23 : 0.17));
+        }
+      }
+
+      // Haptic on last 3 reveal tiles remaining — once per count value, revealTurn only
+      if (room.turnPhase == TurnPhase.revealTurn) {
+        final remaining = room.availablePieceIndices.length;
+        if (remaining <= 3 && remaining > 0 && remaining != _lastHapticAvailableCount) {
+          _lastHapticAvailableCount = remaining;
+          HapticFeedback.lightImpact().ignore();
         }
       }
 
@@ -510,13 +534,20 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       guessChance = 0.50;
     }
 
-    final decides = _random.nextDouble() < guessChance;
+    // Endgame escalation: at ratio≥0.75, bots guess more aggressively and faster
+    final isEndgameBotMode = ratio >= 0.75;
+    final effectiveGuessChance = isEndgameBotMode
+        ? 1.0 - (1.0 - guessChance) * 0.5
+        : guessChance;
+    final double delayMultiplier = isEndgameBotMode ? 0.75 : 1.0;
+
+    final decides = _random.nextDouble() < effectiveGuessChance;
     QaLoggerService.instance.log('BOT',
-        'BOT_GUESS_DECISION ratio=${ratio.toStringAsFixed(2)} chance=${guessChance.toStringAsFixed(2)} decided=$decides');
+        'BOT_GUESS_DECISION ratio=${ratio.toStringAsFixed(2)} chance=${effectiveGuessChance.toStringAsFixed(2)} decided=$decides endgame=$isEndgameBotMode');
 
     if (!decides) {
       // Bot skips — human-like pause before yielding opportunity
-      final skipDelayMs = 1800 + _random.nextInt(1801); // 1800–3600ms
+      final skipDelayMs = ((1800 + _random.nextInt(1801)) * delayMultiplier).round();
       QaLoggerService.instance.log('BOT',
           'BOT_DELAY_SCHEDULED action=skip_guess_opportunity ms=$skipDelayMs');
       Future.delayed(Duration(milliseconds: skipDelayMs), () async {
@@ -530,7 +561,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     }
 
     // Bot decided to enter guessMode — pause first, then enter
-    final enterDelayMs = 1800 + _random.nextInt(1801); // 1800–3600ms
+    final enterDelayMs = ((1800 + _random.nextInt(1801)) * delayMultiplier).round();
     QaLoggerService.instance.log('BOT',
         'BOT_DELAY_SCHEDULED action=enter_guess_mode ms=$enterDelayMs');
 
@@ -550,7 +581,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       QaLoggerService.instance.log('BOT', 'BOT_ENTER_GUESS_MODE');
 
       // Wait human-like time before submitting
-      final submitDelayMs = 3000 + _random.nextInt(5001); // 3000–8000ms
+      final submitDelayMs = ((3000 + _random.nextInt(5001)) * delayMultiplier).round();
       QaLoggerService.instance.log('BOT',
           'BOT_DELAY_SCHEDULED action=submit_guess ms=$submitDelayMs');
 
@@ -564,8 +595,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (snap2.turnPhase != TurnPhase.guessMode) return;
       if (snap2.guessModePlayerId != botId) return;
 
-      // Correct guess only when ≥60% revealed, capped at 20% chance
-      final double correctChance = ratio >= 0.60 ? 0.20 : 0.0;
+      // Correct guess: ≥60% revealed → 20% base; endgame escalates to 35%
+      final double correctChance = ratio >= 0.60
+          ? (isEndgameBotMode ? 0.35 : 0.20)
+          : 0.0;
       await _performBotGuess(snap2, botId, correctChance);
     });
   }
@@ -941,6 +974,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_FROZEN phase=guessMode');
                     QaLoggerService.instance.log('TURN', 'BOARD_DIMMED_GUESS_MODE');
                     QaLoggerService.instance.log('TURN', 'REVEAL_BAR_HIDDEN_GUESS_MODE');
+                    HapticFeedback.mediumImpact().ignore();
                     if (currentUserId != null && room.guessModePlayerId == currentUserId) {
                       QaLoggerService.instance.log('GUESS', 'GUESS_MODE_UI_ENTER');
                     }
@@ -1066,6 +1100,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     room.turnPhase == TurnPhase.guessOpportunity &&
                     room.guessOpportunityPlayerId == currentUserId;
                 final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
+                final _totalTiles = room.gridSize * room.gridSize;
+                final revealRatio = _totalTiles > 0 ? room.placedPieces.length / _totalTiles : 0.0;
 
                 return GameLayout(
                   room: room,
@@ -1075,6 +1111,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   isBusy: _isBusy,
                   canGuessNow: canGuessNow,
                   isSolo: isSolo,
+                  revealRatio: revealRatio,
                   showBanner: _showBanner,
                   bannerEvent: _currentBanner,
                   showBotTyping: _showBotTyping,

@@ -15,6 +15,7 @@ class TopHud extends StatelessWidget {
   final bool isMyGuessOpportunity;
   final bool isMyGuessModeActive;
   final String guessModePlayerName;
+  final double revealRatio;
 
   const TopHud({
     required this.players,
@@ -27,21 +28,40 @@ class TopHud extends StatelessWidget {
     required this.isMyGuessOpportunity,
     required this.isMyGuessModeActive,
     required this.guessModePlayerName,
+    this.revealRatio = 0.0,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isEndgame = revealRatio >= 0.75;
     return SafeArea(
       bottom: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 400),
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: const Color(0xFF07101F).withOpacity(0.82),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.30)),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 16, offset: const Offset(0, 7))],
+            border: Border.all(
+              color: isEndgame
+                  ? const Color(0xFFFF9F43).withOpacity(0.55)
+                  : const Color(0xFFD4AF37).withOpacity(0.30),
+              width: isEndgame ? 1.5 : 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.35),
+                  blurRadius: 16,
+                  offset: const Offset(0, 7)),
+              if (isEndgame)
+                BoxShadow(
+                  color: const Color(0xFFFF6B35).withOpacity(0.20),
+                  blurRadius: 24,
+                  spreadRadius: 2,
+                ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

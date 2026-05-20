@@ -30,6 +30,23 @@ class RoomService {
 
   static const double _letterCardBonusChance = 0.12;
 
+  // Returns reveal timer duration in ms based on how much of the board is open.
+  static int _revealTimerMs(int revealedCount, int totalTiles) {
+    final ratio = totalTiles > 0 ? revealedCount / totalTiles : 0.0;
+    if (ratio <= 0.25) return 8000;
+    if (ratio <= 0.50) return 6500;
+    if (ratio <= 0.75) return 5000;
+    return 3500;
+  }
+
+  // Returns guess-opportunity timer duration in ms based on board state after the latest reveal.
+  static int _guessOppTimerMs(int revealedCount, int totalTiles) {
+    final ratio = totalTiles > 0 ? revealedCount / totalTiles : 0.0;
+    if (ratio <= 0.50) return 7000;
+    if (ratio <= 0.75) return 5000;
+    return 3500;
+  }
+
   static const Set<String> _availableLocalPlaceIds = {
     'western_wall',
     'dome_of_the_rock',
@@ -489,13 +506,19 @@ class RoomService {
         }
       }
 
+      final totalTiles = room.gridSize * room.gridSize;
+      final revealedAfter = totalTiles - newHidden.length;
+      final guessOppMs = _guessOppTimerMs(revealedAfter, totalTiles);
+      QaLoggerService.instance.log('TURN',
+          'GUESS_OPP_TIMER_DYNAMIC ratio=${(revealedAfter / totalTiles).toStringAsFixed(2)} durationMs=$guessOppMs');
+
       final updates = <String, dynamic>{
         'placedPieces.${pieceIndex.toString()}': userId,
         'availablePieceIndices': newHidden,
         'players.$userId.score': newScore,
         'turnPhase': TurnPhase.guessOpportunity.name,
         'guessOpportunityPlayerId': guessOpportunityPlayerId,
-        'guessOpportunityDeadlineMs': now + 7000,
+        'guessOpportunityDeadlineMs': now + guessOppMs,
         'lastRevealedByPlayerId': userId,
       };
 
@@ -519,10 +542,14 @@ class RoomService {
       return;
     }
     final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final _skipTotalTiles = room.gridSize * room.gridSize;
+    final _skipRevealMs = _revealTimerMs(room.placedPieces.length, _skipTotalTiles);
+    QaLoggerService.instance.log('TURN',
+        'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / _skipTotalTiles).toStringAsFixed(2)} durationMs=$_skipRevealMs');
     await _rooms.doc(roomId).update({
       'currentTurnIndex': room.currentTurnIndex + 1,
       'turnPhase': TurnPhase.revealTurn.name,
-      'revealDeadlineMs': nowMs + 8000,
+      'revealDeadlineMs': nowMs + _skipRevealMs,
       'guessOpportunityPlayerId': null,
       'guessModePlayerId': null,
       'guessOpportunityDeadlineMs': null,
@@ -583,10 +610,14 @@ class RoomService {
       final deadline = room.revealDeadlineMs;
       if (deadline == null || now < deadline) return;
 
+      final _advTotalTiles = room.gridSize * room.gridSize;
+      final _advRevealMs = _revealTimerMs(room.placedPieces.length, _advTotalTiles);
+      QaLoggerService.instance.log('TURN',
+          'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / _advTotalTiles).toStringAsFixed(2)} durationMs=$_advRevealMs');
       tx.update(_rooms.doc(roomId), {
         'currentTurnIndex': room.currentTurnIndex + 1,
         'turnPhase': TurnPhase.revealTurn.name,
-        'revealDeadlineMs': now + 8000,
+        'revealDeadlineMs': now + _advRevealMs,
         'guessOpportunityPlayerId': null,
         'guessModePlayerId': null,
         'guessOpportunityDeadlineMs': null,
@@ -614,10 +645,14 @@ class RoomService {
       final deadline = room.guessOpportunityDeadlineMs;
       if (deadline == null || now < deadline) return;
 
+      final _expOppTotalTiles = room.gridSize * room.gridSize;
+      final _expOppRevealMs = _revealTimerMs(room.placedPieces.length, _expOppTotalTiles);
+      QaLoggerService.instance.log('TURN',
+          'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / _expOppTotalTiles).toStringAsFixed(2)} durationMs=$_expOppRevealMs');
       tx.update(_rooms.doc(roomId), {
         'currentTurnIndex': room.currentTurnIndex + 1,
         'turnPhase': TurnPhase.revealTurn.name,
-        'revealDeadlineMs': now + 8000,
+        'revealDeadlineMs': now + _expOppRevealMs,
         'guessOpportunityPlayerId': null,
         'guessOpportunityDeadlineMs': null,
         'revealCycleId': FieldValue.increment(1),
@@ -675,10 +710,14 @@ class RoomService {
         }
       }
 
+      final _expGmTotalTiles = room.gridSize * room.gridSize;
+      final _expGmRevealMs = _revealTimerMs(room.placedPieces.length, _expGmTotalTiles);
+      QaLoggerService.instance.log('TURN',
+          'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / _expGmTotalTiles).toStringAsFixed(2)} durationMs=$_expGmRevealMs');
       tx.update(_rooms.doc(roomId), {
         'currentTurnIndex': room.currentTurnIndex + 1,
         'turnPhase': TurnPhase.revealTurn.name,
-        'revealDeadlineMs': now + 8000,
+        'revealDeadlineMs': now + _expGmRevealMs,
         'guessModePlayerId': null,
         'guessOpportunityPlayerId': null,
         'guessOpportunityDeadlineMs': null,
@@ -767,12 +806,17 @@ class RoomService {
       final nextTurnIndex = room.currentTurnIndex + 1;
       final currentWrongCount = room.wrongGuessCounts[userId] ?? 0;
 
+      final _wgTotalTiles = room.gridSize * room.gridSize;
+      final _wgRevealMs = _revealTimerMs(room.placedPieces.length, _wgTotalTiles);
+      QaLoggerService.instance.log('TURN',
+          'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / _wgTotalTiles).toStringAsFixed(2)} durationMs=$_wgRevealMs');
+
       final updates = <String, dynamic>{
         'currentTurnIndex': nextTurnIndex,
         'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
         'guessCount': FieldValue.increment(1),
         'turnPhase': TurnPhase.revealTurn.name,
-        'revealDeadlineMs': nowMs + 8000,
+        'revealDeadlineMs': nowMs + _wgRevealMs,
         'guessModePlayerId': null,
         'guessOpportunityPlayerId': null,
         'guessOpportunityDeadlineMs': null,
