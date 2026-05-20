@@ -179,6 +179,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   bool _endgamePressureLogged = false;
   int _lastHapticAvailableCount = -1;
 
+  // B8: Prize potential / pressure state logging
+  int _lastRevealedCountForLog = -1;
+  String? _lastPressureStateForLog;
+
   static Future<void> _primeTickSounds() async {
     try {
       await _revealTickPlayer.setPlayerMode(PlayerMode.lowLatency);
@@ -186,6 +190,21 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       await _guessModeTickPlayer.setPlayerMode(PlayerMode.lowLatency);
       await _guessModeTickPlayer.setSource(_tickSound);
     } catch (_) {}
+  }
+
+  static double _computePrizePotential(double ratio) {
+    if (ratio <= 0.0) return 1.0;
+    if (ratio <= 0.20) return 1.0 - (ratio / 0.20) * 0.10;
+    if (ratio <= 0.50) return 0.90 - ((ratio - 0.20) / 0.30) * 0.20;
+    if (ratio <= 0.75) return 0.70 - ((ratio - 0.50) / 0.25) * 0.25;
+    return (0.45 - ((ratio - 0.75) / 0.25) * 0.30).clamp(0.0, 1.0);
+  }
+
+  static String? _pressureStateKey(double ratio) {
+    if (ratio >= 0.92) return 'critical';
+    if (ratio >= 0.85) return 'last_chance';
+    if (ratio >= 0.75) return 'risk_rising';
+    return null;
   }
 
   static Future<void> _playRevealTick({double volume = 0.07}) async {
@@ -472,13 +491,24 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     final totalTiles = room.gridSize * room.gridSize;
     final ratio = totalTiles > 0 ? room.placedPieces.length / totalTiles : 0.0;
-    final int delayMs;
+    final int baseDelayMs;
     if (ratio >= 0.75) {
-      delayMs = 400 + _random.nextInt(301);  // 400–700ms — endgame: racing
+      baseDelayMs = 400 + _random.nextInt(301);  // 400–700ms — endgame: racing
     } else if (ratio >= 0.50) {
-      delayMs = 650 + _random.nextInt(351);  // 650–1000ms — midgame: pressure
+      baseDelayMs = 650 + _random.nextInt(351);  // 650–1000ms — midgame: pressure
     } else {
-      delayMs = 1000 + _random.nextInt(601); // 1000–1600ms — early: realistic
+      baseDelayMs = 1000 + _random.nextInt(601); // 1000–1600ms — early: realistic
+    }
+    // B8: Reveal hesitation — bot simulates prize-potential anxiety by pausing before tile flip
+    int delayMs = baseDelayMs;
+    final double hesitationChance = ratio >= 0.75 ? 0.50 : ratio >= 0.50 ? 0.30 : 0.0;
+    if (hesitationChance > 0 && _random.nextDouble() < hesitationChance) {
+      final extraMs = ratio >= 0.75
+          ? 2000 + _random.nextInt(2001) // 2000–4000ms — severe hesitation
+          : 1500 + _random.nextInt(1001); // 1500–2500ms — moderate hesitation
+      delayMs += extraMs;
+      QaLoggerService.instance.log('BOT',
+          'BOT_HESITATION_ACTIVE ratio=${ratio.toStringAsFixed(2)} delay=$delayMs');
     }
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
@@ -534,16 +564,36 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       guessChance = 0.50;
     }
 
-    // Endgame escalation: at ratio≥0.75, bots guess more aggressively and faster
+    // B7: endgame escalation at ratio≥0.75; B8: super-endgame aggression at ratio≥0.85
     final isEndgameBotMode = ratio >= 0.75;
-    final effectiveGuessChance = isEndgameBotMode
-        ? 1.0 - (1.0 - guessChance) * 0.5
-        : guessChance;
-    final double delayMultiplier = isEndgameBotMode ? 0.75 : 1.0;
+    final isSuperEndgame = ratio >= 0.85;
+
+    final double effectiveGuessChance;
+    if (isSuperEndgame) {
+      effectiveGuessChance = (guessChance * 2.0).clamp(0.0, 0.90);
+    } else if (isEndgameBotMode) {
+      effectiveGuessChance = 1.0 - (1.0 - guessChance) * 0.5;
+    } else {
+      effectiveGuessChance = guessChance;
+    }
+
+    final double delayMultiplier;
+    if (isSuperEndgame) {
+      delayMultiplier = 0.60; // B7 ×0.75 then B8 ×0.80
+    } else if (isEndgameBotMode) {
+      delayMultiplier = 0.75;
+    } else {
+      delayMultiplier = 1.0;
+    }
+
+    if (isSuperEndgame) {
+      QaLoggerService.instance.log('BOT',
+          'BOT_ENDGAME_AGGRESSION ratio=${ratio.toStringAsFixed(2)}');
+    }
 
     final decides = _random.nextDouble() < effectiveGuessChance;
     QaLoggerService.instance.log('BOT',
-        'BOT_GUESS_DECISION ratio=${ratio.toStringAsFixed(2)} chance=${effectiveGuessChance.toStringAsFixed(2)} decided=$decides endgame=$isEndgameBotMode');
+        'BOT_GUESS_DECISION ratio=${ratio.toStringAsFixed(2)} chance=${effectiveGuessChance.toStringAsFixed(2)} decided=$decides endgame=$isEndgameBotMode super=$isSuperEndgame');
 
     if (!decides) {
       // Bot skips — human-like pause before yielding opportunity
@@ -595,9 +645,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (snap2.turnPhase != TurnPhase.guessMode) return;
       if (snap2.guessModePlayerId != botId) return;
 
-      // Correct guess: ≥60% revealed → 20% base; endgame escalates to 35%
+      // Correct guess: ≥60% revealed → 20% base; 75%+ → 35%; 85%+ → 45%
       final double correctChance = ratio >= 0.60
-          ? (isEndgameBotMode ? 0.35 : 0.20)
+          ? (isSuperEndgame ? 0.45 : isEndgameBotMode ? 0.35 : 0.20)
           : 0.0;
       await _performBotGuess(snap2, botId, correctChance);
     });
@@ -1049,6 +1099,23 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 // Cache room + userId for the expiry timer (no setState needed)
                 _latestRoom = room;
                 _currentUserIdForTimer = currentUserId;
+
+                // B8: Prize potential and pressure state QA logging
+                if (room.phase == GamePhase.playing) {
+                  final _pTotal = room.gridSize * room.gridSize;
+                  final _pRatio = _pTotal > 0 ? room.placedPieces.length / _pTotal : 0.0;
+                  if (room.placedPieces.length != _lastRevealedCountForLog) {
+                    _lastRevealedCountForLog = room.placedPieces.length;
+                    final _potential = _computePrizePotential(_pRatio);
+                    QaLoggerService.instance.log('GAME',
+                        'PRIZE_POTENTIAL_UPDATE ratio=${_pRatio.toStringAsFixed(2)} potential=${(_potential * 100).round()}');
+                  }
+                  final _pState = _pressureStateKey(_pRatio);
+                  if (_pState != null && _pState != _lastPressureStateForLog) {
+                    _lastPressureStateForLog = _pState;
+                    QaLoggerService.instance.log('GAME', 'PRESSURE_STATE_CHANGED state=$_pState');
+                  }
+                }
 
                 _scheduleBotTurn(room);
                 _syncMusicVolume(room);
