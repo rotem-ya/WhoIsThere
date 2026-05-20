@@ -402,9 +402,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   }
 
   void _scheduleBotTurn(RoomModel room) {
-    // Phase A: handle bot's guess opportunity first.
+    // Phase A: handle bot's guess opportunity.
     // After a tile reveal, guessOpportunityPlayerId may point to a bot.
-    // That bot should skip immediately so the turn advances.
+    // Bot may enter guessMode with probability based on reveal ratio, or skip.
     final guessOppId = room.guessOpportunityPlayerId;
     if (room.turnPhase == TurnPhase.guessOpportunity && guessOppId != null) {
       final guessOppPlayer = room.players[guessOppId];
@@ -412,20 +412,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         final guessKey = '${room.id}-guess-opp-${room.currentTurnIndex}';
         if (_lastBotTurnKey != guessKey) {
           _lastBotTurnKey = guessKey;
-          // 1400–2600 ms dwell: keeps guessOpportunity UI visible ≥ 1400 ms before bot skips.
-          final skipDelayMs = 1400 + _random.nextInt(1201);
-          final shortOppId = guessOppId.length > 6 ? guessOppId.substring(0, 6) : guessOppId;
-          QaLoggerService.instance.log('BOT', 'BOT_DELAY_SCHEDULED action=guess_opp_skip ms=$skipDelayMs oppId=$shortOppId');
-          Future.delayed(Duration(milliseconds: skipDelayMs), () async {
-            if (!mounted) return;
-            QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=bot_skip phase=guessOpportunity');
-            await ref.read(roomServiceProvider).skipPiecePlacement(roomId: room.id);
-          });
+          _scheduleBotGuessOpportunityDecision(room, guessOppId);
         }
       }
-      // Either bot is handling it or it's a human's turn to decide; don't schedule reveal.
+      // Human owns guessOpportunity — do not interfere, let timer or human decide.
       return;
     }
+
+    // Phase B: bot reveal turn.
+    // Guard: only act during revealTurn to avoid scheduling reveals in guessMode.
+    if (room.turnPhase != TurnPhase.revealTurn) return;
 
     final currentId = room.currentTurnUserId;
     if (currentId == null) return;
@@ -490,11 +486,87 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         return;
       }
 
+      // After bot reveals, guessOpportunity goes to the next player.
+      // _scheduleBotTurn handles the next state from the Firestore stream.
+    });
+  }
+
+  void _scheduleBotGuessOpportunityDecision(RoomModel room, String botId) {
+    final totalTiles = room.gridSize * room.gridSize;
+    final revealedCount = room.placedPieces.length;
+    final ratio = totalTiles > 0 ? revealedCount / totalTiles : 0.0;
+
+    // Probability that bot attempts to guess based on how much is revealed
+    final double guessChance;
+    if (ratio <= 0.20) {
+      guessChance = 0.05;
+    } else if (ratio <= 0.40) {
+      guessChance = 0.12;
+    } else if (ratio <= 0.60) {
+      guessChance = 0.22;
+    } else if (ratio <= 0.80) {
+      guessChance = 0.35;
+    } else {
+      guessChance = 0.50;
+    }
+
+    final decides = _random.nextDouble() < guessChance;
+    QaLoggerService.instance.log('BOT',
+        'BOT_GUESS_DECISION ratio=${ratio.toStringAsFixed(2)} chance=${guessChance.toStringAsFixed(2)} decided=$decides');
+
+    if (!decides) {
+      // Bot skips — human-like pause before yielding opportunity
+      final skipDelayMs = 1800 + _random.nextInt(1801); // 1800–3600ms
+      QaLoggerService.instance.log('BOT',
+          'BOT_DELAY_SCHEDULED action=skip_guess_opportunity ms=$skipDelayMs');
+      Future.delayed(Duration(milliseconds: skipDelayMs), () async {
+        if (!mounted) return;
+        QaLoggerService.instance.log('BOT', 'BOT_SKIP_GUESS_OPPORTUNITY');
+        QaLoggerService.instance.log('TURN',
+            'ADVANCE_TURN_REASON reason=bot_skip phase=guessOpportunity');
+        await ref.read(roomServiceProvider).skipPiecePlacement(roomId: room.id);
+      });
+      return;
+    }
+
+    // Bot decided to enter guessMode — pause first, then enter
+    final enterDelayMs = 1800 + _random.nextInt(1801); // 1800–3600ms
+    QaLoggerService.instance.log('BOT',
+        'BOT_DELAY_SCHEDULED action=enter_guess_mode ms=$enterDelayMs');
+
+    Future.delayed(Duration(milliseconds: enterDelayMs), () async {
+      if (!mounted) return;
+      // Re-read before entering to confirm opportunity is still ours
+      final snap = await ref.read(roomServiceProvider).watchRoom(room.id).first;
+      if (snap == null) return;
+      if (snap.phase == GamePhase.finished) return;
+      if (snap.turnPhase != TurnPhase.guessOpportunity) return;
+      if (snap.guessOpportunityPlayerId != botId) return;
+
+      final entered = await ref.read(roomServiceProvider).enterGuessMode(
+            roomId: room.id, userId: botId);
+      if (!entered) return;
+
+      QaLoggerService.instance.log('BOT', 'BOT_ENTER_GUESS_MODE');
+
+      // Wait human-like time before submitting
+      final submitDelayMs = 3000 + _random.nextInt(5001); // 3000–8000ms
+      QaLoggerService.instance.log('BOT',
+          'BOT_DELAY_SCHEDULED action=submit_guess ms=$submitDelayMs');
+
+      await Future.delayed(Duration(milliseconds: submitDelayMs));
       if (!mounted) return;
 
-      // Phase A: after bot reveals, the guess opportunity goes to the next player.
-      // The bot that just revealed is not the guess opportunity player, so we
-      // don't attempt to guess here — _scheduleBotTurn handles the next state.
+      // Confirm guessMode is still ours before submitting
+      final snap2 = await ref.read(roomServiceProvider).watchRoom(room.id).first;
+      if (snap2 == null) return;
+      if (snap2.phase == GamePhase.finished) return;
+      if (snap2.turnPhase != TurnPhase.guessMode) return;
+      if (snap2.guessModePlayerId != botId) return;
+
+      // Correct guess only when ≥60% revealed, capped at 20% chance
+      final double correctChance = ratio >= 0.60 ? 0.20 : 0.0;
+      await _performBotGuess(snap2, botId, correctChance);
     });
   }
 
@@ -523,6 +595,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     final isCorrect = _random.nextDouble() < correctChance;
     final guess = isCorrect ? image.answer : _realisticWrongGuess(image.answer);
+
+    QaLoggerService.instance.log('BOT', 'BOT_SUBMIT_GUESS correct=$isCorrect');
 
     final botName = room.players[botId]?.name ?? 'בוט';
     await _simulateBotTyping(botName, guess);
