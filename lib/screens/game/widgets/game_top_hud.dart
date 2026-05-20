@@ -14,6 +14,7 @@ class TopHud extends StatelessWidget {
   final TurnPhase turnPhase;
   final bool isMyGuessOpportunity;
   final bool isMyGuessModeActive;
+  final String guessModePlayerName;
 
   const TopHud({
     required this.players,
@@ -25,6 +26,7 @@ class TopHud extends StatelessWidget {
     required this.turnPhase,
     required this.isMyGuessOpportunity,
     required this.isMyGuessModeActive,
+    required this.guessModePlayerName,
   });
 
   @override
@@ -56,6 +58,7 @@ class TopHud extends StatelessWidget {
                       turnPhase: turnPhase,
                       isMyGuessOpportunity: isMyGuessOpportunity,
                       isMyGuessModeActive: isMyGuessModeActive,
+                      guessModePlayerName: guessModePlayerName,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -115,6 +118,7 @@ class _TurnInfo extends StatelessWidget {
   final TurnPhase turnPhase;
   final bool isMyGuessOpportunity;
   final bool isMyGuessModeActive;
+  final String guessModePlayerName;
 
   const _TurnInfo({
     required this.name,
@@ -123,11 +127,13 @@ class _TurnInfo extends StatelessWidget {
     required this.turnPhase,
     required this.isMyGuessOpportunity,
     required this.isMyGuessModeActive,
+    required this.guessModePlayerName,
   });
 
   @override
   Widget build(BuildContext context) {
     final (label, labelColor) = _phaseLabel();
+    final isGuessMode = turnPhase == TurnPhase.guessMode;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -137,7 +143,7 @@ class _TurnInfo extends StatelessWidget {
           label,
           style: TextStyle(
             color: labelColor,
-            fontSize: 11,
+            fontSize: isGuessMode ? 14 : 11,
             fontWeight: FontWeight.w900,
             height: 1,
           ),
@@ -149,11 +155,13 @@ class _TurnInfo extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1),
         ),
-        const SizedBox(height: 4),
-        Text(
-          'גלויות $revealedText',
-          style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12, fontWeight: FontWeight.w800),
-        ),
+        if (!isGuessMode) ...[
+          const SizedBox(height: 4),
+          Text(
+            'גלויות $revealedText',
+            style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12, fontWeight: FontWeight.w800),
+          ),
+        ],
       ],
     );
   }
@@ -169,9 +177,10 @@ class _TurnInfo extends StatelessWidget {
             ? ('האם אתה יודע?', const Color(0xFFFFE082))
             : ('${name.isEmpty ? 'יריב' : name} מחליט...', const Color(0xFF87CEEB).withOpacity(0.80));
       case TurnPhase.guessMode:
+        final gName = guessModePlayerName.isEmpty ? 'יריב' : guessModePlayerName;
         return isMyGuessModeActive
-            ? ('הזן תשובה', const Color(0xFF00F2FF))
-            : ('${name.isEmpty ? 'יריב' : name} מנחש...', const Color(0xFFFF6B35).withOpacity(0.90));
+            ? ('אתה מנחש!', const Color(0xFF00F2FF))
+            : ('$gName מנחש!', const Color(0xFFFF6B35));
       case TurnPhase.resolvingGuess:
       case TurnPhase.roundOver:
         return ('סיום סיבוב', Colors.white54);

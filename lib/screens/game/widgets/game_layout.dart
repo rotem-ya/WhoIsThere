@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/game_constants.dart';
 import '../../../models/game_image_model.dart';
 import '../../../models/room_model.dart';
+import '../../../services/qa_logger_service.dart';
+import '../../../widgets/game/letter_bank_input.dart';
 import 'answer_slots.dart';
 import 'game_actions.dart';
 import 'game_banners.dart';
@@ -29,7 +31,7 @@ class GameLayout extends StatelessWidget {
   final void Function(int)? onReveal;
   final VoidCallback? onRevealHint;
   final VoidCallback? onGuess;
-  final VoidCallback? onGuessMode;
+  final Future<bool> Function(String)? onGuessSubmit;
   final VoidCallback? onSkip;
 
   const GameLayout({
@@ -49,7 +51,7 @@ class GameLayout extends StatelessWidget {
     required this.onReveal,
     required this.onRevealHint,
     required this.onGuess,
-    required this.onGuessMode,
+    required this.onGuessSubmit,
     required this.onSkip,
   });
 
@@ -82,13 +84,18 @@ class GameLayout extends StatelessWidget {
           turnPhase: room.turnPhase,
           isMyGuessOpportunity: isMyGuessOpportunity,
           isMyGuessModeActive: isMyGuessModeActive,
+          guessModePlayerName: guessModePlayerName,
         ),
-        _TurnPhaseCountdownBar(
-          turnPhase: room.turnPhase,
-          revealDeadlineMs: room.revealDeadlineMs,
-          guessOpportunityDeadlineMs: room.guessOpportunityDeadlineMs,
-          guessModeDeadlineMs: room.guessModeDeadlineMs,
-        ),
+        // During guessMode: hide the 3px bar — inline countdown replaces it
+        if (isGuessModeActive)
+          const SizedBox(height: 3)
+        else
+          _TurnPhaseCountdownBar(
+            turnPhase: room.turnPhase,
+            revealDeadlineMs: room.revealDeadlineMs,
+            guessOpportunityDeadlineMs: room.guessOpportunityDeadlineMs,
+            guessModeDeadlineMs: room.guessModeDeadlineMs,
+          ),
         if (kDebugMode)
           _DebugPhaseBadge(
             turnPhase: room.turnPhase,
@@ -104,35 +111,47 @@ class GameLayout extends StatelessWidget {
             event: bannerEvent!,
             players: room.players,
           ),
+        // Board dims during guessMode; hover/glow disabled
         Expanded(
           child: Center(
-            child: GameBoardView(
-              gridSize: room.gridSize,
-              revealedCells: room.revealedCells,
-              availableCells: room.availablePieceIndices,
-              imageUrl: image?.imageUrl,
-              enabled: isMyTurn && !isBusy && !canGuessNow,
-              glowEnabled: isMyTurn && !isBusy && !canGuessNow,
-              onReveal: onReveal,
+            child: AnimatedOpacity(
+              opacity: isGuessModeActive ? 0.35 : 1.0,
+              duration: const Duration(milliseconds: 350),
+              child: GameBoardView(
+                gridSize: room.gridSize,
+                revealedCells: room.revealedCells,
+                availableCells: room.availablePieceIndices,
+                imageUrl: image?.imageUrl,
+                enabled: isMyTurn && !isBusy && !canGuessNow && !isGuessModeActive,
+                glowEnabled: isMyTurn && !isBusy && !canGuessNow && !isGuessModeActive,
+                onReveal: onReveal,
+              ),
             ),
           ),
         ),
-        AnswerSlots(answer: image?.answer ?? '', isMyTurn: isMyTurn),
-        GameActions(
-          isMyTurn: isMyTurn,
-          isBusy: isBusy,
-          canGuessNow: canGuessNow,
-          isSolo: isSolo,
-          revealedCount: revealedCount,
-          totalTiles: total,
-          isGuessModeActive: isGuessModeActive,
-          isMyGuessModeActive: isMyGuessModeActive,
-          guessModePlayerName: guessModePlayerName,
-          onRevealHint: onRevealHint,
-          onGuess: onGuess,
-          onGuessMode: onGuessMode,
-          onSkip: onSkip,
-        ),
+        // Bottom section: inline guess UI for guesser, normal actions for everyone else
+        if (isMyGuessModeActive)
+          _InlineGuessSection(
+            answer: image?.answer ?? '',
+            deadlineMs: room.guessModeDeadlineMs,
+            onSubmit: onGuessSubmit,
+          )
+        else ...[
+          AnswerSlots(answer: image?.answer ?? '', isMyTurn: isMyTurn),
+          GameActions(
+            isMyTurn: isMyTurn,
+            isBusy: isBusy,
+            canGuessNow: canGuessNow,
+            isSolo: isSolo,
+            revealedCount: revealedCount,
+            totalTiles: total,
+            isGuessModeActive: isGuessModeActive,
+            guessModePlayerName: guessModePlayerName,
+            onRevealHint: onRevealHint,
+            onGuess: onGuess,
+            onSkip: onSkip,
+          ),
+        ],
       ],
     );
   }
@@ -249,13 +268,11 @@ class _TurnPhaseCountdownBarState extends State<_TurnPhaseCountdownBar> {
           height: 3,
           child: Stack(
             children: [
-              // Track
               Container(
                 width: maxWidth,
                 height: 3,
                 color: Colors.white.withOpacity(0.06),
               ),
-              // Fill — AnimatedContainer gives smooth linear shrink between 1s ticks
               AnimatedContainer(
                 duration: const Duration(milliseconds: 900),
                 curve: Curves.linear,
@@ -273,6 +290,138 @@ class _TurnPhaseCountdownBarState extends State<_TurnPhaseCountdownBar> {
           ),
         );
       },
+    );
+  }
+}
+
+// Inline guess section — shown in place of AnswerSlots + GameActions when isMyGuessModeActive.
+class _InlineGuessSection extends StatelessWidget {
+  final String answer;
+  final int? deadlineMs;
+  final Future<bool> Function(String)? onSubmit;
+
+  const _InlineGuessSection({
+    required this.answer,
+    required this.deadlineMs,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        color: const Color(0xFF07101F).withOpacity(0.88),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (deadlineMs != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _InlineGuessCountdown(deadlineMs: deadlineMs!),
+              ),
+            SizedBox(
+              height: 350,
+              child: LetterBankInput(
+                key: deadlineMs != null ? ValueKey('guess-$deadlineMs') : null,
+                answer: answer,
+                enabled: onSubmit != null,
+                onComplete: onSubmit ?? (_) async => false,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Large, pulsing countdown shown during guessMode for the active guesser.
+class _InlineGuessCountdown extends StatefulWidget {
+  final int deadlineMs;
+  const _InlineGuessCountdown({required this.deadlineMs});
+
+  @override
+  State<_InlineGuessCountdown> createState() => _InlineGuessCountdownState();
+}
+
+class _InlineGuessCountdownState extends State<_InlineGuessCountdown>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulse;
+  late Animation<double> _scaleAnim;
+  Timer? _t;
+  int _nowMs = DateTime.now().millisecondsSinceEpoch;
+  bool _last5Logged = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _scaleAnim = Tween<double>(begin: 1.0, end: 1.14).animate(
+      CurvedAnimation(parent: _pulse, curve: Curves.easeOut),
+    );
+    _t = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _nowMs = DateTime.now().millisecondsSinceEpoch);
+      _pulse.forward().then((_) => _pulse.reverse());
+    });
+  }
+
+  @override
+  void dispose() {
+    _t?.cancel();
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remainingSec = ((widget.deadlineMs - _nowMs) / 1000).ceil().clamp(0, 20);
+    final isRed = remainingSec <= 5;
+    final isOrange = remainingSec <= 10 && !isRed;
+
+    if (isRed && !_last5Logged) {
+      _last5Logged = true;
+      QaLoggerService.instance.log('GUESS', 'GUESS_COUNTDOWN_LAST5 sec=$remainingSec');
+    }
+
+    final color = isRed
+        ? const Color(0xFFFF3B30)
+        : isOrange
+            ? const Color(0xFFFF6B35)
+            : Colors.white;
+
+    return Center(
+      child: ScaleTransition(
+        scale: _scaleAnim,
+        child: Container(
+          decoration: isRed
+              ? BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF3B30).withOpacity(0.45),
+                      blurRadius: 32,
+                      spreadRadius: 6,
+                    ),
+                  ],
+                )
+              : null,
+          child: Text(
+            '$remainingSec',
+            style: TextStyle(
+              color: color,
+              fontSize: 52,
+              fontWeight: FontWeight.w900,
+              height: 1,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

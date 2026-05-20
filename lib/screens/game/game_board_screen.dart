@@ -169,6 +169,36 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static final AudioPlayer _victoryPlayer = AudioPlayer(playerId: 'victory-fanfare');
   static final AssetSource _victorySound = AssetSource('sounds/victory_fanfare.mp3');
 
+  // Tick sounds — reuse correct_ding at low volume; swap file when dedicated tick.wav is added
+  static final AudioPlayer _revealTickPlayer = AudioPlayer(playerId: 'reveal-tick');
+  static final AudioPlayer _guessModeTickPlayer = AudioPlayer(playerId: 'guess-tick');
+  static final AssetSource _tickSound = AssetSource('sounds/correct_ding.wav');
+
+  static Future<void> _primeTickSounds() async {
+    try {
+      await _revealTickPlayer.setPlayerMode(PlayerMode.lowLatency);
+      await _revealTickPlayer.setSource(_tickSound);
+      await _guessModeTickPlayer.setPlayerMode(PlayerMode.lowLatency);
+      await _guessModeTickPlayer.setSource(_tickSound);
+    } catch (_) {}
+  }
+
+  static Future<void> _playRevealTick() async {
+    try {
+      await _revealTickPlayer.stop();
+      await _revealTickPlayer.setVolume(0.07);
+      await _revealTickPlayer.play(_tickSound);
+    } catch (_) {}
+  }
+
+  static Future<void> _playGuessModeTick() async {
+    try {
+      await _guessModeTickPlayer.stop();
+      await _guessModeTickPlayer.setVolume(0.17);
+      await _guessModeTickPlayer.play(_tickSound);
+    } catch (_) {}
+  }
+
   @override
   void initState() {
     super.initState();
@@ -178,6 +208,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     unawaited(_startBackgroundMusic());
     unawaited(_primeRevealSound());
     unawaited(_primeGuessSounds());
+    unawaited(_primeTickSounds());
     final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
     QaLoggerService.instance.log('GAME', 'GAME_INIT roomId=$shortId');
     _startExpiryTimer();
@@ -191,6 +222,25 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (room == null || room.phase != GamePhase.playing) return;
 
       final now = DateTime.now().millisecondsSinceEpoch;
+
+      // Reveal soft tick — last 3s of reveal phase
+      if (room.turnPhase == TurnPhase.revealTurn && room.revealDeadlineMs != null) {
+        final tickRemaining = room.revealDeadlineMs! - now;
+        if (tickRemaining > 0 && tickRemaining <= 3500) {
+          unawaited(_playRevealTick());
+        }
+      }
+
+      // GuessMode stronger tick — last 5s, only for the active guesser
+      if (room.turnPhase == TurnPhase.guessMode &&
+          room.guessModeDeadlineMs != null &&
+          uid != null &&
+          room.guessModePlayerId == uid) {
+        final tickRemaining = room.guessModeDeadlineMs! - now;
+        if (tickRemaining > 0 && tickRemaining <= 5500) {
+          unawaited(_playGuessModeTick());
+        }
+      }
 
       // Reveal turn timeout — frozen during guessOpportunity/guessMode.
       // Only the current-turn player drives this transition; transaction is the authority.
@@ -258,6 +308,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       _wrongBuzzPlayer.stop().ignore();
       _correctDingPlayer.stop().ignore();
       _victoryPlayer.stop().ignore();
+      _revealTickPlayer.stop().ignore();
+      _guessModeTickPlayer.stop().ignore();
     }
   }
 
@@ -584,6 +636,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final image = _image;
     if (image == null || value.trim().isEmpty) return false;
 
+    // Stop tick sounds immediately on submission
+    _revealTickPlayer.stop().ignore();
+    _guessModeTickPlayer.stop().ignore();
+
     setState(() => _hasGuessedThisTurn = true);
 
     final correct = await ref.read(roomServiceProvider).submitAnswer(
@@ -603,123 +659,28 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       Future.delayed(const Duration(milliseconds: 2500), () {
         if (mounted) setState(() => _showCorrectGuess = false);
       });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('לא נכון, נסה שוב')),
-      );
     }
+    // Wrong guess: LetterBankInput shows its own inline error feedback
     return correct;
   }
 
-  Future<void> _openGuessDialog(RoomModel room, String userId) async {
-    final image = _image;
-    if (image == null) return;
-
+  Future<void> _enterGuessMode(RoomModel room, String userId) async {
     QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED phase=${room.turnPhase.name}');
 
-    // If already in guessMode (e.g. re-opened after dialog dismiss), skip enterGuessMode.
     final alreadyInGuessMode = room.turnPhase == TurnPhase.guessMode &&
         room.guessModePlayerId == userId;
+    if (alreadyInGuessMode) return;
 
-    if (!alreadyInGuessMode) {
-      // Transition from guessOpportunity → guessMode before opening dialog.
-      final entered = await ref.read(roomServiceProvider).enterGuessMode(
-        roomId: room.id,
-        userId: userId,
-      );
-      if (!entered) {
-        QaLoggerService.instance.log('GUESS', 'ENTER_GUESS_MODE_REJECTED phase=${room.turnPhase.name}');
-        return;
-      }
-      QaLoggerService.instance.log('GUESS', 'ENTER_GUESS_MODE_SUCCESS');
-    }
-
-    if (!mounted) return;
-
-    // Capture deadline before opening dialog — it won't change while dialog is open.
-    final guessModeDeadlineMs = room.guessModeDeadlineMs;
-    final remainingOnOpen = guessModeDeadlineMs != null
-        ? (guessModeDeadlineMs - DateTime.now().millisecondsSinceEpoch).clamp(0, 20000)
-        : -1;
-    QaLoggerService.instance.log('GUESS', 'GUESS_COUNTDOWN_SHOWN remainingMs=$remainingOnOpen');
-
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 18),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final inputHeight = min(400.0, constraints.maxHeight - 60);
-              return Center(
-                child: Container(
-                  width: min(420.0, constraints.maxWidth),
-                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF171B3D),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white.withOpacity(0.08)),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        height: 44,
-                        child: Stack(
-                          children: [
-                            const Center(
-                              child: Text(
-                                'מה המקום?',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w900,
-                                  height: 1,
-                                ),
-                              ),
-                            ),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: IconButton(
-                                onPressed: () => Navigator.pop(dialogContext),
-                                icon: const Icon(Icons.close_rounded, color: Colors.white54),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Dominant countdown — ticks every second while player types.
-                      if (guessModeDeadlineMs != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: _GuessDialogCountdown(deadlineMs: guessModeDeadlineMs),
-                        ),
-                      SizedBox(
-                        height: inputHeight,
-                        child: LetterBankInput(
-                          answer: image.answer,
-                          enabled: true,
-                          onComplete: (filled) async {
-                            final correct = await _submitGuess(room, userId, filled);
-                            if (dialogContext.mounted) {
-                              Navigator.pop(dialogContext);
-                            }
-                            return correct;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
+    final entered = await ref.read(roomServiceProvider).enterGuessMode(
+      roomId: room.id,
+      userId: userId,
     );
+    if (!entered) {
+      QaLoggerService.instance.log('GUESS', 'ENTER_GUESS_MODE_REJECTED phase=${room.turnPhase.name}');
+      return;
+    }
+    QaLoggerService.instance.log('GUESS', 'ENTER_GUESS_MODE_SUCCESS');
+    // Inline UI shows automatically via Firestore state stream
   }
 
   Future<void> _showExitConfirmation(BuildContext context) async {
@@ -902,6 +863,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     QaLoggerService.instance.log('TURN', 'GUESS_MODE_STARTED guesserId=$shortGuesserId msLeft=$msLeft');
                     // Reveal expiry timer is frozen while in guessMode — log once on entry.
                     QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_FROZEN phase=guessMode');
+                    QaLoggerService.instance.log('TURN', 'BOARD_DIMMED_GUESS_MODE');
+                    QaLoggerService.instance.log('TURN', 'REVEAL_BAR_HIDDEN_GUESS_MODE');
+                    if (currentUserId != null && room.guessModePlayerId == currentUserId) {
+                      QaLoggerService.instance.log('GUESS', 'GUESS_MODE_UI_ENTER');
+                    }
+                  }
+
+                  if (_lastKnownTurnPhase == TurnPhase.guessMode && room.turnPhase != TurnPhase.guessMode) {
+                    QaLoggerService.instance.log('GUESS', 'GUESS_MODE_UI_EXIT');
+                    _revealTickPlayer.stop().ignore();
+                    _guessModeTickPlayer.stop().ignore();
                   }
 
                   if (room.turnPhase == TurnPhase.revealTurn) {
@@ -1048,11 +1020,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   onRevealHint: currentUserId == null
                       ? null
                       : () => _useRevealHint(room, currentUserId),
-                  onGuess: canGuessNow ? () => _openGuessDialog(room, currentUserId!) : null,
-                  onGuessMode: (currentUserId != null &&
+                  onGuess: canGuessNow ? () => _enterGuessMode(room, currentUserId!) : null,
+                  onGuessSubmit: (currentUserId != null &&
                           room.turnPhase == TurnPhase.guessMode &&
                           room.guessModePlayerId == currentUserId)
-                      ? () => _openGuessDialog(room, currentUserId!)
+                      ? (value) => _submitGuess(room, currentUserId!, value)
                       : null,
                   onSkip: canGuessNow ? () => _skipTurn(room) : null,
                 );
@@ -1371,50 +1343,6 @@ class _FactDialog extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-// Ticking countdown shown inside the guess dialog — isolated StatefulWidget so only it rebuilds.
-class _GuessDialogCountdown extends StatefulWidget {
-  final int deadlineMs;
-  const _GuessDialogCountdown({required this.deadlineMs});
-
-  @override
-  State<_GuessDialogCountdown> createState() => _GuessDialogCountdownState();
-}
-
-class _GuessDialogCountdownState extends State<_GuessDialogCountdown> {
-  late Timer _t;
-  int _nowMs = DateTime.now().millisecondsSinceEpoch;
-
-  @override
-  void initState() {
-    super.initState();
-    _t = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _nowMs = DateTime.now().millisecondsSinceEpoch);
-    });
-  }
-
-  @override
-  void dispose() {
-    _t.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final remainingSec = ((widget.deadlineMs - _nowMs) / 1000).ceil().clamp(0, 20);
-    final isUrgent = remainingSec <= 5;
-    return Text(
-      '$remainingSec שניות',
-      textDirection: TextDirection.rtl,
-      style: TextStyle(
-        color: isUrgent ? const Color(0xFFFF6B35) : Colors.white38,
-        fontSize: isUrgent ? 15 : 12,
-        fontWeight: isUrgent ? FontWeight.w900 : FontWeight.w600,
-        height: 1,
-      ),
     );
   }
 }

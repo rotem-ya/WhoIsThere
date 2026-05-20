@@ -15,13 +15,10 @@ class GameActions extends ConsumerWidget {
   final bool isSolo;
   final int revealedCount;
   final int totalTiles;
-  // Phase B2: guess mode state
   final bool isGuessModeActive;
-  final bool isMyGuessModeActive;
   final String guessModePlayerName;
   final VoidCallback? onRevealHint;
   final VoidCallback? onGuess;
-  final VoidCallback? onGuessMode;
   final VoidCallback? onSkip;
 
   const GameActions({
@@ -32,11 +29,9 @@ class GameActions extends ConsumerWidget {
     required this.revealedCount,
     required this.totalTiles,
     required this.isGuessModeActive,
-    required this.isMyGuessModeActive,
     required this.guessModePlayerName,
     required this.onRevealHint,
     required this.onGuess,
-    required this.onGuessMode,
     required this.onSkip,
   });
 
@@ -58,9 +53,7 @@ class GameActions extends ConsumerWidget {
 
     // Primary button label driven by state machine phase
     final String primaryLabel;
-    if (isMyGuessModeActive) {
-      primaryLabel = 'הזן תשובה';
-    } else if (canGuessNow) {
+    if (canGuessNow) {
       primaryLabel = 'נחש עכשיו!';
     } else if (isGuessModeActive) {
       final name = guessModePlayerName.isEmpty ? 'יריב' : guessModePlayerName;
@@ -72,13 +65,9 @@ class GameActions extends ConsumerWidget {
     }
 
     final primaryIsActive =
-        isMyGuessModeActive || guessActive || (isMyTurn && !canGuessNow && !isGuessModeActive);
-    final primaryGlow = guessActive || isMyGuessModeActive;
-    final primaryOnTap = isMyGuessModeActive
-        ? onGuessMode
-        : guessActive
-            ? onGuess
-            : null;
+        guessActive || (isMyTurn && !canGuessNow && !isGuessModeActive);
+    final primaryGlow = guessActive;
+    final primaryOnTap = guessActive ? onGuess : null;
 
     // Show reward chip on the guess opportunity CTA only
     final showReward = canGuessNow && prize != null;
