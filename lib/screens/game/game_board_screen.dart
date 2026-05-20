@@ -146,6 +146,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   String? _currentUserIdForTimer;
   Timer? _expiryTimer;
 
+  // Expiry deduplication — fire handler at most once per unique phase+deadline pair
+  int? _lastExpiredRevealDeadline;
+  int? _lastExpiredGuessOpportunityDeadline;
+  int? _lastExpiredGuessModeDeadline;
+
   // Economy
   bool _rewardApplied = false;
   DateTime? _gameStartTime;
@@ -187,37 +192,59 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
       final now = DateTime.now().millisecondsSinceEpoch;
 
-      // Reveal turn timeout: only the current turn player drives this transition.
+      // Reveal turn timeout — frozen during guessOpportunity/guessMode.
+      // Only the current-turn player drives this transition; transaction is the authority.
       if (room.turnPhase == TurnPhase.revealTurn &&
           room.revealDeadlineMs != null &&
           now >= room.revealDeadlineMs! &&
           uid != null &&
           room.currentTurnUserId == uid) {
-        QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_EXPIRED');
-        ref.read(roomServiceProvider).advanceTurnOnTimeout(
-          roomId: room.id,
-          userId: uid,
-        ).ignore();
+        if (_lastExpiredRevealDeadline == room.revealDeadlineMs) {
+          QaLoggerService.instance.log('TURN', 'EXPIRY_DEDUP_SKIP phase=revealTurn deadline=${room.revealDeadlineMs}');
+        } else {
+          _lastExpiredRevealDeadline = room.revealDeadlineMs;
+          QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=revealTurn');
+          QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=reveal_timeout');
+          QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_EXPIRED');
+          ref.read(roomServiceProvider).advanceTurnOnTimeout(
+            roomId: room.id,
+            userId: uid,
+          ).ignore();
+        }
       }
 
       // Guess opportunity timeout: any client may call; transaction prevents double-execution.
       if (room.turnPhase == TurnPhase.guessOpportunity &&
           room.guessOpportunityDeadlineMs != null &&
           now >= room.guessOpportunityDeadlineMs!) {
-        QaLoggerService.instance.log('TURN', 'GUESS_OPPORTUNITY_TIMER_EXPIRED');
-        ref.read(roomServiceProvider).expireGuessOpportunity(
-          roomId: room.id,
-        ).ignore();
+        if (_lastExpiredGuessOpportunityDeadline == room.guessOpportunityDeadlineMs) {
+          QaLoggerService.instance.log('TURN', 'EXPIRY_DEDUP_SKIP phase=guessOpportunity deadline=${room.guessOpportunityDeadlineMs}');
+        } else {
+          _lastExpiredGuessOpportunityDeadline = room.guessOpportunityDeadlineMs;
+          QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=guessOpportunity');
+          QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=guess_opp_timeout');
+          QaLoggerService.instance.log('TURN', 'GUESS_OPPORTUNITY_TIMER_EXPIRED');
+          ref.read(roomServiceProvider).expireGuessOpportunity(
+            roomId: room.id,
+          ).ignore();
+        }
       }
 
       // Guess mode timeout: any client may call; transaction prevents double-execution.
       if (room.turnPhase == TurnPhase.guessMode &&
           room.guessModeDeadlineMs != null &&
           now >= room.guessModeDeadlineMs!) {
-        QaLoggerService.instance.log('TURN', 'GUESS_MODE_TIMER_EXPIRED');
-        ref.read(roomServiceProvider).expireGuessMode(
-          roomId: room.id,
-        ).ignore();
+        if (_lastExpiredGuessModeDeadline == room.guessModeDeadlineMs) {
+          QaLoggerService.instance.log('TURN', 'EXPIRY_DEDUP_SKIP phase=guessMode deadline=${room.guessModeDeadlineMs}');
+        } else {
+          _lastExpiredGuessModeDeadline = room.guessModeDeadlineMs;
+          QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=guessMode');
+          QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=guess_mode_timeout');
+          QaLoggerService.instance.log('TURN', 'GUESS_MODE_TIMER_EXPIRED');
+          ref.read(roomServiceProvider).expireGuessMode(
+            roomId: room.id,
+          ).ignore();
+        }
       }
     });
   }
@@ -333,8 +360,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         final guessKey = '${room.id}-guess-opp-${room.currentTurnIndex}';
         if (_lastBotTurnKey != guessKey) {
           _lastBotTurnKey = guessKey;
-          Future.delayed(const Duration(milliseconds: 600), () async {
+          // 1400–2600 ms dwell: keeps guessOpportunity UI visible ≥ 1400 ms before bot skips.
+          final skipDelayMs = 1400 + _random.nextInt(1201);
+          final shortOppId = guessOppId.length > 6 ? guessOppId.substring(0, 6) : guessOppId;
+          QaLoggerService.instance.log('BOT', 'BOT_DELAY_SCHEDULED action=guess_opp_skip ms=$skipDelayMs oppId=$shortOppId');
+          Future.delayed(Duration(milliseconds: skipDelayMs), () async {
             if (!mounted) return;
+            QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=bot_skip phase=guessOpportunity');
             await ref.read(roomServiceProvider).skipPiecePlacement(roomId: room.id);
           });
         }
@@ -604,6 +636,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     if (!mounted) return;
 
+    // Capture deadline before opening dialog — it won't change while dialog is open.
+    final guessModeDeadlineMs = room.guessModeDeadlineMs;
+    final remainingOnOpen = guessModeDeadlineMs != null
+        ? (guessModeDeadlineMs - DateTime.now().millisecondsSinceEpoch).clamp(0, 20000)
+        : -1;
+    QaLoggerService.instance.log('GUESS', 'GUESS_COUNTDOWN_SHOWN remainingMs=$remainingOnOpen');
+
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => Directionality(
@@ -652,6 +691,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                           ],
                         ),
                       ),
+                      // Dominant countdown — ticks every second while player types.
+                      if (guessModeDeadlineMs != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: _GuessDialogCountdown(deadlineMs: guessModeDeadlineMs),
+                        ),
                       SizedBox(
                         height: inputHeight,
                         child: LetterBankInput(
@@ -855,6 +900,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                         ? room.guessModeDeadlineMs! - DateTime.now().millisecondsSinceEpoch
                         : -1;
                     QaLoggerService.instance.log('TURN', 'GUESS_MODE_STARTED guesserId=$shortGuesserId msLeft=$msLeft');
+                    // Reveal expiry timer is frozen while in guessMode — log once on entry.
+                    QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_FROZEN phase=guessMode');
                   }
 
                   if (room.turnPhase == TurnPhase.revealTurn) {
@@ -1324,6 +1371,50 @@ class _FactDialog extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// Ticking countdown shown inside the guess dialog — isolated StatefulWidget so only it rebuilds.
+class _GuessDialogCountdown extends StatefulWidget {
+  final int deadlineMs;
+  const _GuessDialogCountdown({required this.deadlineMs});
+
+  @override
+  State<_GuessDialogCountdown> createState() => _GuessDialogCountdownState();
+}
+
+class _GuessDialogCountdownState extends State<_GuessDialogCountdown> {
+  late Timer _t;
+  int _nowMs = DateTime.now().millisecondsSinceEpoch;
+
+  @override
+  void initState() {
+    super.initState();
+    _t = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _nowMs = DateTime.now().millisecondsSinceEpoch);
+    });
+  }
+
+  @override
+  void dispose() {
+    _t.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remainingSec = ((widget.deadlineMs - _nowMs) / 1000).ceil().clamp(0, 20);
+    final isUrgent = remainingSec <= 5;
+    return Text(
+      '$remainingSec שניות',
+      textDirection: TextDirection.rtl,
+      style: TextStyle(
+        color: isUrgent ? const Color(0xFFFF6B35) : Colors.white38,
+        fontSize: isUrgent ? 15 : 12,
+        fontWeight: isUrgent ? FontWeight.w900 : FontWeight.w600,
+        height: 1,
+      ),
     );
   }
 }
