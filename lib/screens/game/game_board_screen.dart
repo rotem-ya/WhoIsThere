@@ -143,6 +143,30 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   TurnPhase? _lastKnownTurnPhase;
   int? _lastKnownRevealDeadlineMs; // detect first revealDeadlineMs (game start)
 
+  // Cycle integrity
+  int? _lastKnownCycleId;
+
+  // Deadline tracking for timer lifecycle logs
+  int? _lastKnownGuessOpportunityDeadlineMs;
+  int? _lastKnownGuessModeDeadlineMs;
+
+  // Snapshot freshness
+  int? _lastSnapshotMs;
+  int? _lastSnapshotLogCycleId;
+
+  // Watchdog state (issue keys active right now)
+  int _watchdogTickCount = 0;
+  final Set<String> _watchdogActiveIssues = {};
+
+  // Session summary counters
+  int _sessionRevealCount = 0;
+  int _sessionTimeoutCount = 0;
+  int _sessionGuessModeCount = 0;
+  int _sessionWrongGuessCount = 0;
+  int _sessionTxErrorCount = 0;
+  int _sessionWatchdogEventCount = 0;
+  bool? _lastGuessEventCorrect;
+
   // Passive expiry detection — updated each build, read by _expiryTimer
   RoomModel? _latestRoom;
   String? _currentUserIdForTimer;
@@ -201,14 +225,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       await _guessModeTickPlayer.setPlayerMode(PlayerMode.lowLatency);
       await _guessModeTickPlayer.setSource(_tickSound);
     } catch (_) {}
-  }
-
-  static double _computePrizePotential(double ratio) {
-    if (ratio <= 0.0) return 1.0;
-    if (ratio <= 0.20) return 1.0 - (ratio / 0.20) * 0.10;
-    if (ratio <= 0.50) return 0.90 - ((ratio - 0.20) / 0.30) * 0.20;
-    if (ratio <= 0.75) return 0.70 - ((ratio - 0.50) / 0.25) * 0.25;
-    return (0.45 - ((ratio - 0.75) / 0.25) * 0.30).clamp(0.0, 1.0);
   }
 
   static String? _pressureStateKey(double ratio) {
@@ -319,13 +335,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         if (room.currentTurnUserId == uid) {
           if (_lastExpiredRevealDeadline == room.revealDeadlineMs) {
             QaLoggerService.instance.log('TURN', 'EXPIRY_DEDUP_SKIP phase=revealTurn deadline=${room.revealDeadlineMs}');
+            QaLoggerService.instance.log('TIMER', 'TIMER_IGNORED_STALE type=revealTurn deadline=${room.revealDeadlineMs}');
           } else {
             final lastAttempt = _revealTimeoutLastAttemptMs;
             if (lastAttempt != null && now - lastAttempt < 2000) {
               // within cooldown — wait for retry window
             } else {
               _revealTimeoutLastAttemptMs = now;
+              _sessionTimeoutCount++;
               QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=revealTurn');
+              QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=revealTurn deadline=${room.revealDeadlineMs}');
               QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=reveal_timeout');
               QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_EXPIRED');
               final committed = await ref.read(roomServiceProvider).advanceTurnOnTimeout(
@@ -374,6 +393,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         } else {
           _lastExpiredGuessModeDeadline = room.guessModeDeadlineMs;
           QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=guessMode');
+          QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=guessMode deadline=${room.guessModeDeadlineMs}');
           QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=guess_mode_timeout');
           QaLoggerService.instance.log('TURN', 'GUESS_MODE_TIMER_EXPIRED');
           ref.read(roomServiceProvider).expireGuessMode(
@@ -381,7 +401,93 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
           ).ignore();
         }
       }
+
+      // Snapshot staleness check (15s without an update during active game)
+      final lastSnap = _lastSnapshotMs;
+      if (lastSnap != null && now - lastSnap > 15000) {
+        QaLoggerService.instance.log('SNAPSHOT', 'SNAPSHOT_STALE ageMs=${now - lastSnap}');
+        _lastSnapshotMs = now; // reset so we don't spam
+      }
+
+      // Watchdog — run every 3 ticks (~3 seconds)
+      _watchdogTickCount++;
+      if (_watchdogTickCount % 3 == 0) {
+        _runWatchdog(room, now);
+      }
     });
+  }
+
+  void _runWatchdog(RoomModel room, int now) {
+    void _flag(String key, String log) {
+      if (!_watchdogActiveIssues.contains(key)) {
+        _watchdogActiveIssues.add(key);
+        _sessionWatchdogEventCount++;
+        QaLoggerService.instance.log('WATCHDOG', log);
+      }
+    }
+
+    // revealTurn expired deadline
+    if (room.turnPhase == TurnPhase.revealTurn && room.revealDeadlineMs != null) {
+      final overdue = now - room.revealDeadlineMs!;
+      if (overdue > 3000) {
+        _flag('expired_reveal_${room.revealDeadlineMs}',
+            'WATCHDOG_EXPIRED_DEADLINE phase=revealTurn overdueMs=$overdue');
+      } else {
+        _watchdogActiveIssues.removeWhere((k) => k.startsWith('expired_reveal_'));
+      }
+    }
+
+    // guessOpportunity expired deadline
+    if (room.turnPhase == TurnPhase.guessOpportunity &&
+        room.guessOpportunityDeadlineMs != null) {
+      final overdue = now - room.guessOpportunityDeadlineMs!;
+      if (overdue > 3000) {
+        _flag('expired_guessOpp_${room.guessOpportunityDeadlineMs}',
+            'WATCHDOG_EXPIRED_DEADLINE phase=guessOpportunity overdueMs=$overdue');
+      } else {
+        _watchdogActiveIssues.removeWhere((k) => k.startsWith('expired_guessOpp_'));
+      }
+    }
+
+    // guessMode expired deadline
+    if (room.turnPhase == TurnPhase.guessMode && room.guessModeDeadlineMs != null) {
+      final overdue = now - room.guessModeDeadlineMs!;
+      if (overdue > 3000) {
+        _flag('expired_guessMode_${room.guessModeDeadlineMs}',
+            'WATCHDOG_EXPIRED_DEADLINE phase=guessMode overdueMs=$overdue');
+      } else {
+        _watchdogActiveIssues.removeWhere((k) => k.startsWith('expired_guessMode_'));
+      }
+    }
+
+    // playing phase but turnPhase is roundOver (stuck end state)
+    if (room.phase == GamePhase.playing && room.turnPhase == TurnPhase.roundOver) {
+      _flag('phase_mismatch_playing_roundOver',
+          'WATCHDOG_PHASE_MISMATCH phase=playing turnPhase=roundOver');
+    } else {
+      _watchdogActiveIssues.remove('phase_mismatch_playing_roundOver');
+    }
+
+    // null deadline while phase requires one
+    if (room.turnPhase == TurnPhase.revealTurn && room.revealDeadlineMs == null) {
+      _flag('null_deadline_revealTurn', 'WATCHDOG_NULL_DEADLINE phase=revealTurn');
+    } else {
+      _watchdogActiveIssues.remove('null_deadline_revealTurn');
+    }
+
+    if (room.turnPhase == TurnPhase.guessOpportunity &&
+        room.guessOpportunityDeadlineMs == null) {
+      _flag('null_deadline_guessOpportunity',
+          'WATCHDOG_NULL_DEADLINE phase=guessOpportunity');
+    } else {
+      _watchdogActiveIssues.remove('null_deadline_guessOpportunity');
+    }
+
+    if (room.turnPhase == TurnPhase.guessMode && room.guessModeDeadlineMs == null) {
+      _flag('null_deadline_guessMode', 'WATCHDOG_NULL_DEADLINE phase=guessMode');
+    } else {
+      _watchdogActiveIssues.remove('null_deadline_guessMode');
+    }
   }
 
   @override
@@ -412,6 +518,20 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   void dispose() {
     final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
     QaLoggerService.instance.log('GAME', 'GAME_DISPOSE roomId=$shortId lastPhase=${_lastKnownPhase?.name ?? 'unknown'}');
+    final durationSec = _gameStartTime != null
+        ? DateTime.now().difference(_gameStartTime!).inSeconds
+        : 0;
+    QaLoggerService.instance.log('SESSION',
+        'SESSION_SUMMARY'
+        ' durationSec=$durationSec'
+        ' reveals=$_sessionRevealCount'
+        ' timeouts=$_sessionTimeoutCount'
+        ' guessModes=$_sessionGuessModeCount'
+        ' wrongGuesses=$_sessionWrongGuessCount'
+        ' txErrors=$_sessionTxErrorCount'
+        ' watchdogEvents=$_sessionWatchdogEventCount'
+        ' finalPhase=${_lastKnownPhase?.name ?? 'unknown'}'
+        ' finalTurnPhase=${_lastKnownTurnPhase?.name ?? 'unknown'}');
     _expiryTimer?.cancel();
     _guessController.dispose();
     _confettiLeft.dispose();
@@ -1100,7 +1220,91 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   QaLoggerService.instance.log('TURN', 'REVEAL_DEADLINE_SET turnId=$shortTurnId msLeft=$msLeft');
                   _lastKnownRevealDeadlineMs = room.revealDeadlineMs;
                 }
+                final _prevTurnPhaseForCounter = _lastKnownTurnPhase;
                 _lastKnownTurnPhase = room.turnPhase;
+
+                // ── Snapshot freshness ──────────────────────────────────────────────
+                final _snapNow = DateTime.now().millisecondsSinceEpoch;
+                _lastSnapshotMs = _snapNow;
+                if (_lastSnapshotLogCycleId != room.revealCycleId ||
+                    _lastKnownPhase != room.phase) {
+                  _lastSnapshotLogCycleId = room.revealCycleId;
+                  QaLoggerService.instance.log('SNAPSHOT',
+                      'SNAPSHOT_RECEIVED phase=${room.phase.name} turnPhase=${room.turnPhase.name} cycle=${room.revealCycleId}');
+                }
+
+                // ── Cycle integrity ─────────────────────────────────────────────────
+                final _prevCycle = _lastKnownCycleId;
+                if (_prevCycle != null && room.revealCycleId != _prevCycle) {
+                  final jump = room.revealCycleId - _prevCycle;
+                  if (jump > 1) {
+                    QaLoggerService.instance.log('SNAPSHOT',
+                        'CYCLE_GAP_DETECTED from=$_prevCycle to=${room.revealCycleId}');
+                  } else if (jump < 0) {
+                    QaLoggerService.instance.log('SNAPSHOT',
+                        'CYCLE_DUPLICATE_DETECTED cycle=${room.revealCycleId}');
+                  } else {
+                    QaLoggerService.instance.log('SNAPSHOT',
+                        'CYCLE_ADVANCED from=$_prevCycle to=${room.revealCycleId}');
+                  }
+                }
+                _lastKnownCycleId = room.revealCycleId;
+
+                // ── Timer lifecycle — reveal deadline ───────────────────────────────
+                if (room.revealDeadlineMs != null &&
+                    room.revealDeadlineMs != _lastKnownRevealDeadlineMs) {
+                  if (_lastKnownRevealDeadlineMs == null) {
+                    QaLoggerService.instance.log('TIMER',
+                        'TIMER_CREATED type=revealTurn deadline=${room.revealDeadlineMs}');
+                  } else {
+                    QaLoggerService.instance.log('TIMER',
+                        'TIMER_REPLACED type=revealTurn oldDeadline=$_lastKnownRevealDeadlineMs newDeadline=${room.revealDeadlineMs}');
+                  }
+                  _lastKnownRevealDeadlineMs = room.revealDeadlineMs;
+                }
+
+                // ── Timer lifecycle — guessOpportunity deadline ─────────────────────
+                if (room.guessOpportunityDeadlineMs != _lastKnownGuessOpportunityDeadlineMs) {
+                  if (room.guessOpportunityDeadlineMs != null) {
+                    if (_lastKnownGuessOpportunityDeadlineMs == null) {
+                      QaLoggerService.instance.log('TIMER',
+                          'TIMER_CREATED type=guessOpportunity deadline=${room.guessOpportunityDeadlineMs}');
+                    } else {
+                      QaLoggerService.instance.log('TIMER',
+                          'TIMER_REPLACED type=guessOpportunity oldDeadline=$_lastKnownGuessOpportunityDeadlineMs newDeadline=${room.guessOpportunityDeadlineMs}');
+                    }
+                  }
+                  _lastKnownGuessOpportunityDeadlineMs = room.guessOpportunityDeadlineMs;
+                }
+
+                // ── Timer lifecycle — guessMode deadline ────────────────────────────
+                if (room.guessModeDeadlineMs != _lastKnownGuessModeDeadlineMs) {
+                  if (room.guessModeDeadlineMs != null) {
+                    if (_lastKnownGuessModeDeadlineMs == null) {
+                      QaLoggerService.instance.log('TIMER',
+                          'TIMER_CREATED type=guessMode deadline=${room.guessModeDeadlineMs}');
+                    } else {
+                      QaLoggerService.instance.log('TIMER',
+                          'TIMER_REPLACED type=guessMode oldDeadline=$_lastKnownGuessModeDeadlineMs newDeadline=${room.guessModeDeadlineMs}');
+                    }
+                  }
+                  _lastKnownGuessModeDeadlineMs = room.guessModeDeadlineMs;
+                }
+
+                // ── Session counters ────────────────────────────────────────────────
+                if (_prevTurnPhaseForCounter != null &&
+                    _prevTurnPhaseForCounter != room.turnPhase) {
+                  if (room.turnPhase == TurnPhase.revealTurn) _sessionRevealCount++;
+                  if (room.turnPhase == TurnPhase.guessMode) _sessionGuessModeCount++;
+                }
+                // Detect wrong guesses from lastGuessEvent changes
+                final _guessEventCorrect =
+                    room.lastGuessEvent?['isCorrect'] as bool?;
+                if (_guessEventCorrect == false &&
+                    _lastGuessEventCorrect != false) {
+                  _sessionWrongGuessCount++;
+                }
+                _lastGuessEventCorrect = _guessEventCorrect;
 
                 if (room.imageId.isNotEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) => _loadImage(room.imageId));
@@ -1147,17 +1351,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 _latestRoom = room;
                 _currentUserIdForTimer = currentUserId;
 
-                // B8 / B8.2: Prize potential and pressure state QA logging
+                // Prize potential and pressure state QA logging
                 if (room.phase == GamePhase.playing) {
                   final _pTotal = room.gridSize * room.gridSize;
                   final _pRatio = _pTotal > 0 ? room.placedPieces.length / _pTotal : 0.0;
                   if (room.placedPieces.length != _lastRevealedCountForLog) {
                     _lastRevealedCountForLog = room.placedPieces.length;
-                    // Legacy percentage log (piecewise visual curve)
-                    final _potential = _computePrizePotential(_pRatio);
-                    QaLoggerService.instance.log('GAME',
-                        'PRIZE_POTENTIAL_UPDATE ratio=${_pRatio.toStringAsFixed(2)} potential=${(_potential * 100).round()}');
-                    // B8.2: accurate coin-based log from RewardCalculator
                     final _isSoloLog = room.players.values.where((p) => !p.isBot).length == 1;
                     final _coinsLog = RewardCalculator.calculateCurrentPrizePotential(
                       isSolo: _isSoloLog,
@@ -1165,7 +1364,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       totalTiles: _pTotal,
                     );
                     QaLoggerService.instance.log('GAME',
-                        'PRIZE_POTENTIAL_ACTUAL coins=$_coinsLog revealed=${room.placedPieces.length} total=$_pTotal isSolo=$_isSoloLog');
+                        'PRIZE_POTENTIAL_DISPLAY coins=$_coinsLog revealed=${room.placedPieces.length} total=$_pTotal isSolo=$_isSoloLog');
                   }
                   final _pState = _pressureStateKey(_pRatio);
                   if (_pState != null && _pState != _lastPressureStateForLog) {

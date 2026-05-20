@@ -410,7 +410,9 @@ class RoomService {
     required Difficulty difficulty,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
+    final txStartMs = now;
 
+    try {
     await _firestore.runTransaction((tx) async {
       final doc = await tx.get(_rooms.doc(roomId));
       if (!doc.exists) return;
@@ -420,6 +422,7 @@ class RoomService {
 
       QaLoggerService.instance.log('REVEAL',
           'REVEAL_TX_BEGIN cycleId=$cycleId pieceIndex=$pieceIndex uid=$shortUid');
+      QaLoggerService.instance.log('REVEAL', 'TX_BEGIN name=revealPiece');
 
       // Duplicate / phase guard: must still be in revealTurn
       if (room.turnPhase != TurnPhase.revealTurn) {
@@ -484,6 +487,8 @@ class RoomService {
         QaLoggerService.instance.log('GAME', 'ROUND_OVER_SET_NO_WINNER cycleId=$cycleId');
         QaLoggerService.instance.log('REVEAL',
             'REVEAL_TX_COMMIT cycleId=$cycleId pieceIndex=$pieceIndex');
+        QaLoggerService.instance.log('REVEAL',
+            'TX_COMMIT name=revealPiece latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
         return;
       }
 
@@ -531,11 +536,18 @@ class RoomService {
 
       QaLoggerService.instance.log('REVEAL',
           'REVEAL_TX_COMMIT cycleId=$cycleId pieceIndex=$pieceIndex');
+      QaLoggerService.instance.log('REVEAL',
+          'TX_COMMIT name=revealPiece latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
     });
+    } catch (e) {
+      QaLoggerService.instance.log('REVEAL', 'TX_ERROR name=revealPiece error=$e');
+    }
   }
 
   Future<void> skipPiecePlacement({required String roomId}) async {
     final now = DateTime.now().millisecondsSinceEpoch;
+    final txStartMs = now;
+    try {
     await _firestore.runTransaction((tx) async {
       final doc = await tx.get(_rooms.doc(roomId));
       if (!doc.exists) return;
@@ -569,7 +581,12 @@ class RoomService {
         'revealCycleId': FieldValue.increment(1),
       });
       QaLoggerService.instance.log('TURN', 'SKIP_TX_COMMIT');
+      QaLoggerService.instance.log('TURN',
+          'TX_COMMIT name=skipPiecePlacement latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
     });
+    } catch (e) {
+      QaLoggerService.instance.log('TURN', 'TX_ERROR name=skipPiecePlacement error=$e');
+    }
   }
 
   /// Called by the player who has the guess opportunity to lock in as the guesser.
@@ -579,25 +596,48 @@ class RoomService {
     required String userId,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
+    final txStartMs = now;
     bool success = false;
 
-    await _firestore.runTransaction((tx) async {
-      final doc = await tx.get(_rooms.doc(roomId));
-      if (!doc.exists) return;
-      final room = RoomModel.fromFirestore(doc);
+    try {
+      await _firestore.runTransaction((tx) async {
+        final doc = await tx.get(_rooms.doc(roomId));
+        if (!doc.exists) {
+          QaLoggerService.instance.log('TURN', 'TX_ABORT name=enterGuessMode reason=missing_room');
+          return;
+        }
+        final room = RoomModel.fromFirestore(doc);
 
-      if (room.turnPhase != TurnPhase.guessOpportunity) return;
-      if (room.guessOpportunityPlayerId != userId) return;
-      final deadline = room.guessOpportunityDeadlineMs;
-      if (deadline != null && now >= deadline) return;
+        QaLoggerService.instance.log('TURN', 'TX_BEGIN name=enterGuessMode');
 
-      tx.update(_rooms.doc(roomId), {
-        'turnPhase': TurnPhase.guessMode.name,
-        'guessModePlayerId': userId,
-        'guessModeDeadlineMs': now + 20000,
+        if (room.turnPhase != TurnPhase.guessOpportunity) {
+          QaLoggerService.instance.log('TURN',
+              'TX_ABORT name=enterGuessMode reason=wrong_phase phase=${room.turnPhase.name}');
+          return;
+        }
+        if (room.guessOpportunityPlayerId != userId) {
+          QaLoggerService.instance.log('TURN', 'TX_ABORT name=enterGuessMode reason=not_opportunity_player');
+          return;
+        }
+        final deadline = room.guessOpportunityDeadlineMs;
+        if (deadline != null && now >= deadline) {
+          QaLoggerService.instance.log('TURN', 'TX_ABORT name=enterGuessMode reason=deadline_expired');
+          return;
+        }
+
+        tx.update(_rooms.doc(roomId), {
+          'turnPhase': TurnPhase.guessMode.name,
+          'guessModePlayerId': userId,
+          'guessModeDeadlineMs': now + 20000,
+        });
+        success = true;
+        QaLoggerService.instance.log('TURN',
+            'TX_COMMIT name=enterGuessMode latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
       });
-      success = true;
-    });
+    } catch (e) {
+      QaLoggerService.instance.log('TURN', 'TX_ERROR name=enterGuessMode error=$e');
+      return false;
+    }
 
     return success;
   }
@@ -686,100 +726,148 @@ class RoomService {
   /// Advances the turn and resets to revealTurn.
   Future<void> expireGuessOpportunity({required String roomId}) async {
     final now = DateTime.now().millisecondsSinceEpoch;
+    final txStartMs = now;
 
-    await _firestore.runTransaction((tx) async {
-      final doc = await tx.get(_rooms.doc(roomId));
-      if (!doc.exists) return;
-      final room = RoomModel.fromFirestore(doc);
+    try {
+      await _firestore.runTransaction((tx) async {
+        final doc = await tx.get(_rooms.doc(roomId));
+        if (!doc.exists) {
+          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessOpportunity reason=missing_room');
+          return;
+        }
+        final room = RoomModel.fromFirestore(doc);
 
-      if (room.phase == GamePhase.finished) {
-        QaLoggerService.instance.log('TURN', 'TURN_ADVANCE_SKIPPED_FINISHED method=expireGuessOpportunity');
-        return;
-      }
-      if (room.turnPhase != TurnPhase.guessOpportunity) return;
-      final deadline = room.guessOpportunityDeadlineMs;
-      if (deadline == null || now < deadline) return;
+        QaLoggerService.instance.log('TURN', 'TX_BEGIN name=expireGuessOpportunity');
 
-      final _expOppTotalTiles = room.gridSize * room.gridSize;
-      final _expOppRevealMs = _revealTimerMs(room.placedPieces.length, _expOppTotalTiles);
-      QaLoggerService.instance.log('TURN',
-          'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / _expOppTotalTiles).toStringAsFixed(2)} durationMs=$_expOppRevealMs');
-      tx.update(_rooms.doc(roomId), {
-        'currentTurnIndex': room.currentTurnIndex + 1,
-        'turnPhase': TurnPhase.revealTurn.name,
-        'revealDeadlineMs': now + _expOppRevealMs,
-        'guessOpportunityPlayerId': null,
-        'guessOpportunityDeadlineMs': null,
-        'revealCycleId': FieldValue.increment(1),
+        if (room.phase == GamePhase.finished) {
+          QaLoggerService.instance.log('TURN', 'TURN_ADVANCE_SKIPPED_FINISHED method=expireGuessOpportunity');
+          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessOpportunity reason=game_finished');
+          return;
+        }
+        if (room.turnPhase != TurnPhase.guessOpportunity) {
+          QaLoggerService.instance.log('TURN',
+              'TX_ABORT name=expireGuessOpportunity reason=wrong_phase phase=${room.turnPhase.name}');
+          return;
+        }
+        final deadline = room.guessOpportunityDeadlineMs;
+        if (deadline == null) {
+          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessOpportunity reason=deadline_null');
+          return;
+        }
+        if (now < deadline) {
+          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessOpportunity reason=deadline_not_expired');
+          return;
+        }
+
+        final expOppTotalTiles = room.gridSize * room.gridSize;
+        final expOppRevealMs = _revealTimerMs(room.placedPieces.length, expOppTotalTiles);
+        QaLoggerService.instance.log('TURN',
+            'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / expOppTotalTiles).toStringAsFixed(2)} durationMs=$expOppRevealMs');
+        tx.update(_rooms.doc(roomId), {
+          'currentTurnIndex': room.currentTurnIndex + 1,
+          'turnPhase': TurnPhase.revealTurn.name,
+          'revealDeadlineMs': now + expOppRevealMs,
+          'guessOpportunityPlayerId': null,
+          'guessOpportunityDeadlineMs': null,
+          'revealCycleId': FieldValue.increment(1),
+        });
+        QaLoggerService.instance.log('TURN',
+            'TX_COMMIT name=expireGuessOpportunity latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
       });
-    });
+    } catch (e) {
+      QaLoggerService.instance.log('TURN', 'TX_ERROR name=expireGuessOpportunity error=$e');
+    }
   }
 
   /// Called when the guess mode timer expires without a submission.
   /// Deducts a timeout penalty from the guesser's wallet and advances the turn.
   Future<void> expireGuessMode({required String roomId}) async {
     final now = DateTime.now().millisecondsSinceEpoch;
+    final txStartMs = now;
 
-    await _firestore.runTransaction((tx) async {
-      final doc = await tx.get(_rooms.doc(roomId));
-      if (!doc.exists) return;
-      final room = RoomModel.fromFirestore(doc);
-
-      if (room.phase == GamePhase.finished) {
-        QaLoggerService.instance.log('TURN', 'TURN_ADVANCE_SKIPPED_FINISHED method=expireGuessMode');
-        return;
-      }
-      if (room.turnPhase != TurnPhase.guessMode) return;
-      final deadline = room.guessModeDeadlineMs;
-      if (deadline == null || now < deadline) return;
-
-      final guesserUid = room.guessModePlayerId;
-      if (guesserUid != null) {
-        final walletDoc = await tx.get(_walletRef(guesserUid));
-        final wallet = walletDoc.exists
-            ? UserEconomyModel.fromFirestore(
-                guesserUid, walletDoc.data() as Map<String, dynamic>)
-            : null;
-        final before = wallet?.coins ?? 0;
-        final deduct = before > 0
-            ? EconomyConfig.guessTimeoutLivePenalty.clamp(0, before)
-            : 0;
-        final after = before - deduct;
-
-        if (deduct > 0) {
-          tx.set(_walletRef(guesserUid), {'coins': after}, SetOptions(merge: true));
-          final txId = _uuid.v4();
-          tx.set(_txRef(guesserUid, txId), EconomyTransactionModel(
-            id: txId,
-            type: TransactionType.guessTimeoutPenalty,
-            delta: -deduct,
-            balanceAfter: after,
-            roomId: roomId,
-            createdAt: DateTime.now().toUtc(),
-          ).toFirestore());
-          QaLoggerService.instance.log('ECONOMY',
-              'GUESS_TIMEOUT_PENALTY_APPLIED amount=$deduct before=$before after=$after');
-        } else {
-          QaLoggerService.instance.log('ECONOMY',
-              'GUESS_TIMEOUT_PENALTY_SKIPPED reason=zero_balance');
+    try {
+      await _firestore.runTransaction((tx) async {
+        final doc = await tx.get(_rooms.doc(roomId));
+        if (!doc.exists) {
+          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessMode reason=missing_room');
+          return;
         }
-      }
+        final room = RoomModel.fromFirestore(doc);
 
-      final _expGmTotalTiles = room.gridSize * room.gridSize;
-      final _expGmRevealMs = _revealTimerMs(room.placedPieces.length, _expGmTotalTiles);
-      QaLoggerService.instance.log('TURN',
-          'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / _expGmTotalTiles).toStringAsFixed(2)} durationMs=$_expGmRevealMs');
-      tx.update(_rooms.doc(roomId), {
-        'currentTurnIndex': room.currentTurnIndex + 1,
-        'turnPhase': TurnPhase.revealTurn.name,
-        'revealDeadlineMs': now + _expGmRevealMs,
-        'guessModePlayerId': null,
-        'guessOpportunityPlayerId': null,
-        'guessOpportunityDeadlineMs': null,
-        'guessModeDeadlineMs': null,
-        'revealCycleId': FieldValue.increment(1),
+        QaLoggerService.instance.log('TURN', 'TX_BEGIN name=expireGuessMode');
+
+        if (room.phase == GamePhase.finished) {
+          QaLoggerService.instance.log('TURN', 'TURN_ADVANCE_SKIPPED_FINISHED method=expireGuessMode');
+          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessMode reason=game_finished');
+          return;
+        }
+        if (room.turnPhase != TurnPhase.guessMode) {
+          QaLoggerService.instance.log('TURN',
+              'TX_ABORT name=expireGuessMode reason=wrong_phase phase=${room.turnPhase.name}');
+          return;
+        }
+        final deadline = room.guessModeDeadlineMs;
+        if (deadline == null) {
+          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessMode reason=deadline_null');
+          return;
+        }
+        if (now < deadline) {
+          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessMode reason=deadline_not_expired');
+          return;
+        }
+
+        final guesserUid = room.guessModePlayerId;
+        if (guesserUid != null) {
+          final walletDoc = await tx.get(_walletRef(guesserUid));
+          final wallet = walletDoc.exists
+              ? UserEconomyModel.fromFirestore(
+                  guesserUid, walletDoc.data() as Map<String, dynamic>)
+              : null;
+          final before = wallet?.coins ?? 0;
+          final deduct = before > 0
+              ? EconomyConfig.guessTimeoutLivePenalty.clamp(0, before)
+              : 0;
+          final after = before - deduct;
+
+          if (deduct > 0) {
+            tx.set(_walletRef(guesserUid), {'coins': after}, SetOptions(merge: true));
+            final txId = _uuid.v4();
+            tx.set(_txRef(guesserUid, txId), EconomyTransactionModel(
+              id: txId,
+              type: TransactionType.guessTimeoutPenalty,
+              delta: -deduct,
+              balanceAfter: after,
+              roomId: roomId,
+              createdAt: DateTime.now().toUtc(),
+            ).toFirestore());
+            QaLoggerService.instance.log('ECONOMY',
+                'GUESS_TIMEOUT_PENALTY_APPLIED amount=$deduct before=$before after=$after');
+          } else {
+            QaLoggerService.instance.log('ECONOMY',
+                'GUESS_TIMEOUT_PENALTY_SKIPPED reason=zero_balance');
+          }
+        }
+
+        final expGmTotalTiles = room.gridSize * room.gridSize;
+        final expGmRevealMs = _revealTimerMs(room.placedPieces.length, expGmTotalTiles);
+        QaLoggerService.instance.log('TURN',
+            'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / expGmTotalTiles).toStringAsFixed(2)} durationMs=$expGmRevealMs');
+        tx.update(_rooms.doc(roomId), {
+          'currentTurnIndex': room.currentTurnIndex + 1,
+          'turnPhase': TurnPhase.revealTurn.name,
+          'revealDeadlineMs': now + expGmRevealMs,
+          'guessModePlayerId': null,
+          'guessOpportunityPlayerId': null,
+          'guessOpportunityDeadlineMs': null,
+          'guessModeDeadlineMs': null,
+          'revealCycleId': FieldValue.increment(1),
+        });
+        QaLoggerService.instance.log('TURN',
+            'TX_COMMIT name=expireGuessMode latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
       });
-    });
+    } catch (e) {
+      QaLoggerService.instance.log('TURN', 'TX_ERROR name=expireGuessMode error=$e');
+    }
   }
 
   Future<bool> submitAnswer({
@@ -790,21 +878,30 @@ class RoomService {
     required Difficulty difficulty,
   }) async {
     final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final txStartMs = nowMs;
     bool isCorrect = false;
     bool needsEliminationCheck = false;
 
+    try {
     await _firestore.runTransaction((tx) async {
       final roomDoc = await tx.get(_rooms.doc(roomId));
-      if (!roomDoc.exists) return;
+      if (!roomDoc.exists) {
+        QaLoggerService.instance.log('GUESS', 'TX_ABORT name=submitAnswer reason=missing_room');
+        return;
+      }
       final room = RoomModel.fromFirestore(roomDoc);
+
+      QaLoggerService.instance.log('GUESS', 'TX_BEGIN name=submitAnswer');
 
       // Authorization guard: only the designated guesser in guessMode may submit
       if (room.turnPhase != TurnPhase.guessMode) {
         QaLoggerService.instance.log('GUESS', 'GUESS_SUBMIT_DUPLICATE_REJECTED phase=${room.turnPhase.name}');
+        QaLoggerService.instance.log('GUESS', 'TX_ABORT name=submitAnswer reason=wrong_phase phase=${room.turnPhase.name}');
         return;
       }
       if (room.guessModePlayerId != userId) {
         QaLoggerService.instance.log('GUESS', 'GUESS_SUBMIT_REJECTED_UNAUTHORIZED');
+        QaLoggerService.instance.log('GUESS', 'TX_ABORT name=submitAnswer reason=unauthorized');
         return;
       }
 
@@ -823,6 +920,8 @@ class RoomService {
           'guessOpportunityDeadlineMs': null,
           'guessModeDeadlineMs': null,
         });
+        QaLoggerService.instance.log('GUESS',
+            'TX_COMMIT name=submitAnswer result=correct latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
         return;
       }
 
@@ -889,7 +988,12 @@ class RoomService {
       }
 
       tx.update(_rooms.doc(roomId), updates);
+      QaLoggerService.instance.log('GUESS',
+          'TX_COMMIT name=submitAnswer result=wrong latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
     });
+    } catch (e) {
+      QaLoggerService.instance.log('GUESS', 'TX_ERROR name=submitAnswer error=$e');
+    }
 
     if (!isCorrect && needsEliminationCheck) {
       await _checkLastPlayerStanding(roomId);
