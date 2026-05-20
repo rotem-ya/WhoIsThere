@@ -88,6 +88,9 @@ class GameLayout extends StatelessWidget {
           isMyGuessModeActive: isMyGuessModeActive,
           guessModePlayerName: guessModePlayerName,
           revealRatio: revealRatio,
+          isSolo: isSolo,
+          revealedCount: revealedCount,
+          totalTiles: total,
         ),
         // During guessMode: hide the 3px bar — inline countdown replaces it
         if (isGuessModeActive)

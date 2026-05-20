@@ -2,23 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/game_constants.dart';
 import '../../../models/player_model.dart';
+import '../../../services/reward_calculator.dart';
 import '../../../widgets/economy/coin_display.dart';
 
-// Piecewise linear prize potential decay.
-// 0–20% reveal → 100%→90% (slow)
-// 20–50%       → 90%→70%  (medium)
-// 50–75%       → 70%→45%  (aggressive)
-// 75–100%      → 45%→15%  (severe)
-double _computePrizePotential(double ratio) {
-  if (ratio <= 0.0) return 1.0;
-  if (ratio <= 0.20) return 1.0 - (ratio / 0.20) * 0.10;
-  if (ratio <= 0.50) return 0.90 - ((ratio - 0.20) / 0.30) * 0.20;
-  if (ratio <= 0.75) return 0.70 - ((ratio - 0.50) / 0.25) * 0.25;
-  return (0.45 - ((ratio - 0.75) / 0.25) * 0.30).clamp(0.0, 1.0);
-}
-
 String? _prizePressureLabel(double ratio) {
-  if (ratio >= 0.92) return 'כמעט אין פרס';
+  if (ratio >= 0.92) return 'פרס מינימלי';
   if (ratio >= 0.85) return 'הזדמנות אחרונה';
   if (ratio >= 0.75) return 'סיכון עולה';
   return null;
@@ -36,6 +24,9 @@ class TopHud extends StatelessWidget {
   final bool isMyGuessModeActive;
   final String guessModePlayerName;
   final double revealRatio;
+  final bool isSolo;
+  final int revealedCount;
+  final int totalTiles;
 
   const TopHud({
     required this.players,
@@ -49,6 +40,9 @@ class TopHud extends StatelessWidget {
     required this.isMyGuessModeActive,
     required this.guessModePlayerName,
     this.revealRatio = 0.0,
+    this.isSolo = false,
+    this.revealedCount = 0,
+    this.totalTiles = 1,
   });
 
   @override
@@ -108,7 +102,11 @@ class TopHud extends StatelessWidget {
                     children: [
                       const CoinDisplay(compact: true),
                       const SizedBox(height: 3),
-                      _PrizePotentialChip(revealRatio: revealRatio),
+                      _PrizePotentialChip(
+                        isSolo: isSolo,
+                        revealedCount: revealedCount,
+                        totalTiles: totalTiles,
+                      ),
                     ],
                   ),
                 ],
@@ -303,10 +301,18 @@ class _PlayerChip extends StatelessWidget {
   }
 }
 
-// Prize Potential chip — animates on every reveal (scale pulse + orange flash + shake).
+// Prize Potential chip — shows actual achievable coins from RewardCalculator.
+// Animates on every reveal: scale pulse + orange flash + lateral shake.
 class _PrizePotentialChip extends StatefulWidget {
-  final double revealRatio;
-  const _PrizePotentialChip({required this.revealRatio});
+  final bool isSolo;
+  final int revealedCount;
+  final int totalTiles;
+
+  const _PrizePotentialChip({
+    required this.isSolo,
+    required this.revealedCount,
+    required this.totalTiles,
+  });
 
   @override
   State<_PrizePotentialChip> createState() => _PrizePotentialChipState();
@@ -344,7 +350,7 @@ class _PrizePotentialChipState extends State<_PrizePotentialChip>
   @override
   void didUpdateWidget(_PrizePotentialChip old) {
     super.didUpdateWidget(old);
-    if (widget.revealRatio > old.revealRatio + 0.001) {
+    if (widget.revealedCount > old.revealedCount) {
       _anim.forward(from: 0.0);
     }
   }
@@ -357,16 +363,26 @@ class _PrizePotentialChipState extends State<_PrizePotentialChip>
 
   @override
   Widget build(BuildContext context) {
-    final potential = _computePrizePotential(widget.revealRatio);
-    final pct = (potential * 100).round();
-    final pressureLabel = _prizePressureLabel(widget.revealRatio);
+    final coins = RewardCalculator.calculateCurrentPrizePotential(
+      isSolo: widget.isSolo,
+      revealedCount: widget.revealedCount,
+      totalTiles: widget.totalTiles,
+    );
+    final maxCoins = RewardCalculator.calculateCurrentPrizePotential(
+      isSolo: widget.isSolo,
+      revealedCount: 0,
+      totalTiles: widget.totalTiles,
+    );
+    final coinRatio = maxCoins > 0 ? coins / maxCoins : 0.0;
+    final ratio = widget.totalTiles > 0 ? widget.revealedCount / widget.totalTiles : 0.0;
+    final pressureLabel = _prizePressureLabel(ratio);
 
     final Color valueColor;
-    if (pct >= 70) {
+    if (coinRatio >= 0.70) {
       valueColor = const Color(0xFF4CAF50);
-    } else if (pct >= 45) {
+    } else if (coinRatio >= 0.45) {
       valueColor = const Color(0xFFD4AF37);
-    } else if (pct >= 25) {
+    } else if (coinRatio >= 0.33) {
       valueColor = const Color(0xFFFF9F43);
     } else {
       valueColor = const Color(0xFFFF3B30);
@@ -407,7 +423,7 @@ class _PrizePotentialChipState extends State<_PrizePotentialChip>
               ),
             ),
           Text(
-            'פרס $pct%',
+            'פרס $coins 🪙',
             style: TextStyle(
               color: valueColor,
               fontSize: 10,

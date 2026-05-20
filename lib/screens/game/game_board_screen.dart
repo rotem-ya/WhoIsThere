@@ -22,6 +22,7 @@ import '../../models/room_model.dart';
 import '../../models/economy/match_reward_breakdown.dart';
 import '../../providers/providers.dart';
 import '../../services/hint_economy_guard.dart';
+import '../../services/reward_calculator.dart';
 import '../../services/qa_logger_service.dart';
 import '../../widgets/game/animated_reward.dart';
 import '../../widgets/game/letter_bank_input.dart';
@@ -1100,15 +1101,25 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 _latestRoom = room;
                 _currentUserIdForTimer = currentUserId;
 
-                // B8: Prize potential and pressure state QA logging
+                // B8 / B8.2: Prize potential and pressure state QA logging
                 if (room.phase == GamePhase.playing) {
                   final _pTotal = room.gridSize * room.gridSize;
                   final _pRatio = _pTotal > 0 ? room.placedPieces.length / _pTotal : 0.0;
                   if (room.placedPieces.length != _lastRevealedCountForLog) {
                     _lastRevealedCountForLog = room.placedPieces.length;
+                    // Legacy percentage log (piecewise visual curve)
                     final _potential = _computePrizePotential(_pRatio);
                     QaLoggerService.instance.log('GAME',
                         'PRIZE_POTENTIAL_UPDATE ratio=${_pRatio.toStringAsFixed(2)} potential=${(_potential * 100).round()}');
+                    // B8.2: accurate coin-based log from RewardCalculator
+                    final _isSoloLog = room.players.values.where((p) => !p.isBot).length == 1;
+                    final _coinsLog = RewardCalculator.calculateCurrentPrizePotential(
+                      isSolo: _isSoloLog,
+                      revealedCount: room.placedPieces.length,
+                      totalTiles: _pTotal,
+                    );
+                    QaLoggerService.instance.log('GAME',
+                        'PRIZE_POTENTIAL_ACTUAL coins=$_coinsLog revealed=${room.placedPieces.length} total=$_pTotal isSolo=$_isSoloLog');
                   }
                   final _pState = _pressureStateKey(_pRatio);
                   if (_pState != null && _pState != _lastPressureStateForLog) {
