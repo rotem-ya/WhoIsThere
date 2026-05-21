@@ -1288,6 +1288,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   Future<void> _enterGuessMode(RoomModel room, String userId) async {
     QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED phase=${room.turnPhase.name}');
 
+    // Client-side guard: if the guessOpportunity deadline is already past, the
+    // server transaction will reject with deadline_expired anyway. Skip the round
+    // trip and log so QA can confirm the client caught it first.
+    final deadline = room.guessOpportunityDeadlineMs;
+    if (deadline != null && DateTime.now().millisecondsSinceEpoch >= deadline) {
+      QaLoggerService.instance.log('GUESS', 'GUESS_ENTER_SKIPPED reason=deadline_expired_client');
+      return;
+    }
+
     final alreadyInGuessMode = room.turnPhase == TurnPhase.guessMode &&
         room.guessModePlayerId == userId;
     if (alreadyInGuessMode) return;
@@ -1755,11 +1764,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     currentUserId != null &&
                     room.currentTurnUserId == currentUserId &&
                     room.turnPhase == TurnPhase.revealTurn;
-                // canGuessNow: I have the guess opportunity window
+                // canGuessNow: I have the guess opportunity window and deadline has not passed
                 final canGuessNow = !_isFinished &&
                     currentUserId != null &&
                     room.turnPhase == TurnPhase.guessOpportunity &&
-                    room.guessOpportunityPlayerId == currentUserId;
+                    room.guessOpportunityPlayerId == currentUserId &&
+                    (room.guessOpportunityDeadlineMs == null ||
+                        room.guessOpportunityDeadlineMs! >
+                            DateTime.now().millisecondsSinceEpoch);
                 final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
                 final _totalTiles = room.gridSize * room.gridSize;
                 final revealRatio = _totalTiles > 0 ? room.placedPieces.length / _totalTiles : 0.0;
