@@ -199,6 +199,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   // Offline UX — local-only UI state, never written to Firestore
   bool _isOffline = false;
   bool _showRecoveredBanner = false;
+  // Snapshot state at offline-detection time — recovery requires advance beyond these
+  int? _offlineSinceCycleId;
+  TurnPhase? _offlineSinceTurnPhase;
 
   // Economy
   bool _rewardApplied = false;
@@ -523,6 +526,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             _snapshotStaleLevelLogged = level;
             if ((level == 'warning' || level == 'critical') && !_isOffline) {
               _isOffline = true;
+              _offlineSinceCycleId = _lastKnownCycleId;
+              _offlineSinceTurnPhase = _lastKnownTurnPhase;
               QaLoggerService.instance.log('NETWORK',
                   'NETWORK_OFFLINE_DETECTED reason=snapshot_stale_$level');
               if (mounted) {
@@ -582,6 +587,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       } else {
         _clear((k) => k.startsWith('expired_reveal_'));
       }
+    } else {
+      _clear((k) => k.startsWith('expired_reveal_'));
     }
 
     // guessOpportunity expired deadline
@@ -596,6 +603,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       } else {
         _clear((k) => k.startsWith('expired_guessOpp_'));
       }
+    } else {
+      _clear((k) => k.startsWith('expired_guessOpp_'));
     }
 
     // guessMode expired deadline
@@ -609,6 +618,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       } else {
         _clear((k) => k.startsWith('expired_guessMode_'));
       }
+    } else {
+      _clear((k) => k.startsWith('expired_guessMode_'));
     }
 
     // playing phase but turnPhase is roundOver (stuck end state)
@@ -1413,15 +1424,23 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 final _snapNow = DateTime.now().millisecondsSinceEpoch;
                 _lastSnapshotMs = _snapNow;
                 if (_isOffline) {
-                  _isOffline = false;
-                  _showRecoveredBanner = true;
-                  QaLoggerService.instance.log('NETWORK', 'NETWORK_RECOVERY_DETECTED');
-                  QaLoggerService.instance.log('NETWORK', 'OFFLINE_BANNER_HIDDEN');
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    Future.delayed(const Duration(seconds: 2), () {
-                      if (mounted) setState(() => _showRecoveredBanner = false);
+                  final _cycleAdvanced = _offlineSinceCycleId != null &&
+                      room.revealCycleId != _offlineSinceCycleId;
+                  final _turnPhaseChanged = _offlineSinceTurnPhase != null &&
+                      room.turnPhase != _offlineSinceTurnPhase;
+                  if (_cycleAdvanced || _turnPhaseChanged) {
+                    _isOffline = false;
+                    _offlineSinceCycleId = null;
+                    _offlineSinceTurnPhase = null;
+                    _showRecoveredBanner = true;
+                    QaLoggerService.instance.log('NETWORK', 'NETWORK_RECOVERY_DETECTED');
+                    QaLoggerService.instance.log('NETWORK', 'OFFLINE_BANNER_HIDDEN');
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      Future.delayed(const Duration(seconds: 2), () {
+                        if (mounted) setState(() => _showRecoveredBanner = false);
+                      });
                     });
-                  });
+                  }
                 }
                 _snapshotStaleLevelLogged = null; // new snapshot resets stale escalation
                 if (_lastSnapshotLogCycleId != room.revealCycleId ||
