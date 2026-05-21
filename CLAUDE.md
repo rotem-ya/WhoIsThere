@@ -106,3 +106,61 @@ All puzzle images are Israeli landmarks, bundled as assets. `RoomService._loadLo
 - **Bot players** are created with IDs prefixed `virtual_` and flagged `isBot: true` in `PlayerModel`. All bot turn logic (delay, guess probability) runs client-side in `GameBoardScreen._scheduleBotTurn`.
 - **Never push directly to `main`** — changes must pass GitHub Actions build validation.
 - Do not mix visual changes with logic changes in a single commit unless the task explicitly requires both.
+
+## Production Rules
+
+### No-Scroll Layout Policy
+
+The app targets small Android devices first. Screens must fit in one viewport without scrolling.
+
+**Never allowed to scroll:**
+- Gameplay screens (game board, voting)
+- Winner / result screens
+- Reward cards
+- Any screen where a primary CTA could be pushed below the fold
+
+**Allowed to scroll:**
+- Legal pages, debug logs, long settings / about pages
+
+**Never use `SingleChildScrollView` as an overflow fix** unless explicitly approved. Before reaching for scroll, apply these solutions in order:
+1. Reduce spacing / padding
+2. Reduce row heights
+3. Compress typography slightly
+4. Merge or remove secondary sections
+5. Progressive disclosure (collapse less-important content)
+6. Adaptive card sizing
+
+### Live Production Safety
+
+This is a live production app. Every change must be the **smallest safe diff** that achieves the task.
+
+- No opportunistic cleanup, "while I'm here" refactors, or cosmetic rewrites during stabilization.
+- No architecture redesign unless explicitly requested.
+
+Required steps for every task:
+1. Inspect the existing implementation before writing any code.
+2. Modify minimally — preserve all existing behavior.
+3. Run `flutter analyze` and confirm zero new issues.
+4. Run `flutter build apk --release` and confirm it succeeds.
+5. Report the exact list of changed files.
+
+### Forbidden — Do Not Touch Without Explicit Approval
+
+The game board rendering is extremely fragile. Silent pixel-level regressions are possible from small changes. These files and systems are off-limits:
+
+- `lib/screens/game/widgets/game_board_view.dart`
+- Image slicing / tile crop logic
+- `Stack`-based board layout and `Positioned` math
+- `OverflowBox` crop rendering
+- `childAspectRatio` tile calculations
+- `ApertureTile` rendering internals (`lib/widgets/game/aperture_tile.dart`)
+
+### Execution Discipline
+
+For every task, define before touching code:
+- **Scope** — what exactly changes
+- **Forbidden areas** — what must not be touched
+- **Expected output** — what the result looks like
+- **QA / build requirements** — what must pass before done
+
+Never expand scope automatically. Never introduce improvements unrelated to the task.
