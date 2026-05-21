@@ -163,7 +163,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int _sessionTimeoutCount = 0;
   int _sessionGuessModeCount = 0;
   int _sessionWrongGuessCount = 0;
-  int _sessionTxErrorCount = 0;
   int _sessionWatchdogEventCount = 0;
   bool? _lastGuessEventCorrect;
 
@@ -376,6 +375,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         } else {
           _lastExpiredGuessOpportunityDeadline = room.guessOpportunityDeadlineMs;
           QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=guessOpportunity');
+          QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=guessOpportunity deadline=${room.guessOpportunityDeadlineMs}');
           QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=guess_opp_timeout');
           QaLoggerService.instance.log('TURN', 'GUESS_OPPORTUNITY_TIMER_EXPIRED');
           ref.read(roomServiceProvider).expireGuessOpportunity(
@@ -528,7 +528,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         ' timeouts=$_sessionTimeoutCount'
         ' guessModes=$_sessionGuessModeCount'
         ' wrongGuesses=$_sessionWrongGuessCount'
-        ' txErrors=$_sessionTxErrorCount'
+        ' txErrors=see_service_logs'
         ' watchdogEvents=$_sessionWatchdogEventCount'
         ' finalPhase=${_lastKnownPhase?.name ?? 'unknown'}'
         ' finalTurnPhase=${_lastKnownTurnPhase?.name ?? 'unknown'}');
