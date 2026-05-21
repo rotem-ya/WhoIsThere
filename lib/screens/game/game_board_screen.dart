@@ -410,20 +410,23 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
               QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=revealTurn deadline=${room.revealDeadlineMs}');
               QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=reveal_timeout');
               QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_EXPIRED');
-              final committed = await ref.read(roomServiceProvider).advanceTurnOnTimeout(
-                roomId: room.id,
-                userId: uid,
-                guardianAllowed: _canActAsGuardian,
-              );
-              _inFlightRevealDeadline = null;
-              if (!mounted) return;
-              if (committed) {
-                _lastExpiredRevealDeadline = room.revealDeadlineMs;
-                _dedupSkipCount_reveal = 0;
-                _lastDedupSkipLogMs_reveal = null;
-              } else {
-                QaLoggerService.instance.log('TURN',
-                    'EXPIRY_RETRY_ALLOWED phase=revealTurn deadline=${room.revealDeadlineMs}');
+              try {
+                final committed = await ref.read(roomServiceProvider).advanceTurnOnTimeout(
+                  roomId: room.id,
+                  userId: uid,
+                  guardianAllowed: _canActAsGuardian,
+                );
+                if (!mounted) return;
+                if (committed) {
+                  _lastExpiredRevealDeadline = room.revealDeadlineMs;
+                  _dedupSkipCount_reveal = 0;
+                  _lastDedupSkipLogMs_reveal = null;
+                } else {
+                  QaLoggerService.instance.log('TURN',
+                      'EXPIRY_RETRY_ALLOWED phase=revealTurn deadline=${room.revealDeadlineMs}');
+                }
+              } finally {
+                _inFlightRevealDeadline = null;
               }
             }
           }
