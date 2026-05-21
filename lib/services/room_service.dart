@@ -378,8 +378,6 @@ class RoomService {
     final player = room.players[userId];
     if (player == null) return;
 
-    final newHidden = room.availablePieceIndices.where((i) => i != pieceIndex).toList();
-    final newScore = player.score + difficulty.placePiecePoints;
     final shouldGrantLetterCard =
         player.letterCards == 0 &&
         !room.letterCardGrantedPlayerIds.contains(userId) &&
@@ -387,8 +385,8 @@ class RoomService {
 
     final updates = <String, dynamic>{
       'placedPieces.${pieceIndex.toString()}': userId,
-      'availablePieceIndices': newHidden,
-      'players.$userId.score': newScore,
+      'availablePieceIndices': FieldValue.arrayRemove([pieceIndex]),
+      'players.$userId.score': FieldValue.increment(difficulty.placePiecePoints),
     };
 
     if (shouldGrantLetterCard) {
@@ -400,10 +398,8 @@ class RoomService {
   }
 
   Future<void> skipPiecePlacement({required String roomId}) async {
-    final doc = await _rooms.doc(roomId).get();
-    final room = RoomModel.fromFirestore(doc);
     await _rooms.doc(roomId).update({
-      'currentTurnIndex': room.currentTurnIndex + 1,
+      'currentTurnIndex': FieldValue.increment(1),
     });
   }
 
@@ -431,13 +427,12 @@ class RoomService {
     final room = RoomModel.fromFirestore(doc);
     final currentScore = room.players[userId]?.score ?? 0;
     final newScore = currentScore - difficulty.wrongGuessPenalty;
-    final nextTurnIndex = room.currentTurnIndex + 1;
 
     if (newScore <= 0) {
       await _rooms.doc(roomId).update({
         'players.$userId.score': 0,
         'players.$userId.isEliminated': true,
-        'currentTurnIndex': nextTurnIndex,
+        'currentTurnIndex': FieldValue.increment(1),
         'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
         'guessCount': FieldValue.increment(1),
       });
@@ -445,7 +440,7 @@ class RoomService {
     } else {
       await _rooms.doc(roomId).update({
         'players.$userId.score': newScore,
-        'currentTurnIndex': nextTurnIndex,
+        'currentTurnIndex': FieldValue.increment(1),
         'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
         'guessCount': FieldValue.increment(1),
       });
