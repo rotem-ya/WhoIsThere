@@ -11,6 +11,7 @@ enum TransactionType {
   adminAdjustment,
   wrongGuessPenalty,
   guessTimeoutPenalty,
+  stabilityCompensation,
 }
 
 class EconomyTransactionModel {

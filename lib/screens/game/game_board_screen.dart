@@ -421,6 +421,27 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   _lastExpiredRevealDeadline = room.revealDeadlineMs;
                   _dedupSkipCount_reveal = 0;
                   _lastDedupSkipLogMs_reveal = null;
+                  if (_canActAsGuardian) {
+                    final capturedRoomId = room.id;
+                    final capturedDeadline = room.revealDeadlineMs!;
+                    final capturedActor = uid;
+                    QaLoggerService.instance.log('NETWORK',
+                        'STABILITY_COMPENSATION_ELIGIBLE reason=opponent_stuck owner=$_currentOwner actor=$capturedActor overdueMs=$_overdue');
+                    unawaited(ref.read(economyServiceProvider)
+                        .applyStabilityCompensation(
+                          actorUid: capturedActor,
+                          roomId: capturedRoomId,
+                          deadline: capturedDeadline,
+                        )
+                        .then((applied) {
+                      QaLoggerService.instance.log('NETWORK', applied
+                          ? 'STABILITY_COMPENSATION_APPLIED amount=5 actor=$capturedActor roomId=$capturedRoomId deadline=$capturedDeadline'
+                          : 'STABILITY_COMPENSATION_SKIPPED reason=already_applied actor=$capturedActor deadline=$capturedDeadline');
+                    }).catchError((_) {
+                      QaLoggerService.instance.log('NETWORK',
+                          'STABILITY_COMPENSATION_SKIPPED reason=error actor=$capturedActor deadline=$capturedDeadline');
+                    }));
+                  }
                 } else {
                   QaLoggerService.instance.log('TURN',
                       'EXPIRY_RETRY_ALLOWED phase=revealTurn deadline=${room.revealDeadlineMs}');

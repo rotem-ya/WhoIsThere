@@ -325,6 +325,52 @@ class EconomyService {
     await _syncCache(uid);
   }
 
+  /// Grants +5 coins to a guardian-client who unblocked a stuck human turn.
+  /// Idempotent: uses roomId+deadline+actorUid as document key, so retries are safe.
+  /// Returns true only when coins are newly granted.
+  Future<bool> applyStabilityCompensation({
+    required String actorUid,
+    required String roomId,
+    required int deadline,
+  }) async {
+    if (actorUid.startsWith('virtual_')) return false;
+
+    final idempotencyKey = 'guardian_${roomId}_${deadline}_$actorUid';
+    final txDocRef = _txCol(actorUid).doc(idempotencyKey);
+    bool applied = false;
+
+    await _db.runTransaction((tx) async {
+      final existing = await tx.get(txDocRef);
+      if (existing.exists) return;
+
+      final walletSnap = await tx.get(_walletRef(actorUid));
+      final wallet = walletSnap.exists
+          ? UserEconomyModel.fromFirestore(actorUid, walletSnap.data()!)
+          : UserEconomyModel.empty(actorUid);
+
+      const delta = 5;
+      final updated = wallet.copyWith(
+        coins: wallet.coins + delta,
+        totalEarned: wallet.totalEarned + delta,
+      );
+      tx.set(_walletRef(actorUid), updated.toFirestore());
+      tx.set(txDocRef, EconomyTransactionModel(
+        id: idempotencyKey,
+        type: TransactionType.stabilityCompensation,
+        delta: delta,
+        balanceAfter: updated.coins,
+        roomId: roomId,
+        createdAt: DateTime.now().toUtc(),
+        meta: {'deadline': deadline, 'reason': 'guardian_timeout'},
+      ).toFirestore());
+
+      applied = true;
+    });
+
+    if (applied) await _syncCache(actorUid);
+    return applied;
+  }
+
   Future<void> _syncCache(String uid) async {
     final snap = await _walletRef(uid).get();
     if (!snap.exists) return;
