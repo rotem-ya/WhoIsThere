@@ -425,17 +425,21 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     final capturedRoomId = room.id;
                     final capturedDeadline = room.revealDeadlineMs!;
                     final capturedActor = uid;
+                    final capturedDifficulty = room.selectedDifficulty;
+                    final compensationAmount =
+                        capturedDifficulty?.stabilityCompensation ?? 10;
                     QaLoggerService.instance.log('NETWORK',
-                        'STABILITY_COMPENSATION_ELIGIBLE reason=opponent_stuck owner=$_currentOwner actor=$capturedActor overdueMs=$_overdue');
+                        'STABILITY_COMPENSATION_ELIGIBLE difficulty=${capturedDifficulty?.name ?? 'unknown'} amount=$compensationAmount');
                     unawaited(ref.read(economyServiceProvider)
                         .applyStabilityCompensation(
                           actorUid: capturedActor,
                           roomId: capturedRoomId,
                           deadline: capturedDeadline,
+                          amount: compensationAmount,
                         )
                         .then((applied) {
                       QaLoggerService.instance.log('NETWORK', applied
-                          ? 'STABILITY_COMPENSATION_APPLIED amount=5 actor=$capturedActor roomId=$capturedRoomId deadline=$capturedDeadline'
+                          ? 'STABILITY_COMPENSATION_APPLIED amount=$compensationAmount actor=$capturedActor roomId=$capturedRoomId deadline=$capturedDeadline'
                           : 'STABILITY_COMPENSATION_SKIPPED reason=already_applied actor=$capturedActor deadline=$capturedDeadline');
                     }).catchError((_) {
                       QaLoggerService.instance.log('NETWORK',

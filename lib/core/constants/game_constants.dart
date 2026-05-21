@@ -104,6 +104,21 @@ extension DifficultyExtension on Difficulty {
         return '🔴';
     }
   }
+
+  // Guardian stability compensation awarded to the innocent player when
+  // the opponent's stuck turn is force-advanced after the 90s threshold.
+  int get stabilityCompensation {
+    switch (this) {
+      case Difficulty.veryEasy:
+        return 10;
+      case Difficulty.easy:
+        return 10;
+      case Difficulty.medium:
+        return 20;
+      case Difficulty.hard:
+        return 40; // 10x10 / Expert tier
+    }
+  }
 }
 
 enum GamePhase {
