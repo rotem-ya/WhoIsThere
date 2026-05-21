@@ -246,6 +246,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   bool _spectatorGuessClockLogged = false;
   bool _scoreCliffSignalLogged = false;
   String? _lastDreadStateForLog;
+  bool? _lastKnownSoloState;
+  bool _snapRecoverySkippedLogged = false;
+  int? _lastWatchdogEvalDeadline;
 
   static Future<void> _primeTickSounds() async {
     try {
@@ -369,6 +372,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             _currentOwner != null &&
             _currentOwner != uid &&
             _overdue >= 90000;
+        if (_lastWatchdogEvalDeadline != room.revealDeadlineMs) {
+          _lastWatchdogEvalDeadline = room.revealDeadlineMs;
+          final shortOwner = _currentOwner != null && _currentOwner!.length > 6
+              ? _currentOwner!.substring(0, 6) : (_currentOwner ?? 'null');
+          final shortActor = uid.length > 6 ? uid.substring(0, 6) : uid;
+          final evalReason = _ownerIsVirtual ? 'bot_owner'
+              : _currentOwner == uid ? 'is_owner'
+              : _canActAsGuardian ? 'guardian' : 'not_overdue';
+          QaLoggerService.instance.log('WATCHDOG',
+              'WATCHDOG_EVALUATED owner=$shortOwner actor=$shortActor overdueMs=$_overdue eligible=${_currentOwner == uid || _ownerIsVirtual || _canActAsGuardian} reason=$evalReason');
+        }
         if (_currentOwner == uid || _ownerIsVirtual || _canActAsGuardian) {
           if (_lastExpiredRevealDeadline == room.revealDeadlineMs) {
             _dedupSkipCount_reveal++;
@@ -605,12 +619,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       // Watchdog — run every 3 ticks (~3 seconds)
       _watchdogTickCount++;
       if (_watchdogTickCount % 3 == 0) {
-        _runWatchdog(room, now);
+        _runWatchdog(room, now, uid);
       }
     });
   }
 
-  void _runWatchdog(RoomModel room, int now) {
+  void _runWatchdog(RoomModel room, int now, String? uid) {
     void _clear(bool Function(String) predicate) {
       final toRemove = _watchdogActiveIssues.where(predicate).toList();
       for (final k in toRemove) {
@@ -647,6 +661,24 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         _flag(key,
             'WATCHDOG_EXPIRED_DEADLINE phase=revealTurn overdueMs=$overdue',
             stuckLog: 'WATCHDOG_STUCK_CONFIRMED phase=revealTurn overdueMs=$overdue');
+        final suppressKey = 'suppress_reveal_${room.revealDeadlineMs}';
+        if (!_watchdogActiveIssues.contains(suppressKey) && uid != null) {
+          _watchdogActiveIssues.add(suppressKey);
+          final currentOwner = room.currentTurnUserId;
+          final ownerIsVirtual = currentOwner != null && currentOwner.startsWith('virtual_');
+          if (ownerIsVirtual) {
+            QaLoggerService.instance.log('WATCHDOG', 'WATCHDOG_SUPPRESSED reason=bot_owner');
+          } else {
+            final humanCount = room.players.values.where((p) => !p.isBot).length;
+            if (humanCount <= 1) {
+              QaLoggerService.instance.log('WATCHDOG', 'WATCHDOG_SUPPRESSED reason=solo_room');
+            } else if (_isOffline) {
+              QaLoggerService.instance.log('WATCHDOG', 'WATCHDOG_SUPPRESSED reason=local_offline');
+            } else if (overdue < 90000) {
+              QaLoggerService.instance.log('WATCHDOG', 'WATCHDOG_SUPPRESSED reason=not_overdue');
+            }
+          }
+        }
       } else {
         _clear((k) => k.startsWith('expired_reveal_'));
       }
@@ -766,9 +798,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   void _markOffline(String reason) {
     if (_isOffline) return;
     _isOffline = true;
+    _snapRecoverySkippedLogged = false;
     _offlineSinceCycleId = _lastKnownCycleId;
     _offlineSinceTurnPhase = _lastKnownTurnPhase;
     QaLoggerService.instance.log('NETWORK', 'LOCAL_OFFLINE_DETECTED reason=$reason');
+    QaLoggerService.instance.log('NETWORK', 'RECONNECT_STATE_ENTER');
     if (mounted) {
       setState(() {});
       QaLoggerService.instance.log('NETWORK', 'OFFLINE_BANNER_SHOWN');
@@ -1513,6 +1547,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     _guessModeTickPlayer.stop().ignore();
                   }
 
+                  if (_lastKnownTurnPhase == TurnPhase.guessOpportunity) {
+                    _lastDreadStateForLog = null;
+                  }
+
                   if (room.turnPhase == TurnPhase.revealTurn) {
                     final turnId = room.currentTurnUserId ?? 'null';
                     final shortTurnId = turnId.length > 6 ? turnId.substring(0, 6) : turnId;
@@ -1548,11 +1586,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     _showRecoveredBanner = true;
                     QaLoggerService.instance.log('NETWORK', 'LOCAL_RECOVERY_DETECTED');
                     QaLoggerService.instance.log('NETWORK', 'OFFLINE_BANNER_HIDDEN');
+                    QaLoggerService.instance.log('NETWORK', 'SNAPSHOT_RECOVERY_APPLIED');
+                    QaLoggerService.instance.log('NETWORK', 'RECONNECT_STATE_EXIT');
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       Future.delayed(const Duration(seconds: 2), () {
                         if (mounted) setState(() => _showRecoveredBanner = false);
                       });
                     });
+                  } else if (!_snapRecoverySkippedLogged) {
+                    _snapRecoverySkippedLogged = true;
+                    QaLoggerService.instance.log('NETWORK', 'SNAPSHOT_RECOVERY_SKIPPED reason=no_state_advance');
                   }
                 }
                 if (_isOpponentStuck) {
@@ -1578,6 +1621,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   _lastSnapshotLogCycleId = room.revealCycleId;
                   QaLoggerService.instance.log('SNAPSHOT',
                       'SNAPSHOT_RECEIVED phase=${room.phase.name} turnPhase=${room.turnPhase.name} cycle=${room.revealCycleId}');
+                }
+                {
+                  final humanCount = room.players.values.where((p) => !p.isBot).length;
+                  final botCount = room.players.values.where((p) => p.isBot).length;
+                  final isSoloNow = humanCount == 1;
+                  if (isSoloNow != _lastKnownSoloState) {
+                    _lastKnownSoloState = isSoloNow;
+                    QaLoggerService.instance.log('GAME',
+                        'SOLO_STATE_EVALUATED players=${room.players.length} humans=$humanCount bots=$botCount result=${isSoloNow ? "solo" : "multiplayer"}');
+                  }
                 }
 
                 // ── Cycle integrity ─────────────────────────────────────────────────
