@@ -650,6 +650,7 @@ class RoomService {
   Future<bool> advanceTurnOnTimeout({
     required String roomId,
     required String userId,
+    bool guardianAllowed = false,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     bool committed = false;
@@ -677,7 +678,9 @@ class RoomService {
         }
         final currentOwner = room.currentTurnUserId;
         final ownerIsVirtual = currentOwner != null && currentOwner.startsWith('virtual_');
-        if (currentOwner != userId && !ownerIsVirtual) {
+        final isGuardian = guardianAllowed && !ownerIsVirtual &&
+            currentOwner != null && currentOwner != userId;
+        if (currentOwner != userId && !ownerIsVirtual && !isGuardian) {
           QaLoggerService.instance.log('TURN',
               'REVEAL_TIMEOUT_ADVANCE_NOOP reason=unauthorized_current_turn owner=${currentOwner ?? 'null'} actor=$userId');
           return;
@@ -694,6 +697,16 @@ class RoomService {
         if (now < deadline) {
           QaLoggerService.instance.log('TURN', 'REVEAL_TIMEOUT_ADVANCE_NOOP reason=deadline_not_expired');
           return;
+        }
+        if (isGuardian) {
+          final guardianOverdue = now - deadline;
+          if (guardianOverdue < 90000) {
+            QaLoggerService.instance.log('TURN',
+                'REVEAL_TIMEOUT_ADVANCE_NOOP reason=guardian_threshold_not_met overdueMs=$guardianOverdue');
+            return;
+          }
+          QaLoggerService.instance.log('TURN',
+              'GUARDIAN_TIMEOUT_ALLOWED owner=$currentOwner actor=$userId overdueMs=$guardianOverdue');
         }
 
         final advTotalTiles = room.gridSize * room.gridSize;

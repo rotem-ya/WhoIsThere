@@ -180,6 +180,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int? _revealTimeoutLastAttemptMs;
   int? _guessOppTimeoutLastAttemptMs;
   int? _guessModeTimeoutLastAttemptMs;
+  // In-flight guard — suppresses concurrent timer ticks for the same deadline
+  int? _inFlightRevealDeadline;
   // Non-owner observation dedup — log once per expired deadline
   int? _lastObservedNotOwnerRevealDeadline;
   // EXPIRY_DEDUP_SKIP spam suppression — log first, then at most once per 30s
@@ -202,6 +204,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   // Snapshot state at offline-detection time — recovery requires advance beyond these
   int? _offlineSinceCycleId;
   TurnPhase? _offlineSinceTurnPhase;
+  // Opponent-stuck status — shown when their turn expired but they haven't advanced
+  bool _isOpponentStuck = false;
+  String? _opponentStuckOwnerId;
+  int? _opponentStuckDeadline;
+  int? _opponentStuckCycleId;
 
   // Economy
   bool _rewardApplied = false;
@@ -348,7 +355,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       }
 
       // ── Reveal turn timeout ──────────────────────────────────────────────────
-      // Owner OR any client when the current turn is virtual/bot may advance.
+      // Owner OR virtual/bot owner OR non-owner after 90s guardian threshold may advance.
       // Dedup stamp set ONLY after confirmed commit; 2s cooldown allows retry.
       if (room.turnPhase == TurnPhase.revealTurn &&
           room.revealDeadlineMs != null &&
@@ -356,7 +363,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
           uid != null) {
         final _currentOwner = room.currentTurnUserId;
         final _ownerIsVirtual = _currentOwner != null && _currentOwner.startsWith('virtual_');
-        if (_currentOwner == uid || _ownerIsVirtual) {
+        final _overdue = now - room.revealDeadlineMs!;
+        // Guardian: after 90s any active client may advance a human-owned stuck turn
+        final _canActAsGuardian = !_ownerIsVirtual &&
+            _currentOwner != null &&
+            _currentOwner != uid &&
+            _overdue >= 90000;
+        if (_currentOwner == uid || _ownerIsVirtual || _canActAsGuardian) {
           if (_lastExpiredRevealDeadline == room.revealDeadlineMs) {
             _dedupSkipCount_reveal++;
             if (_dedupSkipCount_reveal == 1 ||
@@ -374,14 +387,21 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
               _lastDedupSkipLogMs_reveal = now;
               _dedupSkipCount_reveal = 0;
             }
+          } else if (_inFlightRevealDeadline == room.revealDeadlineMs) {
+            QaLoggerService.instance.log('TURN',
+                'TIMEOUT_ATTEMPT_SUPPRESSED reason=in_flight deadline=${room.revealDeadlineMs}');
           } else {
             final lastAttempt = _revealTimeoutLastAttemptMs;
             if (lastAttempt != null && now - lastAttempt < 2000) {
               // within cooldown — wait for retry window
             } else {
+              _inFlightRevealDeadline = room.revealDeadlineMs;
               _revealTimeoutLastAttemptMs = now;
               _sessionTimeoutKeys.add('revealTurn_${room.revealDeadlineMs}');
-              if (_ownerIsVirtual) {
+              if (_canActAsGuardian) {
+                QaLoggerService.instance.log('TURN',
+                    'EXPIRE_HANDLER_FIRED phase=revealTurn guardian=true owner=$_currentOwner overdueMs=$_overdue');
+              } else if (_ownerIsVirtual) {
                 QaLoggerService.instance.log('TURN',
                     'EXPIRE_HANDLER_FIRED phase=revealTurn virtualGuardian=true owner=$_currentOwner');
               } else {
@@ -393,7 +413,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
               final committed = await ref.read(roomServiceProvider).advanceTurnOnTimeout(
                 roomId: room.id,
                 userId: uid,
+                guardianAllowed: _canActAsGuardian,
               );
+              _inFlightRevealDeadline = null;
               if (!mounted) return;
               if (committed) {
                 _lastExpiredRevealDeadline = room.revealDeadlineMs;
@@ -532,7 +554,21 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 'SNAPSHOT_STALE level=$level ageMs=$ageMs');
             _snapshotStaleLevelLogged = level;
             if (level == 'warning' || level == 'critical') {
-              _markOffline('snapshot_stale_$level');
+              final stalledOwner = room.currentTurnUserId;
+              final isRemoteStalled = uid != null &&
+                  room.turnPhase == TurnPhase.revealTurn &&
+                  stalledOwner != null &&
+                  !stalledOwner.startsWith('virtual_') &&
+                  stalledOwner != uid &&
+                  room.revealDeadlineMs != null &&
+                  _lastObservedNotOwnerRevealDeadline == room.revealDeadlineMs;
+              if (isRemoteStalled) {
+                final overdueMs = now - room.revealDeadlineMs!;
+                _markOpponentStuck(stalledOwner!, room.revealDeadlineMs!,
+                    overdueMs: overdueMs);
+              } else {
+                _markOffline('snapshot_stale_$level');
+              }
             }
           }
         }
@@ -704,10 +740,24 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _isOffline = true;
     _offlineSinceCycleId = _lastKnownCycleId;
     _offlineSinceTurnPhase = _lastKnownTurnPhase;
-    QaLoggerService.instance.log('NETWORK', 'NETWORK_OFFLINE_DETECTED reason=$reason');
+    QaLoggerService.instance.log('NETWORK', 'LOCAL_OFFLINE_DETECTED reason=$reason');
     if (mounted) {
       setState(() {});
       QaLoggerService.instance.log('NETWORK', 'OFFLINE_BANNER_SHOWN');
+    }
+  }
+
+  void _markOpponentStuck(String ownerId, int deadline, {int overdueMs = 0}) {
+    if (_isOpponentStuck && _opponentStuckDeadline == deadline) return;
+    _isOpponentStuck = true;
+    _opponentStuckOwnerId = ownerId;
+    _opponentStuckDeadline = deadline;
+    _opponentStuckCycleId = _lastKnownCycleId;
+    QaLoggerService.instance.log('NETWORK',
+        'REMOTE_PLAYER_STALLED owner=$ownerId phase=revealTurn overdueMs=$overdueMs');
+    if (mounted) {
+      setState(() {});
+      QaLoggerService.instance.log('NETWORK', 'OPPONENT_STUCK_BANNER_SHOWN');
     }
   }
 
@@ -1459,13 +1509,30 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     _offlineSinceCycleId = null;
                     _offlineSinceTurnPhase = null;
                     _showRecoveredBanner = true;
-                    QaLoggerService.instance.log('NETWORK', 'NETWORK_RECOVERY_DETECTED');
+                    QaLoggerService.instance.log('NETWORK', 'LOCAL_RECOVERY_DETECTED');
                     QaLoggerService.instance.log('NETWORK', 'OFFLINE_BANNER_HIDDEN');
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       Future.delayed(const Duration(seconds: 2), () {
                         if (mounted) setState(() => _showRecoveredBanner = false);
                       });
                     });
+                  }
+                }
+                if (_isOpponentStuck) {
+                  final _cycleChanged = _opponentStuckCycleId != null &&
+                      room.revealCycleId != _opponentStuckCycleId;
+                  final _phaseExited = room.turnPhase != TurnPhase.revealTurn;
+                  final _ownerChanged = room.currentTurnUserId != _opponentStuckOwnerId;
+                  final _gameFinished = room.phase == GamePhase.finished;
+                  if (_cycleChanged || _phaseExited || _ownerChanged || _gameFinished) {
+                    final prevOwner = _opponentStuckOwnerId ?? 'unknown';
+                    _isOpponentStuck = false;
+                    _opponentStuckOwnerId = null;
+                    _opponentStuckDeadline = null;
+                    _opponentStuckCycleId = null;
+                    QaLoggerService.instance.log('NETWORK',
+                        'REMOTE_PLAYER_STALL_RECOVERED owner=$prevOwner');
+                    QaLoggerService.instance.log('NETWORK', 'OPPONENT_STUCK_BANNER_HIDDEN');
                   }
                 }
                 _snapshotStaleLevelLogged = null; // new snapshot resets stale escalation
@@ -1778,7 +1845,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 ),
               ),
             ],
-            if (_isOffline || _showRecoveredBanner)
+            if (_isOffline || _showRecoveredBanner || _isOpponentStuck)
               Positioned(
                 top: MediaQuery.of(context).padding.top + 4,
                 left: 0,
@@ -1792,19 +1859,25 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       decoration: BoxDecoration(
                         color: _showRecoveredBanner
                             ? const Color(0xFF0D3B26).withOpacity(0.95)
-                            : const Color(0xFF1A0A00).withOpacity(0.92),
+                            : _isOpponentStuck
+                                ? const Color(0xFF1A1400).withOpacity(0.92)
+                                : const Color(0xFF1A0A00).withOpacity(0.92),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: _showRecoveredBanner
                               ? const Color(0xFF00C853).withOpacity(0.7)
-                              : const Color(0xFFFF6B35).withOpacity(0.7),
+                              : _isOpponentStuck
+                                  ? const Color(0xFFFFB300).withOpacity(0.7)
+                                  : const Color(0xFFFF6B35).withOpacity(0.7),
                           width: 1,
                         ),
                       ),
                       child: Text(
                         _showRecoveredBanner
                             ? 'החיבור חזר'
-                            : 'אין חיבור · מנסה להתחבר…',
+                            : _isOpponentStuck
+                                ? 'השחקן השני לא מגיב · ממשיכים אוטומטית…'
+                                : 'אין חיבור · מנסה להתחבר…',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
