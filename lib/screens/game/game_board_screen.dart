@@ -348,13 +348,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       }
 
       // ── Reveal turn timeout ──────────────────────────────────────────────────
-      // Only the current-turn player drives this transition. Dedup stamp is set
-      // ONLY after the transaction confirms the advance; 2s cooldown allows retry.
+      // Owner OR any client when the current turn is virtual/bot may advance.
+      // Dedup stamp set ONLY after confirmed commit; 2s cooldown allows retry.
       if (room.turnPhase == TurnPhase.revealTurn &&
           room.revealDeadlineMs != null &&
           now >= room.revealDeadlineMs! &&
           uid != null) {
-        if (room.currentTurnUserId == uid) {
+        final _currentOwner = room.currentTurnUserId;
+        final _ownerIsVirtual = _currentOwner != null && _currentOwner.startsWith('virtual_');
+        if (_currentOwner == uid || _ownerIsVirtual) {
           if (_lastExpiredRevealDeadline == room.revealDeadlineMs) {
             _dedupSkipCount_reveal++;
             if (_dedupSkipCount_reveal == 1 ||
@@ -379,7 +381,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             } else {
               _revealTimeoutLastAttemptMs = now;
               _sessionTimeoutKeys.add('revealTurn_${room.revealDeadlineMs}');
-              QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=revealTurn');
+              if (_ownerIsVirtual) {
+                QaLoggerService.instance.log('TURN',
+                    'EXPIRE_HANDLER_FIRED phase=revealTurn virtualGuardian=true owner=$_currentOwner');
+              } else {
+                QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=revealTurn');
+              }
               QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=revealTurn deadline=${room.revealDeadlineMs}');
               QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=reveal_timeout');
               QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_EXPIRED');
@@ -401,7 +408,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         } else if (_lastObservedNotOwnerRevealDeadline != room.revealDeadlineMs) {
           _lastObservedNotOwnerRevealDeadline = room.revealDeadlineMs;
           QaLoggerService.instance.log('TURN',
-              'REVEAL_TIMEOUT_OBSERVED_NOT_OWNER deadline=${room.revealDeadlineMs} owner=${room.currentTurnUserId} observer=$uid');
+              'REVEAL_TIMEOUT_OBSERVED_NOT_OWNER deadline=${room.revealDeadlineMs} owner=$_currentOwner observer=$uid');
         }
       }
 
@@ -524,16 +531,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             QaLoggerService.instance.log('SNAPSHOT',
                 'SNAPSHOT_STALE level=$level ageMs=$ageMs');
             _snapshotStaleLevelLogged = level;
-            if ((level == 'warning' || level == 'critical') && !_isOffline) {
-              _isOffline = true;
-              _offlineSinceCycleId = _lastKnownCycleId;
-              _offlineSinceTurnPhase = _lastKnownTurnPhase;
-              QaLoggerService.instance.log('NETWORK',
-                  'NETWORK_OFFLINE_DETECTED reason=snapshot_stale_$level');
-              if (mounted) {
-                setState(() {});
-                QaLoggerService.instance.log('NETWORK', 'OFFLINE_BANNER_SHOWN');
-              }
+            if (level == 'warning' || level == 'critical') {
+              _markOffline('snapshot_stale_$level');
             }
           }
         }
@@ -700,6 +699,21 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     }
   }
 
+  void _markOffline(String reason) {
+    if (_isOffline) return;
+    _isOffline = true;
+    _offlineSinceCycleId = _lastKnownCycleId;
+    _offlineSinceTurnPhase = _lastKnownTurnPhase;
+    QaLoggerService.instance.log('NETWORK', 'NETWORK_OFFLINE_DETECTED reason=$reason');
+    if (mounted) {
+      setState(() {});
+      QaLoggerService.instance.log('NETWORK', 'OFFLINE_BANNER_SHOWN');
+    }
+  }
+
+  static bool _isFirestoreUnavailable(Object e) =>
+      e.toString().contains('[cloud_firestore/unavailable]');
+
   @override
   Future<bool> didPopRoute() async {
     if (_lastKnownPhase == GamePhase.playing && mounted) {
@@ -787,6 +801,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
           });
         }
       }
+    } catch (e) {
+      if (_isFirestoreUnavailable(e)) _markOffline('firestore_unavailable');
     } finally {
       if (mounted) setState(() => _isBusy = false);
     }
@@ -1163,13 +1179,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     setState(() => _hasGuessedThisTurn = true);
 
-    final correct = await ref.read(roomServiceProvider).submitAnswer(
-          roomId: room.id,
-          userId: userId,
-          guess: value.trim(),
-          image: image,
-          difficulty: room.selectedDifficulty ?? Difficulty.easy,
-        );
+    final bool correct;
+    try {
+      correct = await ref.read(roomServiceProvider).submitAnswer(
+            roomId: room.id,
+            userId: userId,
+            guess: value.trim(),
+            image: image,
+            difficulty: room.selectedDifficulty ?? Difficulty.easy,
+          );
+    } catch (e) {
+      if (_isFirestoreUnavailable(e)) _markOffline('firestore_unavailable');
+      return false;
+    }
 
     if (!mounted) return correct;
     if (correct) {
@@ -1192,15 +1214,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         room.guessModePlayerId == userId;
     if (alreadyInGuessMode) return;
 
-    final entered = await ref.read(roomServiceProvider).enterGuessMode(
-      roomId: room.id,
-      userId: userId,
-    );
-    if (!entered) {
-      QaLoggerService.instance.log('GUESS', 'ENTER_GUESS_MODE_REJECTED phase=${room.turnPhase.name}');
-      return;
+    try {
+      final entered = await ref.read(roomServiceProvider).enterGuessMode(
+        roomId: room.id,
+        userId: userId,
+      );
+      if (!entered) {
+        QaLoggerService.instance.log('GUESS', 'ENTER_GUESS_MODE_REJECTED phase=${room.turnPhase.name}');
+        return;
+      }
+      QaLoggerService.instance.log('GUESS', 'ENTER_GUESS_MODE_SUCCESS');
+    } catch (e) {
+      if (_isFirestoreUnavailable(e)) _markOffline('firestore_unavailable');
     }
-    QaLoggerService.instance.log('GUESS', 'ENTER_GUESS_MODE_SUCCESS');
     // Inline UI shows automatically via Firestore state stream
   }
 

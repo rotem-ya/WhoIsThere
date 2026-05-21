@@ -541,6 +541,7 @@ class RoomService {
     });
     } catch (e) {
       QaLoggerService.instance.log('REVEAL', 'TX_ERROR name=revealPiece error=$e');
+      if (e is FirebaseException && e.code == 'unavailable') rethrow;
     }
   }
 
@@ -636,6 +637,7 @@ class RoomService {
       });
     } catch (e) {
       QaLoggerService.instance.log('TURN', 'TX_ERROR name=enterGuessMode error=$e');
+      if (e is FirebaseException && e.code == 'unavailable') rethrow;
       return false;
     }
 
@@ -673,9 +675,16 @@ class RoomService {
           QaLoggerService.instance.log('TURN', 'REVEAL_TIMEOUT_ADVANCE_NOOP reason=wrong_phase');
           return;
         }
-        if (room.currentTurnUserId != userId) {
-          QaLoggerService.instance.log('TURN', 'REVEAL_TIMEOUT_ADVANCE_NOOP reason=unauthorized_current_turn');
+        final currentOwner = room.currentTurnUserId;
+        final ownerIsVirtual = currentOwner != null && currentOwner.startsWith('virtual_');
+        if (currentOwner != userId && !ownerIsVirtual) {
+          QaLoggerService.instance.log('TURN',
+              'REVEAL_TIMEOUT_ADVANCE_NOOP reason=unauthorized_current_turn owner=${currentOwner ?? 'null'} actor=$userId');
           return;
+        }
+        if (ownerIsVirtual) {
+          QaLoggerService.instance.log('TURN',
+              'REVEAL_TIMEOUT_VIRTUAL_GUARDIAN_ALLOWED owner=$currentOwner actor=$userId');
         }
         final deadline = room.revealDeadlineMs;
         if (deadline == null) {
@@ -1039,6 +1048,7 @@ class RoomService {
     });
     } catch (e) {
       QaLoggerService.instance.log('GUESS', 'TX_ERROR name=submitAnswer error=$e');
+      if (e is FirebaseException && e.code == 'unavailable') rethrow;
     }
 
     if (!isCorrect && needsEliminationCheck) {
