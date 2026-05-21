@@ -9,6 +9,9 @@ enum TransactionType {
   adReward,
   coinPurchase,
   adminAdjustment,
+  wrongGuessPenalty,
+  guessTimeoutPenalty,
+  stabilityCompensation,
 }
 
 class EconomyTransactionModel {

@@ -104,6 +104,21 @@ extension DifficultyExtension on Difficulty {
         return '🔴';
     }
   }
+
+  // Guardian stability compensation awarded to the innocent player when
+  // the opponent's stuck turn is force-advanced after the 90s threshold.
+  int get stabilityCompensation {
+    switch (this) {
+      case Difficulty.veryEasy:
+        return 10;
+      case Difficulty.easy:
+        return 10;
+      case Difficulty.medium:
+        return 20;
+      case Difficulty.hard:
+        return 40; // 10x10 / Expert tier
+    }
+  }
 }
 
 enum GamePhase {
@@ -112,6 +127,14 @@ enum GamePhase {
   votingDifficulty,
   playing,
   finished,
+}
+
+enum TurnPhase {
+  revealTurn,
+  guessOpportunity,
+  guessMode,
+  resolvingGuess,
+  roundOver,
 }
 
 enum ImageCategory {
@@ -166,7 +189,7 @@ extension ImageCategoryExtension on ImageCategory {
 
 class GameConstants {
   static const int maxPlayers = 8;
-  static const int minPlayers = 1;
+  static const int minPlayers = 2;
   static const int roomCodeLength = 6;
   static const int hostVoteWeight = 2;
   static const int regularVoteWeight = 1;

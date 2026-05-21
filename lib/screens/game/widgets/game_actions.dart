@@ -15,6 +15,9 @@ class GameActions extends ConsumerWidget {
   final bool isSolo;
   final int revealedCount;
   final int totalTiles;
+  final bool isGuessModeActive;
+  final bool isScoreCliff;
+  final String guessModePlayerName;
   final VoidCallback? onRevealHint;
   final VoidCallback? onGuess;
   final VoidCallback? onSkip;
@@ -26,9 +29,12 @@ class GameActions extends ConsumerWidget {
     required this.isSolo,
     required this.revealedCount,
     required this.totalTiles,
+    required this.isGuessModeActive,
+    required this.guessModePlayerName,
     required this.onRevealHint,
     required this.onGuess,
     required this.onSkip,
+    this.isScoreCliff = false,
   });
 
   @override
@@ -47,6 +53,27 @@ class GameActions extends ConsumerWidget {
         guard != null &&
         guard.canAfford(wallet, HintType.revealTile);
 
+    // Primary button label driven by state machine phase
+    final String primaryLabel;
+    if (canGuessNow) {
+      primaryLabel = 'נחש עכשיו!';
+    } else if (isGuessModeActive) {
+      final name = guessModePlayerName.isEmpty ? 'יריב' : guessModePlayerName;
+      primaryLabel = '$name מנחש!';
+    } else if (isMyTurn) {
+      primaryLabel = 'בחר משבצת';
+    } else {
+      primaryLabel = 'ממתין לתור';
+    }
+
+    final primaryIsActive =
+        guessActive || (isMyTurn && !canGuessNow && !isGuessModeActive);
+    final primaryGlow = guessActive;
+    final primaryOnTap = guessActive ? onGuess : null;
+
+    // Show reward chip on the guess opportunity CTA only
+    final showReward = canGuessNow && prize != null;
+
     return SafeArea(
       top: false,
       child: Padding(
@@ -56,21 +83,30 @@ class GameActions extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (isScoreCliff && canGuessNow)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    'פרס הניצחון מחכה!',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFFFFE082),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
               Row(
                 children: [
                   Expanded(
                     flex: 7,
                     child: _ActionButton(
-                      label: canGuessNow
-                          ? 'נחש'
-                          : isMyTurn
-                              ? 'בחר משבצת'
-                              : 'ממתין לתור',
+                      label: primaryLabel,
                       isPrimary: true,
-                      isActive: guessActive || (isMyTurn && !canGuessNow),
-                      glow: guessActive,
-                      onTap: guessActive ? onGuess : null,
-                      reward: canGuessNow ? prize : null,
+                      isActive: primaryIsActive,
+                      glow: primaryGlow,
+                      onTap: primaryOnTap,
+                      reward: showReward ? prize : null,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -229,14 +265,15 @@ class _ActionButton extends StatelessWidget {
                     : [],
           ),
           child: Center(
-            child: isPrimary && label == 'נחש' && hasReward
+            child: isPrimary && hasReward
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'נחש',
-                        style: TextStyle(
+                      Text(
+                        label,
+                        textDirection: TextDirection.rtl,
+                        style: const TextStyle(
                           color: Color(0xFF07101F),
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
