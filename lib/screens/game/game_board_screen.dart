@@ -134,6 +134,45 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     }
   }
 
+  int _compensationForDifficulty(Difficulty? difficulty) {
+    if (difficulty == null) return 2;
+    switch (difficulty) {
+      case Difficulty.veryEasy: return 1;
+      case Difficulty.easy: return 2;
+      case Difficulty.medium: return 3;
+      case Difficulty.hard: return 5;
+    }
+  }
+
+  void _armStabilityGuardian(RoomModel room, String? localUserId) {
+    final owner = room.currentTurnUserId;
+    if (owner == null || owner == localUserId) {
+      _guardianTimer?.cancel();
+      _currentOwner = null;
+      return;
+    }
+    if (_currentOwner == owner) return;
+    _guardianTimer?.cancel();
+    _currentOwner = owner;
+    final capturedDifficulty = room.selectedDifficulty;
+    final capturedActor = localUserId;
+    const overdueThresholdMs = 12000;
+    _guardianTimer = Timer(const Duration(milliseconds: overdueThresholdMs), () {
+      if (!mounted) return;
+      final compensationAmount = _compensationForDifficulty(capturedDifficulty);
+      _overdue = overdueThresholdMs;
+      QaLoggerService.instance.log(
+        'NETWORK',
+        'STABILITY_COMPENSATION_ELIGIBLE reason=opponent_stuck '
+        'difficulty=${capturedDifficulty?.name ?? 'unknown'} '
+        'amount=$compensationAmount '
+        'owner=$_currentOwner '
+        'actor=${capturedActor ?? 'unknown'} '
+        'overdueMs=$_overdue',
+      );
+    });
+  }
+
   // QA logging flags
   bool _gameScreenLogged = false;
   bool _gameDataLogged = false;
@@ -143,6 +182,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   bool _rewardApplied = false;
   DateTime? _gameStartTime;
   MatchRewardBreakdown? _rewardBreakdown;
+
+  // Stability guardian
+  Timer? _guardianTimer;
+  String? _currentOwner;
+  int _overdue = 0;
 
   // Wrong / correct guess sounds
   static final AudioPlayer _wrongBuzzPlayer = AudioPlayer(playerId: 'wrong-buzz');
@@ -196,6 +240,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   void dispose() {
     final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
     QaLoggerService.instance.log('GAME', 'GAME_DISPOSE roomId=$shortId lastPhase=${_lastKnownPhase?.name ?? 'unknown'}');
+    _guardianTimer?.cancel();
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
@@ -810,6 +855,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
                 _scheduleBotTurn(room);
                 _syncMusicVolume(room);
+                _armStabilityGuardian(room, currentUserId);
 
                 if (room.currentTurnIndex != _revealedAtTurnIndex &&
                     (_hasRevealedThisTurn || _hasGuessedThisTurn)) {
