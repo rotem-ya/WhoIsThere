@@ -164,3 +164,32 @@ For every task, define before touching code:
 - **QA / build requirements** — what must pass before done
 
 Never expand scope automatically. Never introduce improvements unrelated to the task.
+
+## Multiplayer Safety Invariants
+
+This project is currently in gameplay stabilization and multiplayer reliability phase.
+
+Rules:
+- Guardian handling and local offline handling are separate systems.
+- Local connectivity loss must never be treated as a remote stuck opponent.
+- Remote stuck opponent handling must never be triggered by the local client going offline.
+- Bots and virtual players must never receive economy compensation.
+- Solo rooms must never receive guardian compensation.
+- Normal timeout must never receive guardian compensation.
+- Stability compensation must remain idempotent.
+- The idempotency key must prevent double payout on retries, stale snapshots, reconnects, or duplicate timers.
+- Firestore deadlines are the source of truth.
+- UI timers are cosmetic and must never become authoritative.
+- Audio success or failure must never affect turn advancement.
+- Reconnect must not duplicate reveal, guess, skip, compensation, or turn-advance actions.
+- Stale snapshots must never overwrite newer turn state.
+- Room phase transitions must remain transaction-safe.
+- Any guardian turn advancement must be guarded by current room state checks inside the transaction.
+
+Forbidden:
+- Do not merge guardian logic with offline banner logic.
+- Do not compensate bots.
+- Do not compensate on regular guess/reveal timeout.
+- Do not compensate in solo mode.
+- Do not add deposit/burn/pool logic.
+- Do not refactor multiplayer architecture.
