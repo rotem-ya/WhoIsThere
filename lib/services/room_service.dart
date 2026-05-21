@@ -723,39 +723,47 @@ class RoomService {
   }
 
   /// Called when the guess opportunity timer expires without anyone entering guess mode.
-  /// Advances the turn and resets to revealTurn.
-  Future<void> expireGuessOpportunity({required String roomId}) async {
+  /// Returns true only when the transaction actually commits and advances state.
+  Future<bool> expireGuessOpportunity({required String roomId}) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final txStartMs = now;
+    bool committed = false;
 
     try {
       await _firestore.runTransaction((tx) async {
         final doc = await tx.get(_rooms.doc(roomId));
         if (!doc.exists) {
-          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessOpportunity reason=missing_room');
+          QaLoggerService.instance.log('TURN',
+              'GUESS_OPP_TIMEOUT_ADVANCE_NOOP reason=missing_room');
           return;
         }
         final room = RoomModel.fromFirestore(doc);
 
-        QaLoggerService.instance.log('TURN', 'TX_BEGIN name=expireGuessOpportunity');
+        QaLoggerService.instance.log('TURN',
+            'TX_BEGIN name=expireGuessOpportunity');
+        QaLoggerService.instance.log('TURN',
+            'GUESS_OPP_TIMEOUT_ADVANCE_ATTEMPT deadline=${room.guessOpportunityDeadlineMs} actor=${room.guessOpportunityPlayerId ?? 'none'}');
 
         if (room.phase == GamePhase.finished) {
           QaLoggerService.instance.log('TURN', 'TURN_ADVANCE_SKIPPED_FINISHED method=expireGuessOpportunity');
-          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessOpportunity reason=game_finished');
+          QaLoggerService.instance.log('TURN',
+              'GUESS_OPP_TIMEOUT_ADVANCE_NOOP reason=game_finished');
           return;
         }
         if (room.turnPhase != TurnPhase.guessOpportunity) {
           QaLoggerService.instance.log('TURN',
-              'TX_ABORT name=expireGuessOpportunity reason=wrong_phase phase=${room.turnPhase.name}');
+              'GUESS_OPP_TIMEOUT_ADVANCE_NOOP reason=wrong_phase phase=${room.turnPhase.name}');
           return;
         }
         final deadline = room.guessOpportunityDeadlineMs;
         if (deadline == null) {
-          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessOpportunity reason=deadline_null');
+          QaLoggerService.instance.log('TURN',
+              'GUESS_OPP_TIMEOUT_ADVANCE_NOOP reason=deadline_null');
           return;
         }
         if (now < deadline) {
-          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessOpportunity reason=deadline_not_expired');
+          QaLoggerService.instance.log('TURN',
+              'GUESS_OPP_TIMEOUT_ADVANCE_NOOP reason=deadline_not_expired');
           return;
         }
 
@@ -763,6 +771,14 @@ class RoomService {
         final expOppRevealMs = _revealTimerMs(room.placedPieces.length, expOppTotalTiles);
         QaLoggerService.instance.log('TURN',
             'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / expOppTotalTiles).toStringAsFixed(2)} durationMs=$expOppRevealMs');
+
+        final activePlayerIds = room.turnOrder
+            .where((id) => !(room.players[id]?.isEliminated ?? false))
+            .toList();
+        final newTurnUid = activePlayerIds.isEmpty
+            ? (room.guessOpportunityPlayerId ?? 'unknown')
+            : activePlayerIds[(room.currentTurnIndex + 1) % activePlayerIds.length];
+
         tx.update(_rooms.doc(roomId), {
           'currentTurnIndex': room.currentTurnIndex + 1,
           'turnPhase': TurnPhase.revealTurn.name,
@@ -772,47 +788,62 @@ class RoomService {
           'revealCycleId': FieldValue.increment(1),
         });
         QaLoggerService.instance.log('TURN',
+            'GUESS_OPP_TIMEOUT_ADVANCE_COMMIT oldCycle=${room.revealCycleId} newCycle=${room.revealCycleId + 1} newTurnUid=$newTurnUid');
+        QaLoggerService.instance.log('TURN',
             'TX_COMMIT name=expireGuessOpportunity latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
+        committed = true;
       });
     } catch (e) {
+      QaLoggerService.instance.log('TURN', 'GUESS_OPP_TIMEOUT_ADVANCE_ERROR error=$e');
       QaLoggerService.instance.log('TURN', 'TX_ERROR name=expireGuessOpportunity error=$e');
+      return false;
     }
+
+    return committed;
   }
 
   /// Called when the guess mode timer expires without a submission.
   /// Deducts a timeout penalty from the guesser's wallet and advances the turn.
-  Future<void> expireGuessMode({required String roomId}) async {
+  /// Returns true only when the transaction actually commits and advances state.
+  Future<bool> expireGuessMode({required String roomId}) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final txStartMs = now;
+    bool committed = false;
 
     try {
       await _firestore.runTransaction((tx) async {
         final doc = await tx.get(_rooms.doc(roomId));
         if (!doc.exists) {
-          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessMode reason=missing_room');
+          QaLoggerService.instance.log('TURN',
+              'GUESS_MODE_TIMEOUT_ADVANCE_NOOP reason=missing_room');
           return;
         }
         final room = RoomModel.fromFirestore(doc);
 
         QaLoggerService.instance.log('TURN', 'TX_BEGIN name=expireGuessMode');
+        QaLoggerService.instance.log('TURN',
+            'GUESS_MODE_TIMEOUT_ADVANCE_ATTEMPT deadline=${room.guessModeDeadlineMs} actor=${room.guessModePlayerId ?? 'none'}');
 
         if (room.phase == GamePhase.finished) {
           QaLoggerService.instance.log('TURN', 'TURN_ADVANCE_SKIPPED_FINISHED method=expireGuessMode');
-          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessMode reason=game_finished');
+          QaLoggerService.instance.log('TURN',
+              'GUESS_MODE_TIMEOUT_ADVANCE_NOOP reason=game_finished');
           return;
         }
         if (room.turnPhase != TurnPhase.guessMode) {
           QaLoggerService.instance.log('TURN',
-              'TX_ABORT name=expireGuessMode reason=wrong_phase phase=${room.turnPhase.name}');
+              'GUESS_MODE_TIMEOUT_ADVANCE_NOOP reason=wrong_phase phase=${room.turnPhase.name}');
           return;
         }
         final deadline = room.guessModeDeadlineMs;
         if (deadline == null) {
-          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessMode reason=deadline_null');
+          QaLoggerService.instance.log('TURN',
+              'GUESS_MODE_TIMEOUT_ADVANCE_NOOP reason=deadline_null');
           return;
         }
         if (now < deadline) {
-          QaLoggerService.instance.log('TURN', 'TX_ABORT name=expireGuessMode reason=deadline_not_expired');
+          QaLoggerService.instance.log('TURN',
+              'GUESS_MODE_TIMEOUT_ADVANCE_NOOP reason=deadline_not_expired');
           return;
         }
 
@@ -852,6 +883,14 @@ class RoomService {
         final expGmRevealMs = _revealTimerMs(room.placedPieces.length, expGmTotalTiles);
         QaLoggerService.instance.log('TURN',
             'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / expGmTotalTiles).toStringAsFixed(2)} durationMs=$expGmRevealMs');
+
+        final activePlayerIds = room.turnOrder
+            .where((id) => !(room.players[id]?.isEliminated ?? false))
+            .toList();
+        final newTurnUid = activePlayerIds.isEmpty
+            ? (guesserUid ?? 'unknown')
+            : activePlayerIds[(room.currentTurnIndex + 1) % activePlayerIds.length];
+
         tx.update(_rooms.doc(roomId), {
           'currentTurnIndex': room.currentTurnIndex + 1,
           'turnPhase': TurnPhase.revealTurn.name,
@@ -863,11 +902,18 @@ class RoomService {
           'revealCycleId': FieldValue.increment(1),
         });
         QaLoggerService.instance.log('TURN',
+            'GUESS_MODE_TIMEOUT_ADVANCE_COMMIT oldCycle=${room.revealCycleId} newCycle=${room.revealCycleId + 1} newTurnUid=$newTurnUid');
+        QaLoggerService.instance.log('TURN',
             'TX_COMMIT name=expireGuessMode latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
+        committed = true;
       });
     } catch (e) {
+      QaLoggerService.instance.log('TURN', 'GUESS_MODE_TIMEOUT_ADVANCE_ERROR error=$e');
       QaLoggerService.instance.log('TURN', 'TX_ERROR name=expireGuessMode error=$e');
+      return false;
     }
+
+    return committed;
   }
 
   Future<bool> submitAnswer({

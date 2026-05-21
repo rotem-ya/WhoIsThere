@@ -171,14 +171,28 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   String? _currentUserIdForTimer;
   Timer? _expiryTimer;
 
-  // Expiry deduplication — permanent marker set only after confirmed commit
+  // Expiry deduplication — permanent marker set ONLY after confirmed commit
   int? _lastExpiredRevealDeadline;
   int? _lastExpiredGuessOpportunityDeadline;
   int? _lastExpiredGuessModeDeadline;
-  // Reveal retry cooldown — prevents 1s-tick spam while waiting for transaction result
+  // Per-phase retry cooldowns (2s) — prevents tick-spam on failed attempts
   int? _revealTimeoutLastAttemptMs;
+  int? _guessOppTimeoutLastAttemptMs;
+  int? _guessModeTimeoutLastAttemptMs;
   // Non-owner observation dedup — log once per expired deadline
   int? _lastObservedNotOwnerRevealDeadline;
+  // EXPIRY_DEDUP_SKIP spam suppression — log first, then at most once per 30s
+  int _dedupSkipCount_reveal = 0;
+  int? _lastDedupSkipLogMs_reveal;
+  int _dedupSkipCount_guessOpp = 0;
+  int? _lastDedupSkipLogMs_guessOpp;
+  int _dedupSkipCount_guessMode = 0;
+  int? _lastDedupSkipLogMs_guessMode;
+  // Snapshot stale escalation — log each level once per stale period
+  String? _snapshotStaleLevelLogged;
+  // Watchdog stuck confirmation — log once when issue persists >10s
+  final Map<String, int> _watchdogFirstSeenMs = {};
+  final Set<String> _watchdogConfirmedIssues = {};
 
   // Economy
   bool _rewardApplied = false;
@@ -324,17 +338,31 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         }
       }
 
-      // Reveal turn timeout — only the current-turn player drives this transition.
-      // Dedup is set ONLY after the transaction confirms the advance; on failure a
-      // 2-second cooldown prevents spam while allowing automatic retry.
+      // ── Reveal turn timeout ──────────────────────────────────────────────────
+      // Only the current-turn player drives this transition. Dedup stamp is set
+      // ONLY after the transaction confirms the advance; 2s cooldown allows retry.
       if (room.turnPhase == TurnPhase.revealTurn &&
           room.revealDeadlineMs != null &&
           now >= room.revealDeadlineMs! &&
           uid != null) {
         if (room.currentTurnUserId == uid) {
           if (_lastExpiredRevealDeadline == room.revealDeadlineMs) {
-            QaLoggerService.instance.log('TURN', 'EXPIRY_DEDUP_SKIP phase=revealTurn deadline=${room.revealDeadlineMs}');
-            QaLoggerService.instance.log('TIMER', 'TIMER_IGNORED_STALE type=revealTurn deadline=${room.revealDeadlineMs}');
+            _dedupSkipCount_reveal++;
+            if (_dedupSkipCount_reveal == 1 ||
+                (_lastDedupSkipLogMs_reveal != null &&
+                    now - _lastDedupSkipLogMs_reveal! >= 30000)) {
+              if (_dedupSkipCount_reveal > 1) {
+                QaLoggerService.instance.log('TURN',
+                    'EXPIRY_DEDUP_SKIP_SUPPRESSED phase=revealTurn deadline=${room.revealDeadlineMs} count=$_dedupSkipCount_reveal');
+              } else {
+                QaLoggerService.instance.log('TURN',
+                    'EXPIRY_DEDUP_SKIP phase=revealTurn deadline=${room.revealDeadlineMs}');
+                QaLoggerService.instance.log('TIMER',
+                    'TIMER_IGNORED_STALE type=revealTurn deadline=${room.revealDeadlineMs}');
+              }
+              _lastDedupSkipLogMs_reveal = now;
+              _dedupSkipCount_reveal = 0;
+            }
           } else {
             final lastAttempt = _revealTimeoutLastAttemptMs;
             if (lastAttempt != null && now - lastAttempt < 2000) {
@@ -353,6 +381,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
               if (!mounted) return;
               if (committed) {
                 _lastExpiredRevealDeadline = room.revealDeadlineMs;
+                _dedupSkipCount_reveal = 0;
+                _lastDedupSkipLogMs_reveal = null;
               } else {
                 QaLoggerService.instance.log('TURN',
                     'EXPIRY_RETRY_ALLOWED phase=revealTurn deadline=${room.revealDeadlineMs}');
@@ -366,47 +396,125 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         }
       }
 
-      // Guess opportunity timeout: any client may call; transaction prevents double-execution.
+      // ── Guess opportunity timeout ─────────────────────────────────────────────
+      // Any client may call; transaction guards prevent double-execution.
+      // Dedup stamp set ONLY after confirmed commit; 2s cooldown allows retry.
       if (room.turnPhase == TurnPhase.guessOpportunity &&
           room.guessOpportunityDeadlineMs != null &&
           now >= room.guessOpportunityDeadlineMs!) {
         if (_lastExpiredGuessOpportunityDeadline == room.guessOpportunityDeadlineMs) {
-          QaLoggerService.instance.log('TURN', 'EXPIRY_DEDUP_SKIP phase=guessOpportunity deadline=${room.guessOpportunityDeadlineMs}');
+          _dedupSkipCount_guessOpp++;
+          if (_dedupSkipCount_guessOpp == 1 ||
+              (_lastDedupSkipLogMs_guessOpp != null &&
+                  now - _lastDedupSkipLogMs_guessOpp! >= 30000)) {
+            if (_dedupSkipCount_guessOpp > 1) {
+              QaLoggerService.instance.log('TURN',
+                  'EXPIRY_DEDUP_SKIP_SUPPRESSED phase=guessOpportunity deadline=${room.guessOpportunityDeadlineMs} count=$_dedupSkipCount_guessOpp');
+            } else {
+              QaLoggerService.instance.log('TURN',
+                  'EXPIRY_DEDUP_SKIP phase=guessOpportunity deadline=${room.guessOpportunityDeadlineMs}');
+            }
+            _lastDedupSkipLogMs_guessOpp = now;
+            _dedupSkipCount_guessOpp = 0;
+          }
         } else {
-          _lastExpiredGuessOpportunityDeadline = room.guessOpportunityDeadlineMs;
-          QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=guessOpportunity');
-          QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=guessOpportunity deadline=${room.guessOpportunityDeadlineMs}');
-          QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=guess_opp_timeout');
-          QaLoggerService.instance.log('TURN', 'GUESS_OPPORTUNITY_TIMER_EXPIRED');
-          ref.read(roomServiceProvider).expireGuessOpportunity(
-            roomId: room.id,
-          ).ignore();
+          final lastAttempt = _guessOppTimeoutLastAttemptMs;
+          if (lastAttempt != null && now - lastAttempt < 2000) {
+            // within cooldown — wait for retry window
+          } else {
+            _guessOppTimeoutLastAttemptMs = now;
+            QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=guessOpportunity');
+            QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=guessOpportunity deadline=${room.guessOpportunityDeadlineMs}');
+            QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=guess_opp_timeout');
+            QaLoggerService.instance.log('TURN', 'GUESS_OPPORTUNITY_TIMER_EXPIRED');
+            final committed = await ref.read(roomServiceProvider).expireGuessOpportunity(
+              roomId: room.id,
+            );
+            if (!mounted) return;
+            if (committed) {
+              _lastExpiredGuessOpportunityDeadline = room.guessOpportunityDeadlineMs;
+              _dedupSkipCount_guessOpp = 0;
+              _lastDedupSkipLogMs_guessOpp = null;
+            } else {
+              QaLoggerService.instance.log('TURN',
+                  'EXPIRY_RETRY_ALLOWED phase=guessOpportunity deadline=${room.guessOpportunityDeadlineMs}');
+            }
+          }
         }
       }
 
-      // Guess mode timeout: any client may call; transaction prevents double-execution.
+      // ── Guess mode timeout ────────────────────────────────────────────────────
+      // Any client may call; transaction guards prevent double-execution.
+      // Dedup stamp set ONLY after confirmed commit; 2s cooldown allows retry.
       if (room.turnPhase == TurnPhase.guessMode &&
           room.guessModeDeadlineMs != null &&
           now >= room.guessModeDeadlineMs!) {
         if (_lastExpiredGuessModeDeadline == room.guessModeDeadlineMs) {
-          QaLoggerService.instance.log('TURN', 'EXPIRY_DEDUP_SKIP phase=guessMode deadline=${room.guessModeDeadlineMs}');
+          _dedupSkipCount_guessMode++;
+          if (_dedupSkipCount_guessMode == 1 ||
+              (_lastDedupSkipLogMs_guessMode != null &&
+                  now - _lastDedupSkipLogMs_guessMode! >= 30000)) {
+            if (_dedupSkipCount_guessMode > 1) {
+              QaLoggerService.instance.log('TURN',
+                  'EXPIRY_DEDUP_SKIP_SUPPRESSED phase=guessMode deadline=${room.guessModeDeadlineMs} count=$_dedupSkipCount_guessMode');
+            } else {
+              QaLoggerService.instance.log('TURN',
+                  'EXPIRY_DEDUP_SKIP phase=guessMode deadline=${room.guessModeDeadlineMs}');
+            }
+            _lastDedupSkipLogMs_guessMode = now;
+            _dedupSkipCount_guessMode = 0;
+          }
         } else {
-          _lastExpiredGuessModeDeadline = room.guessModeDeadlineMs;
-          QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=guessMode');
-          QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=guessMode deadline=${room.guessModeDeadlineMs}');
-          QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=guess_mode_timeout');
-          QaLoggerService.instance.log('TURN', 'GUESS_MODE_TIMER_EXPIRED');
-          ref.read(roomServiceProvider).expireGuessMode(
-            roomId: room.id,
-          ).ignore();
+          final lastAttempt = _guessModeTimeoutLastAttemptMs;
+          if (lastAttempt != null && now - lastAttempt < 2000) {
+            // within cooldown — wait for retry window
+          } else {
+            _guessModeTimeoutLastAttemptMs = now;
+            QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=guessMode');
+            QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=guessMode deadline=${room.guessModeDeadlineMs}');
+            QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=guess_mode_timeout');
+            QaLoggerService.instance.log('TURN', 'GUESS_MODE_TIMER_EXPIRED');
+            final committed = await ref.read(roomServiceProvider).expireGuessMode(
+              roomId: room.id,
+            );
+            if (!mounted) return;
+            if (committed) {
+              _lastExpiredGuessModeDeadline = room.guessModeDeadlineMs;
+              _dedupSkipCount_guessMode = 0;
+              _lastDedupSkipLogMs_guessMode = null;
+            } else {
+              QaLoggerService.instance.log('TURN',
+                  'EXPIRY_RETRY_ALLOWED phase=guessMode deadline=${room.guessModeDeadlineMs}');
+            }
+          }
         }
       }
 
-      // Snapshot staleness check (15s without an update during active game)
+      // Snapshot staleness — escalating levels, each logged once per stale period
       final lastSnap = _lastSnapshotMs;
-      if (lastSnap != null && now - lastSnap > 15000) {
-        QaLoggerService.instance.log('SNAPSHOT', 'SNAPSHOT_STALE ageMs=${now - lastSnap}');
-        _lastSnapshotMs = now; // reset so we don't spam
+      if (lastSnap != null) {
+        final ageMs = now - lastSnap;
+        final String? level = ageMs >= 300000
+            ? 'severe'
+            : ageMs >= 60000
+                ? 'critical'
+                : ageMs >= 15000
+                    ? 'warning'
+                    : null;
+        if (level == null) {
+          _snapshotStaleLevelLogged = null; // fresh — reset for next stale period
+        } else {
+          const _levels = ['warning', 'critical', 'severe'];
+          final prevIdx = _snapshotStaleLevelLogged == null
+              ? -1
+              : _levels.indexOf(_snapshotStaleLevelLogged!);
+          final currIdx = _levels.indexOf(level);
+          if (currIdx > prevIdx) {
+            QaLoggerService.instance.log('SNAPSHOT',
+                'SNAPSHOT_STALE level=$level ageMs=$ageMs');
+            _snapshotStaleLevelLogged = level;
+          }
+        }
       }
 
       // Watchdog — run every 3 ticks (~3 seconds)
@@ -418,11 +526,27 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   }
 
   void _runWatchdog(RoomModel room, int now) {
-    void _flag(String key, String log) {
+    void _clear(bool Function(String) predicate) {
+      final toRemove = _watchdogActiveIssues.where(predicate).toList();
+      for (final k in toRemove) {
+        _watchdogActiveIssues.remove(k);
+        _watchdogFirstSeenMs.remove(k);
+        _watchdogConfirmedIssues.remove(k);
+      }
+    }
+
+    void _flag(String key, String log, {String? stuckLog}) {
       if (!_watchdogActiveIssues.contains(key)) {
         _watchdogActiveIssues.add(key);
+        _watchdogFirstSeenMs[key] = now;
         _sessionWatchdogEventCount++;
         QaLoggerService.instance.log('WATCHDOG', log);
+      } else if (stuckLog != null && !_watchdogConfirmedIssues.contains(key)) {
+        final firstSeen = _watchdogFirstSeenMs[key] ?? now;
+        if (now - firstSeen >= 10000) {
+          _watchdogConfirmedIssues.add(key);
+          QaLoggerService.instance.log('WATCHDOG', stuckLog);
+        }
       }
     }
 
@@ -430,10 +554,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (room.turnPhase == TurnPhase.revealTurn && room.revealDeadlineMs != null) {
       final overdue = now - room.revealDeadlineMs!;
       if (overdue > 3000) {
-        _flag('expired_reveal_${room.revealDeadlineMs}',
-            'WATCHDOG_EXPIRED_DEADLINE phase=revealTurn overdueMs=$overdue');
+        final key = 'expired_reveal_${room.revealDeadlineMs}';
+        _flag(key,
+            'WATCHDOG_EXPIRED_DEADLINE phase=revealTurn overdueMs=$overdue',
+            stuckLog: 'WATCHDOG_STUCK_CONFIRMED phase=revealTurn overdueMs=$overdue');
       } else {
-        _watchdogActiveIssues.removeWhere((k) => k.startsWith('expired_reveal_'));
+        _clear((k) => k.startsWith('expired_reveal_'));
       }
     }
 
@@ -442,10 +568,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         room.guessOpportunityDeadlineMs != null) {
       final overdue = now - room.guessOpportunityDeadlineMs!;
       if (overdue > 3000) {
-        _flag('expired_guessOpp_${room.guessOpportunityDeadlineMs}',
-            'WATCHDOG_EXPIRED_DEADLINE phase=guessOpportunity overdueMs=$overdue');
+        final key = 'expired_guessOpp_${room.guessOpportunityDeadlineMs}';
+        _flag(key,
+            'WATCHDOG_EXPIRED_DEADLINE phase=guessOpportunity overdueMs=$overdue',
+            stuckLog: 'WATCHDOG_STUCK_CONFIRMED phase=guessOpportunity overdueMs=$overdue');
       } else {
-        _watchdogActiveIssues.removeWhere((k) => k.startsWith('expired_guessOpp_'));
+        _clear((k) => k.startsWith('expired_guessOpp_'));
       }
     }
 
@@ -453,26 +581,29 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (room.turnPhase == TurnPhase.guessMode && room.guessModeDeadlineMs != null) {
       final overdue = now - room.guessModeDeadlineMs!;
       if (overdue > 3000) {
-        _flag('expired_guessMode_${room.guessModeDeadlineMs}',
-            'WATCHDOG_EXPIRED_DEADLINE phase=guessMode overdueMs=$overdue');
+        final key = 'expired_guessMode_${room.guessModeDeadlineMs}';
+        _flag(key,
+            'WATCHDOG_EXPIRED_DEADLINE phase=guessMode overdueMs=$overdue',
+            stuckLog: 'WATCHDOG_STUCK_CONFIRMED phase=guessMode overdueMs=$overdue');
       } else {
-        _watchdogActiveIssues.removeWhere((k) => k.startsWith('expired_guessMode_'));
+        _clear((k) => k.startsWith('expired_guessMode_'));
       }
     }
 
     // playing phase but turnPhase is roundOver (stuck end state)
     if (room.phase == GamePhase.playing && room.turnPhase == TurnPhase.roundOver) {
       _flag('phase_mismatch_playing_roundOver',
-          'WATCHDOG_PHASE_MISMATCH phase=playing turnPhase=roundOver');
+          'WATCHDOG_PHASE_MISMATCH phase=playing turnPhase=roundOver',
+          stuckLog: 'WATCHDOG_STUCK_CONFIRMED phase=playing turnPhase=roundOver overdueMs=0');
     } else {
-      _watchdogActiveIssues.remove('phase_mismatch_playing_roundOver');
+      _clear((k) => k == 'phase_mismatch_playing_roundOver');
     }
 
     // null deadline while phase requires one
     if (room.turnPhase == TurnPhase.revealTurn && room.revealDeadlineMs == null) {
       _flag('null_deadline_revealTurn', 'WATCHDOG_NULL_DEADLINE phase=revealTurn');
     } else {
-      _watchdogActiveIssues.remove('null_deadline_revealTurn');
+      _clear((k) => k == 'null_deadline_revealTurn');
     }
 
     if (room.turnPhase == TurnPhase.guessOpportunity &&
@@ -480,13 +611,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       _flag('null_deadline_guessOpportunity',
           'WATCHDOG_NULL_DEADLINE phase=guessOpportunity');
     } else {
-      _watchdogActiveIssues.remove('null_deadline_guessOpportunity');
+      _clear((k) => k == 'null_deadline_guessOpportunity');
     }
 
     if (room.turnPhase == TurnPhase.guessMode && room.guessModeDeadlineMs == null) {
       _flag('null_deadline_guessMode', 'WATCHDOG_NULL_DEADLINE phase=guessMode');
     } else {
-      _watchdogActiveIssues.remove('null_deadline_guessMode');
+      _clear((k) => k == 'null_deadline_guessMode');
     }
   }
 
@@ -1226,6 +1357,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 // ── Snapshot freshness ──────────────────────────────────────────────
                 final _snapNow = DateTime.now().millisecondsSinceEpoch;
                 _lastSnapshotMs = _snapNow;
+                _snapshotStaleLevelLogged = null; // new snapshot resets stale escalation
                 if (_lastSnapshotLogCycleId != room.revealCycleId ||
                     _lastKnownPhase != room.phase) {
                   _lastSnapshotLogCycleId = room.revealCycleId;
