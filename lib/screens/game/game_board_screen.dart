@@ -429,7 +429,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     final compensationAmount =
                         capturedDifficulty?.stabilityCompensation ?? 10;
                     QaLoggerService.instance.log('NETWORK',
-                        'STABILITY_COMPENSATION_ELIGIBLE difficulty=${capturedDifficulty?.name ?? 'unknown'} amount=$compensationAmount');
+                        'STABILITY_COMPENSATION_ELIGIBLE reason=opponent_stuck difficulty=${capturedDifficulty?.name ?? 'unknown'} amount=$compensationAmount owner=$_currentOwner actor=$capturedActor overdueMs=$_overdue');
                     unawaited(ref.read(economyServiceProvider)
                         .applyStabilityCompensation(
                           actorUid: capturedActor,
