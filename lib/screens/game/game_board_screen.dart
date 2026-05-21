@@ -160,7 +160,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   // Session summary counters
   int _sessionRevealCount = 0;
-  int _sessionTimeoutCount = 0;
+  // Unique timeout events keyed by phase_deadline — retry attempts do not inflate this
+  final Set<String> _sessionTimeoutKeys = {};
   int _sessionGuessModeCount = 0;
   int _sessionWrongGuessCount = 0;
   int _sessionWatchdogEventCount = 0;
@@ -195,6 +196,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   final Set<String> _watchdogConfirmedIssues = {};
   // Audio recovery — only attempt when app is in foreground
   bool _appIsInForeground = true;
+  // Offline UX — local-only UI state, never written to Firestore
+  bool _isOffline = false;
+  bool _showRecoveredBanner = false;
 
   // Economy
   bool _rewardApplied = false;
@@ -371,7 +375,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
               // within cooldown — wait for retry window
             } else {
               _revealTimeoutLastAttemptMs = now;
-              _sessionTimeoutCount++;
+              _sessionTimeoutKeys.add('revealTurn_${room.revealDeadlineMs}');
               QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=revealTurn');
               QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=revealTurn deadline=${room.revealDeadlineMs}');
               QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=reveal_timeout');
@@ -425,7 +429,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             // within cooldown — wait for retry window
           } else {
             _guessOppTimeoutLastAttemptMs = now;
-            _sessionTimeoutCount++;
+            _sessionTimeoutKeys.add('guessOpportunity_${room.guessOpportunityDeadlineMs}');
             QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=guessOpportunity');
             QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=guessOpportunity deadline=${room.guessOpportunityDeadlineMs}');
             QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=guess_opp_timeout');
@@ -473,7 +477,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             // within cooldown — wait for retry window
           } else {
             _guessModeTimeoutLastAttemptMs = now;
-            _sessionTimeoutCount++;
+            _sessionTimeoutKeys.add('guessMode_${room.guessModeDeadlineMs}');
             QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=guessMode');
             QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=guessMode deadline=${room.guessModeDeadlineMs}');
             QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=guess_mode_timeout');
@@ -517,6 +521,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             QaLoggerService.instance.log('SNAPSHOT',
                 'SNAPSHOT_STALE level=$level ageMs=$ageMs');
             _snapshotStaleLevelLogged = level;
+            if ((level == 'warning' || level == 'critical') && !_isOffline) {
+              _isOffline = true;
+              QaLoggerService.instance.log('NETWORK',
+                  'NETWORK_OFFLINE_DETECTED reason=snapshot_stale_$level');
+              if (mounted) {
+                setState(() {});
+                QaLoggerService.instance.log('NETWORK', 'OFFLINE_BANNER_SHOWN');
+              }
+            }
           }
         }
       }
@@ -697,7 +710,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         'SESSION_SUMMARY'
         ' durationSec=$durationSec'
         ' reveals=$_sessionRevealCount'
-        ' timeouts=$_sessionTimeoutCount'
+        ' timeouts=${_sessionTimeoutKeys.length}'
         ' guessModes=$_sessionGuessModeCount'
         ' wrongGuesses=$_sessionWrongGuessCount'
         ' txErrors=see_service_logs'
@@ -1399,6 +1412,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 // ── Snapshot freshness ──────────────────────────────────────────────
                 final _snapNow = DateTime.now().millisecondsSinceEpoch;
                 _lastSnapshotMs = _snapNow;
+                if (_isOffline) {
+                  _isOffline = false;
+                  _showRecoveredBanner = true;
+                  QaLoggerService.instance.log('NETWORK', 'NETWORK_RECOVERY_DETECTED');
+                  QaLoggerService.instance.log('NETWORK', 'OFFLINE_BANNER_HIDDEN');
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    Future.delayed(const Duration(seconds: 2), () {
+                      if (mounted) setState(() => _showRecoveredBanner = false);
+                    });
+                  });
+                }
                 _snapshotStaleLevelLogged = null; // new snapshot resets stale escalation
                 if (_lastSnapshotLogCycleId != room.revealCycleId ||
                     _lastKnownPhase != room.phase) {
@@ -1709,6 +1733,44 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 ),
               ),
             ],
+            if (_isOffline || _showRecoveredBanner)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 4,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(
+                  child: Center(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _showRecoveredBanner
+                            ? const Color(0xFF0D3B26).withOpacity(0.95)
+                            : const Color(0xFF1A0A00).withOpacity(0.92),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _showRecoveredBanner
+                              ? const Color(0xFF00C853).withOpacity(0.7)
+                              : const Color(0xFFFF6B35).withOpacity(0.7),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        _showRecoveredBanner
+                            ? 'החיבור חזר'
+                            : 'אין חיבור · מנסה להתחבר…',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
