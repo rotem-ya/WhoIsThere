@@ -6,6 +6,7 @@ import 'dart:math' show Random, min, pi;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/theme/app_styles.dart';
 
@@ -295,6 +296,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
     QaLoggerService.instance.log('GAME', 'GAME_INIT roomId=$shortId');
     _startExpiryTimer();
+    _enableWakelock();
   }
 
   void _startExpiryTimer() {
@@ -836,6 +838,26 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     return false;
   }
 
+  void _enableWakelock() {
+    QaLoggerService.instance.log('GAME', 'WAKELOCK_ENABLE_ATTEMPT');
+    try {
+      WakelockPlus.enable();
+      QaLoggerService.instance.log('GAME', 'WAKELOCK_ENABLED');
+    } catch (_) {
+      QaLoggerService.instance.log('GAME', 'WAKELOCK_SKIPPED reason=error');
+    }
+  }
+
+  void _disableWakelock() {
+    QaLoggerService.instance.log('GAME', 'WAKELOCK_DISABLE_ATTEMPT');
+    try {
+      WakelockPlus.disable();
+      QaLoggerService.instance.log('GAME', 'WAKELOCK_DISABLED');
+    } catch (_) {
+      QaLoggerService.instance.log('GAME', 'WAKELOCK_SKIPPED reason=error');
+    }
+  }
+
   @override
   void dispose() {
     final shortId = widget.roomId.substring(0, widget.roomId.length.clamp(0, 6));
@@ -861,6 +883,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _confettiRight.dispose();
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_bgPlayer.stop());
+    _disableWakelock();
     super.dispose();
   }
 
@@ -1503,6 +1526,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
                 if (_lastKnownPhase != null && _lastKnownPhase != room.phase) {
                   QaLoggerService.instance.log('GAME', 'GAME_PHASE_CHANGED from=${_lastKnownPhase!.name} to=${room.phase.name}');
+                  if (room.phase == GamePhase.finished) {
+                    _disableWakelock();
+                  }
                 }
                 _lastKnownPhase = room.phase;
 
