@@ -193,6 +193,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   // Watchdog stuck confirmation — log once when issue persists >10s
   final Map<String, int> _watchdogFirstSeenMs = {};
   final Set<String> _watchdogConfirmedIssues = {};
+  // Audio recovery — only attempt when app is in foreground
+  bool _appIsInForeground = true;
 
   // Economy
   bool _rewardApplied = false;
@@ -423,6 +425,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             // within cooldown — wait for retry window
           } else {
             _guessOppTimeoutLastAttemptMs = now;
+            _sessionTimeoutCount++;
             QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=guessOpportunity');
             QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=guessOpportunity deadline=${room.guessOpportunityDeadlineMs}');
             QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=guess_opp_timeout');
@@ -470,6 +473,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             // within cooldown — wait for retry window
           } else {
             _guessModeTimeoutLastAttemptMs = now;
+            _sessionTimeoutCount++;
             QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=guessMode');
             QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=guessMode deadline=${room.guessModeDeadlineMs}');
             QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=guess_mode_timeout');
@@ -532,6 +536,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         _watchdogActiveIssues.remove(k);
         _watchdogFirstSeenMs.remove(k);
         _watchdogConfirmedIssues.remove(k);
+        QaLoggerService.instance.log('WATCHDOG', 'WATCHDOG_RECOVERED key=$k');
+      }
+      if (toRemove.isNotEmpty) {
+        _attemptAudioRecovery(room);
       }
     }
 
@@ -625,6 +633,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
+      _appIsInForeground = false;
       _bgPlayer.stop().ignore();
       _revealSoundPlayer.stop().ignore();
       _wrongBuzzPlayer.stop().ignore();
@@ -632,6 +641,38 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       _victoryPlayer.stop().ignore();
       _revealTickPlayer.stop().ignore();
       _guessModeTickPlayer.stop().ignore();
+    } else if (state == AppLifecycleState.resumed) {
+      _appIsInForeground = true;
+    }
+  }
+
+  Future<void> _attemptAudioRecovery(RoomModel room) async {
+    if (!mounted) {
+      QaLoggerService.instance.log('AUDIO', 'AUDIO_RECOVERY_SKIPPED reason=not_mounted');
+      return;
+    }
+    if (room.phase != GamePhase.playing) {
+      QaLoggerService.instance.log('AUDIO',
+          'AUDIO_RECOVERY_SKIPPED reason=phase_not_playing');
+      return;
+    }
+    if (!_appIsInForeground) {
+      QaLoggerService.instance.log('AUDIO',
+          'AUDIO_RECOVERY_SKIPPED reason=app_in_background');
+      return;
+    }
+    QaLoggerService.instance.log('AUDIO',
+        'AUDIO_RECOVERY_ATTEMPT reason=watchdog_recovered phase=${room.phase.name}');
+    try {
+      if (_bgPlayer.state == PlayerState.playing) {
+        QaLoggerService.instance.log('AUDIO',
+            'AUDIO_RECOVERY_SKIPPED reason=already_playing');
+        return;
+      }
+      await _startBackgroundMusic();
+      QaLoggerService.instance.log('AUDIO', 'AUDIO_RECOVERY_SUCCESS');
+    } catch (e) {
+      QaLoggerService.instance.log('AUDIO', 'AUDIO_RECOVERY_SKIPPED reason=error');
     }
   }
 
@@ -661,6 +702,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         ' wrongGuesses=$_sessionWrongGuessCount'
         ' txErrors=see_service_logs'
         ' watchdogEvents=$_sessionWatchdogEventCount'
+        ' unresolvedWatchdogIssues=${_watchdogActiveIssues.length}'
         ' finalPhase=${_lastKnownPhase?.name ?? 'unknown'}'
         ' finalTurnPhase=${_lastKnownTurnPhase?.name ?? 'unknown'}');
     _expiryTimer?.cancel();
