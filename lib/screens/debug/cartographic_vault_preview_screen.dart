@@ -1,4 +1,4 @@
-// TEMP DEBUG — continuous-image board visual prototype v3.
+// TEMP DEBUG — continuous-image board visual prototype v4.
 // Remove before merging vault visuals to production.
 // Does NOT touch GameBoardScreen, game_board_view.dart, ApertureTile, or any gameplay code.
 
@@ -9,8 +9,9 @@ const String _kImage = 'assets/game_places/images/masada.jpg';
 const Set<int> _kInitialRevealed = {0, 1, 5, 6, 7, 10, 12};
 const int _kCols = 5;
 const int _kRows = 5;
-// Hairline seam between cells — thin enough to feel like one board.
 const double _kSeam = 1.5;
+// Short, tactile reveal duration — feels mechanical, not animated.
+const Duration _kRevealDuration = Duration(milliseconds: 190);
 
 class CartographicVaultPreviewScreen extends StatefulWidget {
   const CartographicVaultPreviewScreen({super.key});
@@ -21,16 +22,55 @@ class CartographicVaultPreviewScreen extends StatefulWidget {
 }
 
 class _CartographicVaultPreviewScreenState
-    extends State<CartographicVaultPreviewScreen> {
+    extends State<CartographicVaultPreviewScreen>
+    with TickerProviderStateMixin {
+  // Cells that are fully open (animation complete).
   final Set<int> _revealed = Set.from(_kInitialRevealed);
+  // Controllers for cells currently mid-animation.
+  final Map<int, AnimationController> _controllers = {};
+  // Current hole-scale progress per animating cell: 0.0 = closed, 1.0 = open.
+  final Map<int, double> _progress = {};
 
-  void _toggleCell(int idx) {
+  @override
+  void dispose() {
+    for (final c in _controllers.values) c.dispose();
+    super.dispose();
+  }
+
+  void _tap(int idx) {
+    if (_controllers.containsKey(idx)) return; // already animating
+
+    final opening = !_revealed.contains(idx);
+
+    final ctrl = AnimationController(vsync: this, duration: _kRevealDuration);
+    final curved = CurvedAnimation(
+      parent: ctrl,
+      // easeOut = snaps open quickly then settles.
+      // easeIn  = releases slowly then snaps shut.
+      curve: opening ? Curves.easeOut : Curves.easeIn,
+    );
+
+    curved.addListener(() {
+      if (!mounted) return;
+      setState(() {
+        _progress[idx] = opening ? curved.value : 1.0 - curved.value;
+      });
+    });
+
     setState(() {
-      if (_revealed.contains(idx)) {
-        _revealed.remove(idx);
-      } else {
-        _revealed.add(idx);
-      }
+      if (opening) _revealed.add(idx);
+      _controllers[idx] = ctrl;
+      _progress[idx] = opening ? 0.0 : 1.0;
+    });
+
+    ctrl.forward().then((_) {
+      if (!mounted) return; // dispose() already cleaned up ctrl
+      setState(() {
+        if (!opening) _revealed.remove(idx);
+        _progress.remove(idx);
+        _controllers.remove(idx);
+      });
+      ctrl.dispose();
     });
   }
 
@@ -56,7 +96,8 @@ class _CartographicVaultPreviewScreenState
                     padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
                     child: _BoardArea(
                       revealed: Set.from(_revealed),
-                      onTap: _toggleCell,
+                      animProgress: Map.from(_progress),
+                      onTap: _tap,
                     ),
                   ),
                 ),
@@ -72,7 +113,6 @@ class _CartographicVaultPreviewScreenState
 }
 
 // ── Atmosphere ────────────────────────────────────────────────────────────────
-// Midnight blue → deep steel blue — deliberately NOT black.
 
 class _Atmosphere extends StatelessWidget {
   const _Atmosphere();
@@ -82,22 +122,18 @@ class _Atmosphere extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Base gradient: midnight blue → steel blue → dark navy
+        // Base: midnight blue → deep steel blue — NOT black.
         const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF0C1A2E),
-                Color(0xFF0E2444),
-                Color(0xFF080F1E),
-              ],
+              colors: [Color(0xFF0C1A2E), Color(0xFF0E2444), Color(0xFF080F1E)],
               stops: [0.0, 0.55, 1.0],
             ),
           ),
         ),
-        // Cyan atmospheric bloom — upper centre
+        // Cyan atmospheric bloom — upper centre.
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: RadialGradient(
@@ -110,7 +146,7 @@ class _Atmosphere extends StatelessWidget {
             ),
           ),
         ),
-        // Warm gold exhale — bottom-left corner
+        // Warm gold exhale — bottom-left corner.
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: RadialGradient(
@@ -175,7 +211,6 @@ class _Header extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          // Revealed count — understated
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
@@ -202,9 +237,14 @@ class _Header extends StatelessWidget {
 
 class _BoardArea extends StatelessWidget {
   final Set<int> revealed;
+  final Map<int, double> animProgress;
   final void Function(int) onTap;
 
-  const _BoardArea({required this.revealed, required this.onTap});
+  const _BoardArea({
+    required this.revealed,
+    required this.animProgress,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -214,7 +254,6 @@ class _BoardArea extends StatelessWidget {
 
       return Center(
         child: ClipRRect(
-          // Minimal radius — the board is an aperture, not a card.
           borderRadius: BorderRadius.circular(8),
           child: SizedBox(
             width: size,
@@ -233,15 +272,13 @@ class _BoardArea extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Layer 1 — the continuous image.
-                  // Fills the entire board area; both layers share this space.
+                  // Layer 1 — continuous image, fills entire board.
                   Image.asset(_kImage, fit: BoxFit.cover),
-                  // Layer 2 — unified shutter mask.
-                  // One painter covers everything; revealed cells are transparent
-                  // holes punched through with BlendMode.clear.
+                  // Layer 2 — unified shutter mask with mechanical depth.
                   CustomPaint(
                     painter: _ShutterMask(
                       revealed: revealed,
+                      animProgress: animProgress,
                       cols: _kCols,
                       rows: _kRows,
                       cellSize: cellSize,
@@ -260,18 +297,26 @@ class _BoardArea extends StatelessWidget {
 
 // ── Unified shutter mask ──────────────────────────────────────────────────────
 //
-// Draws a single dark overlay over the full board, then punches transparent
-// holes at each revealed cell using BlendMode.clear inside a saveLayer.
-// The result is ONE mechanical surface with aperture openings — not N tiles.
+// Single CustomPainter covers the full board.
 //
-// Pass order:
-//   1. saveLayer → dark steel overlay → clear holes → restore
-//   2. Hairline seam grid (over everything, including revealed cells)
-//   3. Gold cut-edge around each revealed aperture
-//   4. Top-left bevel hairline on covered cells (machined feel)
+// Paint order:
+//   [saveLayer]
+//     1. Dark steel-blue base fill — covers entire board, fully opaque
+//     2. Directional gradient overlay — soft light from top-left
+//     3. Horizontal brushed-metal lines — subtle surface texture
+//     4. BlendMode.clear punches transparent holes for revealed cells
+//        — fully open cells: full cell rect cleared
+//        — animating cells: centered iris rect scaled by progress
+//   [restore]
+//   5. Inner bevel on fully covered cells (top+left white, bottom+right black)
+//   6. Hairline seam grid across entire board
+//   7. Gold cut-edge around open apertures
+//
+// Covered cells receive ZERO transparency — image is invisible under them.
 
 class _ShutterMask extends CustomPainter {
   final Set<int> revealed;
+  final Map<int, double> animProgress;
   final int cols;
   final int rows;
   final double cellSize;
@@ -279,6 +324,7 @@ class _ShutterMask extends CustomPainter {
 
   _ShutterMask({
     required this.revealed,
+    required this.animProgress,
     required this.cols,
     required this.rows,
     required this.cellSize,
@@ -296,28 +342,117 @@ class _ShutterMask extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final bounds = Offset.zero & size;
 
-    // ── 1. Unified overlay with punched holes ─────────────────────────────
+    // ── Layer: unified shutter with punched apertures ─────────────────────
     canvas.saveLayer(bounds, Paint());
 
-    // Dark steel-blue shutter — not black, not grey.
+    // 1. Base fill — dark steel-blue. Fully opaque; image invisible here.
     canvas.drawRect(
       bounds,
-      Paint()..color = const Color(0xFF07152A).withOpacity(0.88),
+      Paint()..color = const Color(0xFF07152A),
     );
 
-    // Punch transparent holes for revealed cells.
+    // 2. Soft directional light from top-left — implies a single overhead
+    //    light source, gives the panel a slight convex/curved feel.
+    canvas.drawRect(
+      bounds,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(0.07),
+            Colors.transparent,
+            Colors.black.withOpacity(0.14),
+          ],
+          stops: const [0.0, 0.40, 1.0],
+        ).createShader(bounds),
+    );
+
+    // 3. Horizontal brushed-metal texture — very faint parallel lines
+    //    simulate a horizontally brushed aluminium/steel surface.
+    //    Low opacity and tight spacing keep it subtle, not noisy.
+    final brushPaint = Paint()
+      ..color = Colors.white.withOpacity(0.022)
+      ..strokeWidth = 0.55;
+    for (double y = 1.5; y < size.height; y += 4.0) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), brushPaint);
+    }
+
+    // 4. Punch holes.
     final clearPaint = Paint()..blendMode = BlendMode.clear;
+
+    // Fully open cells — clear entire cell rect.
     for (var idx = 0; idx < rows * cols; idx++) {
-      if (revealed.contains(idx)) {
+      if (revealed.contains(idx) && !animProgress.containsKey(idx)) {
         canvas.drawRect(_cell(idx ~/ cols, idx % cols), clearPaint);
+      }
+    }
+
+    // Animating cells — clear a centered iris scaled by progress.
+    // The iris grows/shrinks vertically from the cell's horizontal midline,
+    // like two blast-door panels sliding apart or sealing shut.
+    for (final entry in animProgress.entries) {
+      final idx = entry.key;
+      final p = entry.value; // 0.0 = fully closed, 1.0 = fully open
+      if (p > 0.001 && revealed.contains(idx)) {
+        final cell = _cell(idx ~/ cols, idx % cols);
+        canvas.drawRect(
+          Rect.fromCenter(
+            center: cell.center,
+            width: cell.width,
+            height: cell.height * p,
+          ),
+          clearPaint,
+        );
       }
     }
 
     canvas.restore();
 
-    // ── 2. Hairline seam grid ─────────────────────────────────────────────
-    // Drawn on top of everything — gives the board a unified grid reading
-    // even across revealed cells, so it reads as one surface not N tiles.
+    // ── Inner bevel — covered cells only ─────────────────────────────────
+    // Four hairlines per cell (top/left highlight, bottom/right shadow)
+    // create an inset bevel — the plate reads as a slightly recessed panel.
+    for (var idx = 0; idx < rows * cols; idx++) {
+      if (revealed.contains(idx)) continue;
+      final r = _cell(idx ~/ cols, idx % cols);
+
+      // Top inner highlight
+      canvas.drawLine(
+        Offset(r.left + 0.5, r.top + 0.5),
+        Offset(r.right - 0.5, r.top + 0.5),
+        Paint()
+          ..color = Colors.white.withOpacity(0.18)
+          ..strokeWidth = 0.9,
+      );
+      // Left inner highlight
+      canvas.drawLine(
+        Offset(r.left + 0.5, r.top + 1.0),
+        Offset(r.left + 0.5, r.bottom - 0.5),
+        Paint()
+          ..color = Colors.white.withOpacity(0.10)
+          ..strokeWidth = 0.9,
+      );
+      // Bottom inner shadow
+      canvas.drawLine(
+        Offset(r.left + 0.5, r.bottom - 0.5),
+        Offset(r.right - 0.5, r.bottom - 0.5),
+        Paint()
+          ..color = Colors.black.withOpacity(0.38)
+          ..strokeWidth = 0.9,
+      );
+      // Right inner shadow
+      canvas.drawLine(
+        Offset(r.right - 0.5, r.top + 1.0),
+        Offset(r.right - 0.5, r.bottom - 0.5),
+        Paint()
+          ..color = Colors.black.withOpacity(0.26)
+          ..strokeWidth = 0.9,
+      );
+    }
+
+    // ── Hairline seam grid ────────────────────────────────────────────────
+    // Runs across the entire board including open cells — keeps the board
+    // reading as one unified surface even when tiles are revealed.
     final seamPaint = Paint()
       ..color = Colors.white.withOpacity(0.09)
       ..strokeWidth = 0.6;
@@ -331,35 +466,36 @@ class _ShutterMask extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), seamPaint);
     }
 
-    // ── 3. Gold cut-edge on revealed apertures ────────────────────────────
-    // Thin gold stroke marks each opened aperture — premium, laser-cut feel.
+    // ── Gold cut-edge on open apertures ───────────────────────────────────
+    // Thin gold stroke marks revealed openings — reads as a precision-cut
+    // aperture edge, premium and restrained.
     final goldEdge = Paint()
-      ..color = const Color(0xFFD4AF37).withOpacity(0.48)
+      ..color = const Color(0xFFD4AF37).withOpacity(0.50)
       ..strokeWidth = 0.9
       ..style = PaintingStyle.stroke;
 
     for (var idx = 0; idx < rows * cols; idx++) {
-      if (revealed.contains(idx)) {
-        canvas.drawRect(_cell(idx ~/ cols, idx % cols), goldEdge);
-      }
-    }
-
-    // ── 4. Bevel highlight on covered cells ───────────────────────────────
-    // Very faint top + left hairline — implies machined depth without
-    // making each cell look like a standalone button.
-    final bevel = Paint()
-      ..color = Colors.white.withOpacity(0.11)
-      ..strokeWidth = 0.7;
-
-    for (var idx = 0; idx < rows * cols; idx++) {
-      if (!revealed.contains(idx)) {
-        final r = _cell(idx ~/ cols, idx % cols);
-        canvas.drawLine(r.topLeft, r.topRight, bevel);
-        canvas.drawLine(r.topLeft, r.bottomLeft, bevel);
+      if (!revealed.contains(idx)) continue;
+      final cell = _cell(idx ~/ cols, idx % cols);
+      if (animProgress.containsKey(idx)) {
+        final p = animProgress[idx]!;
+        if (p > 0.001) {
+          canvas.drawRect(
+            Rect.fromCenter(
+              center: cell.center,
+              width: cell.width,
+              height: cell.height * p,
+            ),
+            goldEdge,
+          );
+        }
+      } else {
+        canvas.drawRect(cell, goldEdge);
       }
     }
   }
 
+  // Always repaint during animation; no-op frames are cheap.
   @override
   bool shouldRepaint(covariant _ShutterMask old) => true;
 }
