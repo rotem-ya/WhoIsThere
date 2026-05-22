@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/build_info.dart';
 import '../../core/ui/app_scaffold.dart';
+// TEMP DEBUG — remove before shipping vault visual to production
+import '../debug/cartographic_vault_preview_screen.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../core/utils/display_name_sanitizer.dart';
@@ -179,6 +181,27 @@ class ProfileScreen extends ConsumerWidget {
                         label: const Text('העתק לוג QA'),
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.white38,
+                          textStyle: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      // TEMP DEBUG — Cartographic Vault visual prototype entry point.
+                      // Remove this button before shipping vault visuals to production.
+                      TextButton.icon(
+                        onPressed: () {
+                          QaLoggerService.instance.log('VISUAL_PREVIEW', 'VISUAL_PREVIEW_OPENED');
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CartographicVaultPreviewScreen(),
+                            ),
+                          ).then((_) {
+                            QaLoggerService.instance.log('VISUAL_PREVIEW', 'VISUAL_PREVIEW_BACK');
+                          });
+                        },
+                        icon: const Icon(Icons.map_outlined, size: 16),
+                        label: const Text('Vault Preview [debug]'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white24,
                           textStyle: const TextStyle(fontSize: 12),
                         ),
                       ),
