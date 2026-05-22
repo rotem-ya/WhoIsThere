@@ -52,6 +52,7 @@ dependencies:
   equatable: ^2.0.5
   intl: ^0.18.1
   share_plus: ^9.0.0
+  wakelock_plus: ^1.2.8
 
 dev_dependencies:
   flutter_test:
