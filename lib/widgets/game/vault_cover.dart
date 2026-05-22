@@ -25,19 +25,33 @@ class _VaultCoverState extends State<VaultCover>
   @override
   void initState() {
     super.initState();
+
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 230),
+      duration: const Duration(milliseconds: 420),
     );
-    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic);
-    if (widget.isRevealed) _ctrl.value = 1.0;
+
+    _anim = CurvedAnimation(
+      parent: _ctrl,
+      curve: Curves.easeOutExpo,
+    );
+
+    if (widget.isRevealed) {
+      _ctrl.value = 1.0;
+    }
   }
 
   @override
-  void didUpdateWidget(covariant VaultCover old) {
-    super.didUpdateWidget(old);
-    if (widget.isRevealed && !old.isRevealed) _ctrl.forward(from: 0.0);
-    if (!widget.isRevealed && old.isRevealed) _ctrl.reverse();
+  void didUpdateWidget(covariant VaultCover oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.isRevealed && !oldWidget.isRevealed) {
+      _ctrl.forward(from: 0.0);
+    }
+
+    if (!widget.isRevealed && oldWidget.isRevealed) {
+      _ctrl.reverse();
+    }
   }
 
   @override
@@ -48,26 +62,25 @@ class _VaultCoverState extends State<VaultCover>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: (widget.isFocused && !widget.isRevealed)
-          ? BoxDecoration(
-              border: Border.all(
-                color: Colors.white.withOpacity(0.18),
-                width: 0.6,
-              ),
-            )
-          : null,
+    return RepaintBoundary(
       child: ClipRect(
         child: Stack(
           fit: StackFit.expand,
           children: [
             widget.child,
+
             AnimatedBuilder(
               animation: _anim,
               builder: (_, __) {
-                if (_anim.value >= 1.0) return const SizedBox.shrink();
+                if (_anim.value >= 0.995) {
+                  return const SizedBox.shrink();
+                }
+
                 return CustomPaint(
-                  painter: _ApertureIrisPainter(progress: _anim.value),
+                  painter: _AperturePainter(
+                    progress: _anim.value,
+                    focused: widget.isFocused,
+                  ),
                 );
               },
             ),
@@ -78,40 +91,56 @@ class _VaultCoverState extends State<VaultCover>
   }
 }
 
-class _ApertureIrisPainter extends CustomPainter {
+class _AperturePainter extends CustomPainter {
   final double progress;
-  static const int _blades = 8;
+  final bool focused;
 
-  const _ApertureIrisPainter({required this.progress});
+  static const int bladeCount = 8;
+
+  const _AperturePainter({
+    required this.progress,
+    required this.focused,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
     final rect = Offset.zero & size;
-    final diagonal =
-        math.sqrt(size.width * size.width + size.height * size.height);
 
-    final eased = Curves.easeInOutCubic.transform(progress.clamp(0.0, 1.0));
+    final center = Offset(
+      size.width / 2,
+      size.height / 2,
+    );
 
-    // Iris opening — 1.8× faster blade rotation for clearly mechanical feel
-    final double openFactor;
-    if (progress <= 0.82) {
-      openFactor = Curves.easeInOutCubic.transform(progress / 0.82);
-    } else {
-      final t = (progress - 0.82) / 0.18;
-      openFactor = 1.0 + math.sin(t * math.pi) * 0.045;
-    }
-    // Expanded to 0.84 so iris visibly fills entire tile
-    final openRadius = openFactor * diagonal * 0.84;
-    final rotation = eased * math.pi / _blades * 1.8;
+    final diagonal = math.sqrt(
+      size.width * size.width +
+          size.height * size.height,
+    );
 
-    // ── Compositing layer ─────────────────────────────────────────────────
+    final eased =
+        Curves.easeOutCubic.transform(progress);
+
+    final overshoot =
+        math.sin(progress * math.pi) * 0.10;
+
+    final openRadius =
+        (eased + overshoot) *
+            diagonal *
+            0.92;
+
+    final rotation =
+        eased *
+            math.pi /
+            bladeCount *
+            3.2;
+
     canvas.saveLayer(rect, Paint());
 
-    // 1. Glossy near-black DSLR body base
-    canvas.drawRect(rect, Paint()..color = const Color(0xFF0A1420));
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..color = const Color(0xFF03070D),
+    );
 
-    // 2. Strong directional metallic sheen — overhead light on polished glass
     canvas.drawRect(
       rect,
       Paint()
@@ -119,29 +148,164 @@ class _ApertureIrisPainter extends CustomPainter {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.white.withOpacity(0.22),
-            Colors.transparent,
-            Colors.black.withOpacity(0.28),
+            const Color(0xFF4E84AA)
+                .withOpacity(0.45),
+            const Color(0xFF163049)
+                .withOpacity(0.20),
+            Colors.black.withOpacity(0.72),
           ],
-          stops: const [0.0, 0.42, 1.0],
         ).createShader(rect),
     );
 
-    // 3. 8 high-contrast aperture blades: dark vs. lighter gunmetal
-    for (int i = 0; i < _blades; i++) {
-      final a0 = i * 2 * math.pi / _blades + rotation;
-      final a1 = (i + 1) * 2 * math.pi / _blades + rotation;
+
+    final scanPaint = Paint()
+      ..color = Colors.white.withOpacity(0.035)
+      ..strokeWidth = 0.45;
+
+    for (double y = 1; y < size.height; y += 2.5) {
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(size.width, y),
+        scanPaint,
+      );
+    }
+
+    for (int i = 0; i < bladeCount; i++) {
+      final a0 =
+          i * 2 * math.pi / bladeCount + rotation;
+
+      final a1 =
+          (i + 1) *
+                  2 *
+                  math.pi /
+                  bladeCount +
+              rotation;
+
       final aMid = (a0 + a1) / 2;
 
-      final bladePath = Path()
+      final blade = Path()
+        ..moveTo(center.dx, center.dy)
+        ..lineTo(
+          center.dx +
+              diagonal * math.cos(a0),
+          center.dy +
+              diagonal * math.sin(a0),
+        )
+        ..lineTo(
+          center.dx +
+              diagonal *
+                  1.15 *
+                  math.cos(aMid),
+          center.dy +
+              diagonal *
+                  1.15 *
+                  math.sin(aMid),
+        )
+        ..lineTo(
+          center.dx +
+              diagonal * math.cos(a1),
+          center.dy +
+              diagonal * math.sin(a1),
+        )
+        ..close();
+
+      canvas.drawPath(
+        blade,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: i.isEven
+                ? const [
+                    Color(0xFF35698D),
+                    Color(0xFF122A40),
+                    Color(0xFF050C14),
+                  ]
+                : const [
+                    Color(0xFF132D45),
+                    Color(0xFF07111B),
+                    Color(0xFF010409),
+                  ],
+          ).createShader(rect),
+      );
+
+      canvas.drawLine(
+        center,
+        Offset(
+          center.dx +
+              diagonal * math.cos(a0),
+          center.dy +
+              diagonal * math.sin(a0),
+        ),
+        Paint()
+          ..color = const Color(0xFFA8E8FF)
+              .withOpacity(0.28)
+          ..strokeWidth = 1.0,
+      );
+    }
+
+    final hubRadius =
+        size.shortestSide * 0.09;
+
+    canvas.drawCircle(
+      center,
+      hubRadius * 1.8,
+      Paint()
+        ..color =
+            Colors.black.withOpacity(0.55),
+    );
+
+    canvas.drawCircle(
+      center,
+      hubRadius * 1.4,
+      Paint()
+        ..color = const Color(0xFF16344D),
+    );
+
+    canvas.drawCircle(
+      center,
+      hubRadius * 1.4,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.1
+        ..color = const Color(0xFFA8E8FF)
+            .withOpacity(0.35),
+    );
+
+    canvas.drawCircle(
+      center,
+      hubRadius * 0.75,
+      Paint()
+        ..color = const Color(0xFF03070D),
+    );
+
+
+    final scanPaint = Paint()
+      ..color = Colors.white.withOpacity(0.035)
+      ..strokeWidth = 0.45;
+
+    for (double y = 1; y < size.height; y += 2.5) {
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(size.width, y),
+        scanPaint,
+      );
+    }
+
+    for (int i = 0; i < bladeCount; i++) {
+      final a0 = i * 2 * math.pi / bladeCount + rotation;
+      final a1 = (i + 1) * 2 * math.pi / bladeCount + rotation;
+      final aMid = (a0 + a1) / 2;
+
+      final blade = Path()
         ..moveTo(center.dx, center.dy)
         ..lineTo(
           center.dx + diagonal * math.cos(a0),
           center.dy + diagonal * math.sin(a0),
         )
         ..lineTo(
-          center.dx + diagonal * math.cos(aMid),
-          center.dy + diagonal * math.sin(aMid),
+          center.dx + diagonal * 1.15 * math.cos(aMid),
+          center.dy + diagonal * 1.15 * math.sin(aMid),
         )
         ..lineTo(
           center.dx + diagonal * math.cos(a1),
@@ -150,13 +314,25 @@ class _ApertureIrisPainter extends CustomPainter {
         ..close();
 
       canvas.drawPath(
-        bladePath,
+        blade,
         Paint()
-          ..color =
-              i.isEven ? const Color(0xFF1A2D42) : const Color(0xFF060E18),
+          ..shader = LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: i.isEven
+                ? const [
+                    Color(0xFF35698D),
+                    Color(0xFF122A40),
+                    Color(0xFF050C14),
+                  ]
+                : const [
+                    Color(0xFF132D45),
+                    Color(0xFF07111B),
+                    Color(0xFF010409),
+                  ],
+          ).createShader(rect),
       );
 
-      // Clearly visible radial dividers — white hairlines at full opacity
       canvas.drawLine(
         center,
         Offset(
@@ -164,132 +340,140 @@ class _ApertureIrisPainter extends CustomPainter {
           center.dy + diagonal * math.sin(a0),
         ),
         Paint()
-          ..color = Colors.white.withOpacity(0.18)
+          ..color = const Color(0xFFA8E8FF).withOpacity(0.28)
           ..strokeWidth = 1.0,
       );
     }
 
-    // 4. Center pivot hub — 3-ring metallic stack (visible anchor point)
-    canvas.drawCircle(center, 7.0, Paint()..color = const Color(0xFF0A1420));
+    final hubRadius = size.shortestSide * 0.09;
+
     canvas.drawCircle(
       center,
-      7.0,
-      Paint()
-        ..color = Colors.white.withOpacity(0.22)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2,
+      hubRadius * 1.8,
+      Paint()..color = Colors.black.withOpacity(0.55),
     );
-    canvas.drawCircle(center, 4.5, Paint()..color = const Color(0xFF141E2A));
-    canvas.drawCircle(center, 2.5, Paint()..color = const Color(0xFF0A1018));
+
     canvas.drawCircle(
       center,
-      2.5,
-      Paint()
-        ..color = Colors.white.withOpacity(0.45)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.8,
+      hubRadius * 1.4,
+      Paint()..color = const Color(0xFF16344D),
     );
 
-    // 5. Metallic specular sweep across blades during opening
-    if (progress > 0.08 && progress < 0.65) {
-      final sweepT = ((progress - 0.08) / 0.57).clamp(0.0, 1.0);
-      final sweepAlpha =
-          (sweepT < 0.5 ? sweepT * 2 : (1.0 - sweepT) * 2) * 0.12;
-      if (sweepAlpha > 0.005) {
-        canvas.drawRect(
-          rect,
-          Paint()
-            ..shader = LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.transparent,
-                Colors.white.withOpacity(sweepAlpha),
-                Colors.transparent,
-              ],
-              stops: [
-                (sweepT - 0.20).clamp(0.0, 1.0),
-                sweepT.clamp(0.0, 1.0),
-                (sweepT + 0.20).clamp(0.0, 1.0),
-              ],
-            ).createShader(rect),
-        );
-      }
-    }
+    canvas.drawCircle(
+      center,
+      hubRadius * 1.4,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.1
+        ..color = const Color(0xFFA8E8FF).withOpacity(0.35),
+    );
 
-    // 6. Punch iris opening via BlendMode.clear
-    if (openRadius > 0.5) {
+    canvas.drawCircle(
+      center,
+      hubRadius * 0.75,
+      Paint()..color = const Color(0xFF03070D),
+    );
+
+
+    final sweep = math.sin(progress * math.pi).clamp(0.0, 1.0);
+
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.transparent,
+            Colors.white.withOpacity(0.22 * sweep),
+            const Color(0xFF80D8FF).withOpacity(0.16 * sweep),
+            Colors.transparent,
+          ],
+          stops: const [0.0, 0.34, 0.48, 1.0],
+        ).createShader(rect),
+    );
+
+    if (openRadius > 1) {
       canvas.drawPath(
-        _irisPolygon(center, openRadius, rotation),
+        _irisHole(center, openRadius, rotation),
         Paint()..blendMode = BlendMode.clear,
       );
     }
 
     canvas.restore();
-    // ── End compositing layer ─────────────────────────────────────────────
 
-    // 7. Bright metallic blade-tip ring at iris edge
-    if (openRadius > 1.5 && progress < 0.97) {
+    if (openRadius > 2 && progress < 0.96) {
       canvas.drawPath(
-        _irisPolygon(center, openRadius, rotation),
+        _irisHole(center, openRadius, rotation),
         Paint()
-          ..color = Colors.white.withOpacity(0.45)
-          ..strokeWidth = 0.9
-          ..style = PaintingStyle.stroke,
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.45
+          ..color = const Color(0xFFA8E8FF)
+              .withOpacity(0.72 * (1.0 - progress * 0.35)),
       );
     }
 
-    // 8. Center lens exposure glow — visible flash as image is "exposed"
-    if (progress > 0.15 && progress < 0.95 && openRadius > 2) {
-      final glowProg = ((progress - 0.15) / 0.80).clamp(0.0, 1.0);
-      final glowAlpha =
-          (glowProg < 0.5 ? glowProg * 2 : (1.0 - glowProg) * 2) * 0.45;
-      if (glowAlpha > 0.01) {
-        final glowRadius = openRadius * 0.72;
-        canvas.drawCircle(
-          center,
-          glowRadius,
-          Paint()
-            ..shader = RadialGradient(
-              colors: [
-                const Color(0xFFD0E8F8).withOpacity(glowAlpha),
-                Colors.transparent,
-              ],
-            ).createShader(
-                Rect.fromCircle(center: center, radius: glowRadius)),
-        );
-      }
-    }
+    if (progress > 0.08 && progress < 0.90) {
+      final flash =
+          math.sin(((progress - 0.08) / 0.82).clamp(0.0, 1.0) * math.pi);
 
-    // 9. Outer vignette — stronger depth
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = RadialGradient(
-          center: Alignment.center,
-          radius: 0.72,
-          colors: [Colors.transparent, Colors.black.withOpacity(0.32)],
-        ).createShader(rect),
-    );
+      final flashRadius =
+          math.max(4.0, openRadius * 0.72);
+
+      canvas.drawCircle(
+        center,
+        flashRadius,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              Colors.white.withOpacity(0.36 * flash),
+              const Color(0xFF8FE7FF).withOpacity(0.34 * flash),
+              Colors.transparent,
+            ],
+            stops: const [0.0, 0.36, 1.0],
+          ).createShader(
+            Rect.fromCircle(
+              center: center,
+              radius: flashRadius,
+            ),
+          ),
+      );
+    }
   }
 
-  Path _irisPolygon(Offset center, double radius, double rotation) {
+  Path _irisHole(
+    Offset center,
+    double radius,
+    double rotation,
+  ) {
+    const sides = 8;
     final path = Path();
-    for (int i = 0; i < _blades; i++) {
-      final angle = i * 2 * math.pi / _blades + rotation;
-      final x = center.dx + radius * math.cos(angle);
-      final y = center.dy + radius * math.sin(angle);
+
+    for (int i = 0; i < sides; i++) {
+      final angle =
+          i * 2 * math.pi / sides + rotation;
+
+      final point = Offset(
+        center.dx + radius * math.cos(angle),
+        center.dy + radius * math.sin(angle),
+      );
+
       if (i == 0) {
-        path.moveTo(x, y);
+        path.moveTo(point.dx, point.dy);
       } else {
-        path.lineTo(x, y);
+        path.lineTo(point.dx, point.dy);
       }
     }
+
     path.close();
     return path;
   }
 
   @override
-  bool shouldRepaint(covariant _ApertureIrisPainter old) =>
-      old.progress != progress;
+  bool shouldRepaint(
+    covariant _AperturePainter oldDelegate,
+  ) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.focused != focused;
+  }
 }
