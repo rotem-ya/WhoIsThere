@@ -51,7 +51,7 @@ class _VaultCoverState extends State<VaultCover>
     return Container(
       margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(
           color: (widget.isFocused && !widget.isRevealed)
               ? Colors.white.withOpacity(0.30)
@@ -60,7 +60,7 @@ class _VaultCoverState extends State<VaultCover>
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(3),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -134,6 +134,15 @@ class _VaultDoorPainter extends CustomPainter {
     for (var y = rect.top + 1.5; y < rect.bottom; y += 3.0) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), brushPaint);
     }
+
+    // Glossy top-edge specular catch
+    canvas.drawLine(
+      Offset(0, rect.top + 0.5),
+      Offset(size.width, rect.top + 0.5),
+      Paint()
+        ..color = Colors.white.withOpacity(0.10)
+        ..strokeWidth = 0.8,
+    );
   }
 
   @override

@@ -60,27 +60,21 @@ class TopHud extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 400),
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.fromLTRB(10, 7, 10, 7),
           decoration: BoxDecoration(
             color: const Color(0xFF07101F).withOpacity(0.82),
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: isEndgame
-                  ? const Color(0xFFFF9F43).withOpacity(0.55)
-                  : const Color(0xFFD4AF37).withOpacity(0.30),
-              width: isEndgame ? 1.5 : 1.0,
+                  ? const Color(0xFFFF9F43).withOpacity(0.32)
+                  : Colors.white.withOpacity(0.10),
+              width: 0.8,
             ),
             boxShadow: [
               BoxShadow(
                   color: Colors.black.withOpacity(0.35),
                   blurRadius: 16,
                   offset: const Offset(0, 7)),
-              if (isEndgame)
-                BoxShadow(
-                  color: const Color(0xFFFF6B35).withOpacity(0.20),
-                  blurRadius: 24,
-                  spreadRadius: 2,
-                ),
             ],
           ),
           child: Column(
@@ -122,7 +116,7 @@ class TopHud extends StatelessWidget {
               if (players.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 SizedBox(
-                  height: 28,
+                  height: 24,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: players.length,
@@ -255,8 +249,8 @@ class _TurnInfoState extends State<_TurnInfo> {
               : ('ממתין לגילוי האחרון', const Color(0xFFFF6B35));
         }
         return widget.isMyTurn
-            ? ('גלה קלף', const Color(0xFFD4AF37))
-            : ('${widget.name.isEmpty ? 'יריב' : widget.name} מגלה', const Color(0xFF87CEEB).withOpacity(0.85));
+            ? ('גלה קלף', Colors.white)
+            : ('${widget.name.isEmpty ? 'יריב' : widget.name} מגלה', const Color(0xFF6A9CC4));
       case TurnPhase.guessOpportunity:
         if (widget.isMyGuessOpportunity) {
           return ('האם אתה יודע?', const Color(0xFFFFE082));
@@ -294,10 +288,9 @@ class _PlayerChip extends StatelessWidget {
         duration: const Duration(milliseconds: 220),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)]),
+          color: const Color(0xFF1C3A56),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withOpacity(0.18)),
-          boxShadow: [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.28), blurRadius: 10)],
+          border: Border.all(color: Colors.white.withOpacity(0.28)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -305,11 +298,11 @@ class _PlayerChip extends StatelessWidget {
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 72),
               child: Text(player.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Color(0xFF07101F), fontSize: 12, fontWeight: FontWeight.w900)),
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
             ),
             const SizedBox(width: 4),
             Text('${player.score}',
-                style: TextStyle(color: const Color(0xFF07101F).withOpacity(0.82), fontSize: 11, fontWeight: FontWeight.w900)),
+                style: TextStyle(color: Colors.white.withOpacity(0.70), fontSize: 11, fontWeight: FontWeight.w900)),
           ],
         ),
       );

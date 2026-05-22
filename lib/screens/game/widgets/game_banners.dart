@@ -160,58 +160,48 @@ class _BotTypingBannerState extends State<BotTypingBanner>
 
     return AnimatedBuilder(
       animation: _borderOpacity,
-      builder: (context, child) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      builder: (_, __) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFF07101F).withOpacity(0.92),
-            borderRadius: BorderRadius.circular(14),
+            color: const Color(0xFF07101F).withOpacity(0.90),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: const Color(0xFF87CEEB).withOpacity(_borderOpacity.value),
-              width: 2.0,
+              color: Colors.white.withOpacity(0.11),
+              width: 0.8,
             ),
           ),
-          child: child,
+          child: Row(
+            children: [
+              Container(
+                width: 5,
+                height: 5,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF4A8AB5).withOpacity(_borderOpacity.value),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  isTyping
+                      ? '${widget.botName}: "${widget.typedSoFar}"'
+                      : '${widget.botName} חושב...',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textDirection: TextDirection.rtl,
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            isTyping ? '${widget.botName} מקליד...' : '${widget.botName} חושב...',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          if (isTyping)
-            Text(
-              '"${widget.typedSoFar}" |',
-              textAlign: TextAlign.center,
-              textDirection: TextDirection.rtl,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-              ),
-            )
-          else
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white70,
-              ),
-            ),
-        ],
       ),
     );
   }
