@@ -51,16 +51,16 @@ class _VaultCoverState extends State<VaultCover>
     return Container(
       margin: const EdgeInsets.all(1),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(1),
         border: Border.all(
           color: (widget.isFocused && !widget.isRevealed)
-              ? Colors.white.withOpacity(0.22)
-              : Colors.white.withOpacity(0.06),
-          width: 0.5,
+              ? Colors.white.withOpacity(0.14)
+              : Colors.white.withOpacity(0.04),
+          width: 0.4,
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(1),
+        borderRadius: BorderRadius.zero,
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -111,7 +111,7 @@ class _VaultDoorPainter extends CustomPainter {
   void _drawPanel(Canvas canvas, Size size, Rect rect) {
     final bounds = Offset.zero & size;
 
-    canvas.drawRect(rect, Paint()..color = const Color(0xFF1E2C3A));
+    canvas.drawRect(rect, Paint()..color = const Color(0xFF263848));
 
     canvas.drawRect(
       rect,
@@ -122,7 +122,7 @@ class _VaultDoorPainter extends CustomPainter {
           colors: [
             Colors.white.withOpacity(0.08),
             Colors.transparent,
-            Colors.black.withOpacity(0.08),
+            Colors.black.withOpacity(0.05),
           ],
           stops: const [0.0, 0.45, 1.0],
         ).createShader(bounds),
