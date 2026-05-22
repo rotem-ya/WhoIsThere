@@ -234,10 +234,10 @@ class _ActionButton extends StatelessWidget {
             gradient: isPrimary
                 ? const LinearGradient(
                     colors: [
-                      Color(0xFFEDCE78),
-                      Color(0xFFC49530),
-                      Color(0xFF9A7220),
-                      Color(0xFF7D5C14),
+                      Color(0xFFD0C090),
+                      Color(0xFFA89060),
+                      Color(0xFF806838),
+                      Color(0xFF604820),
                     ],
                     stops: [0.0, 0.38, 0.72, 1.0],
                     begin: Alignment.topCenter,
@@ -248,24 +248,29 @@ class _ActionButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isPrimary
-                  ? Colors.white.withOpacity(0.22)
-                  : Colors.white.withOpacity(isActive ? 0.14 : 0.08),
+                  ? Colors.white.withOpacity(0.32)
+                  : const Color(0xFF3A6080).withOpacity(isActive ? 0.40 : 0.18),
               width: 1.0,
             ),
             boxShadow: glow
                 ? [
                     BoxShadow(
-                      color: const Color(0xFFBF9030).withOpacity(0.38),
+                      color: const Color(0xFF906020).withOpacity(0.50),
                       blurRadius: 18,
                       offset: const Offset(0, 5),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.45),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
                     ),
                   ]
                 : isPrimary
                     ? [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.30),
+                          color: Colors.black.withOpacity(0.45),
                           blurRadius: 8,
-                          offset: const Offset(0, 4),
+                          offset: const Offset(0, 3),
                         ),
                       ]
                     : [],
@@ -277,7 +282,7 @@ class _ActionButton extends StatelessWidget {
                   top: 0,
                   left: 0,
                   right: 0,
-                  height: 12,
+                  height: 16,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       borderRadius: const BorderRadius.only(
@@ -288,7 +293,7 @@ class _ActionButton extends StatelessWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.white.withOpacity(0.13),
+                          Colors.white.withOpacity(0.24),
                           Colors.transparent,
                         ],
                       ),

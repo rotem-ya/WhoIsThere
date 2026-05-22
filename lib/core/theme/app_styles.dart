@@ -12,7 +12,7 @@ abstract class AppStyles {
   static const Color navyTop = AppColors.background;
 
   /// Background mid — dark vault mid
-  static const Color navyMid = Color(0xFF0A1A30);
+  static const Color navyMid = Color(0xFF0D2244);
 
   /// Background bottom — deep vault black-navy
   static const Color cyanBottom = AppColors.backgroundBottom;
@@ -35,8 +35,8 @@ abstract class AppStyles {
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [navyTop, navyMid, cyanBottom],
-    stops: [0.0, 0.55, 1.0],
+    colors: [navyTop, navyMid, Color(0xFF071540), Color(0xFF040A18)],
+    stops: [0.0, 0.40, 0.75, 1.0],
   );
 
   /// Banana action button gradient (top-highlight → mid-yellow → bottom-shadow).

@@ -27,7 +27,7 @@ class _VaultCoverState extends State<VaultCover>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 240),
+      duration: const Duration(milliseconds: 230),
     );
     _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic);
     if (widget.isRevealed) _ctrl.value = 1.0;
@@ -49,12 +49,11 @@ class _VaultCoverState extends State<VaultCover>
   @override
   Widget build(BuildContext context) {
     return Container(
-      // subtle focus ring only — no border radius, no margin
       decoration: (widget.isFocused && !widget.isRevealed)
           ? BoxDecoration(
               border: Border.all(
-                color: Colors.white.withOpacity(0.14),
-                width: 0.5,
+                color: Colors.white.withOpacity(0.18),
+                width: 0.6,
               ),
             )
           : null,
@@ -92,10 +91,9 @@ class _ApertureIrisPainter extends CustomPainter {
     final diagonal =
         math.sqrt(size.width * size.width + size.height * size.height);
 
-    // Primary eased progress for blade rotation
     final eased = Curves.easeInOutCubic.transform(progress.clamp(0.0, 1.0));
 
-    // Iris opening with slight mechanical overshoot at 82–100 %
+    // Iris opening — 1.8× faster blade rotation for clearly mechanical feel
     final double openFactor;
     if (progress <= 0.82) {
       openFactor = Curves.easeInOutCubic.transform(progress / 0.82);
@@ -103,18 +101,17 @@ class _ApertureIrisPainter extends CustomPainter {
       final t = (progress - 0.82) / 0.18;
       openFactor = 1.0 + math.sin(t * math.pi) * 0.045;
     }
-    final openRadius = openFactor * diagonal * 0.76;
+    // Expanded to 0.84 so iris visibly fills entire tile
+    final openRadius = openFactor * diagonal * 0.84;
+    final rotation = eased * math.pi / _blades * 1.8;
 
-    // Blades rotate 1.2× the base step as iris opens — mechanical momentum
-    final rotation = eased * math.pi / _blades * 1.2;
-
-    // ── Compositing layer: graphite blades + iris hole ─────────────────────
+    // ── Compositing layer ─────────────────────────────────────────────────
     canvas.saveLayer(rect, Paint());
 
-    // 1. Base graphite fill
-    canvas.drawRect(rect, Paint()..color = const Color(0xFF263848));
+    // 1. Glossy near-black DSLR body base
+    canvas.drawRect(rect, Paint()..color = const Color(0xFF0A1420));
 
-    // 2. Directional metallic sheen (single overhead light source)
+    // 2. Strong directional metallic sheen — overhead light on polished glass
     canvas.drawRect(
       rect,
       Paint()
@@ -122,15 +119,15 @@ class _ApertureIrisPainter extends CustomPainter {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.white.withOpacity(0.09),
+            Colors.white.withOpacity(0.22),
             Colors.transparent,
-            Colors.black.withOpacity(0.10),
+            Colors.black.withOpacity(0.28),
           ],
-          stops: const [0.0, 0.45, 1.0],
+          stops: const [0.0, 0.42, 1.0],
         ).createShader(rect),
     );
 
-    // 3. 8 aperture blade segments — alternating tones
+    // 3. 8 high-contrast aperture blades: dark vs. lighter gunmetal
     for (int i = 0; i < _blades; i++) {
       final a0 = i * 2 * math.pi / _blades + rotation;
       final a1 = (i + 1) * 2 * math.pi / _blades + rotation;
@@ -156,10 +153,10 @@ class _ApertureIrisPainter extends CustomPainter {
         bladePath,
         Paint()
           ..color =
-              i.isEven ? const Color(0xFF2E4258) : const Color(0xFF1E3040),
+              i.isEven ? const Color(0xFF1A2D42) : const Color(0xFF060E18),
       );
 
-      // Hairline radial divider at each blade edge
+      // Clearly visible radial dividers — white hairlines at full opacity
       canvas.drawLine(
         center,
         Offset(
@@ -167,27 +164,37 @@ class _ApertureIrisPainter extends CustomPainter {
           center.dy + diagonal * math.sin(a0),
         ),
         Paint()
-          ..color = Colors.white.withOpacity(0.05)
-          ..strokeWidth = 0.4,
+          ..color = Colors.white.withOpacity(0.18)
+          ..strokeWidth = 1.0,
       );
     }
 
-    // 4. Center pivot pin (aperture hub)
-    canvas.drawCircle(center, 3.0, Paint()..color = const Color(0xFF141E28));
+    // 4. Center pivot hub — 3-ring metallic stack (visible anchor point)
+    canvas.drawCircle(center, 7.0, Paint()..color = const Color(0xFF0A1420));
     canvas.drawCircle(
       center,
-      3.0,
+      7.0,
       Paint()
-        ..color = Colors.white.withOpacity(0.14)
+        ..color = Colors.white.withOpacity(0.22)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.6,
+        ..strokeWidth = 1.2,
+    );
+    canvas.drawCircle(center, 4.5, Paint()..color = const Color(0xFF141E2A));
+    canvas.drawCircle(center, 2.5, Paint()..color = const Color(0xFF0A1018));
+    canvas.drawCircle(
+      center,
+      2.5,
+      Paint()
+        ..color = Colors.white.withOpacity(0.45)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8,
     );
 
-    // 5. Metallic specular sweep — diagonal highlight band during opening
+    // 5. Metallic specular sweep across blades during opening
     if (progress > 0.08 && progress < 0.65) {
       final sweepT = ((progress - 0.08) / 0.57).clamp(0.0, 1.0);
       final sweepAlpha =
-          (sweepT < 0.5 ? sweepT * 2 : (1.0 - sweepT) * 2) * 0.08;
+          (sweepT < 0.5 ? sweepT * 2 : (1.0 - sweepT) * 2) * 0.12;
       if (sweepAlpha > 0.005) {
         canvas.drawRect(
           rect,
@@ -210,7 +217,7 @@ class _ApertureIrisPainter extends CustomPainter {
       }
     }
 
-    // 6. Punch growing iris hole — image shows through via BlendMode.clear
+    // 6. Punch iris opening via BlendMode.clear
     if (openRadius > 0.5) {
       canvas.drawPath(
         _irisPolygon(center, openRadius, rotation),
@@ -219,33 +226,33 @@ class _ApertureIrisPainter extends CustomPainter {
     }
 
     canvas.restore();
-    // ── End compositing layer ───────────────────────────────────────────────
+    // ── End compositing layer ─────────────────────────────────────────────
 
-    // 7. Metallic blade-tip highlights at the iris edge (visible during open)
+    // 7. Bright metallic blade-tip ring at iris edge
     if (openRadius > 1.5 && progress < 0.97) {
       canvas.drawPath(
         _irisPolygon(center, openRadius, rotation),
         Paint()
-          ..color = Colors.white.withOpacity(0.38)
-          ..strokeWidth = 0.7
+          ..color = Colors.white.withOpacity(0.45)
+          ..strokeWidth = 0.9
           ..style = PaintingStyle.stroke,
       );
     }
 
-    // 8. Center exposure glow — halo around the iris opening, peaks ~50 %
+    // 8. Center lens exposure glow — visible flash as image is "exposed"
     if (progress > 0.15 && progress < 0.95 && openRadius > 2) {
       final glowProg = ((progress - 0.15) / 0.80).clamp(0.0, 1.0);
       final glowAlpha =
-          (glowProg < 0.5 ? glowProg * 2 : (1.0 - glowProg) * 2) * 0.22;
+          (glowProg < 0.5 ? glowProg * 2 : (1.0 - glowProg) * 2) * 0.45;
       if (glowAlpha > 0.01) {
-        final glowRadius = openRadius * 0.70;
+        final glowRadius = openRadius * 0.72;
         canvas.drawCircle(
           center,
           glowRadius,
           Paint()
             ..shader = RadialGradient(
               colors: [
-                const Color(0xFFB8D0E8).withOpacity(glowAlpha),
+                const Color(0xFFD0E8F8).withOpacity(glowAlpha),
                 Colors.transparent,
               ],
             ).createShader(
@@ -254,14 +261,14 @@ class _ApertureIrisPainter extends CustomPainter {
       }
     }
 
-    // 9. Subtle outer vignette for panel depth
+    // 9. Outer vignette — stronger depth
     canvas.drawRect(
       rect,
       Paint()
         ..shader = RadialGradient(
           center: Alignment.center,
-          radius: 0.78,
-          colors: [Colors.transparent, Colors.black.withOpacity(0.18)],
+          radius: 0.72,
+          colors: [Colors.transparent, Colors.black.withOpacity(0.32)],
         ).createShader(rect),
     );
   }

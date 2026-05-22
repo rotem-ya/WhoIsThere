@@ -62,19 +62,20 @@ class TopHud extends StatelessWidget {
           duration: const Duration(milliseconds: 400),
           padding: const EdgeInsets.fromLTRB(10, 7, 10, 7),
           decoration: BoxDecoration(
-            color: const Color(0xFF07101F).withOpacity(0.82),
-            borderRadius: BorderRadius.circular(22),
+            color: const Color(0xFF0A1E38).withOpacity(0.92),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isEndgame
-                  ? const Color(0xFFFF9F43).withOpacity(0.18)
-                  : Colors.white.withOpacity(0.06),
-              width: 0.5,
+                  ? const Color(0xFFFF9F43).withOpacity(0.45)
+                  : const Color(0xFF2A5878).withOpacity(0.50),
+              width: 0.8,
             ),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.22),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4)),
+                color: const Color(0xFF0A2848).withOpacity(0.60),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
+              ),
             ],
           ),
           child: Column(
@@ -149,11 +150,18 @@ class _BackButton extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: const Color(0xFF1A3A5C).withOpacity(0.55),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.07)),
+          border: Border.all(color: const Color(0xFF3A6080).withOpacity(0.60), width: 1.0),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0A2040).withOpacity(0.40),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
-        child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 17),
+        child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 17),
       ),
     );
   }
@@ -290,7 +298,7 @@ class _PlayerChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFF162E44),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withOpacity(0.14)),
+          border: Border.all(color: const Color(0xFF3A7090).withOpacity(0.55), width: 1.2),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -314,9 +322,9 @@ class _PlayerChip extends StatelessWidget {
       duration: const Duration(milliseconds: 220),
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: const Color(0xFF0D1E30).withOpacity(0.60),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: const Color(0xFF2A5070).withOpacity(0.35), width: 0.8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -326,7 +334,7 @@ class _PlayerChip extends StatelessWidget {
             height: 16,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.14),
+              color: const Color(0xFF2A5878).withOpacity(0.55),
             ),
             child: Center(
               child: Text(initial,
