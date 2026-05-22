@@ -16,6 +16,8 @@ import '../../widgets/common/ambient_background.dart';
 import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
+// TEMP DEBUG — vault visual prototype entry. Remove before production.
+import '../debug/cartographic_vault_preview_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -45,6 +47,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
     QaLoggerService.instance.log('HOME', 'HOME_SCREEN_OPENED');
+    // TEMP DEBUG — vault visual prototype is visible on home screen.
+    QaLoggerService.instance.log('VISUAL_PREVIEW', 'VISUAL_PREVIEW_BUTTON_VISIBLE');
   }
 
   @override
@@ -97,6 +101,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         });
       }
     }
+  }
+
+  // TEMP DEBUG — remove when vault visual prototype is no longer needed.
+  void _openVaultPreview() {
+    QaLoggerService.instance.log('VISUAL_PREVIEW', 'VISUAL_PREVIEW_OPENED');
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const CartographicVaultPreviewScreen(),
+      ),
+    ).then((_) {
+      QaLoggerService.instance.log('VISUAL_PREVIEW', 'VISUAL_PREVIEW_BACK');
+    });
   }
 
   void _showJoinDialog() {
@@ -342,6 +359,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   onTap: _isCreating ? null : _showJoinDialog,
                                 ),
                                 delayMs: 590, durationMs: 240,
+                              ),
+                              // TEMP DEBUG — vault visual prototype button.
+                              // Remove this block before merging to production.
+                              const SizedBox(height: 16),
+                              _step(
+                                _VaultPreviewDebugButton(onTap: _openVaultPreview),
+                                delayMs: 650, durationMs: 220,
                               ),
                               SizedBox(height: verySmall ? 14 : compact ? 20 : 30),
                             ],
@@ -990,6 +1014,52 @@ class _JoinCodeDialogState extends ConsumerState<_JoinCodeDialog> {
                     ),
                   ),
                 ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── TEMP DEBUG: Vault Preview entry button ────────────────────────────────────
+// Remove this class before merging vault visuals to production.
+
+class _VaultPreviewDebugButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _VaultPreviewDebugButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: PressableScale(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF050A14).withOpacity(0.50),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: const Color(0xFF00F2FF).withOpacity(0.35),
+              width: 1.2,
+            ),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.map_outlined, color: Color(0xFF00F2FF), size: 17),
+              SizedBox(width: 8),
+              Text(
+                'תצוגת Vault',
+                style: TextStyle(
+                  color: Color(0xFF00F2FF),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ],
           ),
