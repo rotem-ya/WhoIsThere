@@ -49,18 +49,18 @@ class _VaultCoverState extends State<VaultCover>
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(2),
+      margin: const EdgeInsets.all(1),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(2),
         border: Border.all(
           color: (widget.isFocused && !widget.isRevealed)
-              ? Colors.white.withOpacity(0.30)
-              : Colors.white.withOpacity(0.09),
-          width: 0.8,
+              ? Colors.white.withOpacity(0.22)
+              : Colors.white.withOpacity(0.06),
+          width: 0.5,
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(3),
+        borderRadius: BorderRadius.circular(1),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -111,7 +111,7 @@ class _VaultDoorPainter extends CustomPainter {
   void _drawPanel(Canvas canvas, Size size, Rect rect) {
     final bounds = Offset.zero & size;
 
-    canvas.drawRect(rect, Paint()..color = const Color(0xFF071221));
+    canvas.drawRect(rect, Paint()..color = const Color(0xFF1E2C3A));
 
     canvas.drawRect(
       rect,
@@ -120,16 +120,16 @@ class _VaultDoorPainter extends CustomPainter {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.white.withOpacity(0.05),
+            Colors.white.withOpacity(0.08),
             Colors.transparent,
-            Colors.black.withOpacity(0.18),
+            Colors.black.withOpacity(0.08),
           ],
           stops: const [0.0, 0.45, 1.0],
         ).createShader(bounds),
     );
 
     final brushPaint = Paint()
-      ..color = Colors.white.withOpacity(0.015)
+      ..color = Colors.white.withOpacity(0.025)
       ..strokeWidth = 0.55;
     for (var y = rect.top + 1.5; y < rect.bottom; y += 3.0) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), brushPaint);
