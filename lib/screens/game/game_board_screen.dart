@@ -204,6 +204,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   // Snapshot state at offline-detection time — recovery requires advance beyond these
   int? _offlineSinceCycleId;
   TurnPhase? _offlineSinceTurnPhase;
+  int? _lastGuessOppOfflineSuppressDeadline;
   // Opponent-stuck status — shown when their turn expired but they haven't advanced
   bool _isOpponentStuck = false;
   String? _opponentStuckOwnerId;
@@ -498,6 +499,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             _dedupSkipCount_guessOpp = 0;
           }
         } else {
+          if (_isOffline) {
+            if (_lastGuessOppOfflineSuppressDeadline != room.guessOpportunityDeadlineMs) {
+              _lastGuessOppOfflineSuppressDeadline = room.guessOpportunityDeadlineMs;
+              QaLoggerService.instance.log('TURN',
+                  'EXPIRY_RETRY_SUPPRESSED reason=local_offline phase=guessOpportunity deadline=${room.guessOpportunityDeadlineMs}');
+            }
+            return;
+          }
           final lastAttempt = _guessOppTimeoutLastAttemptMs;
           if (lastAttempt != null && now - lastAttempt < 2000) {
             // within cooldown — wait for retry window
