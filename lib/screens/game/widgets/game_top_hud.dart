@@ -66,15 +66,15 @@ class TopHud extends StatelessWidget {
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: isEndgame
-                  ? const Color(0xFFFF9F43).withOpacity(0.32)
-                  : Colors.white.withOpacity(0.10),
-              width: 0.8,
+                  ? const Color(0xFFFF9F43).withOpacity(0.18)
+                  : Colors.white.withOpacity(0.06),
+              width: 0.5,
             ),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.35),
-                  blurRadius: 16,
-                  offset: const Offset(0, 7)),
+                  color: Colors.black.withOpacity(0.22),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4)),
             ],
           ),
           child: Column(
@@ -149,9 +149,9 @@ class _BackButton extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.06),
+          color: Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.12)),
+          border: Border.all(color: Colors.white.withOpacity(0.07)),
         ),
         child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 17),
       ),
@@ -288,9 +288,9 @@ class _PlayerChip extends StatelessWidget {
         duration: const Duration(milliseconds: 220),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: const Color(0xFF1C3A56),
+          color: const Color(0xFF162E44),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withOpacity(0.28)),
+          border: Border.all(color: Colors.white.withOpacity(0.14)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -314,9 +314,9 @@ class _PlayerChip extends StatelessWidget {
       duration: const Duration(milliseconds: 220),
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.055),
+        color: Colors.white.withOpacity(0.04),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.10)),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

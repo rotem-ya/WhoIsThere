@@ -12,7 +12,7 @@ abstract class AppStyles {
   static const Color navyTop = AppColors.background;
 
   /// Background mid — dark vault mid
-  static const Color navyMid = Color(0xFF061426);
+  static const Color navyMid = Color(0xFF0A1A30);
 
   /// Background bottom — deep vault black-navy
   static const Color cyanBottom = AppColors.backgroundBottom;

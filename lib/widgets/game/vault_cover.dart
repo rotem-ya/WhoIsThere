@@ -27,7 +27,7 @@ class _VaultCoverState extends State<VaultCover>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 210),
+      duration: const Duration(milliseconds: 240),
     );
     _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic);
     if (widget.isRevealed) _ctrl.value = 1.0;
@@ -49,18 +49,16 @@ class _VaultCoverState extends State<VaultCover>
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(1),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(
-          color: (widget.isFocused && !widget.isRevealed)
-              ? Colors.white.withOpacity(0.18)
-              : Colors.white.withOpacity(0.05),
-          width: 0.5,
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(2),
+      // subtle focus ring only — no border radius, no margin
+      decoration: (widget.isFocused && !widget.isRevealed)
+          ? BoxDecoration(
+              border: Border.all(
+                color: Colors.white.withOpacity(0.14),
+                width: 0.5,
+              ),
+            )
+          : null,
+      child: ClipRect(
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -94,16 +92,23 @@ class _ApertureIrisPainter extends CustomPainter {
     final diagonal =
         math.sqrt(size.width * size.width + size.height * size.height);
 
-    // Eased progress — mechanical precision feel
+    // Primary eased progress for blade rotation
     final eased = Curves.easeInOutCubic.transform(progress.clamp(0.0, 1.0));
 
-    // Iris opening grows from center until it clears the entire tile
-    final openRadius = eased * diagonal * 0.76;
+    // Iris opening with slight mechanical overshoot at 82–100 %
+    final double openFactor;
+    if (progress <= 0.82) {
+      openFactor = Curves.easeInOutCubic.transform(progress / 0.82);
+    } else {
+      final t = (progress - 0.82) / 0.18;
+      openFactor = 1.0 + math.sin(t * math.pi) * 0.045;
+    }
+    final openRadius = openFactor * diagonal * 0.76;
 
-    // Blades rotate one blade-step as iris opens
-    final rotation = eased * math.pi / _blades;
+    // Blades rotate 1.2× the base step as iris opens — mechanical momentum
+    final rotation = eased * math.pi / _blades * 1.2;
 
-    // ── Compositing layer: graphite blades + iris hole ─────────────
+    // ── Compositing layer: graphite blades + iris hole ─────────────────────
     canvas.saveLayer(rect, Paint());
 
     // 1. Base graphite fill
@@ -125,7 +130,7 @@ class _ApertureIrisPainter extends CustomPainter {
         ).createShader(rect),
     );
 
-    // 3. 8 aperture blade segments — alternating tones for visible iris identity
+    // 3. 8 aperture blade segments — alternating tones
     for (int i = 0; i < _blades; i++) {
       final a0 = i * 2 * math.pi / _blades + rotation;
       final a1 = (i + 1) * 2 * math.pi / _blades + rotation;
@@ -147,7 +152,6 @@ class _ApertureIrisPainter extends CustomPainter {
         )
         ..close();
 
-      // Even blades: lighter gunmetal. Odd blades: deeper graphite.
       canvas.drawPath(
         bladePath,
         Paint()
@@ -179,7 +183,34 @@ class _ApertureIrisPainter extends CustomPainter {
         ..strokeWidth = 0.6,
     );
 
-    // 5. Punch growing iris hole — image shows through via BlendMode.clear
+    // 5. Metallic specular sweep — diagonal highlight band during opening
+    if (progress > 0.08 && progress < 0.65) {
+      final sweepT = ((progress - 0.08) / 0.57).clamp(0.0, 1.0);
+      final sweepAlpha =
+          (sweepT < 0.5 ? sweepT * 2 : (1.0 - sweepT) * 2) * 0.08;
+      if (sweepAlpha > 0.005) {
+        canvas.drawRect(
+          rect,
+          Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.transparent,
+                Colors.white.withOpacity(sweepAlpha),
+                Colors.transparent,
+              ],
+              stops: [
+                (sweepT - 0.20).clamp(0.0, 1.0),
+                sweepT.clamp(0.0, 1.0),
+                (sweepT + 0.20).clamp(0.0, 1.0),
+              ],
+            ).createShader(rect),
+        );
+      }
+    }
+
+    // 6. Punch growing iris hole — image shows through via BlendMode.clear
     if (openRadius > 0.5) {
       canvas.drawPath(
         _irisPolygon(center, openRadius, rotation),
@@ -188,9 +219,9 @@ class _ApertureIrisPainter extends CustomPainter {
     }
 
     canvas.restore();
-    // ── End compositing layer ───────────────────────────────────────
+    // ── End compositing layer ───────────────────────────────────────────────
 
-    // 6. Metallic blade-tip highlights at the iris edge (visible during open)
+    // 7. Metallic blade-tip highlights at the iris edge (visible during open)
     if (openRadius > 1.5 && progress < 0.97) {
       canvas.drawPath(
         _irisPolygon(center, openRadius, rotation),
@@ -201,7 +232,29 @@ class _ApertureIrisPainter extends CustomPainter {
       );
     }
 
-    // 7. Subtle outer vignette for panel depth
+    // 8. Center exposure glow — halo around the iris opening, peaks ~50 %
+    if (progress > 0.15 && progress < 0.95 && openRadius > 2) {
+      final glowProg = ((progress - 0.15) / 0.80).clamp(0.0, 1.0);
+      final glowAlpha =
+          (glowProg < 0.5 ? glowProg * 2 : (1.0 - glowProg) * 2) * 0.22;
+      if (glowAlpha > 0.01) {
+        final glowRadius = openRadius * 0.70;
+        canvas.drawCircle(
+          center,
+          glowRadius,
+          Paint()
+            ..shader = RadialGradient(
+              colors: [
+                const Color(0xFFB8D0E8).withOpacity(glowAlpha),
+                Colors.transparent,
+              ],
+            ).createShader(
+                Rect.fromCircle(center: center, radius: glowRadius)),
+        );
+      }
+    }
+
+    // 9. Subtle outer vignette for panel depth
     canvas.drawRect(
       rect,
       Paint()
