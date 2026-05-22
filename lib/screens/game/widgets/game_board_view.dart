@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../utils/game_constants.dart';
-import '../../../widgets/game/aperture_tile.dart';
+import '../../../widgets/game/vault_cover.dart';
 
 const Duration _kApertureDuration = Duration(milliseconds: 600);
 
@@ -181,17 +181,8 @@ class _TileState extends State<_Tile> {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: widget.isRevealed
-                      ? [
-                          BoxShadow(
-                            color: kCyan.withOpacity(0.22),
-                            blurRadius: 14,
-                            spreadRadius: 1,
-                          ),
-                        ]
-                      : null,
                 ),
-                child: ApertureTile(
+                child: VaultCover(
                   isRevealed: widget.isRevealed,
                   isFocused: _canTap,
                   child: _ImageSlice(
