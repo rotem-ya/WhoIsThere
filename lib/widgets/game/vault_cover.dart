@@ -27,7 +27,7 @@ class _VaultCoverState extends State<VaultCover>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 190),
+      duration: const Duration(milliseconds: 210),
     );
     _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic);
     if (widget.isRevealed) _ctrl.value = 1.0;
@@ -51,16 +51,16 @@ class _VaultCoverState extends State<VaultCover>
     return Container(
       margin: const EdgeInsets.all(1),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(1),
+        borderRadius: BorderRadius.circular(3),
         border: Border.all(
           color: (widget.isFocused && !widget.isRevealed)
-              ? Colors.white.withOpacity(0.14)
-              : Colors.white.withOpacity(0.04),
-          width: 0.4,
+              ? Colors.white.withOpacity(0.18)
+              : Colors.white.withOpacity(0.05),
+          width: 0.5,
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.zero,
+        borderRadius: BorderRadius.circular(2),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -70,7 +70,7 @@ class _VaultCoverState extends State<VaultCover>
               builder: (_, __) {
                 if (_anim.value >= 1.0) return const SizedBox.shrink();
                 return CustomPaint(
-                  painter: _VaultDoorPainter(progress: _anim.value),
+                  painter: _ApertureIrisPainter(progress: _anim.value),
                 );
               },
             ),
@@ -81,38 +81,35 @@ class _VaultCoverState extends State<VaultCover>
   }
 }
 
-class _VaultDoorPainter extends CustomPainter {
+class _ApertureIrisPainter extends CustomPainter {
   final double progress;
+  static const int _blades = 8;
 
-  const _VaultDoorPainter({required this.progress});
+  const _ApertureIrisPainter({required this.progress});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final half = size.height / 2;
-    final retract = progress * half;
+    final center = Offset(size.width / 2, size.height / 2);
+    final rect = Offset.zero & size;
+    final diagonal =
+        math.sqrt(size.width * size.width + size.height * size.height);
 
-    // Top panel slides up, bottom panel slides down
-    _drawPanel(canvas, size, Rect.fromLTWH(0, -retract, size.width, half));
-    _drawPanel(canvas, size, Rect.fromLTWH(0, half + retract, size.width, half));
+    // Eased progress — mechanical precision feel
+    final eased = Curves.easeInOutCubic.transform(progress.clamp(0.0, 1.0));
 
-    // Hairline gap seam — visible mid-animation, fades at start and end
-    if (retract > 0.5) {
-      final gapOpacity = math.sin(progress * math.pi) * 0.14;
-      canvas.drawLine(
-        Offset(0, half),
-        Offset(size.width, half),
-        Paint()
-          ..color = Colors.white.withOpacity(gapOpacity.clamp(0.0, 0.14))
-          ..strokeWidth = 0.5,
-      );
-    }
-  }
+    // Iris opening grows from center until it clears the entire tile
+    final openRadius = eased * diagonal * 0.76;
 
-  void _drawPanel(Canvas canvas, Size size, Rect rect) {
-    final bounds = Offset.zero & size;
+    // Blades rotate one blade-step as iris opens
+    final rotation = eased * math.pi / _blades;
 
+    // ── Compositing layer: graphite blades + iris hole ─────────────
+    canvas.saveLayer(rect, Paint());
+
+    // 1. Base graphite fill
     canvas.drawRect(rect, Paint()..color = const Color(0xFF263848));
 
+    // 2. Directional metallic sheen (single overhead light source)
     canvas.drawRect(
       rect,
       Paint()
@@ -120,32 +117,119 @@ class _VaultDoorPainter extends CustomPainter {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.white.withOpacity(0.08),
+            Colors.white.withOpacity(0.09),
             Colors.transparent,
-            Colors.black.withOpacity(0.05),
+            Colors.black.withOpacity(0.10),
           ],
           stops: const [0.0, 0.45, 1.0],
-        ).createShader(bounds),
+        ).createShader(rect),
     );
 
-    final brushPaint = Paint()
-      ..color = Colors.white.withOpacity(0.025)
-      ..strokeWidth = 0.55;
-    for (var y = rect.top + 1.5; y < rect.bottom; y += 3.0) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), brushPaint);
+    // 3. 8 aperture blade segments — alternating tones for visible iris identity
+    for (int i = 0; i < _blades; i++) {
+      final a0 = i * 2 * math.pi / _blades + rotation;
+      final a1 = (i + 1) * 2 * math.pi / _blades + rotation;
+      final aMid = (a0 + a1) / 2;
+
+      final bladePath = Path()
+        ..moveTo(center.dx, center.dy)
+        ..lineTo(
+          center.dx + diagonal * math.cos(a0),
+          center.dy + diagonal * math.sin(a0),
+        )
+        ..lineTo(
+          center.dx + diagonal * math.cos(aMid),
+          center.dy + diagonal * math.sin(aMid),
+        )
+        ..lineTo(
+          center.dx + diagonal * math.cos(a1),
+          center.dy + diagonal * math.sin(a1),
+        )
+        ..close();
+
+      // Even blades: lighter gunmetal. Odd blades: deeper graphite.
+      canvas.drawPath(
+        bladePath,
+        Paint()
+          ..color =
+              i.isEven ? const Color(0xFF2E4258) : const Color(0xFF1E3040),
+      );
+
+      // Hairline radial divider at each blade edge
+      canvas.drawLine(
+        center,
+        Offset(
+          center.dx + diagonal * math.cos(a0),
+          center.dy + diagonal * math.sin(a0),
+        ),
+        Paint()
+          ..color = Colors.white.withOpacity(0.05)
+          ..strokeWidth = 0.4,
+      );
     }
 
-    // Glossy top-edge specular catch
-    canvas.drawLine(
-      Offset(0, rect.top + 0.5),
-      Offset(size.width, rect.top + 0.5),
+    // 4. Center pivot pin (aperture hub)
+    canvas.drawCircle(center, 3.0, Paint()..color = const Color(0xFF141E28));
+    canvas.drawCircle(
+      center,
+      3.0,
       Paint()
-        ..color = Colors.white.withOpacity(0.10)
-        ..strokeWidth = 0.8,
+        ..color = Colors.white.withOpacity(0.14)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.6,
+    );
+
+    // 5. Punch growing iris hole — image shows through via BlendMode.clear
+    if (openRadius > 0.5) {
+      canvas.drawPath(
+        _irisPolygon(center, openRadius, rotation),
+        Paint()..blendMode = BlendMode.clear,
+      );
+    }
+
+    canvas.restore();
+    // ── End compositing layer ───────────────────────────────────────
+
+    // 6. Metallic blade-tip highlights at the iris edge (visible during open)
+    if (openRadius > 1.5 && progress < 0.97) {
+      canvas.drawPath(
+        _irisPolygon(center, openRadius, rotation),
+        Paint()
+          ..color = Colors.white.withOpacity(0.38)
+          ..strokeWidth = 0.7
+          ..style = PaintingStyle.stroke,
+      );
+    }
+
+    // 7. Subtle outer vignette for panel depth
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = RadialGradient(
+          center: Alignment.center,
+          radius: 0.78,
+          colors: [Colors.transparent, Colors.black.withOpacity(0.18)],
+        ).createShader(rect),
     );
   }
 
+  Path _irisPolygon(Offset center, double radius, double rotation) {
+    final path = Path();
+    for (int i = 0; i < _blades; i++) {
+      final angle = i * 2 * math.pi / _blades + rotation;
+      final x = center.dx + radius * math.cos(angle);
+      final y = center.dy + radius * math.sin(angle);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    path.close();
+    return path;
+  }
+
   @override
-  bool shouldRepaint(covariant _VaultDoorPainter old) =>
+  bool shouldRepaint(covariant _ApertureIrisPainter old) =>
       old.progress != progress;
 }
