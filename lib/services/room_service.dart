@@ -459,7 +459,6 @@ class RoomService {
 
       // Compute reveal outcome
       final newHidden = room.availablePieceIndices.where((i) => i != pieceIndex).toList();
-      final newScore = player.score + difficulty.placePiecePoints;
       final shouldGrantLetterCard =
           player.letterCards == 0 &&
           !room.letterCardGrantedPlayerIds.contains(userId) &&
@@ -469,8 +468,8 @@ class RoomService {
       if (newHidden.isEmpty) {
         final finishUpdates = <String, dynamic>{
           'placedPieces.${pieceIndex.toString()}': userId,
-          'availablePieceIndices': newHidden,
-          'players.$userId.score': newScore,
+          'availablePieceIndices': FieldValue.arrayRemove([pieceIndex]),
+          'players.$userId.score': FieldValue.increment(difficulty.placePiecePoints),
           'phase': GamePhase.finished.name,
           'turnPhase': TurnPhase.roundOver.name,
           'guessOpportunityPlayerId': null,
@@ -519,8 +518,8 @@ class RoomService {
 
       final updates = <String, dynamic>{
         'placedPieces.${pieceIndex.toString()}': userId,
-        'availablePieceIndices': newHidden,
-        'players.$userId.score': newScore,
+        'availablePieceIndices': FieldValue.arrayRemove([pieceIndex]),
+        'players.$userId.score': FieldValue.increment(difficulty.placePiecePoints),
         'turnPhase': TurnPhase.guessOpportunity.name,
         'guessOpportunityPlayerId': guessOpportunityPlayerId,
         'guessOpportunityDeadlineMs': now + guessOppMs,
@@ -572,7 +571,7 @@ class RoomService {
       QaLoggerService.instance.log('TURN',
           'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / skipTotalTiles).toStringAsFixed(2)} durationMs=$skipRevealMs');
       tx.update(_rooms.doc(roomId), {
-        'currentTurnIndex': room.currentTurnIndex + 1,
+        'currentTurnIndex': FieldValue.increment(1),
         'turnPhase': TurnPhase.revealTurn.name,
         'revealDeadlineMs': now + skipRevealMs,
         'guessOpportunityPlayerId': null,
@@ -1025,7 +1024,6 @@ class RoomService {
 
       final currentScore = room.players[userId]?.score ?? 0;
       final newScore = currentScore - difficulty.wrongGuessPenalty;
-      final nextTurnIndex = room.currentTurnIndex + 1;
       final currentWrongCount = room.wrongGuessCounts[userId] ?? 0;
 
       final _wgTotalTiles = room.gridSize * room.gridSize;
@@ -1034,7 +1032,7 @@ class RoomService {
           'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / _wgTotalTiles).toStringAsFixed(2)} durationMs=$_wgRevealMs');
 
       final updates = <String, dynamic>{
-        'currentTurnIndex': nextTurnIndex,
+        'currentTurnIndex': FieldValue.increment(1),
         'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
         'guessCount': FieldValue.increment(1),
         'turnPhase': TurnPhase.revealTurn.name,
