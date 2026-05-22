@@ -1,4 +1,4 @@
-// TEMP DEBUG — continuous-image board visual prototype v5 (aperture iris).
+// TEMP DEBUG — continuous-image board visual prototype v6 (overlapping shutter blades).
 // Remove before merging vault visuals to production.
 // Does NOT touch GameBoardScreen, game_board_view.dart, ApertureTile, or any gameplay code.
 
@@ -10,41 +10,14 @@ const Set<int> _kInitialRevealed = {0, 1, 5, 6, 7, 10, 12};
 const int _kCols = 5;
 const int _kRows = 5;
 const double _kSeam = 1.5;
-const Duration _kRevealDuration = Duration(milliseconds: 210);
+const Duration _kRevealDuration = Duration(milliseconds: 220);
 
-// ── Iris geometry ─────────────────────────────────────────────────────────────
-// 6-blade hexagonal aperture that grows AND rotates as it opens,
-// matching the mechanics of a real camera iris diaphragm.
-const int _kBlades = 6;
-// Circumradius multiple at progress=1 — must exceed half-diagonal (√2/2 ≈ 0.707).
-// At 0.84 the blade tips clear all four cell corners. ✓
-const double _kMaxR = 0.84;
-// Total twist over the full animation: one blade pitch = 2π/N.
-// Blades "unwind" as they retract, matching physical aperture rotation.
-const double _kTwist = math.pi / _kBlades; // π/6 = 30°
-
-// Builds the 6-gon iris aperture polygon.
-// progress 0.0 → point at centre (fully closed)
-// progress 1.0 → hexagon whose inscribed circle covers the cell square
-Path _irisPath(Offset center, double cellSize, double progress) {
-  final r = cellSize * _kMaxR * progress;
-  // Twist decreases as iris opens — blades rotate outward as they retract.
-  final twist = _kTwist * (1.0 - progress);
-
-  final path = Path();
-  for (var i = 0; i < _kBlades; i++) {
-    final angle = 2 * math.pi * i / _kBlades + twist;
-    final pt = Offset(
-      center.dx + r * math.cos(angle),
-      center.dy + r * math.sin(angle),
-    );
-    if (i == 0) path.moveTo(pt.dx, pt.dy);
-    else path.lineTo(pt.dx, pt.dy);
-  }
-  path.close();
-  return path;
-}
-
+// ── Blade geometry ────────────────────────────────────────────────────────────
+const int    _kBlades   = 7;
+const double _kPivotR   = 0.40;           // pivot ring radius / cellSize
+const double _kBladeLen = 0.88;           // blade length / cellSize
+const double _kBladeW   = 0.36;           // blade width / cellSize
+const double _kSweep    = math.pi * 0.82; // total sweep from closed→open (~148°)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class CartographicVaultPreviewScreen extends StatefulWidget {
@@ -58,11 +31,11 @@ class CartographicVaultPreviewScreen extends StatefulWidget {
 class _CartographicVaultPreviewScreenState
     extends State<CartographicVaultPreviewScreen>
     with TickerProviderStateMixin {
-  // Cells that are fully open (animation complete).
+  // Cells that are open (fully revealed or currently opening/closing).
   final Set<int> _revealed = Set.from(_kInitialRevealed);
-  // Per-cell animation controllers (discarded after animation completes).
+  // Per-cell animation controllers, discarded once complete.
   final Map<int, AnimationController> _controllers = {};
-  // Current iris-open progress per animating cell: 0.0 = closed, 1.0 = open.
+  // Blade-open progress: 0.0 = blades fully covering cell, 1.0 = blades swept away.
   final Map<int, double> _progress = {};
 
   @override
@@ -72,33 +45,26 @@ class _CartographicVaultPreviewScreenState
   }
 
   void _tap(int idx) {
-    if (_controllers.containsKey(idx)) return; // ignore while animating
-
+    if (_controllers.containsKey(idx)) return;
     final opening = !_revealed.contains(idx);
-
     final ctrl = AnimationController(vsync: this, duration: _kRevealDuration);
-    // easeOut = aperture snaps open quickly then settles.
-    // easeIn  = aperture releases slowly then snaps shut.
     final curved = CurvedAnimation(
       parent: ctrl,
       curve: opening ? Curves.easeOut : Curves.easeIn,
     );
-
     curved.addListener(() {
       if (!mounted) return;
       setState(() {
         _progress[idx] = opening ? curved.value : 1.0 - curved.value;
       });
     });
-
     setState(() {
       if (opening) _revealed.add(idx);
       _controllers[idx] = ctrl;
       _progress[idx] = opening ? 0.0 : 1.0;
     });
-
     ctrl.forward().then((_) {
-      if (!mounted) return; // dispose() already cleaned up ctrl
+      if (!mounted) return;
       setState(() {
         if (!opening) _revealed.remove(idx);
         _progress.remove(idx);
@@ -305,7 +271,7 @@ class _BoardArea extends StatelessWidget {
                 children: [
                   // Layer 1 — continuous image, full board.
                   Image.asset(_kImage, fit: BoxFit.cover),
-                  // Layer 2 — shutter mask with aperture iris animation.
+                  // Layer 2 — shutter mask with overlapping blade animation.
                   CustomPaint(
                     painter: _ShutterMask(
                       revealed: revealed,
@@ -326,26 +292,23 @@ class _BoardArea extends StatelessWidget {
   }
 }
 
-// ── Shutter mask with camera-iris aperture ────────────────────────────────────
+// ── Shutter mask with overlapping camera-shutter blades ───────────────────────
 //
 // Paint order
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // [saveLayer]
-//   1. Dark base fill   — fully opaque, image invisible under closed cells
-//   2. Directional gradient — soft top-left light source
+//   1. Dark base fill — fully opaque, image hidden beneath covered cells
+//   2. Directional gradient — top-left light source, global convexity illusion
 //   3. Brushed-metal texture — horizontal hairlines
-//   4. BlendMode.clear  — full rect for fully open cells
-//   5. BlendMode.clear  — iris polygon for animating cells
+//   4. BlendMode.clear — full cell rect for ALL revealed cells
+//      (both mid-animation and fully open — blades drawn on top for the former)
 // [restore]
-//   6. Inner bevel on fully covered cells (top/left highlight, bottom/right shadow)
-//   7. Hairline seam grid across the whole board
-//   8. Gold cut-edge on fully open apertures
-//   9. Per animating cell:
-//      a. clip to cell rect
-//      b. evenOdd clip (cell minus iris polygon) → draw dark graphite blade body
-//         with matching directional sheen — blades look like physical objects
-//      c. thin specular stroke along the iris polygon — metallic blade-edge glint
-// ──────────────────────────────────────────────────────────────────────────────
+//   5. Thin frame stroke on fully covered cells
+//   6. Hairline seam grid across the full board
+//   7. Gold cut-edge on fully open (non-animating) cells
+//   8. Per animating opening cell: _drawBlades — N=7 overlapping graphite
+//      shutter blades clipped to the cell rect, rotating from closed to open
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _ShutterMask extends CustomPainter {
   final Set<int> revealed;
@@ -375,15 +338,13 @@ class _ShutterMask extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final bounds = Offset.zero & size;
 
-    // ── Steps 1-5: unified mask layer ─────────────────────────────────────
+    // ── Steps 1-4: unified mask saveLayer ────────────────────────────────────
     canvas.saveLayer(bounds, Paint());
 
-    // 1. Base fill — dark steel-blue, FULLY OPAQUE.
-    //    The image is completely invisible beneath any covered cell.
+    // 1. Fully opaque dark base.
     canvas.drawRect(bounds, Paint()..color = const Color(0xFF07152A));
 
-    // 2. Directional gradient — single light source from top-left creates
-    //    the illusion that the shutter surface has slight convexity.
+    // 2. Directional gradient — single light source from top-left.
     canvas.drawRect(
       bounds,
       Paint()
@@ -399,8 +360,7 @@ class _ShutterMask extends CustomPainter {
         ).createShader(bounds),
     );
 
-    // 3. Horizontal brushed-metal texture — fine parallel lines
-    //    at 2.2% opacity simulate a horizontally-machined steel surface.
+    // 3. Brushed-metal horizontal hairlines.
     final brushPaint = Paint()
       ..color = Colors.white.withOpacity(0.022)
       ..strokeWidth = 0.55;
@@ -408,71 +368,30 @@ class _ShutterMask extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), brushPaint);
     }
 
+    // 4. Clear ALL revealed cells so the image shows through.
+    //    Mid-animation cells get the same full clear; the blades drawn after
+    //    restore provide the coverage at partial progress.
     final clearPaint = Paint()..blendMode = BlendMode.clear;
-
-    // 4. Clear full rect for fully open cells.
     for (var idx = 0; idx < rows * cols; idx++) {
-      if (revealed.contains(idx) && !animProgress.containsKey(idx)) {
+      if (revealed.contains(idx)) {
         canvas.drawRect(_cell(idx ~/ cols, idx % cols), clearPaint);
-      }
-    }
-
-    // 5. Clear iris polygon for animating cells.
-    //    The polygon grows and rotates — at partial progress it creates
-    //    the characteristic polygonal camera-iris aperture opening.
-    for (final entry in animProgress.entries) {
-      final idx = entry.key;
-      final p = entry.value;
-      if (p > 0.001 && revealed.contains(idx)) {
-        final cell = _cell(idx ~/ cols, idx % cols);
-        canvas.drawPath(_irisPath(cell.center, cell.width, p), clearPaint);
       }
     }
 
     canvas.restore();
 
-    // ── Step 6: inner bevel on fully covered cells ─────────────────────────
+    // ── Step 5: thin frame on fully covered cells ─────────────────────────────
+    final framePaint = Paint()
+      ..color = Colors.white.withOpacity(0.15)
+      ..strokeWidth = 0.9
+      ..style = PaintingStyle.stroke;
     for (var idx = 0; idx < rows * cols; idx++) {
-      if (revealed.contains(idx)) continue;
-      final r = _cell(idx ~/ cols, idx % cols);
-
-      // Top inner highlight — brightest edge (light source above)
-      canvas.drawLine(
-        Offset(r.left + 0.5, r.top + 0.5),
-        Offset(r.right - 0.5, r.top + 0.5),
-        Paint()
-          ..color = Colors.white.withOpacity(0.18)
-          ..strokeWidth = 0.9,
-      );
-      // Left inner highlight
-      canvas.drawLine(
-        Offset(r.left + 0.5, r.top + 1.0),
-        Offset(r.left + 0.5, r.bottom - 0.5),
-        Paint()
-          ..color = Colors.white.withOpacity(0.10)
-          ..strokeWidth = 0.9,
-      );
-      // Bottom inner shadow
-      canvas.drawLine(
-        Offset(r.left + 0.5, r.bottom - 0.5),
-        Offset(r.right - 0.5, r.bottom - 0.5),
-        Paint()
-          ..color = Colors.black.withOpacity(0.38)
-          ..strokeWidth = 0.9,
-      );
-      // Right inner shadow
-      canvas.drawLine(
-        Offset(r.right - 0.5, r.top + 1.0),
-        Offset(r.right - 0.5, r.bottom - 0.5),
-        Paint()
-          ..color = Colors.black.withOpacity(0.26)
-          ..strokeWidth = 0.9,
-      );
+      if (!revealed.contains(idx)) {
+        canvas.drawRect(_cell(idx ~/ cols, idx % cols).deflate(0.5), framePaint);
+      }
     }
 
-    // ── Step 7: hairline seam grid ──────────────────────────────────────────
-    // Runs across the full board including open cells —
-    // the board reads as one unified surface.
+    // ── Step 6: hairline seam grid across full board ──────────────────────────
     final seamPaint = Paint()
       ..color = Colors.white.withOpacity(0.09)
       ..strokeWidth = 0.6;
@@ -485,7 +404,7 @@ class _ShutterMask extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), seamPaint);
     }
 
-    // ── Step 8: gold cut-edge on fully open cells ───────────────────────────
+    // ── Step 7: gold cut-edge on fully open cells ─────────────────────────────
     final goldEdge = Paint()
       ..color = const Color(0xFFD4AF37).withOpacity(0.50)
       ..strokeWidth = 0.9
@@ -496,76 +415,84 @@ class _ShutterMask extends CustomPainter {
       }
     }
 
-    // ── Step 9: blade body + specular for animating cells ──────────────────
-    //
-    // For each cell mid-animation, draw the physical blade geometry on top:
-    //   a. clip canvas to cell rect
-    //   b. further clip to evenOdd (cell - iris polygon) = blade-body area
-    //   c. draw dark graphite fill + directional sheen — blades look physical
-    //   d. release evenOdd clip, draw specular stroke on iris polygon edge
-    //      (the blade tips catch the overhead light as they rotate)
+    // ── Step 8: overlapping shutter blades for animating cells ────────────────
     for (final entry in animProgress.entries) {
       final idx = entry.key;
       final p = entry.value;
-      if (p <= 0.001 || !revealed.contains(idx)) continue;
-
-      final cell = _cell(idx ~/ cols, idx % cols);
-      final iris = _irisPath(cell.center, cell.width, p);
-
-      canvas.save();
-      canvas.clipRect(cell); // outer boundary — nothing outside the cell
-
-      // Blade-body clip: cell rect minus iris polygon via even-odd fill.
-      // Points inside the cell but outside the iris = blade body area.
-      final bladeClip = Path()
-        ..addRect(cell)
-        ..addPath(iris, Offset.zero);
-      bladeClip.fillType = PathFillType.evenOdd;
-
-      canvas.save();
-      canvas.clipPath(bladeClip); // restrict drawing to blade body only
-
-      // Dark graphite blade body — fractionally cooler/darker than the main
-      // mask to give the blades a separate material feel.
-      canvas.drawRect(cell, Paint()..color = const Color(0xFF060D1A));
-
-      // Directional sheen matching the main mask light source — the blade
-      // surfaces catch the same overhead light consistently.
-      canvas.drawRect(
-        cell,
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withOpacity(0.09),
-              Colors.transparent,
-              Colors.black.withOpacity(0.13),
-            ],
-            stops: const [0.0, 0.45, 1.0],
-          ).createShader(cell),
-      );
-
-      canvas.restore(); // release blade-body clip
-
-      // Specular stroke along the iris polygon perimeter —
-      // the inner edge of each blade tip catches the light as it rotates.
-      // Opacity ramps quickly at the start of the animation so the glint is
-      // most visible when the iris first starts to open.
-      final specularOpacity = 0.24 * math.min(1.0, p * 2.0);
-      canvas.drawPath(
-        iris,
-        Paint()
-          ..color = Colors.white.withOpacity(specularOpacity)
-          ..strokeWidth = 1.1
-          ..style = PaintingStyle.stroke,
-      );
-
-      canvas.restore(); // release cell clipRect
+      // Only draw blades while the cell is in the revealed set
+      // (opening: cell added immediately; closing: cell still in set until end).
+      if (!revealed.contains(idx)) continue;
+      _drawBlades(canvas, _cell(idx ~/ cols, idx % cols), p);
     }
   }
 
-  // Always repaint during animation; idle frames are zero-cost.
+  // Draws N=7 overlapping graphite shutter blades for one cell at open-progress p.
+  //   p = 0.0 → blades closed, covering the cell
+  //   p = 1.0 → blades swept away, cell fully exposed
+  void _drawBlades(Canvas canvas, Rect cell, double progress) {
+    final cx = cell.center.dx;
+    final cy = cell.center.dy;
+    final s = cell.width;
+    final R = s * _kPivotR;    // pivot ring radius from cell center
+    final L = s * _kBladeLen;  // blade body length
+    final W = s * _kBladeW;    // blade body width
+    final cr = W * 0.42;       // rounded corner radius on blade ends
+
+    canvas.save();
+    canvas.clipRect(cell); // blades never render outside their cell
+
+    // Draw from last blade to first so blade 0 sits on top of blade 6 —
+    // matching the physical stacking order of a real iris diaphragm.
+    for (var i = _kBlades - 1; i >= 0; i--) {
+      final base = 2 * math.pi * i / _kBlades;
+
+      // The pivot ring itself rotates slightly as the aperture opens,
+      // matching the physical rotation of the iris ring in a real lens.
+      final pivotAngle = base + progress * (math.pi / _kBlades * 0.55);
+      final px = cx + R * math.cos(pivotAngle);
+      final py = cy + R * math.sin(pivotAngle);
+
+      // At p=0: blade points from pivot toward cell center (pivotAngle + π).
+      // At p=1: blade has swept _kSweep radians counterclockwise.
+      final bladeAngle = pivotAngle + math.pi + progress * _kSweep;
+
+      canvas.save();
+      canvas.translate(px, py);
+      canvas.rotate(bladeAngle);
+
+      // Blade body: rounded rect starting at pivot (t=0), extending length L.
+      final rect = Rect.fromLTWH(0.0, -W * 0.5, L, W);
+      final rr = RRect.fromRectAndRadius(rect, Radius.circular(cr));
+
+      // Alternate between two very close graphite tones for z-stack depth.
+      final fill = i.isEven ? const Color(0xFF0A1018) : const Color(0xFF0F1A24);
+      canvas.drawRRect(rr, Paint()..color = fill);
+
+      // Leading-edge specular — the top surface of each blade catches overhead
+      // light and shows a thin bright line along its length.
+      canvas.drawLine(
+        Offset(cr, -W * 0.5 + 0.75),
+        Offset(L - cr * 0.6, -W * 0.5 + 0.75),
+        Paint()
+          ..color = Colors.white.withOpacity(0.20)
+          ..strokeWidth = 0.85,
+      );
+
+      // Trailing-edge shadow — the underside of the blade in shadow.
+      canvas.drawLine(
+        Offset(cr, W * 0.5 - 0.85),
+        Offset(L - cr * 0.6, W * 0.5 - 0.85),
+        Paint()
+          ..color = Colors.black.withOpacity(0.28)
+          ..strokeWidth = 0.7,
+      );
+
+      canvas.restore();
+    }
+
+    canvas.restore();
+  }
+
   @override
   bool shouldRepaint(covariant _ShutterMask old) => true;
 }
