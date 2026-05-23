@@ -129,7 +129,7 @@ class TopHud extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(width: 5),
                     itemBuilder: (context, index) {
                       final player = players[index];
-                      return _PlayerChip(player: player, active: player.id == currentPlayerId);
+                      return _PlayerChip(player: player, active: false);
                     },
                   ),
                 ),
@@ -226,23 +226,27 @@ class _TurnInfoState extends State<_TurnInfo> {
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: labelColor,
-            fontSize: isGuessMode ? 14 : (widget.isMyTurn && widget.turnPhase == TurnPhase.revealTurn ? 14 : 11),
-            fontWeight: FontWeight.w900,
-            height: 1,
+        if (isGuessMode) ...[
+          // During guessMode: small phase label + big guesser name
+          Text(
+            label,
+            style: TextStyle(color: labelColor, fontSize: 12, fontWeight: FontWeight.w900, height: 1),
           ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          widget.name.isEmpty ? 'ממתין לשחקן' : widget.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1),
-        ),
-        if (!isGuessMode) ...[
+          const SizedBox(height: 3),
+          Text(
+            widget.isMyGuessModeActive
+                ? 'אתה מנחש!'
+                : (widget.guessModePlayerName.isEmpty ? 'יריב' : widget.guessModePlayerName),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1),
+          ),
+        ] else ...[
+          // In race mode: phase label IS the main text, no player name
+          Text(
+            label,
+            style: TextStyle(color: labelColor, fontSize: 17, fontWeight: FontWeight.w900, height: 1),
+          ),
           const SizedBox(height: 4),
           Text(
             'גלויות ${widget.revealedText}',
@@ -266,10 +270,9 @@ class _TurnInfoState extends State<_TurnInfo> {
         }
         return ('מרוץ ניחושים!', const Color(0xFF87CEEB).withOpacity(0.80));
       case TurnPhase.guessMode:
-        final gName = widget.guessModePlayerName.isEmpty ? 'יריב' : widget.guessModePlayerName;
         return widget.isMyGuessModeActive
-            ? ('אתה מנחש!', const Color(0xFF00F2FF))
-            : ('$gName מנחש!', const Color(0xFFFF6B35));
+            ? ('🎯 זמן לנחש!', const Color(0xFF00F2FF))
+            : ('מנחש:', const Color(0xFFFF6B35));
       case TurnPhase.resolvingGuess:
       case TurnPhase.roundOver:
         return ('סיום סיבוב', Colors.white54);
