@@ -61,7 +61,7 @@ class _GameBoardViewState extends State<GameBoardView> {
               color: const Color(0xFF0A1A2E),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: widget.enabled ? kCyan.withOpacity(0.15) : Colors.transparent,
+                color: widget.enabled ? kCyan.withOpacity(0.55) : Colors.transparent,
                 width: 1,
               ),
             ),
@@ -176,11 +176,26 @@ class _TileState extends State<_Tile> {
                   child: child,
                 );
               },
-              child: DecoratedBox(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
+                  border: _canTap
+                      ? Border.all(color: kCyan.withOpacity(0.80), width: 1.5)
+                      : null,
+                  boxShadow: _canTap
+                      ? [
+                          BoxShadow(
+                            color: kCyan.withOpacity(0.40),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                      : null,
                 ),
-                child: VaultCover(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: VaultCover(
                   isRevealed: widget.isRevealed,
                   isFocused: _canTap,
                   child: _ImageSlice(
@@ -189,6 +204,7 @@ class _TileState extends State<_Tile> {
                     tileSize: widget.tileSize,
                     imageUrl: widget.imageUrl,
                   ),
+                ),
                 ),
               ),
             ),

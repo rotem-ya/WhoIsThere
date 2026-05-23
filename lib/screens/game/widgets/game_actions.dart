@@ -96,6 +96,7 @@ class GameActions extends ConsumerWidget {
                     ),
                   ),
                 ),
+              if (!isMyTurn || canGuessNow || isGuessModeActive)
               Row(
                 children: [
                   Expanded(
@@ -122,7 +123,7 @@ class GameActions extends ConsumerWidget {
                   ),
                 ],
               ),
-              // Hint button — only in solo mode
+              // Hint button — only in solo mode (shown regardless of turn state)
               if (isSolo && onRevealHint != null) ...[
                 const SizedBox(height: 6),
                 _HintButton(

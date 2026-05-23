@@ -225,7 +225,7 @@ class _TurnInfoState extends State<_TurnInfo> {
           label,
           style: TextStyle(
             color: labelColor,
-            fontSize: isGuessMode ? 14 : 11,
+            fontSize: isGuessMode ? 14 : (widget.isMyTurn && widget.turnPhase == TurnPhase.revealTurn ? 14 : 11),
             fontWeight: FontWeight.w900,
             height: 1,
           ),
@@ -257,7 +257,7 @@ class _TurnInfoState extends State<_TurnInfo> {
               : ('ממתין לגילוי האחרון', const Color(0xFFFF6B35));
         }
         return widget.isMyTurn
-            ? ('גלה קלף', Colors.white)
+            ? ('◉ התור שלך', const Color(0xFF00D4FF))
             : ('${widget.name.isEmpty ? 'יריב' : widget.name} מגלה', const Color(0xFF6A9CC4));
       case TurnPhase.guessOpportunity:
         if (widget.isMyGuessOpportunity) {
