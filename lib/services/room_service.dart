@@ -111,6 +111,10 @@ class RoomService {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
 
+    // Read the host's selected card skin so all players see it
+    final userSnap = await _firestore.doc('users/$hostId').get();
+    final cardSkinId = (userSnap.data()?['selectedCardSkin'] as String?) ?? 'default';
+
     final host = PlayerModel(
       id: hostId,
       name: hostName,
@@ -138,6 +142,7 @@ class RoomService {
       players: players,
       createdAt: DateTime.now(),
       entryFee: entryFee,
+      cardSkinId: cardSkinId,
     );
 
     await docRef.set(room.toMap());

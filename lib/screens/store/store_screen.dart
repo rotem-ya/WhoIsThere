@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/economy_config.dart';
@@ -53,6 +54,10 @@ class StoreScreen extends ConsumerWidget {
                     children: [
                       // ── Starter Pack ──────────────────────────────────
                       _StarterPackCard(coins: coins),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // ── Card skins ────────────────────────────────────
+                      _CardSkinsSection(),
                       const SizedBox(height: AppSpacing.lg),
 
                       // ── Rewarded ad ───────────────────────────────────
@@ -535,6 +540,69 @@ class _ImagePackCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Card Skins section (banner that navigates to /store/skins) ───────────────
+
+class _CardSkinsSection extends StatelessWidget {
+  const _CardSkinsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/store/skins'),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF0A1A2E), Color(0xFF1A0A2E)],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFF8B6FFF).withOpacity(0.55),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B6FFF).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFF8B6FFF).withOpacity(0.40),
+                ),
+              ),
+              child: const Icon(Icons.style_rounded,
+                  color: Color(0xFF8B6FFF), size: 28),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('עיצובי קלפים',
+                      style: AppTextStyles.titleLight
+                          .copyWith(fontSize: 16)),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'בחר עיצוב לכרטיסיות המשחק',
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_left_rounded,
+                color: Colors.white38, size: 22),
+          ],
+        ),
       ),
     );
   }
