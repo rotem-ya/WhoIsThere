@@ -20,7 +20,6 @@ class GameActions extends ConsumerWidget {
   final String guessModePlayerName;
   final VoidCallback? onRevealHint;
   final VoidCallback? onGuess;
-  final VoidCallback? onSkip;
   final bool isBlocked;
   final int blockedRemaining;
 
@@ -35,7 +34,6 @@ class GameActions extends ConsumerWidget {
     required this.guessModePlayerName,
     required this.onRevealHint,
     required this.onGuess,
-    required this.onSkip,
     this.isScoreCliff = false,
     this.isBlocked = false,
     this.blockedRemaining = 0,
@@ -49,6 +47,8 @@ class GameActions extends ConsumerWidget {
       totalTiles: totalTiles,
     );
     final guessActive = canGuessNow && !isBusy;
+    // Button is active whenever not blocked and not in an opponent's guessMode
+    final buttonActive = !isBlocked && !isGuessModeActive && !isBusy;
 
     // Hint affordability — solo only; guard already enforces this server-side
     final wallet = isSolo ? ref.watch(walletProvider).valueOrNull : null;
@@ -61,18 +61,18 @@ class GameActions extends ConsumerWidget {
     final String primaryLabel;
     if (isBlocked) {
       primaryLabel = blockedRemaining > 0 ? 'חסום ($blockedRemaining גילויים)' : 'חסום';
-    } else if (canGuessNow) {
-      primaryLabel = 'נחש עכשיו!';
     } else if (isGuessModeActive) {
       final name = guessModePlayerName.isEmpty ? 'יריב' : guessModePlayerName;
       primaryLabel = '$name מנחש!';
+    } else if (canGuessNow) {
+      primaryLabel = 'נחש עכשיו!';
     } else {
-      primaryLabel = 'ממתין...';
+      primaryLabel = 'נחש!';
     }
 
-    final primaryIsActive = guessActive;
+    final primaryIsActive = buttonActive;
     final primaryGlow = guessActive;
-    final primaryOnTap = guessActive ? onGuess : null;
+    final primaryOnTap = buttonActive ? onGuess : null;
 
     // Show reward chip on the guess opportunity CTA only
     final showReward = canGuessNow && prize != null;
@@ -99,31 +99,13 @@ class GameActions extends ConsumerWidget {
                     ),
                   ),
                 ),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 7,
-                    child: _ActionButton(
-                      label: primaryLabel,
-                      isPrimary: true,
-                      isActive: primaryIsActive,
-                      glow: primaryGlow,
-                      onTap: primaryOnTap,
-                      reward: showReward ? prize : null,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 5,
-                    child: _ActionButton(
-                      label: 'דלג',
-                      isPrimary: false,
-                      isActive: canGuessNow && !isBusy,
-                      glow: false,
-                      onTap: canGuessNow && !isBusy ? onSkip : null,
-                    ),
-                  ),
-                ],
+              _ActionButton(
+                label: primaryLabel,
+                isPrimary: true,
+                isActive: primaryIsActive,
+                glow: primaryGlow,
+                onTap: primaryOnTap,
+                reward: showReward ? prize : null,
               ),
               // Hint button — only in solo mode (shown regardless of turn state)
               if (isSolo && onRevealHint != null) ...[

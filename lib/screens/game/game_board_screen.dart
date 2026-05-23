@@ -1723,13 +1723,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   onRevealHint: currentUserId == null
                       ? null
                       : () => _useRevealHint(room, currentUserId),
-                  onGuess: canGuessNow ? () => _enterGuessMode(room, currentUserId!) : null,
+                  onGuess: !_isFinished && currentUserId != null
+                      ? () => _enterGuessMode(room, currentUserId!)
+                      : null,
                   onGuessSubmit: (currentUserId != null &&
                           room.turnPhase == TurnPhase.guessMode &&
                           room.guessModePlayerId == currentUserId)
                       ? (value) => _submitGuess(room, currentUserId!, value)
                       : null,
-                  onSkip: null,
                 );
               },
             ),

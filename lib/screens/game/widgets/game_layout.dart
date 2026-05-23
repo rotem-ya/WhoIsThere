@@ -33,7 +33,6 @@ class GameLayout extends StatelessWidget {
   final VoidCallback? onRevealHint;
   final VoidCallback? onGuess;
   final Future<bool> Function(String)? onGuessSubmit;
-  final VoidCallback? onSkip;
   final double revealRatio;
   final int potTotal;
 
@@ -55,7 +54,6 @@ class GameLayout extends StatelessWidget {
     required this.onRevealHint,
     required this.onGuess,
     required this.onGuessSubmit,
-    required this.onSkip,
     this.revealRatio = 0.0,
     this.potTotal = 0,
   });
@@ -172,7 +170,6 @@ class GameLayout extends StatelessWidget {
             blockedRemaining: blockedRemaining,
             onRevealHint: onRevealHint,
             onGuess: onGuess,
-            onSkip: onSkip,
           ),
         ],
       ],
