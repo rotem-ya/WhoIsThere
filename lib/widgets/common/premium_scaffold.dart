@@ -514,28 +514,66 @@ class _PremiumBackdropState extends State<_PremiumBackdrop>
         final t = _controller.value * math.pi * 2;
         return Stack(
           children: [
+            // Electric cyan bloom — top right
             Positioned(
-              top: -90 + math.sin(t) * 18,
-              right: -70 + math.cos(t) * 12,
+              top: -80 + math.sin(t) * 20,
+              right: -60 + math.cos(t) * 14,
               child: _GlowOrb(
-                size: 260,
-                color: AppColors.accent.withOpacity(0.22),
+                size: 360,
+                color: const Color(0xFF0090C8).withOpacity(0.50),
               ),
             ),
+            // Deep ocean pool — bottom left
             Positioned(
-              bottom: -120 + math.cos(t) * 20,
-              left: -80 + math.sin(t) * 16,
+              bottom: -100 + math.cos(t) * 22,
+              left: -70 + math.sin(t) * 18,
               child: _GlowOrb(
-                size: 310,
-                color: AppColors.secondary.withOpacity(0.20),
+                size: 400,
+                color: const Color(0xFF0840A0).withOpacity(0.42),
+              ),
+            ),
+            // Teal accent — top left drift
+            Positioned(
+              top: -50 + math.cos(t * 0.7) * 16,
+              left: -30 + math.sin(t * 0.9) * 12,
+              child: _GlowOrb(
+                size: 280,
+                color: const Color(0xFF0878A0).withOpacity(0.38),
+              ),
+            ),
+            // Sky blue glow — bottom right
+            Positioned(
+              bottom: -70 + math.sin(t * 0.6) * 14,
+              right: -50 + math.cos(t * 0.8) * 12,
+              child: _GlowOrb(
+                size: 300,
+                color: const Color(0xFF1060C0).withOpacity(0.35),
               ),
             ),
             Positioned.fill(
               child: CustomPaint(
                 painter: _GridPainter(
-                  opacity: 0.07 + math.sin(t) * 0.015,
+                  opacity: 0.06 + math.sin(t) * 0.012,
                   showBeams: widget.showBeams,
                   phase: t,
+                ),
+              ),
+            ),
+            // Lens vignette — clearly visible edge darkening
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment.center,
+                      radius: 1.15,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.28),
+                      ],
+                      stops: const [0.55, 1.0],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -580,6 +618,24 @@ class _GridPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final sweepRect = Rect.fromLTWH(0, 0, size.width, size.height);
+
+    // Diagonal ambient light sweep — visible lens-flare shading
+    canvas.drawRect(
+      sweepRect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(opacity * 2.5),
+            Colors.transparent,
+            Colors.black.withOpacity(opacity * 2.2),
+          ],
+          stops: const [0.0, 0.52, 1.0],
+        ).createShader(sweepRect),
+    );
+
     final paint = Paint()
       ..color = Colors.white.withOpacity(opacity)
       ..strokeWidth = 1;
@@ -594,12 +650,12 @@ class _GridPainter extends CustomPainter {
       final beamPaint = Paint()
         ..shader = LinearGradient(
           colors: [
-            AppColors.accent.withOpacity(0),
-            AppColors.accent.withOpacity(0.18),
-            AppColors.secondary.withOpacity(0),
+            const Color(0xFF1060A0).withOpacity(0),
+            const Color(0xFF1060A0).withOpacity(0.32),
+            const Color(0xFF1060A0).withOpacity(0),
           ],
-        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-        ..strokeWidth = 2.5;
+        ).createShader(sweepRect)
+        ..strokeWidth = 3.0;
       final y = (math.sin(phase) * 0.5 + 0.5) * size.height;
       canvas.drawLine(
           Offset(-40, y), Offset(size.width + 40, y - 140), beamPaint);

@@ -840,6 +840,25 @@ class _JoinCodeDialogState extends ConsumerState<_JoinCodeDialog> {
         setState(() => _error = 'לא נמצא חדר עם הקוד הזה');
         return;
       }
+      if (found.phase == GamePhase.playing) {
+        if (found.players.containsKey(user.id)) {
+          final shortId = found.id.substring(0, found.id.length.clamp(0, 6));
+          QaLoggerService.instance.log('HOME',
+              'JOIN_ROOM_REJOIN_ACTIVE_ALLOWED code=$code roomId=$shortId uid=${user.id}');
+          QaLoggerService.instance.log('GAME',
+              'GAME_REJOIN_ACTIVE_ROOM roomId=$shortId phase=playing turnPhase=${found.turnPhase.name}');
+          ref.read(currentRoomIdProvider.notifier).state = found.id;
+          if (mounted) {
+            Navigator.of(context).pop();
+            context.go('/game/${found.id}');
+          }
+        } else {
+          QaLoggerService.instance.log('HOME',
+              'JOIN_ROOM_REJOIN_ACTIVE_DENIED_NOT_PLAYER code=$code uid=${user.id}');
+          setState(() => _error = 'המשחק כבר התחיל');
+        }
+        return;
+      }
       if (found.phase != GamePhase.waiting) {
         QaLoggerService.instance.log('HOME', 'JOIN_ROOM_ERROR reason=already_started code=$code');
         setState(() => _error = 'המשחק כבר התחיל');

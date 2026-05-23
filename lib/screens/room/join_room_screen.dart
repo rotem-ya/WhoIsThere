@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/game_constants.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
@@ -62,6 +63,26 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
     try {
       final user = await ref.read(currentUserProvider.future);
       if (user == null) return;
+
+      // Check for active-game rejoin before the standard waiting-room join path
+      final found = await ref.read(roomServiceProvider).findRoomByCode(code);
+      if (found != null && found.phase == GamePhase.playing) {
+        if (found.players.containsKey(user.id)) {
+          final shortId = found.id.substring(0, found.id.length.clamp(0, 6));
+          QaLoggerService.instance.log('ROOM',
+              'JOIN_ROOM_REJOIN_ACTIVE_ALLOWED code=$code roomId=$shortId uid=${user.id}');
+          QaLoggerService.instance.log('GAME',
+              'GAME_REJOIN_ACTIVE_ROOM roomId=$shortId phase=playing turnPhase=${found.turnPhase.name}');
+          ref.read(currentRoomIdProvider.notifier).state = found.id;
+          if (mounted) context.go('/game/${found.id}');
+        } else {
+          AppFeedback.error();
+          QaLoggerService.instance.log('ROOM',
+              'JOIN_ROOM_REJOIN_ACTIVE_DENIED_NOT_PLAYER code=$code uid=${user.id}');
+          setState(() => _errorMessage = 'המשחק כבר התחיל');
+        }
+        return;
+      }
 
       final room = await ref.read(roomServiceProvider).joinRoom(
             code: code,
