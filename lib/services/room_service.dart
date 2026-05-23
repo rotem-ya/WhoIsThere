@@ -890,7 +890,8 @@ class RoomService {
                 userId, walletDoc.data() as Map<String, dynamic>)
             : null;
         final coinsBefore = wallet?.coins ?? 0;
-        final actualCost = claimCost.clamp(0, coinsBefore);
+        // Always charge full cost — balance can go negative (debt)
+        final actualCost = claimCost;
         final coinsAfter = coinsBefore - actualCost;
 
         if (actualCost > 0) {
@@ -1271,7 +1272,8 @@ class RoomService {
 
       final wrongPenalty = EconomyConfig.baseWrongGuessPenalty +
           (currentWrongCount * EconomyConfig.wrongGuessPenaltyIncrement);
-      final actualPenalty = wrongPenalty.clamp(0, before);
+      // Always apply full penalty — balance can go negative (debt)
+      final actualPenalty = wrongPenalty;
       final after = before - actualPenalty;
 
       if (actualPenalty > 0) {
