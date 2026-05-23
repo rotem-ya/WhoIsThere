@@ -268,7 +268,7 @@ class _TurnPhaseCountdownBarState extends State<_TurnPhaseCountdownBar> {
         else totalMs = 3500;
         barColor = isEndgame
             ? const Color(0xFFFF9F43) // amber-orange at endgame
-            : const Color(0xFF87CEEB); // cyan
+            : const Color(0xFF3A7BA8); // muted steel-blue
       case TurnPhase.guessOpportunity:
         deadlineMs = widget.guessOpportunityDeadlineMs;
         // Match server-side _guessOppTimerMs formula

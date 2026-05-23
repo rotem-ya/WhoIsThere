@@ -96,6 +96,7 @@ class GameActions extends ConsumerWidget {
                     ),
                   ),
                 ),
+              if (!isMyTurn || canGuessNow || isGuessModeActive)
               Row(
                 children: [
                   Expanded(
@@ -122,7 +123,7 @@ class GameActions extends ConsumerWidget {
                   ),
                 ],
               ),
-              // Hint button — only in solo mode
+              // Hint button — only in solo mode (shown regardless of turn state)
               if (isSolo && onRevealHint != null) ...[
                 const SizedBox(height: 6),
                 _HintButton(
@@ -168,22 +169,22 @@ class _HintButton extends StatelessWidget {
             color: const Color(0xFF07101F).withOpacity(0.56),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: const Color(0xFF87CEEB)
-                  .withOpacity(canAfford ? 0.38 : 0.18),
-              width: 1.2,
+              color: const Color(0xFF4A8BAA)
+                  .withOpacity(canAfford ? 0.32 : 0.14),
+              width: 0.8,
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(Icons.lightbulb_outline_rounded,
-                  color: Color(0xFF87CEEB), size: 18),
+                  color: Color(0xFF5A9BBB), size: 18),
               const SizedBox(width: 6),
               Text(
                 'רמז  (${EconomyConfig.hintRevealTilePrice} 🪙)',
                 textDirection: TextDirection.rtl,
                 style: const TextStyle(
-                  color: Color(0xFF87CEEB),
+                  color: Color(0xFF5A9BBB),
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                 ),
@@ -229,82 +230,122 @@ class _ActionButton extends StatelessWidget {
         opacity: isActive ? 1.0 : 0.42,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
-          height: 54,
+          height: 48,
           decoration: BoxDecoration(
             gradient: isPrimary
                 ? const LinearGradient(
-                    colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
+                    colors: [
+                      Color(0xFF20A8E0),
+                      Color(0xFF0E88C8),
+                      Color(0xFF0868A8),
+                      Color(0xFF054880),
+                    ],
+                    stops: [0.0, 0.38, 0.72, 1.0],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   )
                 : null,
-            color: isPrimary ? null : const Color(0xFF07101F).withOpacity(0.64),
-            borderRadius: BorderRadius.circular(18),
+            color: isPrimary ? null : const Color(0xFF081828).withOpacity(0.65),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isPrimary
-                  ? Colors.white.withOpacity(0.16)
-                  : const Color(0xFF87CEEB).withOpacity(isActive ? 0.40 : 0.16),
-              width: 1.2,
+                  ? Colors.white.withOpacity(0.35)
+                  : const Color(0xFF2080C0).withOpacity(isActive ? 0.45 : 0.20),
+              width: 1.0,
             ),
             boxShadow: glow
                 ? [
                     BoxShadow(
-                      color: const Color(0xFFD4AF37).withOpacity(0.42),
-                      blurRadius: 22,
-                      offset: const Offset(0, 7),
+                      color: const Color(0xFF10A0E0).withOpacity(0.60),
+                      blurRadius: 20,
+                      offset: const Offset(0, 5),
+                    ),
+                    BoxShadow(
+                      color: const Color(0xFF0050B0).withOpacity(0.45),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
                     ),
                   ]
                 : isPrimary
                     ? [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.28),
+                          color: const Color(0xFF0050B0).withOpacity(0.45),
                           blurRadius: 10,
-                          offset: const Offset(0, 5),
+                          offset: const Offset(0, 4),
                         ),
                       ]
                     : [],
           ),
-          child: Center(
-            child: isPrimary && hasReward
-                ? Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        label,
-                        textDirection: TextDirection.rtl,
-                        style: const TextStyle(
-                          color: Color(0xFF07101F),
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          height: 1,
-                        ),
+          child: Stack(
+            children: [
+              if (isPrimary)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 16,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(15),
+                        topRight: Radius.circular(15),
                       ),
-                      const SizedBox(height: 2),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: AnimatedReward(
-                          key: ValueKey('reward_$reward'),
-                          value: reward!,
-                          isPositive: true,
-                        ),
-                      ),
-                    ],
-                  )
-                : FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      label,
-                      textDirection: TextDirection.rtl,
-                      maxLines: 1,
-                      style: TextStyle(
-                        color: isPrimary ? const Color(0xFF07101F) : Colors.white.withOpacity(0.78),
-                        fontSize: isPrimary ? 21 : 18,
-                        fontWeight: FontWeight.w900,
-                        height: 1,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.white.withOpacity(0.24),
+                          Colors.transparent,
+                        ],
                       ),
                     ),
                   ),
+                ),
+              Center(
+                child: isPrimary && hasReward
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            label,
+                            textDirection: TextDirection.rtl,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 19,
+                              fontWeight: FontWeight.w900,
+                              height: 1,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: AnimatedReward(
+                              key: ValueKey('reward_$reward'),
+                              value: reward!,
+                              isPositive: true,
+                            ),
+                          ),
+                        ],
+                      )
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          label,
+                          textDirection: TextDirection.rtl,
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: isPrimary
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.75),
+                            fontSize: isPrimary ? 20 : 17,
+                            fontWeight: FontWeight.w900,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+              ),
+            ],
           ),
         ),
       ),

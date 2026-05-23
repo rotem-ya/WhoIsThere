@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../utils/game_constants.dart';
-import '../../../widgets/game/aperture_tile.dart';
+import '../../../widgets/game/vault_cover.dart';
 
 const Duration _kApertureDuration = Duration(milliseconds: 600);
 
@@ -58,10 +58,10 @@ class _GameBoardViewState extends State<GameBoardView> {
             height: side,
             padding: const EdgeInsets.all(1),
             decoration: BoxDecoration(
-              color: kNavyBlack,
+              color: const Color(0xFF0A1A2E),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: widget.enabled ? kCyan.withOpacity(0.15) : Colors.transparent,
+                color: widget.enabled ? kCyan.withOpacity(0.55) : Colors.transparent,
                 width: 1,
               ),
             ),
@@ -145,9 +145,7 @@ class _TileState extends State<_Tile> {
       top: row * widget.tileSize,
       width: widget.tileSize,
       height: widget.tileSize,
-      child: Padding(
-        padding: const EdgeInsets.all(2),
-        child: GestureDetector(
+      child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: _canTap
               ? (_) {
@@ -178,20 +176,24 @@ class _TileState extends State<_Tile> {
                   child: child,
                 );
               },
-              child: DecoratedBox(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: widget.isRevealed
+                  border: _canTap
+                      ? Border.all(color: kCyan.withOpacity(0.80), width: 1.5)
+                      : null,
+                  boxShadow: _canTap
                       ? [
                           BoxShadow(
-                            color: kCyan.withOpacity(0.22),
-                            blurRadius: 14,
-                            spreadRadius: 1,
+                            color: kCyan.withOpacity(0.40),
+                            blurRadius: 10,
+                            spreadRadius: 2,
                           ),
                         ]
                       : null,
                 ),
-                child: ApertureTile(
+                child: VaultCover(
                   isRevealed: widget.isRevealed,
                   isFocused: _canTap,
                   child: _ImageSlice(
@@ -204,7 +206,6 @@ class _TileState extends State<_Tile> {
               ),
             ),
           ),
-        ),
       ),
     );
   }
