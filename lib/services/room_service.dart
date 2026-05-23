@@ -409,7 +409,8 @@ class RoomService {
       'revealCycleId': 1,
       'revealCount': 0,
       'blockedGuessers': {},
-      'potTotal': 0,
+      // Bots have no real client to call payMyEntryFee — seed their share now.
+      'potTotal': room.players.values.where((p) => p.isBot).length * room.entryFee,
       'entryFeePaidPlayerIds': [],
     });
   }
