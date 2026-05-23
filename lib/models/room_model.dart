@@ -36,6 +36,7 @@ class RoomModel extends Equatable {
   final Map<String, int> blockedGuessers;
   final int entryFee;
   final int potTotal;
+  final Map<String, int> guessClaimCounts;
 
   const RoomModel({
     required this.id,
@@ -70,6 +71,7 @@ class RoomModel extends Equatable {
     this.blockedGuessers = const {},
     this.entryFee = 0,
     this.potTotal = 0,
+    this.guessClaimCounts = const {},
   });
 
   bool isBlockedFromGuessing(String userId) {
@@ -122,6 +124,11 @@ class RoomModel extends Equatable {
     final blockedGuessers =
         blockedGuessersRaw.map((k, v) => MapEntry(k, (v as num).toInt()));
 
+    final guessClaimCountsRaw =
+        data['guessClaimCounts'] as Map<String, dynamic>? ?? {};
+    final guessClaimCounts =
+        guessClaimCountsRaw.map((k, v) => MapEntry(k, (v as num).toInt()));
+
     return RoomModel(
       id: doc.id,
       code: data['code'] ?? '',
@@ -168,6 +175,7 @@ class RoomModel extends Equatable {
       blockedGuessers: blockedGuessers,
       entryFee: (data['entryFee'] as num?)?.toInt() ?? 0,
       potTotal: (data['potTotal'] as num?)?.toInt() ?? 0,
+      guessClaimCounts: guessClaimCounts,
     );
   }
 
@@ -203,6 +211,7 @@ class RoomModel extends Equatable {
         'blockedGuessers': blockedGuessers,
         'entryFee': entryFee,
         'potTotal': potTotal,
+        'guessClaimCounts': guessClaimCounts,
       };
 
   RoomModel copyWith({
@@ -234,6 +243,7 @@ class RoomModel extends Equatable {
     Map<String, int>? blockedGuessers,
     int? entryFee,
     int? potTotal,
+    Map<String, int>? guessClaimCounts,
   }) =>
       RoomModel(
         id: id,
@@ -272,6 +282,7 @@ class RoomModel extends Equatable {
         blockedGuessers: blockedGuessers ?? this.blockedGuessers,
         entryFee: entryFee ?? this.entryFee,
         potTotal: potTotal ?? this.potTotal,
+        guessClaimCounts: guessClaimCounts ?? this.guessClaimCounts,
       );
 
   @override
@@ -304,5 +315,6 @@ class RoomModel extends Equatable {
         blockedGuessers,
         entryFee,
         potTotal,
+        guessClaimCounts,
       ];
 }

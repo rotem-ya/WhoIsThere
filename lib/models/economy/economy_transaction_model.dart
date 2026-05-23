@@ -13,6 +13,7 @@ enum TransactionType {
   guessTimeoutPenalty,
   stabilityCompensation,
   roomEntryFee,
+  guessClaimFee,
   wrongGuessPotPenalty,
   potWin,
   potRefund,

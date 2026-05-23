@@ -106,7 +106,7 @@ class RoomService {
     required String hostName,
     String? hostPhotoUrl,
     int playerCount = 1,
-    int entryFee = 0,
+    int entryFee = EconomyConfig.gameEntryFee,
   }) async {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
@@ -401,6 +401,7 @@ class RoomService {
       'guessOpportunityDeadlineMs': null,
       'guessModeDeadlineMs': null,
       'wrongGuessCounts': {},
+      'guessClaimCounts': {},
       'revealCycleId': 1,
       'revealCount': 0,
       'blockedGuessers': {},
@@ -878,16 +879,49 @@ class RoomService {
           return;
         }
 
-        // Atomically claim the guess slot and enter guessMode
+        // Charge the guess-claim fee — increments by 2 each time this player claims
+        final claimCount = room.guessClaimCounts[userId] ?? 0;
+        final claimCost = EconomyConfig.baseGuessClaimCost +
+            (claimCount * EconomyConfig.guessClaimCostIncrement);
+
+        final walletDoc = await tx.get(_walletRef(userId));
+        final wallet = walletDoc.exists
+            ? UserEconomyModel.fromFirestore(
+                userId, walletDoc.data() as Map<String, dynamic>)
+            : null;
+        final coinsBefore = wallet?.coins ?? 0;
+        final actualCost = claimCost.clamp(0, coinsBefore);
+        final coinsAfter = coinsBefore - actualCost;
+
+        if (actualCost > 0) {
+          tx.set(_walletRef(userId), {'coins': coinsAfter}, SetOptions(merge: true));
+          final txId = _uuid.v4();
+          tx.set(
+            _txRef(userId, txId),
+            EconomyTransactionModel(
+              id: txId,
+              type: TransactionType.guessClaimFee,
+              delta: -actualCost,
+              balanceAfter: coinsAfter,
+              roomId: roomId,
+              createdAt: DateTime.now().toUtc(),
+              meta: {'claimNumber': claimCount + 1, 'claimCost': actualCost},
+            ).toFirestore(),
+          );
+        }
+
+        // Atomically claim the guess slot, enter guessMode, track claim count, add to pot
         tx.update(_rooms.doc(roomId), {
           'turnPhase': TurnPhase.guessMode.name,
           'guessOpportunityPlayerId': userId,
           'guessModePlayerId': userId,
           'guessModeDeadlineMs': now + 20000,
+          'guessClaimCounts.$userId': claimCount + 1,
+          if (actualCost > 0) 'potTotal': FieldValue.increment(actualCost),
         });
         success = true;
         QaLoggerService.instance.log('TURN',
-            'TX_COMMIT name=enterGuessMode latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
+            'TX_COMMIT name=enterGuessMode claimCost=$actualCost claimNumber=${claimCount + 1} latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
       });
     } catch (e) {
       QaLoggerService.instance.log('TURN', 'TX_ERROR name=enterGuessMode error=$e');
@@ -1226,61 +1260,41 @@ class RoomService {
         return;
       }
 
-      // Wrong guess — deduct live penalty + pot penalty from wallet in same transaction
+      // Wrong guess — dynamic penalty: 2 coins for 1st wrong, +2 for each subsequent (goes to pot)
       final walletDoc = await tx.get(_walletRef(userId));
       final wallet = walletDoc.exists
           ? UserEconomyModel.fromFirestore(
               userId, walletDoc.data() as Map<String, dynamic>)
           : null;
       final before = wallet?.coins ?? 0;
+      final currentWrongCount = room.wrongGuessCounts[userId] ?? 0;
 
-      // Pot penalty: 5% of entry fee (only if entry fee > 0)
-      final potPenalty = room.entryFee > 0
-          ? max(1, (room.entryFee * EconomyConfig.potPenaltyRate).ceil())
-          : 0;
+      final wrongPenalty = EconomyConfig.baseWrongGuessPenalty +
+          (currentWrongCount * EconomyConfig.wrongGuessPenaltyIncrement);
+      final actualPenalty = wrongPenalty.clamp(0, before);
+      final after = before - actualPenalty;
 
-      final livePenalty = before > 0
-          ? EconomyConfig.wrongGuessLivePenalty.clamp(0, before)
-          : 0;
-      final totalWalletDeduct = (livePenalty + potPenalty).clamp(0, before);
-      final after = before - totalWalletDeduct;
-
-      if (totalWalletDeduct > 0) {
+      if (actualPenalty > 0) {
         tx.set(_walletRef(userId), {'coins': after}, SetOptions(merge: true));
-        if (livePenalty > 0) {
-          final txId = _uuid.v4();
-          tx.set(_txRef(userId, txId), EconomyTransactionModel(
-            id: txId,
-            type: TransactionType.wrongGuessPenalty,
-            delta: -livePenalty,
-            balanceAfter: after + potPenalty,
-            roomId: roomId,
-            createdAt: DateTime.now().toUtc(),
-          ).toFirestore());
-        }
-        if (potPenalty > 0) {
-          final txId2 = _uuid.v4();
-          tx.set(_txRef(userId, txId2), EconomyTransactionModel(
-            id: txId2,
-            type: TransactionType.wrongGuessPotPenalty,
-            delta: -potPenalty,
-            balanceAfter: after,
-            roomId: roomId,
-            createdAt: DateTime.now().toUtc(),
-            meta: {'potPenalty': potPenalty, 'entryFee': room.entryFee},
-          ).toFirestore());
-        }
+        final txId = _uuid.v4();
+        tx.set(_txRef(userId, txId), EconomyTransactionModel(
+          id: txId,
+          type: TransactionType.wrongGuessPenalty,
+          delta: -actualPenalty,
+          balanceAfter: after,
+          roomId: roomId,
+          createdAt: DateTime.now().toUtc(),
+          meta: {'wrongGuessNumber': currentWrongCount + 1, 'penalty': actualPenalty},
+        ).toFirestore());
         QaLoggerService.instance.log('ECONOMY',
-            'WRONG_GUESS_PENALTY_APPLIED livePenalty=$livePenalty potPenalty=$potPenalty before=$before after=$after');
+            'WRONG_GUESS_PENALTY wrongNumber=${currentWrongCount + 1} penalty=$actualPenalty before=$before after=$after');
       } else {
-        QaLoggerService.instance.log('ECONOMY',
-            'WRONG_GUESS_PENALTY_SKIPPED reason=zero_balance');
+        QaLoggerService.instance.log('ECONOMY', 'WRONG_GUESS_PENALTY_SKIPPED reason=zero_balance');
       }
 
       final currentScore = room.players[userId]?.score ?? 0;
       final newScore = currentScore - difficulty.wrongGuessPenalty;
       final nextTurnIndex = room.currentTurnIndex + 1;
-      final currentWrongCount = room.wrongGuessCounts[userId] ?? 0;
 
       final updates = <String, dynamic>{
         'currentTurnIndex': nextTurnIndex,
@@ -1294,15 +1308,14 @@ class RoomService {
         'guessModeDeadlineMs': null,
         'wrongGuessCounts.$userId': currentWrongCount + 1,
         'revealCycleId': FieldValue.increment(1),
-        // Block this player from pressing Guess for 2 more auto-reveals
-        'blockedGuessers.$userId': room.revealCount + 2,
+        'blockedGuessers.$userId': room.revealCount + EconomyConfig.wrongGuessBlockTurns,
       };
 
-      // Add pot penalty to room pot
-      if (potPenalty > 0) {
-        updates['potTotal'] = FieldValue.increment(potPenalty);
+      // Wrong-guess penalty goes entirely to pot
+      if (actualPenalty > 0) {
+        updates['potTotal'] = FieldValue.increment(actualPenalty);
         QaLoggerService.instance.log('ECONOMY',
-            'POT_PENALTY_ADDED amount=$potPenalty newPot=${room.potTotal + potPenalty}');
+            'POT_PENALTY_ADDED amount=$actualPenalty newPot=${room.potTotal + actualPenalty}');
       }
 
       if (newScore <= 0) {

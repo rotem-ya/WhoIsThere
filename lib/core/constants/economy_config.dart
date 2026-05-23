@@ -1,11 +1,27 @@
 class EconomyConfig {
   EconomyConfig._();
 
-  // Starting balance for new users
-  static const int initialCoins = 100;
+  // Starting balance for new users (granted on first install)
+  static const int initialCoins = 50;
+
+  // ── Game entry & pot ─────────────────────────────────────────
+  static const int gameEntryFee = 10;
+
+  // ── Guess-claim cost (pressing the guess button) ─────────────
+  // 1st press = 2, 2nd = 4, 3rd = 6 … all goes to the pot
+  static const int baseGuessClaimCost = 2;
+  static const int guessClaimCostIncrement = 2;
+
+  // ── Wrong-guess penalty (each wrong answer, added to pot) ────
+  // 1st wrong = 2, 2nd = 4, 3rd = 6 …
+  static const int baseWrongGuessPenalty = 2;
+  static const int wrongGuessPenaltyIncrement = 2;
+
+  // ── Block duration on wrong guess (in reveal-count units) ────
+  static const int wrongGuessBlockTurns = 2;
 
   // ── Hint prices ──────────────────────────────────────────────
-  static const int hintRevealTilePrice = 40;
+  static const int hintRevealTilePrice = 5;   // letter-reveal hint
   static const int hintExtraGuessPrice = 60;
 
   // ── Match rewards: solo ───────────────────────────────────────
@@ -43,8 +59,7 @@ class EconomyConfig {
   static const int wrongGuessPenaltyPerGuess = 10;
   static const int maxWrongGuessPenalty = 25;
 
-  // ── Live in-game guess penalties (guessMode phase) ─────────────
-  static const int wrongGuessLivePenalty = 3;
+  // ── Guess-timeout penalty (guessMode expired without answering) ─
   static const int guessTimeoutLivePenalty = 3;
 
   // ── Efficiency bonus (deprecated — kept for schema compat) ────
@@ -75,7 +90,6 @@ class EconomyConfig {
   // ── Auto-reveal race mechanic ─────────────────────────────────
   static const int autoRevealIntervalMs = 4000;
 
-  // ── Entry fee & pot mechanic ──────────────────────────────────
+  // ── Entry fee options (for future host selection UI) ─────────
   static const List<int> entryFeeOptions = [0, 10, 25, 50];
-  static const double potPenaltyRate = 0.05;
 }
