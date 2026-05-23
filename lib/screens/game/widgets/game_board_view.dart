@@ -125,10 +125,45 @@ class _Tile extends StatefulWidget {
   State<_Tile> createState() => _TileState();
 }
 
-class _TileState extends State<_Tile> {
+class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
   bool _pressed = false;
+  late AnimationController _popCtrl;
+  late Animation<double> _popScale;
 
-  bool get _canTap => widget.enabled && widget.isAvailable && !widget.isRevealed && widget.onReveal != null;
+  @override
+  void initState() {
+    super.initState();
+    _popCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+    // Bounce: 1.0 → 1.10 → 0.96 → 1.0
+    _popScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.10), weight: 28),
+      TweenSequenceItem(tween: Tween(begin: 1.10, end: 0.96), weight: 32),
+      TweenSequenceItem(tween: Tween(begin: 0.96, end: 1.0), weight: 40),
+    ]).animate(_popCtrl);
+  }
+
+  @override
+  void didUpdateWidget(_Tile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isRevealed && !oldWidget.isRevealed) {
+      _popCtrl.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _popCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _canTap =>
+      widget.enabled &&
+      widget.isAvailable &&
+      !widget.isRevealed &&
+      widget.onReveal != null;
 
   void _setPressed(bool value) {
     if (_pressed == value) return;
@@ -145,7 +180,13 @@ class _TileState extends State<_Tile> {
       top: row * widget.tileSize,
       width: widget.tileSize,
       height: widget.tileSize,
-      child: GestureDetector(
+      child: AnimatedBuilder(
+        animation: _popScale,
+        builder: (context, child) => Transform.scale(
+          scale: _pressed ? kTapScale : _popScale.value,
+          child: child,
+        ),
+        child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: _canTap
               ? (_) {
@@ -160,52 +201,35 @@ class _TileState extends State<_Tile> {
                   widget.onReveal!(widget.index);
                 }
               : null,
-          child: AnimatedOpacity(
-            duration: kRevealDuration,
-            opacity: 1.0,
-            child: TweenAnimationBuilder<double>(
-              key: ValueKey(widget.index),
-              tween: Tween<double>(begin: widget.isRevealed ? 1.08 : 1.0, end: 1.0),
-              duration: kRevealDuration,
-              curve: Curves.easeOutCubic,
-              builder: (context, revealScale, child) {
-                return AnimatedScale(
-                  scale: _pressed ? kTapScale : revealScale,
-                  duration: const Duration(milliseconds: 100),
-                  curve: Curves.easeOutCubic,
-                  child: child,
-                );
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: _canTap
-                      ? Border.all(color: kCyan.withOpacity(0.80), width: 1.5)
-                      : null,
-                  boxShadow: _canTap
-                      ? [
-                          BoxShadow(
-                            color: kCyan.withOpacity(0.40),
-                            blurRadius: 10,
-                            spreadRadius: 2,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: VaultCover(
-                  isRevealed: widget.isRevealed,
-                  isFocused: _canTap,
-                  child: _ImageSlice(
-                    index: widget.index,
-                    gridSize: widget.gridSize,
-                    tileSize: widget.tileSize,
-                    imageUrl: widget.imageUrl,
-                  ),
-                ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: _canTap
+                  ? Border.all(color: kCyan.withOpacity(0.80), width: 1.5)
+                  : null,
+              boxShadow: _canTap
+                  ? [
+                      BoxShadow(
+                        color: kCyan.withOpacity(0.40),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: VaultCover(
+              isRevealed: widget.isRevealed,
+              isFocused: _canTap,
+              child: _ImageSlice(
+                index: widget.index,
+                gridSize: widget.gridSize,
+                tileSize: widget.tileSize,
+                imageUrl: widget.imageUrl,
               ),
             ),
           ),
+        ),
       ),
     );
   }
