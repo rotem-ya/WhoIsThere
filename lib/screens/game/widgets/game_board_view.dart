@@ -58,7 +58,7 @@ class _GameBoardViewState extends State<GameBoardView> {
             height: side,
             padding: const EdgeInsets.all(1),
             decoration: BoxDecoration(
-              color: kNavyBlack,
+              color: const Color(0xFF0A1A2E),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: widget.enabled ? kCyan.withOpacity(0.15) : Colors.transparent,
@@ -146,7 +146,7 @@ class _TileState extends State<_Tile> {
       width: widget.tileSize,
       height: widget.tileSize,
       child: Padding(
-        padding: const EdgeInsets.all(2),
+        padding: const EdgeInsets.all(1),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: _canTap
