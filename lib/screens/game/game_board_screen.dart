@@ -248,7 +248,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   String? _lastDreadStateForLog;
   bool? _lastKnownSoloState;
   bool _snapRecoverySkippedLogged = false;
-  int? _lastWatchdogEvalDeadline;
 
   static Future<void> _primeTickSounds() async {
     try {
@@ -357,122 +356,61 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         }
       }
 
-      // ── Reveal turn timeout ──────────────────────────────────────────────────
-      // Owner OR virtual/bot owner OR non-owner after 90s guardian threshold may advance.
+      // ── Auto-reveal timeout ──────────────────────────────────────────────────
+      // Any client can fire; Firestore transaction deduplicates via revealCycleId.
       // Dedup stamp set ONLY after confirmed commit; 2s cooldown allows retry.
       if (room.turnPhase == TurnPhase.revealTurn &&
           room.revealDeadlineMs != null &&
           now >= room.revealDeadlineMs! &&
           uid != null) {
-        final _currentOwner = room.currentTurnUserId;
-        final _ownerIsVirtual = _currentOwner != null && _currentOwner.startsWith('virtual_');
-        final _overdue = now - room.revealDeadlineMs!;
-        // Guardian: after 90s any active client may advance a human-owned stuck turn
-        final _canActAsGuardian = !_ownerIsVirtual &&
-            _currentOwner != null &&
-            _currentOwner != uid &&
-            _overdue >= 90000;
-        if (_lastWatchdogEvalDeadline != room.revealDeadlineMs) {
-          _lastWatchdogEvalDeadline = room.revealDeadlineMs;
-          final shortOwner = _currentOwner != null && _currentOwner!.length > 6
-              ? _currentOwner!.substring(0, 6) : (_currentOwner ?? 'null');
-          final shortActor = uid.length > 6 ? uid.substring(0, 6) : uid;
-          final evalReason = _ownerIsVirtual ? 'bot_owner'
-              : _currentOwner == uid ? 'is_owner'
-              : _canActAsGuardian ? 'guardian' : 'not_overdue';
-          QaLoggerService.instance.log('WATCHDOG',
-              'WATCHDOG_EVALUATED owner=$shortOwner actor=$shortActor overdueMs=$_overdue eligible=${_currentOwner == uid || _ownerIsVirtual || _canActAsGuardian} reason=$evalReason');
-        }
-        if (_currentOwner == uid || _ownerIsVirtual || _canActAsGuardian) {
-          if (_lastExpiredRevealDeadline == room.revealDeadlineMs) {
-            _dedupSkipCount_reveal++;
-            if (_dedupSkipCount_reveal == 1 ||
-                (_lastDedupSkipLogMs_reveal != null &&
-                    now - _lastDedupSkipLogMs_reveal! >= 30000)) {
-              if (_dedupSkipCount_reveal > 1) {
-                QaLoggerService.instance.log('TURN',
-                    'EXPIRY_DEDUP_SKIP_SUPPRESSED phase=revealTurn deadline=${room.revealDeadlineMs} count=$_dedupSkipCount_reveal');
-              } else {
-                QaLoggerService.instance.log('TURN',
-                    'EXPIRY_DEDUP_SKIP phase=revealTurn deadline=${room.revealDeadlineMs}');
-                QaLoggerService.instance.log('TIMER',
-                    'TIMER_IGNORED_STALE type=revealTurn deadline=${room.revealDeadlineMs}');
-              }
-              _lastDedupSkipLogMs_reveal = now;
-              _dedupSkipCount_reveal = 0;
-            }
-          } else if (_inFlightRevealDeadline == room.revealDeadlineMs) {
-            QaLoggerService.instance.log('TURN',
-                'TIMEOUT_ATTEMPT_SUPPRESSED reason=in_flight deadline=${room.revealDeadlineMs}');
-          } else {
-            final lastAttempt = _revealTimeoutLastAttemptMs;
-            if (lastAttempt != null && now - lastAttempt < 2000) {
-              // within cooldown — wait for retry window
+        if (_lastExpiredRevealDeadline == room.revealDeadlineMs) {
+          _dedupSkipCount_reveal++;
+          if (_dedupSkipCount_reveal == 1 ||
+              (_lastDedupSkipLogMs_reveal != null &&
+                  now - _lastDedupSkipLogMs_reveal! >= 30000)) {
+            if (_dedupSkipCount_reveal > 1) {
+              QaLoggerService.instance.log('TURN',
+                  'EXPIRY_DEDUP_SKIP_SUPPRESSED phase=revealTurn deadline=${room.revealDeadlineMs} count=$_dedupSkipCount_reveal');
             } else {
-              _inFlightRevealDeadline = room.revealDeadlineMs;
-              _revealTimeoutLastAttemptMs = now;
-              _sessionTimeoutKeys.add('revealTurn_${room.revealDeadlineMs}');
-              if (_canActAsGuardian) {
-                QaLoggerService.instance.log('TURN',
-                    'EXPIRE_HANDLER_FIRED phase=revealTurn guardian=true owner=$_currentOwner overdueMs=$_overdue');
-              } else if (_ownerIsVirtual) {
-                QaLoggerService.instance.log('TURN',
-                    'EXPIRE_HANDLER_FIRED phase=revealTurn virtualGuardian=true owner=$_currentOwner');
+              QaLoggerService.instance.log('TURN',
+                  'EXPIRY_DEDUP_SKIP phase=revealTurn deadline=${room.revealDeadlineMs}');
+              QaLoggerService.instance.log('TIMER',
+                  'TIMER_IGNORED_STALE type=revealTurn deadline=${room.revealDeadlineMs}');
+            }
+            _lastDedupSkipLogMs_reveal = now;
+            _dedupSkipCount_reveal = 0;
+          }
+        } else if (_inFlightRevealDeadline == room.revealDeadlineMs) {
+          QaLoggerService.instance.log('TURN',
+              'TIMEOUT_ATTEMPT_SUPPRESSED reason=in_flight deadline=${room.revealDeadlineMs}');
+        } else {
+          final lastAttempt = _revealTimeoutLastAttemptMs;
+          if (lastAttempt != null && now - lastAttempt < 2000) {
+            // within cooldown — wait for retry window
+          } else {
+            _inFlightRevealDeadline = room.revealDeadlineMs;
+            _revealTimeoutLastAttemptMs = now;
+            _sessionTimeoutKeys.add('revealTurn_${room.revealDeadlineMs}');
+            QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=revealTurn autoReveal=true');
+            QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=revealTurn deadline=${room.revealDeadlineMs}');
+            try {
+              final committed = await ref.read(roomServiceProvider).autoRevealPiece(
+                roomId: room.id,
+                actorUid: uid,
+              );
+              if (!mounted) return;
+              if (committed) {
+                _lastExpiredRevealDeadline = room.revealDeadlineMs;
+                _dedupSkipCount_reveal = 0;
+                _lastDedupSkipLogMs_reveal = null;
               } else {
-                QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=revealTurn');
+                QaLoggerService.instance.log('TURN',
+                    'EXPIRY_RETRY_ALLOWED phase=revealTurn deadline=${room.revealDeadlineMs}');
               }
-              QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=revealTurn deadline=${room.revealDeadlineMs}');
-              QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=reveal_timeout');
-              QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_EXPIRED');
-              try {
-                final committed = await ref.read(roomServiceProvider).advanceTurnOnTimeout(
-                  roomId: room.id,
-                  userId: uid,
-                  guardianAllowed: _canActAsGuardian,
-                );
-                if (!mounted) return;
-                if (committed) {
-                  _lastExpiredRevealDeadline = room.revealDeadlineMs;
-                  _dedupSkipCount_reveal = 0;
-                  _lastDedupSkipLogMs_reveal = null;
-                  if (_canActAsGuardian) {
-                    final capturedRoomId = room.id;
-                    final capturedDeadline = room.revealDeadlineMs!;
-                    final capturedActor = uid;
-                    final capturedDifficulty = room.selectedDifficulty;
-                    final compensationAmount =
-                        capturedDifficulty?.stabilityCompensation ?? 10;
-                    QaLoggerService.instance.log('NETWORK',
-                        'STABILITY_COMPENSATION_ELIGIBLE reason=opponent_stuck difficulty=${capturedDifficulty?.name ?? 'unknown'} amount=$compensationAmount owner=$_currentOwner actor=$capturedActor overdueMs=$_overdue');
-                    unawaited(ref.read(economyServiceProvider)
-                        .applyStabilityCompensation(
-                          actorUid: capturedActor,
-                          roomId: capturedRoomId,
-                          deadline: capturedDeadline,
-                          amount: compensationAmount,
-                        )
-                        .then((applied) {
-                      QaLoggerService.instance.log('NETWORK', applied
-                          ? 'STABILITY_COMPENSATION_APPLIED amount=$compensationAmount actor=$capturedActor roomId=$capturedRoomId deadline=$capturedDeadline'
-                          : 'STABILITY_COMPENSATION_SKIPPED reason=already_applied actor=$capturedActor deadline=$capturedDeadline');
-                    }).catchError((_) {
-                      QaLoggerService.instance.log('NETWORK',
-                          'STABILITY_COMPENSATION_SKIPPED reason=error actor=$capturedActor deadline=$capturedDeadline');
-                    }));
-                  }
-                } else {
-                  QaLoggerService.instance.log('TURN',
-                      'EXPIRY_RETRY_ALLOWED phase=revealTurn deadline=${room.revealDeadlineMs}');
-                }
-              } finally {
-                _inFlightRevealDeadline = null;
-              }
+            } finally {
+              _inFlightRevealDeadline = null;
             }
           }
-        } else if (_lastObservedNotOwnerRevealDeadline != room.revealDeadlineMs) {
-          _lastObservedNotOwnerRevealDeadline = room.revealDeadlineMs;
-          QaLoggerService.instance.log('TURN',
-              'REVEAL_TIMEOUT_OBSERVED_NOT_OWNER deadline=${room.revealDeadlineMs} owner=$_currentOwner observer=$uid');
         }
       }
 
@@ -932,109 +870,25 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   }
 
   void _scheduleBotTurn(RoomModel room) {
-    // Phase A: handle bot's guess opportunity.
-    // After a tile reveal, guessOpportunityPlayerId may point to a bot.
-    // Bot may enter guessMode with probability based on reveal ratio, or skip.
-    final guessOppId = room.guessOpportunityPlayerId;
-    if (room.turnPhase == TurnPhase.guessOpportunity && guessOppId != null) {
-      final guessOppPlayer = room.players[guessOppId];
-      if (guessOppPlayer != null && guessOppPlayer.isBot) {
-        final guessKey = '${room.id}-guess-opp-${room.currentTurnIndex}';
-        if (_lastBotTurnKey != guessKey) {
-          _lastBotTurnKey = guessKey;
-          _scheduleBotGuessOpportunityDecision(room, guessOppId);
-        }
-      }
-      // Human owns guessOpportunity — do not interfere, let timer or human decide.
-      return;
-    }
+    // In auto-reveal mode, bots no longer reveal tiles (guardian handles it).
+    // Bots only participate in the open guess-opportunity race.
+    if (room.turnPhase != TurnPhase.guessOpportunity) return;
+    if (room.guessOpportunityPlayerId != null) return; // already claimed
 
-    // Phase B: bot reveal turn.
-    // Guard: only act during revealTurn to avoid scheduling reveals in guessMode.
-    if (room.turnPhase != TurnPhase.revealTurn) return;
+    // Pick any non-blocked bot in this room to participate in the race.
+    final botEntries = room.players.entries
+        .where((e) => e.value.isBot && !room.isBlockedFromGuessing(e.key))
+        .toList();
+    if (botEntries.isEmpty) return;
 
-    final currentId = room.currentTurnUserId;
-    if (currentId == null) return;
+    // Use a stable key per (revealCycleId) so we don't schedule multiple times.
+    final guessKey = '${room.id}-guess-race-${room.revealCycleId}';
+    if (_lastBotTurnKey == guessKey) return;
+    _lastBotTurnKey = guessKey;
 
-    final player = room.players[currentId];
-    if (player == null || !player.isBot) return;
-
-    if (room.availablePieceIndices.isEmpty) return;
-
-    final key = '${room.id}-${room.currentTurnIndex}';
-    if (_lastBotTurnKey == key) return;
-    _lastBotTurnKey = key;
-
-    final botName = player.name.isNotEmpty ? player.name : 'בוט';
-    final totalTiles = room.gridSize * room.gridSize;
-    final ratio = totalTiles > 0 ? room.placedPieces.length / totalTiles : 0.0;
-    final int baseDelayMs;
-    if (ratio >= 0.75) {
-      baseDelayMs = 400 + _random.nextInt(301);  // 400–700ms — endgame: racing
-    } else if (ratio >= 0.50) {
-      baseDelayMs = 650 + _random.nextInt(351);  // 650–1000ms — midgame: pressure
-    } else {
-      baseDelayMs = 1000 + _random.nextInt(601); // 1000–1600ms — early: realistic
-    }
-    // B8/B9: Reveal hesitation — bot simulates prize-potential anxiety; B9 shows tell text
-    int delayMs = baseDelayMs;
-    final double hesitationChance = ratio >= 0.75 ? 0.50 : ratio >= 0.50 ? 0.30 : 0.0;
-    bool isHesitating = false;
-    if (hesitationChance > 0 && _random.nextDouble() < hesitationChance) {
-      final extraMs = ratio >= 0.75
-          ? 2000 + _random.nextInt(2001)
-          : 1500 + _random.nextInt(1001);
-      delayMs += extraMs;
-      isHesitating = true;
-      QaLoggerService.instance.log('BOT',
-          'BOT_HESITATION_ACTIVE ratio=${ratio.toStringAsFixed(2)} delay=$delayMs');
-    }
-    final hesitationText = isHesitating ? (_random.nextBool() ? '...לא בטוח' : '...חושב') : '';
-    // Show "opponent thinking" banner — with hesitation text when hesitating
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() {
-        _showBotTyping = true;
-        _botTypingName = botName;
-        _botTypingText = hesitationText;
-      });
-      if (isHesitating) {
-        QaLoggerService.instance.log('BOT', 'BOT_HESITATION_TELL_VISIBLE text=$hesitationText');
-      }
-    });
-    Future.delayed(Duration(milliseconds: delayMs), () async {
-      if (!mounted) return;
-      final snapshot = await ref.read(roomServiceProvider).watchRoom(room.id).first;
-      if (snapshot == null) return;
-      if (snapshot.phase == GamePhase.finished) return;
-      if (snapshot.currentTurnUserId != currentId) return;
-      if (snapshot.availablePieceIndices.isEmpty) return;
-
-      final idx = snapshot.availablePieceIndices[
-          _random.nextInt(snapshot.availablePieceIndices.length)];
-      final isLastTile = snapshot.availablePieceIndices.length == 1;
-      final difficulty = snapshot.selectedDifficulty ?? Difficulty.easy;
-
-      await ref.read(roomServiceProvider).revealPiece(
-            roomId: snapshot.id,
-            userId: currentId,
-            pieceIndex: idx,
-            difficulty: difficulty,
-          );
-      unawaited(_playRevealSound());
-
-      if (mounted) setState(() => _showBotTyping = false);
-
-      if (isLastTile) {
-        if (mounted) {
-          await ref.read(roomServiceProvider).endGameNoWinner(snapshot.id);
-        }
-        return;
-      }
-
-      // After bot reveals, guessOpportunity goes to the next player.
-      // _scheduleBotTurn handles the next state from the Firestore stream.
-    });
+    // Pick a random bot to represent in this race.
+    final botEntry = botEntries[_random.nextInt(botEntries.length)];
+    _scheduleBotGuessOpportunityDecision(room, botEntry.key);
   }
 
   void _scheduleBotGuessOpportunityDecision(RoomModel room, String botId) {
@@ -1088,17 +942,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         'BOT_GUESS_DECISION ratio=${ratio.toStringAsFixed(2)} chance=${effectiveGuessChance.toStringAsFixed(2)} decided=$decides endgame=$isEndgameBotMode super=$isSuperEndgame');
 
     if (!decides) {
-      // Bot skips — human-like pause before yielding opportunity
-      final skipDelayMs = ((1800 + _random.nextInt(1801)) * delayMultiplier).round();
-      QaLoggerService.instance.log('BOT',
-          'BOT_DELAY_SCHEDULED action=skip_guess_opportunity ms=$skipDelayMs');
-      Future.delayed(Duration(milliseconds: skipDelayMs), () async {
-        if (!mounted) return;
-        QaLoggerService.instance.log('BOT', 'BOT_SKIP_GUESS_OPPORTUNITY');
-        QaLoggerService.instance.log('TURN',
-            'ADVANCE_TURN_REASON reason=bot_skip phase=guessOpportunity');
-        await ref.read(roomServiceProvider).skipPiecePlacement(roomId: room.id);
-      });
+      // Bot passes on this round — window will expire naturally.
+      QaLoggerService.instance.log('BOT', 'BOT_SKIP_GUESS_OPPORTUNITY');
       return;
     }
 
@@ -1114,7 +959,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (snap == null) return;
       if (snap.phase == GamePhase.finished) return;
       if (snap.turnPhase != TurnPhase.guessOpportunity) return;
-      if (snap.guessOpportunityPlayerId != botId) return;
+      if (snap.guessOpportunityPlayerId != null) return; // already claimed
+      if (snap.isBlockedFromGuessing(botId)) return;
 
       final entered = await ref.read(roomServiceProvider).enterGuessMode(
             roomId: room.id, userId: botId);
@@ -1812,16 +1658,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 }
 
                 final _isFinished = room.phase == GamePhase.finished;
-                // isMyTurn: it's my reveal turn (revealTurn phase, I'm the current turn player)
-                final isMyTurn = !_isFinished &&
-                    currentUserId != null &&
-                    room.currentTurnUserId == currentUserId &&
-                    room.turnPhase == TurnPhase.revealTurn;
+                // In auto-reveal mode, nobody has a manual reveal turn.
+                const isMyTurn = false;
                 // canGuessNow: I have the guess opportunity window and deadline has not passed
                 final canGuessNow = !_isFinished &&
                     currentUserId != null &&
                     room.turnPhase == TurnPhase.guessOpportunity &&
-                    room.guessOpportunityPlayerId == currentUserId &&
+                    room.guessOpportunityPlayerId == null &&
+                    !room.isBlockedFromGuessing(currentUserId) &&
                     (room.guessOpportunityDeadlineMs == null ||
                         room.guessOpportunityDeadlineMs! >
                             DateTime.now().millisecondsSinceEpoch);
@@ -1860,6 +1704,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   canGuessNow: canGuessNow,
                   isSolo: isSolo,
                   revealRatio: revealRatio,
+                  potTotal: room.potTotal,
                   showBanner: _showBanner,
                   bannerEvent: _currentBanner,
                   showBotTyping: _showBotTyping,
@@ -1874,13 +1719,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       context.go('/home');
                     }
                   },
-                  onReveal: currentUserId == null
-                      ? null
-                      : (index) => _humanRevealTile(
-                            room: room,
-                            userId: currentUserId,
-                            index: index,
-                          ),
+                  onReveal: null,
                   onRevealHint: currentUserId == null
                       ? null
                       : () => _useRevealHint(room, currentUserId),
@@ -1890,7 +1729,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                           room.guessModePlayerId == currentUserId)
                       ? (value) => _submitGuess(room, currentUserId!, value)
                       : null,
-                  onSkip: canGuessNow ? () => _skipTurn(room) : null,
+                  onSkip: null,
                 );
               },
             ),

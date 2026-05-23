@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/economy_config.dart';
 import '../../../core/constants/game_constants.dart';
 import '../../../models/game_image_model.dart';
 import '../../../models/room_model.dart';
@@ -34,6 +35,7 @@ class GameLayout extends StatelessWidget {
   final Future<bool> Function(String)? onGuessSubmit;
   final VoidCallback? onSkip;
   final double revealRatio;
+  final int potTotal;
 
   const GameLayout({
     required this.room,
@@ -55,6 +57,7 @@ class GameLayout extends StatelessWidget {
     required this.onGuessSubmit,
     required this.onSkip,
     this.revealRatio = 0.0,
+    this.potTotal = 0,
   });
 
   @override
@@ -63,9 +66,8 @@ class GameLayout extends StatelessWidget {
     final revealedCount = room.placedPieces.length;
     final total = room.gridSize * room.gridSize;
 
-    final isMyGuessOpportunity = currentUserId != null &&
-        room.turnPhase == TurnPhase.guessOpportunity &&
-        room.guessOpportunityPlayerId == currentUserId;
+    // In race mode, guessOpportunityPlayerId is null when the window is open to all.
+    final isMyGuessOpportunity = canGuessNow;
 
     final isMyGuessModeActive = currentUserId != null &&
         room.turnPhase == TurnPhase.guessMode &&
@@ -77,6 +79,9 @@ class GameLayout extends StatelessWidget {
     final myScore = currentUserId != null ? (room.players[currentUserId]?.score ?? 0) : 0;
     final leaderScore = room.sortedPlayers.isNotEmpty ? room.sortedPlayers.first.score : 0;
     final isScoreCliff = canGuessNow && (leaderScore - myScore) <= 1;
+    final isBlocked = currentUserId != null && room.isBlockedFromGuessing(currentUserId);
+    final blockedUntil = currentUserId != null ? (room.blockedGuessers[currentUserId] ?? 0) : 0;
+    final blockedRemaining = isBlocked ? (blockedUntil - room.revealCount).clamp(0, 99) : 0;
 
     return Column(
       children: [
@@ -97,6 +102,7 @@ class GameLayout extends StatelessWidget {
           totalTiles: total,
           guessOpportunityDeadlineMs: room.guessOpportunityDeadlineMs,
           isLastTile: isLastTile,
+          potTotal: potTotal,
         ),
         // During my guessMode: hide the 3px bar — inline countdown replaces it
         if (isMyGuessModeActive)
@@ -161,6 +167,8 @@ class GameLayout extends StatelessWidget {
             isGuessModeActive: isGuessModeActive,
             isScoreCliff: isScoreCliff,
             guessModePlayerName: guessModePlayerName,
+            isBlocked: isBlocked,
+            blockedRemaining: blockedRemaining,
             onRevealHint: onRevealHint,
             onGuess: onGuess,
             onSkip: onSkip,
@@ -261,14 +269,10 @@ class _TurnPhaseCountdownBarState extends State<_TurnPhaseCountdownBar> {
     switch (widget.turnPhase) {
       case TurnPhase.revealTurn:
         deadlineMs = widget.revealDeadlineMs;
-        // Match server-side _revealTimerMs formula for accurate bar fraction
-        if (ratio <= 0.25) totalMs = 8000;
-        else if (ratio <= 0.50) totalMs = 6500;
-        else if (ratio <= 0.75) totalMs = 5000;
-        else totalMs = 3500;
+        totalMs = EconomyConfig.autoRevealIntervalMs;
         barColor = isEndgame
-            ? const Color(0xFFFF9F43) // amber-orange at endgame
-            : const Color(0xFF3A7BA8); // muted steel-blue
+            ? const Color(0xFFFF9F43)
+            : const Color(0xFF3A7BA8);
       case TurnPhase.guessOpportunity:
         deadlineMs = widget.guessOpportunityDeadlineMs;
         // Match server-side _guessOppTimerMs formula

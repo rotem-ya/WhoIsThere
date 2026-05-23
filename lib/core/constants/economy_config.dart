@@ -71,4 +71,11 @@ class EconomyConfig {
     'coins_medium': 300,
     'coins_large': 750,
   };
+
+  // ── Auto-reveal race mechanic ─────────────────────────────────
+  static const int autoRevealIntervalMs = 4000;
+
+  // ── Entry fee & pot mechanic ──────────────────────────────────
+  static const List<int> entryFeeOptions = [0, 10, 25, 50];
+  static const double potPenaltyRate = 0.05;
 }

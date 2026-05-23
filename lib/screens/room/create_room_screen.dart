@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/economy_config.dart';
 import '../../core/theme/app_styles.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
@@ -26,6 +27,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   String? _roomCode;
   String? _roomId;
   int _playerCount = 2;
+  int _entryFee = 0;
 
   @override
   void initState() {
@@ -46,6 +48,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
             hostName: user.name,
             hostPhotoUrl: user.photoUrl,
             playerCount: _playerCount,
+            entryFee: _entryFee,
           );
 
       final shortId = room.id.substring(0, room.id.length.clamp(0, 6));
@@ -98,10 +101,22 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
               child: _isLoading
                   ? const CircularProgressIndicator(color: AppColors.accent)
                   : _roomCode == null
-                      ? _PlayerCountCard(
-                          selected: _playerCount,
-                          onChanged: (value) =>
-                              setState(() => _playerCount = value),
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _PlayerCountCard(
+                              selected: _playerCount,
+                              onChanged: (value) =>
+                                  setState(() => _playerCount = value),
+                            ),
+                            const SizedBox(height: 12),
+                            _EntryFeeCard(
+                              selected: _entryFee,
+                              playerCount: _playerCount,
+                              onChanged: (value) =>
+                                  setState(() => _entryFee = value),
+                            ),
+                          ],
                         )
                       : _RoomCodeCard(
                           roomCode: _roomCode!,
@@ -268,6 +283,91 @@ class _RoomCodeCardState extends State<_RoomCodeCard> {
             style: AppTextStyles.subtitleDark,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _EntryFeeCard extends StatelessWidget {
+  final int selected;
+  final int playerCount;
+  final ValueChanged<int> onChanged;
+
+  const _EntryFeeCard({
+    required this.selected,
+    required this.playerCount,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('דמי כניסה', style: AppTextStyles.titleDark),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            selected == 0
+                ? 'ללא סיר — משחק חינמי'
+                : 'סיר: $selected × $playerCount = ${selected * playerCount} מטבעות',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.subtitleDark,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              for (final fee in EconomyConfig.entryFeeOptions) ...[
+                Expanded(
+                  child: _FeeButton(
+                    fee: fee,
+                    selected: selected == fee,
+                    onTap: () => onChanged(fee),
+                  ),
+                ),
+                if (fee != EconomyConfig.entryFeeOptions.last)
+                  const SizedBox(width: 6),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeeButton extends StatelessWidget {
+  final int fee;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FeeButton({required this.fee, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 48,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.accent.withOpacity(0.18) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? AppColors.accent : Colors.white24,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          fee == 0 ? 'חינם' : '$fee',
+          style: TextStyle(
+            color: selected ? AppColors.accent : Colors.white70,
+            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 14,
+          ),
+        ),
       ),
     );
   }

@@ -21,6 +21,8 @@ class GameActions extends ConsumerWidget {
   final VoidCallback? onRevealHint;
   final VoidCallback? onGuess;
   final VoidCallback? onSkip;
+  final bool isBlocked;
+  final int blockedRemaining;
 
   const GameActions({
     required this.isMyTurn,
@@ -35,6 +37,8 @@ class GameActions extends ConsumerWidget {
     required this.onGuess,
     required this.onSkip,
     this.isScoreCliff = false,
+    this.isBlocked = false,
+    this.blockedRemaining = 0,
   });
 
   @override
@@ -55,19 +59,18 @@ class GameActions extends ConsumerWidget {
 
     // Primary button label driven by state machine phase
     final String primaryLabel;
-    if (canGuessNow) {
+    if (isBlocked) {
+      primaryLabel = blockedRemaining > 0 ? 'חסום ($blockedRemaining גילויים)' : 'חסום';
+    } else if (canGuessNow) {
       primaryLabel = 'נחש עכשיו!';
     } else if (isGuessModeActive) {
       final name = guessModePlayerName.isEmpty ? 'יריב' : guessModePlayerName;
       primaryLabel = '$name מנחש!';
-    } else if (isMyTurn) {
-      primaryLabel = 'בחר משבצת';
     } else {
-      primaryLabel = 'ממתין לתור';
+      primaryLabel = 'ממתין...';
     }
 
-    final primaryIsActive =
-        guessActive || (isMyTurn && !canGuessNow && !isGuessModeActive);
+    final primaryIsActive = guessActive;
     final primaryGlow = guessActive;
     final primaryOnTap = guessActive ? onGuess : null;
 
@@ -96,7 +99,6 @@ class GameActions extends ConsumerWidget {
                     ),
                   ),
                 ),
-              if (!isMyTurn || canGuessNow || isGuessModeActive)
               Row(
                 children: [
                   Expanded(

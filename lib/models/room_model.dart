@@ -32,6 +32,10 @@ class RoomModel extends Equatable {
   final int? guessModeDeadlineMs;
   final Map<String, int> wrongGuessCounts;
   final int revealCycleId;
+  final int revealCount;
+  final Map<String, int> blockedGuessers;
+  final int entryFee;
+  final int potTotal;
 
   const RoomModel({
     required this.id,
@@ -62,7 +66,17 @@ class RoomModel extends Equatable {
     this.guessModeDeadlineMs,
     this.wrongGuessCounts = const {},
     this.revealCycleId = 0,
+    this.revealCount = 0,
+    this.blockedGuessers = const {},
+    this.entryFee = 0,
+    this.potTotal = 0,
   });
+
+  bool isBlockedFromGuessing(String userId) {
+    final blockedUntil = blockedGuessers[userId];
+    if (blockedUntil == null) return false;
+    return revealCount < blockedUntil;
+  }
 
   String? get currentTurnUserId {
     final activePlayers = turnOrder
@@ -102,6 +116,11 @@ class RoomModel extends Equatable {
         data['wrongGuessCounts'] as Map<String, dynamic>? ?? {};
     final wrongGuessCounts =
         wrongGuessCountsRaw.map((k, v) => MapEntry(k, (v as num).toInt()));
+
+    final blockedGuessersRaw =
+        data['blockedGuessers'] as Map<String, dynamic>? ?? {};
+    final blockedGuessers =
+        blockedGuessersRaw.map((k, v) => MapEntry(k, (v as num).toInt()));
 
     return RoomModel(
       id: doc.id,
@@ -145,6 +164,10 @@ class RoomModel extends Equatable {
       guessModeDeadlineMs: (data['guessModeDeadlineMs'] as num?)?.toInt(),
       wrongGuessCounts: wrongGuessCounts,
       revealCycleId: (data['revealCycleId'] as num?)?.toInt() ?? 0,
+      revealCount: (data['revealCount'] as num?)?.toInt() ?? 0,
+      blockedGuessers: blockedGuessers,
+      entryFee: (data['entryFee'] as num?)?.toInt() ?? 0,
+      potTotal: (data['potTotal'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -176,6 +199,10 @@ class RoomModel extends Equatable {
         'guessModeDeadlineMs': guessModeDeadlineMs,
         'wrongGuessCounts': wrongGuessCounts,
         'revealCycleId': revealCycleId,
+        'revealCount': revealCount,
+        'blockedGuessers': blockedGuessers,
+        'entryFee': entryFee,
+        'potTotal': potTotal,
       };
 
   RoomModel copyWith({
@@ -203,6 +230,10 @@ class RoomModel extends Equatable {
     int? guessModeDeadlineMs,
     Map<String, int>? wrongGuessCounts,
     int? revealCycleId,
+    int? revealCount,
+    Map<String, int>? blockedGuessers,
+    int? entryFee,
+    int? potTotal,
   }) =>
       RoomModel(
         id: id,
@@ -237,6 +268,10 @@ class RoomModel extends Equatable {
         guessModeDeadlineMs: guessModeDeadlineMs ?? this.guessModeDeadlineMs,
         wrongGuessCounts: wrongGuessCounts ?? this.wrongGuessCounts,
         revealCycleId: revealCycleId ?? this.revealCycleId,
+        revealCount: revealCount ?? this.revealCount,
+        blockedGuessers: blockedGuessers ?? this.blockedGuessers,
+        entryFee: entryFee ?? this.entryFee,
+        potTotal: potTotal ?? this.potTotal,
       );
 
   @override
@@ -265,5 +300,9 @@ class RoomModel extends Equatable {
         guessModeDeadlineMs,
         wrongGuessCounts,
         revealCycleId,
+        revealCount,
+        blockedGuessers,
+        entryFee,
+        potTotal,
       ];
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -105,6 +106,7 @@ class RoomService {
     required String hostName,
     String? hostPhotoUrl,
     int playerCount = 1,
+    int entryFee = 0,
   }) async {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
@@ -135,6 +137,7 @@ class RoomService {
       hostId: hostId,
       players: players,
       createdAt: DateTime.now(),
+      entryFee: entryFee,
     );
 
     await docRef.set(room.toMap());
@@ -360,7 +363,12 @@ class RoomService {
     }
   }
 
-  Future<void> _startGame(String roomId, RoomModel room, Difficulty difficulty) async {
+  Future<void> _startGame(
+    String roomId,
+    RoomModel room,
+    Difficulty difficulty,
+  ) async {
+    final entryFee = room.entryFee;
     final playerIds = room.players.keys.toList()..shuffle();
     final startScore = difficulty.startingPoints;
     final nowMs = DateTime.now().millisecondsSinceEpoch;
@@ -386,7 +394,7 @@ class RoomService {
       'solvedLetters': [],
       'letterCardGrantedPlayerIds': [],
       'turnPhase': TurnPhase.revealTurn.name,
-      'revealDeadlineMs': nowMs + 8000,
+      'revealDeadlineMs': nowMs + EconomyConfig.autoRevealIntervalMs,
       'guessOpportunityPlayerId': null,
       'guessModePlayerId': null,
       'lastRevealedByPlayerId': null,
@@ -394,7 +402,147 @@ class RoomService {
       'guessModeDeadlineMs': null,
       'wrongGuessCounts': {},
       'revealCycleId': 1,
+      'revealCount': 0,
+      'blockedGuessers': {},
+      'potTotal': 0,
     });
+
+    if (entryFee > 0) {
+      unawaited(_collectEntryFees(roomId, room.players, entryFee));
+    }
+  }
+
+  Future<void> _collectEntryFees(
+    String roomId,
+    Map<String, PlayerModel> players,
+    int entryFee,
+  ) async {
+    final humanIds = players.entries
+        .where((e) => !e.value.isBot)
+        .map((e) => e.key)
+        .toList();
+
+    var potCollected = 0;
+    for (final uid in humanIds) {
+      try {
+        await _firestore.runTransaction((tx) async {
+          final walletDoc = await tx.get(_walletRef(uid));
+          final wallet = walletDoc.exists
+              ? UserEconomyModel.fromFirestore(
+                  uid, walletDoc.data() as Map<String, dynamic>)
+              : null;
+          final before = wallet?.coins ?? 0;
+          if (before < entryFee) return;
+          final after = before - entryFee;
+          tx.set(_walletRef(uid), {'coins': after}, SetOptions(merge: true));
+          final txId = _uuid.v4();
+          tx.set(_txRef(uid, txId), EconomyTransactionModel(
+            id: txId,
+            type: TransactionType.roomEntryFee,
+            delta: -entryFee,
+            balanceAfter: after,
+            roomId: roomId,
+            createdAt: DateTime.now().toUtc(),
+            meta: {'entryFee': entryFee},
+          ).toFirestore());
+          potCollected += entryFee;
+        });
+      } catch (e) {
+        QaLoggerService.instance.log('ECONOMY',
+            'ENTRY_FEE_COLLECT_ERROR uid=${uid.substring(0, uid.length.clamp(0, 6))} error=$e');
+      }
+    }
+
+    if (potCollected > 0) {
+      await _rooms.doc(roomId).update({
+        'potTotal': FieldValue.increment(potCollected),
+      });
+      QaLoggerService.instance.log('ECONOMY',
+          'ENTRY_FEES_COLLECTED total=$potCollected players=${humanIds.length}');
+    }
+  }
+
+  Future<void> distributePot(String roomId, String winnerId) async {
+    try {
+      final doc = await _rooms.doc(roomId).get();
+      if (!doc.exists) return;
+      final room = RoomModel.fromFirestore(doc);
+      final pot = room.potTotal;
+      if (pot <= 0 || winnerId.startsWith('virtual_')) return;
+
+      await _firestore.runTransaction((tx) async {
+        final walletDoc = await tx.get(_walletRef(winnerId));
+        final wallet = walletDoc.exists
+            ? UserEconomyModel.fromFirestore(
+                winnerId, walletDoc.data() as Map<String, dynamic>)
+            : null;
+        final before = wallet?.coins ?? 0;
+        final after = before + pot;
+        tx.set(_walletRef(winnerId), {'coins': after}, SetOptions(merge: true));
+        final txId = _uuid.v4();
+        tx.set(_txRef(winnerId, txId), EconomyTransactionModel(
+          id: txId,
+          type: TransactionType.potWin,
+          delta: pot,
+          balanceAfter: after,
+          roomId: roomId,
+          createdAt: DateTime.now().toUtc(),
+          meta: {'potAmount': pot},
+        ).toFirestore());
+      });
+      QaLoggerService.instance.log('ECONOMY',
+          'POT_DISTRIBUTED amount=$pot winner=${winnerId.substring(0, winnerId.length.clamp(0, 6))}');
+    } catch (e) {
+      QaLoggerService.instance.log('ECONOMY', 'POT_DISTRIBUTE_ERROR error=$e');
+    }
+  }
+
+  Future<void> refundPot(String roomId) async {
+    try {
+      final doc = await _rooms.doc(roomId).get();
+      if (!doc.exists) return;
+      final room = RoomModel.fromFirestore(doc);
+      final pot = room.potTotal;
+      if (pot <= 0) return;
+
+      final humanIds = room.players.entries
+          .where((e) => !e.value.isBot)
+          .map((e) => e.key)
+          .toList();
+      if (humanIds.isEmpty) return;
+
+      final share = pot ~/ humanIds.length;
+      if (share <= 0) return;
+
+      for (final uid in humanIds) {
+        try {
+          await _firestore.runTransaction((tx) async {
+            final walletDoc = await tx.get(_walletRef(uid));
+            final wallet = walletDoc.exists
+                ? UserEconomyModel.fromFirestore(
+                    uid, walletDoc.data() as Map<String, dynamic>)
+                : null;
+            final before = wallet?.coins ?? 0;
+            final after = before + share;
+            tx.set(_walletRef(uid), {'coins': after}, SetOptions(merge: true));
+            final txId = _uuid.v4();
+            tx.set(_txRef(uid, txId), EconomyTransactionModel(
+              id: txId,
+              type: TransactionType.potRefund,
+              delta: share,
+              balanceAfter: after,
+              roomId: roomId,
+              createdAt: DateTime.now().toUtc(),
+              meta: {'refundShare': share, 'totalPot': pot},
+            ).toFirestore());
+          });
+        } catch (_) {}
+      }
+      QaLoggerService.instance.log('ECONOMY',
+          'POT_REFUNDED total=$pot players=${humanIds.length} shareEach=$share');
+    } catch (e) {
+      QaLoggerService.instance.log('ECONOMY', 'POT_REFUND_ERROR error=$e');
+    }
   }
 
   Future<void> revealCell(String roomId, int index) async {
@@ -545,6 +693,108 @@ class RoomService {
     }
   }
 
+  /// Auto-reveals a random tile on behalf of the system (no player auth required).
+  /// This is called by the guardian client when the revealDeadline expires.
+  /// Returns true only when a tile was actually revealed.
+  Future<bool> autoRevealPiece({
+    required String roomId,
+    required String actorUid,
+  }) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final txStartMs = now;
+    bool committed = false;
+    bool noWinner = false;
+    List<String>? playerIdsForRefund;
+
+    try {
+      await _firestore.runTransaction((tx) async {
+        final doc = await tx.get(_rooms.doc(roomId));
+        if (!doc.exists) return;
+        final room = RoomModel.fromFirestore(doc);
+
+        QaLoggerService.instance.log('REVEAL', 'TX_BEGIN name=autoRevealPiece');
+
+        if (room.phase == GamePhase.finished) {
+          QaLoggerService.instance.log('REVEAL', 'AUTO_REVEAL_ABORT reason=game_finished');
+          return;
+        }
+        if (room.turnPhase != TurnPhase.revealTurn) {
+          QaLoggerService.instance.log('REVEAL',
+              'AUTO_REVEAL_ABORT reason=wrong_phase phase=${room.turnPhase.name}');
+          return;
+        }
+        final deadline = room.revealDeadlineMs;
+        if (deadline == null || now < deadline) {
+          QaLoggerService.instance.log('REVEAL', 'AUTO_REVEAL_ABORT reason=deadline_not_expired');
+          return;
+        }
+        if (room.availablePieceIndices.isEmpty) {
+          QaLoggerService.instance.log('REVEAL', 'AUTO_REVEAL_ABORT reason=no_tiles_left');
+          return;
+        }
+
+        final rng = Random();
+        final pieceIndex = room.availablePieceIndices[
+            rng.nextInt(room.availablePieceIndices.length)];
+        final newHidden = room.availablePieceIndices
+            .where((i) => i != pieceIndex)
+            .toList();
+        final newRevealCount = room.revealCount + 1;
+
+        if (newHidden.isEmpty) {
+          tx.update(_rooms.doc(roomId), {
+            'placedPieces.${pieceIndex.toString()}': 'system',
+            'availablePieceIndices': newHidden,
+            'phase': GamePhase.finished.name,
+            'turnPhase': TurnPhase.roundOver.name,
+            'guessOpportunityPlayerId': null,
+            'guessModePlayerId': null,
+            'guessOpportunityDeadlineMs': null,
+            'guessModeDeadlineMs': null,
+            'lastRevealedByPlayerId': null,
+            'revealCount': newRevealCount,
+            'revealCycleId': FieldValue.increment(1),
+          });
+          QaLoggerService.instance.log('GAME', 'AUTO_REVEAL_LAST_TILE_NO_WINNER');
+          committed = true;
+          noWinner = true;
+          playerIdsForRefund = room.players.keys.toList();
+          return;
+        }
+
+        final totalTiles = room.gridSize * room.gridSize;
+        final revealedAfter = totalTiles - newHidden.length;
+        final guessOppMs = _guessOppTimerMs(revealedAfter, totalTiles);
+
+        tx.update(_rooms.doc(roomId), {
+          'placedPieces.${pieceIndex.toString()}': 'system',
+          'availablePieceIndices': newHidden,
+          'turnPhase': TurnPhase.guessOpportunity.name,
+          'guessOpportunityPlayerId': null,
+          'guessOpportunityDeadlineMs': now + guessOppMs,
+          'lastRevealedByPlayerId': null,
+          'revealCount': newRevealCount,
+          'revealCycleId': FieldValue.increment(1),
+        });
+
+        QaLoggerService.instance.log('REVEAL',
+            'AUTO_REVEAL_COMMIT pieceIndex=$pieceIndex revealCount=$newRevealCount guessOppMs=$guessOppMs');
+        QaLoggerService.instance.log('REVEAL',
+            'TX_COMMIT name=autoRevealPiece latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
+        committed = true;
+      });
+    } catch (e) {
+      QaLoggerService.instance.log('REVEAL', 'TX_ERROR name=autoRevealPiece error=$e');
+      if (e is FirebaseException && e.code == 'unavailable') rethrow;
+    }
+
+    if (noWinner && playerIdsForRefund != null) {
+      unawaited(refundPot(roomId));
+    }
+
+    return committed;
+  }
+
   Future<void> skipPiecePlacement({required String roomId}) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final txStartMs = now;
@@ -567,14 +817,9 @@ class RoomService {
         QaLoggerService.instance.log('TURN', 'SKIP_TX_ABORT reason=null_deadline');
         return;
       }
-      final skipTotalTiles = room.gridSize * room.gridSize;
-      final skipRevealMs = _revealTimerMs(room.placedPieces.length, skipTotalTiles);
-      QaLoggerService.instance.log('TURN',
-          'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / skipTotalTiles).toStringAsFixed(2)} durationMs=$skipRevealMs');
       tx.update(_rooms.doc(roomId), {
-        'currentTurnIndex': room.currentTurnIndex + 1,
         'turnPhase': TurnPhase.revealTurn.name,
-        'revealDeadlineMs': now + skipRevealMs,
+        'revealDeadlineMs': now + EconomyConfig.autoRevealIntervalMs,
         'guessOpportunityPlayerId': null,
         'guessModePlayerId': null,
         'guessOpportunityDeadlineMs': null,
@@ -616,8 +861,15 @@ class RoomService {
               'TX_ABORT name=enterGuessMode reason=wrong_phase phase=${room.turnPhase.name}');
           return;
         }
-        if (room.guessOpportunityPlayerId != userId) {
-          QaLoggerService.instance.log('TURN', 'TX_ABORT name=enterGuessMode reason=not_opportunity_player');
+        // Race mechanic: slot must be unclaimed (null = open to all)
+        if (room.guessOpportunityPlayerId != null) {
+          QaLoggerService.instance.log('TURN',
+              'TX_ABORT name=enterGuessMode reason=already_claimed player=${room.guessOpportunityPlayerId}');
+          return;
+        }
+        if (room.isBlockedFromGuessing(userId)) {
+          QaLoggerService.instance.log('TURN',
+              'TX_ABORT name=enterGuessMode reason=player_blocked uid=${userId.substring(0, userId.length.clamp(0, 6))} blockedUntil=${room.blockedGuessers[userId]}');
           return;
         }
         final deadline = room.guessOpportunityDeadlineMs;
@@ -626,8 +878,10 @@ class RoomService {
           return;
         }
 
+        // Atomically claim the guess slot and enter guessMode
         tx.update(_rooms.doc(roomId), {
           'turnPhase': TurnPhase.guessMode.name,
+          'guessOpportunityPlayerId': userId,
           'guessModePlayerId': userId,
           'guessModeDeadlineMs': now + 20000,
         });
@@ -789,22 +1043,10 @@ class RoomService {
           return;
         }
 
-        final expOppTotalTiles = room.gridSize * room.gridSize;
-        final expOppRevealMs = _revealTimerMs(room.placedPieces.length, expOppTotalTiles);
-        QaLoggerService.instance.log('TURN',
-            'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / expOppTotalTiles).toStringAsFixed(2)} durationMs=$expOppRevealMs');
-
-        final activePlayerIds = room.turnOrder
-            .where((id) => !(room.players[id]?.isEliminated ?? false))
-            .toList();
-        final newTurnUid = activePlayerIds.isEmpty
-            ? (room.guessOpportunityPlayerId ?? 'unknown')
-            : activePlayerIds[(room.currentTurnIndex + 1) % activePlayerIds.length];
-
         tx.update(_rooms.doc(roomId), {
           'currentTurnIndex': room.currentTurnIndex + 1,
           'turnPhase': TurnPhase.revealTurn.name,
-          'revealDeadlineMs': now + expOppRevealMs,
+          'revealDeadlineMs': now + EconomyConfig.autoRevealIntervalMs,
           'guessOpportunityPlayerId': null,
           'guessOpportunityDeadlineMs': null,
           'revealCycleId': FieldValue.increment(1),
@@ -901,30 +1143,21 @@ class RoomService {
           }
         }
 
-        final expGmTotalTiles = room.gridSize * room.gridSize;
-        final expGmRevealMs = _revealTimerMs(room.placedPieces.length, expGmTotalTiles);
-        QaLoggerService.instance.log('TURN',
-            'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / expGmTotalTiles).toStringAsFixed(2)} durationMs=$expGmRevealMs');
-
-        final activePlayerIds = room.turnOrder
-            .where((id) => !(room.players[id]?.isEliminated ?? false))
-            .toList();
-        final newTurnUid = activePlayerIds.isEmpty
-            ? (guesserUid ?? 'unknown')
-            : activePlayerIds[(room.currentTurnIndex + 1) % activePlayerIds.length];
-
-        tx.update(_rooms.doc(roomId), {
-          'currentTurnIndex': room.currentTurnIndex + 1,
+        final updates = <String, dynamic>{
           'turnPhase': TurnPhase.revealTurn.name,
-          'revealDeadlineMs': now + expGmRevealMs,
+          'revealDeadlineMs': now + EconomyConfig.autoRevealIntervalMs,
           'guessModePlayerId': null,
           'guessOpportunityPlayerId': null,
           'guessOpportunityDeadlineMs': null,
           'guessModeDeadlineMs': null,
           'revealCycleId': FieldValue.increment(1),
-        });
+        };
+        if (guesserUid != null) {
+          updates['blockedGuessers.$guesserUid'] = room.revealCount + 2;
+        }
+        tx.update(_rooms.doc(roomId), updates);
         QaLoggerService.instance.log('TURN',
-            'GUESS_MODE_TIMEOUT_ADVANCE_COMMIT oldCycle=${room.revealCycleId} newCycle=${room.revealCycleId + 1} newTurnUid=$newTurnUid');
+            'GUESS_MODE_TIMEOUT_ADVANCE_COMMIT oldCycle=${room.revealCycleId} newCycle=${room.revealCycleId + 1} blockedUid=$guesserUid');
         QaLoggerService.instance.log('TURN',
             'TX_COMMIT name=expireGuessMode latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
         committed = true;
@@ -993,31 +1226,52 @@ class RoomService {
         return;
       }
 
-      // Wrong guess — deduct live penalty from wallet within same transaction
+      // Wrong guess — deduct live penalty + pot penalty from wallet in same transaction
       final walletDoc = await tx.get(_walletRef(userId));
       final wallet = walletDoc.exists
           ? UserEconomyModel.fromFirestore(
               userId, walletDoc.data() as Map<String, dynamic>)
           : null;
       final before = wallet?.coins ?? 0;
-      final deduct = before > 0
+
+      // Pot penalty: 5% of entry fee (only if entry fee > 0)
+      final potPenalty = room.entryFee > 0
+          ? max(1, (room.entryFee * EconomyConfig.potPenaltyRate).ceil())
+          : 0;
+
+      final livePenalty = before > 0
           ? EconomyConfig.wrongGuessLivePenalty.clamp(0, before)
           : 0;
-      final after = before - deduct;
+      final totalWalletDeduct = (livePenalty + potPenalty).clamp(0, before);
+      final after = before - totalWalletDeduct;
 
-      if (deduct > 0) {
+      if (totalWalletDeduct > 0) {
         tx.set(_walletRef(userId), {'coins': after}, SetOptions(merge: true));
-        final txId = _uuid.v4();
-        tx.set(_txRef(userId, txId), EconomyTransactionModel(
-          id: txId,
-          type: TransactionType.wrongGuessPenalty,
-          delta: -deduct,
-          balanceAfter: after,
-          roomId: roomId,
-          createdAt: DateTime.now().toUtc(),
-        ).toFirestore());
+        if (livePenalty > 0) {
+          final txId = _uuid.v4();
+          tx.set(_txRef(userId, txId), EconomyTransactionModel(
+            id: txId,
+            type: TransactionType.wrongGuessPenalty,
+            delta: -livePenalty,
+            balanceAfter: after + potPenalty,
+            roomId: roomId,
+            createdAt: DateTime.now().toUtc(),
+          ).toFirestore());
+        }
+        if (potPenalty > 0) {
+          final txId2 = _uuid.v4();
+          tx.set(_txRef(userId, txId2), EconomyTransactionModel(
+            id: txId2,
+            type: TransactionType.wrongGuessPotPenalty,
+            delta: -potPenalty,
+            balanceAfter: after,
+            roomId: roomId,
+            createdAt: DateTime.now().toUtc(),
+            meta: {'potPenalty': potPenalty, 'entryFee': room.entryFee},
+          ).toFirestore());
+        }
         QaLoggerService.instance.log('ECONOMY',
-            'WRONG_GUESS_PENALTY_APPLIED amount=$deduct before=$before after=$after');
+            'WRONG_GUESS_PENALTY_APPLIED livePenalty=$livePenalty potPenalty=$potPenalty before=$before after=$after');
       } else {
         QaLoggerService.instance.log('ECONOMY',
             'WRONG_GUESS_PENALTY_SKIPPED reason=zero_balance');
@@ -1028,24 +1282,28 @@ class RoomService {
       final nextTurnIndex = room.currentTurnIndex + 1;
       final currentWrongCount = room.wrongGuessCounts[userId] ?? 0;
 
-      final _wgTotalTiles = room.gridSize * room.gridSize;
-      final _wgRevealMs = _revealTimerMs(room.placedPieces.length, _wgTotalTiles);
-      QaLoggerService.instance.log('TURN',
-          'REVEAL_TIMER_DYNAMIC ratio=${(room.placedPieces.length / _wgTotalTiles).toStringAsFixed(2)} durationMs=$_wgRevealMs');
-
       final updates = <String, dynamic>{
         'currentTurnIndex': nextTurnIndex,
         'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
         'guessCount': FieldValue.increment(1),
         'turnPhase': TurnPhase.revealTurn.name,
-        'revealDeadlineMs': nowMs + _wgRevealMs,
+        'revealDeadlineMs': nowMs + EconomyConfig.autoRevealIntervalMs,
         'guessModePlayerId': null,
         'guessOpportunityPlayerId': null,
         'guessOpportunityDeadlineMs': null,
         'guessModeDeadlineMs': null,
         'wrongGuessCounts.$userId': currentWrongCount + 1,
         'revealCycleId': FieldValue.increment(1),
+        // Block this player from pressing Guess for 2 more auto-reveals
+        'blockedGuessers.$userId': room.revealCount + 2,
       };
+
+      // Add pot penalty to room pot
+      if (potPenalty > 0) {
+        updates['potTotal'] = FieldValue.increment(potPenalty);
+        QaLoggerService.instance.log('ECONOMY',
+            'POT_PENALTY_ADDED amount=$potPenalty newPot=${room.potTotal + potPenalty}');
+      }
 
       if (newScore <= 0) {
         updates['players.$userId.score'] = 0;
@@ -1064,7 +1322,9 @@ class RoomService {
       if (e is FirebaseException && e.code == 'unavailable') rethrow;
     }
 
-    if (!isCorrect && needsEliminationCheck) {
+    if (isCorrect) {
+      unawaited(distributePot(roomId, userId));
+    } else if (needsEliminationCheck) {
       await _checkLastPlayerStanding(roomId);
     }
     return isCorrect;

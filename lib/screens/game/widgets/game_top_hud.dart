@@ -31,6 +31,7 @@ class TopHud extends StatelessWidget {
   final int totalTiles;
   final int? guessOpportunityDeadlineMs;
   final bool isLastTile;
+  final int potTotal;
 
   const TopHud({
     required this.players,
@@ -49,6 +50,7 @@ class TopHud extends StatelessWidget {
     this.totalTiles = 1,
     this.guessOpportunityDeadlineMs,
     this.isLastTile = false,
+    this.potTotal = 0,
   });
 
   @override
@@ -105,11 +107,14 @@ class TopHud extends StatelessWidget {
                     children: [
                       const CoinDisplay(compact: true),
                       const SizedBox(height: 3),
-                      _PrizePotentialChip(
-                        isSolo: isSolo,
-                        revealedCount: revealedCount,
-                        totalTiles: totalTiles,
-                      ),
+                      if (potTotal > 0)
+                        _PotChip(potTotal: potTotal)
+                      else
+                        _PrizePotentialChip(
+                          isSolo: isSolo,
+                          revealedCount: revealedCount,
+                          totalTiles: totalTiles,
+                        ),
                     ],
                   ),
                 ],
@@ -252,26 +257,14 @@ class _TurnInfoState extends State<_TurnInfo> {
     switch (widget.turnPhase) {
       case TurnPhase.revealTurn:
         if (widget.isLastTile) {
-          return widget.isMyTurn
-              ? ('גילוי אחרון!', const Color(0xFFFF3B30))
-              : ('ממתין לגילוי האחרון', const Color(0xFFFF6B35));
+          return ('גילוי אחרון!', const Color(0xFFFF3B30));
         }
-        return widget.isMyTurn
-            ? ('◉ התור שלך', const Color(0xFF00D4FF))
-            : ('${widget.name.isEmpty ? 'יריב' : widget.name} מגלה', const Color(0xFF6A9CC4));
+        return ('מגלה אוטומטי...', const Color(0xFF6A9CC4));
       case TurnPhase.guessOpportunity:
         if (widget.isMyGuessOpportunity) {
-          return ('האם אתה יודע?', const Color(0xFFFFE082));
+          return ('האם אתה יודע? לחץ!', const Color(0xFFFFE082));
         }
-        if (widget.guessOpportunityDeadlineMs != null) {
-          final remaining = widget.guessOpportunityDeadlineMs! - _nowMs;
-          if (remaining <= 2000) {
-            return ('ייתכן שינחש!', const Color(0xFFFF3B30));
-          } else if (remaining <= 3500) {
-            return ('יריב שוקל...', const Color(0xFFFF9F43));
-          }
-        }
-        return ('${widget.name.isEmpty ? 'יריב' : widget.name} מחליט...', const Color(0xFF87CEEB).withOpacity(0.80));
+        return ('מרוץ ניחושים!', const Color(0xFF87CEEB).withOpacity(0.80));
       case TurnPhase.guessMode:
         final gName = widget.guessModePlayerName.isEmpty ? 'יריב' : widget.guessModePlayerName;
         return widget.isMyGuessModeActive
@@ -352,6 +345,39 @@ class _PlayerChip extends StatelessWidget {
 
 // Prize Potential chip — shows actual achievable coins from RewardCalculator.
 // Animates on every reveal: scale pulse + orange flash + lateral shake.
+class _PotChip extends StatelessWidget {
+  final int potTotal;
+  const _PotChip({required this.potTotal});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1000).withOpacity(0.85),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFFB300).withOpacity(0.75), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🏆', style: TextStyle(fontSize: 11)),
+          const SizedBox(width: 3),
+          Text(
+            '$potTotal',
+            style: const TextStyle(
+              color: Color(0xFFFFE14D),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PrizePotentialChip extends StatefulWidget {
   final bool isSolo;
   final int revealedCount;

@@ -372,6 +372,36 @@ class EconomyService {
     return applied;
   }
 
+  Future<void> awardPotWin({
+    required String uid,
+    required int amount,
+    required String roomId,
+  }) async {
+    if (amount <= 0) return;
+    await _applyDelta(
+      uid: uid,
+      delta: amount,
+      type: TransactionType.potWin,
+      roomId: roomId,
+      meta: {'potAmount': amount},
+    );
+  }
+
+  Future<void> awardPotRefund({
+    required String uid,
+    required int amount,
+    required String roomId,
+  }) async {
+    if (amount <= 0) return;
+    await _applyDelta(
+      uid: uid,
+      delta: amount,
+      type: TransactionType.potRefund,
+      roomId: roomId,
+      meta: {'refundAmount': amount},
+    );
+  }
+
   Future<void> _syncCache(String uid) async {
     final snap = await _walletRef(uid).get();
     if (!snap.exists) return;
