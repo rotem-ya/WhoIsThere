@@ -145,9 +145,7 @@ class _TileState extends State<_Tile> {
       top: row * widget.tileSize,
       width: widget.tileSize,
       height: widget.tileSize,
-      child: Padding(
-        padding: const EdgeInsets.all(1),
-        child: GestureDetector(
+      child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: _canTap
               ? (_) {
@@ -195,7 +193,6 @@ class _TileState extends State<_Tile> {
               ),
             ),
           ),
-        ),
       ),
     );
   }

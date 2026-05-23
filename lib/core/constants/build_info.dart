@@ -1,3 +1,3 @@
 /// Manually updated on each push. Check this label in Profile screen
 /// to verify which APK build is installed on a test device.
-const String kBuildLabel = 'build-20260523-ocean-no-grid-lines';
+const String kBuildLabel = 'build-20260523-zero-gap-tiles';
