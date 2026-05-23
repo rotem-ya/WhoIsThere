@@ -26,15 +26,15 @@ class _VaultCoverState extends State<VaultCover>
   void initState() {
     super.initState();
 
-    // Adjusted to 600ms for a more obvious, satisfying mechanical aperture feel
+    // Fast, tactile 220ms animation for a heavy mechanical snap
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 220),
     );
 
     _anim = CurvedAnimation(
       parent: _ctrl,
-      curve: Curves.easeOutExpo,
+      curve: Curves.easeOutCubic,
     );
 
     if (widget.isRevealed) {
@@ -74,7 +74,7 @@ class _VaultCoverState extends State<VaultCover>
             AnimatedBuilder(
               animation: _anim,
               builder: (_, __) {
-                // Remove overlay completely when fully revealed
+                // Remove overlay completely when fully revealed to expose the board
                 if (_anim.value >= 0.995) {
                   return const SizedBox.shrink();
                 }
@@ -112,28 +112,28 @@ class _AperturePainter extends CustomPainter {
     final diagonal = math.sqrt(size.width * size.width + size.height * size.height);
 
     final eased = Curves.easeOutCubic.transform(progress);
-    final overshoot = math.sin(progress * math.pi) * 0.10;
+    final overshoot = math.sin(progress * math.pi) * 0.05;
     final openRadius = (eased + overshoot) * diagonal * 0.92;
-    final rotation = eased * math.pi / bladeCount * 3.2;
+    final rotation = eased * math.pi / bladeCount * 2.5;
 
     canvas.saveLayer(rect, Paint());
 
-    // 1. Vivid Deep Camera Glass Background
+    // 1. Deep Graphite / Gunmetal Background
     canvas.drawRect(
       rect,
       Paint()
         ..shader = RadialGradient(
           colors: const [
-            Color(0xFF004488),
-            Color(0xFF001133),
-            Color(0xFF000511),
+            Color(0xFF2A2A2A),
+            Color(0xFF141414),
+            Color(0xFF050505),
           ],
           radius: 1.5,
           center: Alignment.center,
         ).createShader(rect),
     );
 
-    // 2. Diagonal Lens Glass Sweep / Glare
+    // 2. Glossy Metal Sweep (Neutral highlights, no neon)
     final sweep = math.sin(progress * math.pi).clamp(0.0, 1.0);
     canvas.drawRect(
       rect,
@@ -143,15 +143,15 @@ class _AperturePainter extends CustomPainter {
           end: Alignment.bottomRight,
           colors: [
             Colors.transparent,
-            const Color(0xFF00FFFF).withOpacity(0.15 + (0.2 * sweep)),
-            const Color(0xFF00BFFF).withOpacity(0.3 + (0.3 * sweep)),
+            Colors.white.withOpacity(0.05 + (0.05 * sweep)),
+            Colors.white.withOpacity(0.1 + (0.1 * sweep)),
             Colors.transparent,
           ],
           stops: const [0.0, 0.4, 0.6, 1.0],
         ).createShader(rect),
     );
 
-    // 3. Premium Cyan/Electric Blue Aperture Blades
+    // 3. Overlapping Mechanical Blades (Black Chrome / Graphite)
     for (int i = 0; i < bladeCount; i++) {
       final a0 = i * 2 * math.pi / bladeCount + rotation;
       final a1 = (i + 1) * 2 * math.pi / bladeCount + rotation;
@@ -171,12 +171,12 @@ class _AperturePainter extends CustomPainter {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: i.isEven
-                ? const [Color(0xFF0099FF), Color(0xFF0055BB), Color(0xFF002266)]
-                : const [Color(0xFF0088EE), Color(0xFF0044AA), Color(0xFF001144)],
+                ? const [Color(0xFF383838), Color(0xFF1E1E1E), Color(0xFF0A0A0A)]
+                : const [Color(0xFF2C2C2C), Color(0xFF151515), Color(0xFF000000)],
           ).createShader(rect),
       );
 
-      // Bright Cyan Blade Edges for Mechanical Precision
+      // Subtle metallic edge for precision-engineered look
       canvas.drawLine(
         center,
         Offset(
@@ -184,48 +184,48 @@ class _AperturePainter extends CustomPainter {
           center.dy + diagonal * math.sin(a0),
         ),
         Paint()
-          ..color = const Color(0xFF00FFFF).withOpacity(0.6)
-          ..strokeWidth = 1.2,
+          ..color = const Color(0xFF666666).withOpacity(0.6)
+          ..strokeWidth = 1.0,
       );
     }
 
-    // 4. Center Camera Lens Hub (No lock icon, pure optics)
+    // 4. Center Vault Optics (Pure mechanical geometry, no glow)
     final hubRadius = size.shortestSide * 0.12;
 
-    // Outer cyan glowing ring
+    // Outer dark steel ring
     canvas.drawCircle(
       center,
       hubRadius * 1.8,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
-        ..color = const Color(0xFF00E5FF).withOpacity(0.5),
+        ..color = const Color(0xFF444444).withOpacity(0.8),
     );
 
-    // Inner dark pupil
+    // Inner shadow ring
     canvas.drawCircle(
       center,
       hubRadius * 1.4,
-      Paint()..color = const Color(0xFF00081A),
+      Paint()..color = const Color(0xFF0A0A0A),
     );
 
-    // Inner bright optical ring
+    // Inner bright steel ring
     canvas.drawCircle(
       center,
       hubRadius * 1.4,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = const Color(0xFF00FFFF).withOpacity(0.8),
+        ..strokeWidth = 1.0
+        ..color = const Color(0xFF777777).withOpacity(0.9),
     );
 
     canvas.drawCircle(
       center,
       hubRadius * 0.75,
-      Paint()..color = const Color(0xFF00030A),
+      Paint()..color = const Color(0xFF030303),
     );
 
-    // 5. Iris Hole Opening (Clears the layer to expose the image slice)
+    // 5. Iris Hole Opening (Clears the metal layer to expose the image slice)
     if (openRadius > 1) {
       canvas.drawPath(
         _irisHole(center, openRadius, rotation),
@@ -235,36 +235,14 @@ class _AperturePainter extends CustomPainter {
 
     canvas.restore();
 
-    // 6. Glowing Cyan Edge exactly on the opening rim
-    if (openRadius > 2 && progress < 0.96) {
+    // 6. Brushed Metal Rim exactly on the opening edge (fades as it opens)
+    if (openRadius > 2 && progress < 0.98) {
       canvas.drawPath(
         _irisHole(center, openRadius, rotation),
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.0
-          ..color = const Color(0xFF00FFFF).withOpacity(0.9 * (1.0 - progress * 0.35)),
-      );
-    }
-
-    // 7. Bright Camera Exposure Flash (Replaces the dark sweep)
-    if (progress > 0.05 && progress < 0.90) {
-      final flash = math.sin(((progress - 0.05) / 0.85).clamp(0.0, 1.0) * math.pi);
-      final flashRadius = math.max(8.0, openRadius * 0.85);
-
-      canvas.drawCircle(
-        center,
-        flashRadius,
-        Paint()
-          ..shader = RadialGradient(
-            colors: [
-              Colors.white.withOpacity(0.7 * flash),
-              const Color(0xFF00FFFF).withOpacity(0.4 * flash),
-              Colors.transparent,
-            ],
-            stops: const [0.0, 0.4, 1.0],
-          ).createShader(
-            Rect.fromCircle(center: center, radius: flashRadius),
-          ),
+          ..strokeWidth = 1.5
+          ..color = const Color(0xFF999999).withOpacity(0.7 * (1.0 - progress)),
       );
     }
   }
@@ -296,3 +274,4 @@ class _AperturePainter extends CustomPainter {
     return oldDelegate.progress != progress || oldDelegate.focused != focused;
   }
 }
+
