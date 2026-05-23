@@ -47,8 +47,6 @@ class GameActions extends ConsumerWidget {
       totalTiles: totalTiles,
     );
     final guessActive = canGuessNow && !isBusy;
-    // Button is active whenever not blocked and not in an opponent's guessMode
-    final buttonActive = !isBlocked && !isGuessModeActive && !isBusy;
 
     // Hint affordability — solo only; guard already enforces this server-side
     final wallet = isSolo ? ref.watch(walletProvider).valueOrNull : null;
@@ -61,18 +59,18 @@ class GameActions extends ConsumerWidget {
     final String primaryLabel;
     if (isBlocked) {
       primaryLabel = blockedRemaining > 0 ? 'חסום ($blockedRemaining גילויים)' : 'חסום';
-    } else if (isGuessModeActive) {
-      final name = guessModePlayerName.isEmpty ? 'יריב' : guessModePlayerName;
-      primaryLabel = '$name מנחש!';
     } else if (canGuessNow) {
       primaryLabel = 'נחש עכשיו!';
+    } else if (isGuessModeActive) {
+      final name = guessModePlayerName.isEmpty ? 'יריב' : guessModePlayerName;
+      primaryLabel = '$name מנחש...';
     } else {
-      primaryLabel = 'נחש!';
+      primaryLabel = 'ממתין לגילוי...';
     }
 
-    final primaryIsActive = buttonActive;
+    final primaryIsActive = guessActive;
     final primaryGlow = guessActive;
-    final primaryOnTap = buttonActive ? onGuess : null;
+    final primaryOnTap = guessActive ? onGuess : null;
 
     // Show reward chip on the guess opportunity CTA only
     final showReward = canGuessNow && prize != null;

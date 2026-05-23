@@ -25,7 +25,6 @@ import '../../services/hint_economy_guard.dart';
 import '../../services/reward_calculator.dart';
 import '../../services/qa_logger_service.dart';
 import '../../widgets/game/animated_reward.dart';
-import '../../widgets/game/letter_bank_input.dart';
 import 'widgets/game_top_hud.dart';
 import 'widgets/game_board_view.dart';
 
@@ -1723,9 +1722,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   onRevealHint: currentUserId == null
                       ? null
                       : () => _useRevealHint(room, currentUserId),
-                  onGuess: !_isFinished && currentUserId != null
-                      ? () => _enterGuessMode(room, currentUserId!)
-                      : null,
+                  onGuess: canGuessNow ? () => _enterGuessMode(room, currentUserId!) : null,
                   onGuessSubmit: (currentUserId != null &&
                           room.turnPhase == TurnPhase.guessMode &&
                           room.guessModePlayerId == currentUserId)
