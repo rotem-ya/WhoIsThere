@@ -17,25 +17,19 @@ class VaultCover extends StatefulWidget {
   State<VaultCover> createState() => _VaultCoverState();
 }
 
-class _VaultCoverState extends State<VaultCover>
-    with SingleTickerProviderStateMixin {
+class _VaultCoverState extends State<VaultCover> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _anim;
 
   @override
   void initState() {
     super.initState();
-
-    // Fast, tactile 220ms animation for a heavy mechanical snap
+    // Snappy, tactile mechanical opening
     _ctrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 220),
     );
-
-    _anim = CurvedAnimation(
-      parent: _ctrl,
-      curve: Curves.easeOutCubic,
-    );
+    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic);
 
     if (widget.isRevealed) {
       _ctrl.value = 1.0;
@@ -45,12 +39,9 @@ class _VaultCoverState extends State<VaultCover>
   @override
   void didUpdateWidget(covariant VaultCover oldWidget) {
     super.didUpdateWidget(oldWidget);
-
     if (widget.isRevealed && !oldWidget.isRevealed) {
-      _ctrl.forward(from: 0.0);
-    }
-
-    if (!widget.isRevealed && oldWidget.isRevealed) {
+      _ctrl.forward();
+    } else if (!widget.isRevealed && oldWidget.isRevealed) {
       _ctrl.reverse();
     }
   }
@@ -64,31 +55,29 @@ class _VaultCoverState extends State<VaultCover>
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
-      child: ClipRect(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // The continuous underlying image slice remains untouched
-            widget.child,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Underlying continuous image slice
+          widget.child,
+          
+          AnimatedBuilder(
+            animation: _anim,
+            builder: (context, _) {
+              // Return nothing once fully open to save rendering
+              if (_anim.value >= 0.995) return const SizedBox.shrink();
 
-            AnimatedBuilder(
-              animation: _anim,
-              builder: (_, __) {
-                // Remove overlay completely when fully revealed to expose the board
-                if (_anim.value >= 0.995) {
-                  return const SizedBox.shrink();
-                }
-
-                return CustomPaint(
+              return RepaintBoundary(
+                child: CustomPaint(
                   painter: _AperturePainter(
                     progress: _anim.value,
                     focused: widget.isFocused,
                   ),
-                );
-              },
-            ),
-          ],
-        ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -99,11 +88,35 @@ class _AperturePainter extends CustomPainter {
   final bool focused;
 
   static const int bladeCount = 8;
+  
+  // Premium DSLR Palette - Heavy Gunmetal & Black Chrome
+  static const Color gunmetalDark = Color(0xFF101012);
+  static const Color gunmetalBase = Color(0xFF1C1C1F);
+  static const Color gunmetalLight = Color(0xFF2D2D32);
+  static const Color chromeHighlight = Color(0xFF5A5A62);
 
   const _AperturePainter({
     required this.progress,
     required this.focused,
   });
+
+  Path _createIrisHole(Offset center, double radius, double rotation) {
+    final path = Path();
+    for (int i = 0; i < bladeCount; i++) {
+      final angle = rotation + (i * 2 * math.pi / bladeCount);
+      final point = Offset(
+        center.dx + radius * math.cos(angle),
+        center.dy + radius * math.sin(angle),
+      );
+      if (i == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    path.close();
+    return path;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -111,162 +124,107 @@ class _AperturePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final diagonal = math.sqrt(size.width * size.width + size.height * size.height);
 
-    final eased = Curves.easeOutCubic.transform(progress);
-    final overshoot = math.sin(progress * math.pi) * 0.05;
-    final openRadius = (eased + overshoot) * diagonal * 0.92;
-    final rotation = eased * math.pi / bladeCount * 2.5;
-
+    // 1. Setup Layer for masking
     canvas.saveLayer(rect, Paint());
 
-    // 1. Deep Graphite / Gunmetal Background
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = RadialGradient(
-          colors: const [
-            Color(0xFF2A2A2A),
-            Color(0xFF141414),
-            Color(0xFF050505),
-          ],
-          radius: 1.5,
-          center: Alignment.center,
-        ).createShader(rect),
-    );
+    // 2. Base layer to ensure complete opacity behind blades
+    final bgPaint = Paint()..color = gunmetalDark;
+    canvas.drawRect(rect, bgPaint);
 
-    // 2. Glossy Metal Sweep (Neutral highlights, no neon)
-    final sweep = math.sin(progress * math.pi).clamp(0.0, 1.0);
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.transparent,
-            Colors.white.withOpacity(0.05 + (0.05 * sweep)),
-            Colors.white.withOpacity(0.1 + (0.1 * sweep)),
-            Colors.transparent,
-          ],
-          stops: const [0.0, 0.4, 0.6, 1.0],
-        ).createShader(rect),
-    );
-
-    // 3. Overlapping Mechanical Blades (Black Chrome / Graphite)
+    // 3. Draw overlapping filled mechanical blades
+    final rotation = progress * math.pi * 0.35;
+    
     for (int i = 0; i < bladeCount; i++) {
-      final a0 = i * 2 * math.pi / bladeCount + rotation;
-      final a1 = (i + 1) * 2 * math.pi / bladeCount + rotation;
-      final aMid = (a0 + a1) / 2;
+      final angle = (i * 2 * math.pi / bladeCount) + rotation;
+      // Extend the blade far into the next sector to create realistic geometric overlap
+      final nextAngle = ((i + 1.8) * 2 * math.pi / bladeCount) + rotation; 
 
-      final blade = Path()
+      // Points constructing a single aperture blade
+      final pOuter1 = Offset(
+        center.dx + diagonal * math.cos(angle - 0.2), 
+        center.dy + diagonal * math.sin(angle - 0.2),
+      );
+      final pOuter2 = Offset(
+        center.dx + diagonal * math.cos(nextAngle),
+        center.dy + diagonal * math.sin(nextAngle),
+      );
+
+      final bladePath = Path()
         ..moveTo(center.dx, center.dy)
-        ..lineTo(center.dx + diagonal * math.cos(a0), center.dy + diagonal * math.sin(a0))
-        ..lineTo(center.dx + diagonal * 1.15 * math.cos(aMid), center.dy + diagonal * 1.15 * math.sin(aMid))
-        ..lineTo(center.dx + diagonal * math.cos(a1), center.dy + diagonal * math.sin(a1))
+        ..lineTo(pOuter1.dx, pOuter1.dy)
+        ..lineTo(pOuter2.dx, pOuter2.dy)
         ..close();
 
-      canvas.drawPath(
-        blade,
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: i.isEven
-                ? const [Color(0xFF383838), Color(0xFF1E1E1E), Color(0xFF0A0A0A)]
-                : const [Color(0xFF2C2C2C), Color(0xFF151515), Color(0xFF000000)],
-          ).createShader(rect),
-      );
+      // DSLR brushed metal gradient relative to blade angle
+      final gradientPaint = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment(math.cos(angle), math.sin(angle)),
+          end: Alignment(math.cos(angle + math.pi), math.sin(angle + math.pi)),
+          colors: const [gunmetalLight, gunmetalBase, gunmetalDark],
+          stops: const [0.0, 0.4, 1.0],
+        ).createShader(rect);
 
-      // Subtle metallic edge for precision-engineered look
-      canvas.drawLine(
-        center,
-        Offset(
-          center.dx + diagonal * math.cos(a0),
-          center.dy + diagonal * math.sin(a0),
-        ),
-        Paint()
-          ..color = const Color(0xFF666666).withOpacity(0.6)
-          ..strokeWidth = 1.0,
-      );
+      // Deep drop shadow separating this blade from the one beneath it
+      canvas.drawShadow(bladePath, Colors.black, 6.0, true);
+      
+      // Fill the solid metal blade
+      canvas.drawPath(bladePath, gradientPaint);
+
+      // Dark seam line
+      final seamPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..color = Colors.black
+        ..strokeWidth = 1.5;
+      canvas.drawPath(bladePath, seamPaint);
+      
+      // Inner edge subtle chrome reflection
+      final highlightPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..color = chromeHighlight.withOpacity(0.4)
+        ..strokeWidth = 0.5;
+      canvas.drawPath(bladePath, highlightPaint);
     }
 
-    // 4. Center Vault Optics (Pure mechanical geometry, no glow)
-    final hubRadius = size.shortestSide * 0.12;
+    // 4. Cut the expanding iris hole
+    final maxRadius = diagonal / 1.1; // Ensure hole grows large enough to clear corners
+    final currentRadius = progress * maxRadius;
 
-    // Outer dark steel ring
-    canvas.drawCircle(
-      center,
-      hubRadius * 1.8,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = const Color(0xFF444444).withOpacity(0.8),
-    );
-
-    // Inner shadow ring
-    canvas.drawCircle(
-      center,
-      hubRadius * 1.4,
-      Paint()..color = const Color(0xFF0A0A0A),
-    );
-
-    // Inner bright steel ring
-    canvas.drawCircle(
-      center,
-      hubRadius * 1.4,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0
-        ..color = const Color(0xFF777777).withOpacity(0.9),
-    );
-
-    canvas.drawCircle(
-      center,
-      hubRadius * 0.75,
-      Paint()..color = const Color(0xFF030303),
-    );
-
-    // 5. Iris Hole Opening (Clears the metal layer to expose the image slice)
-    if (openRadius > 1) {
-      canvas.drawPath(
-        _irisHole(center, openRadius, rotation),
-        Paint()..blendMode = BlendMode.clear,
-      );
+    if (currentRadius > 0) {
+      final irisPath = _createIrisHole(center, currentRadius, rotation);
+      final clearPaint = Paint()..blendMode = BlendMode.clear;
+      canvas.drawPath(irisPath, clearPaint);
     }
 
+    // 5. Restore layer to finalize mask
     canvas.restore();
 
-    // 6. Brushed Metal Rim exactly on the opening edge (fades as it opens)
-    if (openRadius > 2 && progress < 0.98) {
-      canvas.drawPath(
-        _irisHole(center, openRadius, rotation),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5
-          ..color = const Color(0xFF999999).withOpacity(0.7 * (1.0 - progress)),
-      );
-    }
-  }
+    // 6. Draw mechanical rim highlights ON TOP of the cleared hole
+    if (currentRadius > 0 && progress < 1.0) {
+      final irisPath = _createIrisHole(center, currentRadius, rotation);
+      
+      // Heavy shadow inside the cutting rim
+      final innerRimShadow = Paint()
+        ..style = PaintingStyle.stroke
+        ..color = Colors.black.withOpacity(0.8)
+        ..strokeWidth = 3.0;
+      canvas.drawPath(irisPath, innerRimShadow);
 
-  Path _irisHole(Offset center, double radius, double rotation) {
-    const sides = 8;
-    final path = Path();
-
-    for (int i = 0; i < sides; i++) {
-      final angle = i * 2 * math.pi / sides + rotation;
-      final point = Offset(
-        center.dx + radius * math.cos(angle),
-        center.dy + radius * math.sin(angle),
-      );
-
-      if (i == 0) {
-        path.moveTo(point.dx, point.dy);
-      } else {
-        path.lineTo(point.dx, point.dy);
-      }
+      // Sharp metallic edge
+      final outerRimHighlight = Paint()
+        ..style = PaintingStyle.stroke
+        ..color = chromeHighlight
+        ..strokeWidth = 1.0;
+      canvas.drawPath(irisPath, outerRimHighlight);
     }
 
-    path.close();
-    return path;
+    // 7. Focus State (minimalist UI indicator, unobtrusive)
+    if (focused) {
+      final focusPaint = Paint()
+        ..color = Colors.white24
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      canvas.drawRect(rect, focusPaint);
+    }
   }
 
   @override
@@ -274,4 +232,3 @@ class _AperturePainter extends CustomPainter {
     return oldDelegate.progress != progress || oldDelegate.focused != focused;
   }
 }
-
