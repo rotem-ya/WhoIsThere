@@ -234,43 +234,43 @@ class _ActionButton extends StatelessWidget {
             gradient: isPrimary
                 ? const LinearGradient(
                     colors: [
-                      Color(0xFFD0C090),
-                      Color(0xFFA89060),
-                      Color(0xFF806838),
-                      Color(0xFF604820),
+                      Color(0xFF20A8E0),
+                      Color(0xFF0E88C8),
+                      Color(0xFF0868A8),
+                      Color(0xFF054880),
                     ],
                     stops: [0.0, 0.38, 0.72, 1.0],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   )
                 : null,
-            color: isPrimary ? null : const Color(0xFF07101F).withOpacity(0.58),
+            color: isPrimary ? null : const Color(0xFF081828).withOpacity(0.65),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isPrimary
-                  ? Colors.white.withOpacity(0.32)
-                  : const Color(0xFF3A6080).withOpacity(isActive ? 0.40 : 0.18),
+                  ? Colors.white.withOpacity(0.35)
+                  : const Color(0xFF2080C0).withOpacity(isActive ? 0.45 : 0.20),
               width: 1.0,
             ),
             boxShadow: glow
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF906020).withOpacity(0.50),
-                      blurRadius: 18,
+                      color: const Color(0xFF10A0E0).withOpacity(0.60),
+                      blurRadius: 20,
                       offset: const Offset(0, 5),
                     ),
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.45),
-                      blurRadius: 6,
+                      color: const Color(0xFF0050B0).withOpacity(0.45),
+                      blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
                   ]
                 : isPrimary
                     ? [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.45),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
+                          color: const Color(0xFF0050B0).withOpacity(0.45),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ]
                     : [],
@@ -310,7 +310,7 @@ class _ActionButton extends StatelessWidget {
                             label,
                             textDirection: TextDirection.rtl,
                             style: const TextStyle(
-                              color: Color(0xFF07101F),
+                              color: Colors.white,
                               fontSize: 19,
                               fontWeight: FontWeight.w900,
                               height: 1,
@@ -335,7 +335,7 @@ class _ActionButton extends StatelessWidget {
                           maxLines: 1,
                           style: TextStyle(
                             color: isPrimary
-                                ? const Color(0xFF0A1828)
+                                ? Colors.white
                                 : Colors.white.withOpacity(0.75),
                             fontSize: isPrimary ? 20 : 17,
                             fontWeight: FontWeight.w900,

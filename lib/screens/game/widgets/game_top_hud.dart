@@ -62,18 +62,18 @@ class TopHud extends StatelessWidget {
           duration: const Duration(milliseconds: 400),
           padding: const EdgeInsets.fromLTRB(10, 7, 10, 7),
           decoration: BoxDecoration(
-            color: const Color(0xFF0A1E38).withOpacity(0.92),
+            color: const Color(0xFF081E3A).withOpacity(0.90),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isEndgame
-                  ? const Color(0xFFFF9F43).withOpacity(0.45)
-                  : const Color(0xFF2A5878).withOpacity(0.50),
-              width: 0.8,
+                  ? const Color(0xFFFF9F43).withOpacity(0.55)
+                  : const Color(0xFF1890D0).withOpacity(0.65),
+              width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0A2848).withOpacity(0.60),
-                blurRadius: 20,
+                color: const Color(0xFF0040A0).withOpacity(0.35),
+                blurRadius: 24,
                 offset: const Offset(0, 6),
               ),
             ],
@@ -150,13 +150,13 @@ class _BackButton extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: const Color(0xFF1A3A5C).withOpacity(0.55),
+          color: const Color(0xFF0E3A68).withOpacity(0.70),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF3A6080).withOpacity(0.60), width: 1.0),
+          border: Border.all(color: const Color(0xFF20A0E0).withOpacity(0.70), width: 1.0),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF0A2040).withOpacity(0.40),
-              blurRadius: 8,
+              color: const Color(0xFF0050B0).withOpacity(0.40),
+              blurRadius: 10,
               offset: const Offset(0, 3),
             ),
           ],
@@ -296,9 +296,9 @@ class _PlayerChip extends StatelessWidget {
         duration: const Duration(milliseconds: 220),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: const Color(0xFF162E44),
+          color: const Color(0xFF103860),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0xFF3A7090).withOpacity(0.55), width: 1.2),
+          border: Border.all(color: const Color(0xFF40B0E0).withOpacity(0.65), width: 1.2),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

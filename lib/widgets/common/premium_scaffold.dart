@@ -514,40 +514,40 @@ class _PremiumBackdropState extends State<_PremiumBackdrop>
         final t = _controller.value * math.pi * 2;
         return Stack(
           children: [
-            // Bold cyan-blue bloom — top right
+            // Electric cyan bloom — top right
             Positioned(
-              top: -90 + math.sin(t) * 18,
-              right: -70 + math.cos(t) * 12,
+              top: -80 + math.sin(t) * 20,
+              right: -60 + math.cos(t) * 14,
               child: _GlowOrb(
-                size: 320,
-                color: const Color(0xFF1560A0).withOpacity(0.35),
+                size: 360,
+                color: const Color(0xFF0090C8).withOpacity(0.50),
               ),
             ),
-            // Deep navy pool — bottom left
+            // Deep ocean pool — bottom left
             Positioned(
-              bottom: -120 + math.cos(t) * 20,
-              left: -80 + math.sin(t) * 16,
+              bottom: -100 + math.cos(t) * 22,
+              left: -70 + math.sin(t) * 18,
               child: _GlowOrb(
-                size: 380,
-                color: const Color(0xFF0A2840).withOpacity(0.25),
+                size: 400,
+                color: const Color(0xFF0840A0).withOpacity(0.42),
               ),
             ),
-            // Steel-blue accent — top left drift
+            // Teal accent — top left drift
             Positioned(
-              top: -60 + math.cos(t * 0.7) * 14,
-              left: -40 + math.sin(t * 0.9) * 10,
+              top: -50 + math.cos(t * 0.7) * 16,
+              left: -30 + math.sin(t * 0.9) * 12,
               child: _GlowOrb(
-                size: 240,
-                color: const Color(0xFF105090).withOpacity(0.22),
+                size: 280,
+                color: const Color(0xFF0878A0).withOpacity(0.38),
               ),
             ),
-            // Warm amber glow — bottom right (lens flare warmth)
+            // Sky blue glow — bottom right
             Positioned(
-              bottom: -80 + math.sin(t * 0.6) * 12,
-              right: -60 + math.cos(t * 0.8) * 10,
+              bottom: -70 + math.sin(t * 0.6) * 14,
+              right: -50 + math.cos(t * 0.8) * 12,
               child: _GlowOrb(
-                size: 260,
-                color: const Color(0xFF603010).withOpacity(0.22),
+                size: 300,
+                color: const Color(0xFF1060C0).withOpacity(0.35),
               ),
             ),
             Positioned.fill(
@@ -569,9 +569,9 @@ class _PremiumBackdropState extends State<_PremiumBackdrop>
                       radius: 1.15,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withOpacity(0.48),
+                        Colors.black.withOpacity(0.28),
                       ],
-                      stops: const [0.42, 1.0],
+                      stops: const [0.55, 1.0],
                     ),
                   ),
                 ),

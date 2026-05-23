@@ -80,10 +80,10 @@ class _AperturePainter extends CustomPainter {
 
   static const int bladeCount = 8;
 
-  static const Color gunmetalDark = Color(0xFF101012);
-  static const Color gunmetalBase = Color(0xFF1C1C1F);
-  static const Color gunmetalLight = Color(0xFF2D2D32);
-  static const Color chromeHighlight = Color(0xFF5A5A62);
+  static const Color gunmetalDark = Color(0xFF0A1A2E);
+  static const Color gunmetalBase = Color(0xFF122540);
+  static const Color gunmetalLight = Color(0xFF1A3558);
+  static const Color chromeHighlight = Color(0xFF4A90C8);
 
   const _AperturePainter({required this.progress});
 
