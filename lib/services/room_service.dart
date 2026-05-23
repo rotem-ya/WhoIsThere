@@ -433,7 +433,7 @@ class RoomService {
                   uid, walletDoc.data() as Map<String, dynamic>)
               : null;
           final before = wallet?.coins ?? 0;
-          if (before < entryFee) return;
+          // Always charge — balance can go negative (debt)
           final after = before - entryFee;
           tx.set(_walletRef(uid), {'coins': after}, SetOptions(merge: true));
           final txId = _uuid.v4();

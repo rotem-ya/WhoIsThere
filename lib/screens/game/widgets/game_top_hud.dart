@@ -65,17 +65,18 @@ class TopHud extends StatelessWidget {
             // ── Top info row — outside the card, free for future info ──────
             Row(
               children: [
-                // Left: my coins + prize potential
+                // Left: my coins · pot (when active) · bonus preview
                 const CoinDisplay(compact: true),
-                const SizedBox(width: 8),
-                if (potTotal > 0)
-                  _PotChip(potTotal: potTotal)
-                else
-                  _PrizePotentialChip(
-                    isSolo: isSolo,
-                    revealedCount: revealedCount,
-                    totalTiles: totalTiles,
-                  ),
+                const SizedBox(width: 6),
+                if (potTotal > 0) ...[
+                  _PotChip(potTotal: potTotal),
+                  const SizedBox(width: 4),
+                ],
+                _BonusPreviewChip(
+                  isSolo: isSolo,
+                  revealedCount: revealedCount,
+                  totalTiles: totalTiles,
+                ),
                 const Spacer(),
                 // Right: back to lobby
                 _SmallBackButton(onTap: onBack),
@@ -247,22 +248,22 @@ class _PotChip extends StatelessWidget {
 
 // ── Prize potential chip ──────────────────────────────────────────────────────
 
-class _PrizePotentialChip extends StatefulWidget {
+class _BonusPreviewChip extends StatefulWidget {
   final bool isSolo;
   final int revealedCount;
   final int totalTiles;
 
-  const _PrizePotentialChip({
+  const _BonusPreviewChip({
     required this.isSolo,
     required this.revealedCount,
     required this.totalTiles,
   });
 
   @override
-  State<_PrizePotentialChip> createState() => _PrizePotentialChipState();
+  State<_BonusPreviewChip> createState() => _BonusPreviewChipState();
 }
 
-class _PrizePotentialChipState extends State<_PrizePotentialChip>
+class _BonusPreviewChipState extends State<_BonusPreviewChip>
     with SingleTickerProviderStateMixin {
   late AnimationController _anim;
   late Animation<double> _scale;
@@ -292,7 +293,7 @@ class _PrizePotentialChipState extends State<_PrizePotentialChip>
   }
 
   @override
-  void didUpdateWidget(_PrizePotentialChip old) {
+  void didUpdateWidget(_BonusPreviewChip old) {
     super.didUpdateWidget(old);
     if (widget.revealedCount > old.revealedCount) {
       _anim.forward(from: 0.0);
@@ -367,7 +368,7 @@ class _PrizePotentialChipState extends State<_PrizePotentialChip>
               ),
             ),
           Text(
-            'פרס $coins 🪙',
+            '+$coins 🔥',
             style: TextStyle(
               color: valueColor,
               fontSize: 10,

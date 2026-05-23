@@ -2,6 +2,7 @@ import 'widgets/answer_slots.dart';
 import 'widgets/game_layout.dart';
 import 'widgets/game_winner_view.dart';
 import 'dart:async';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'dart:math' show Random, min, pi;
 
 import 'package:audioplayers/audioplayers.dart';
@@ -287,6 +288,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _confettiLeft = ConfettiController(duration: const Duration(seconds: 2));
     _confettiRight = ConfettiController(duration: const Duration(seconds: 2));
     WidgetsBinding.instance.addObserver(this);
+    unawaited(WakelockPlus.enable());
     unawaited(_startBackgroundMusic());
     unawaited(_primeRevealSound());
     unawaited(_primeGuessSounds());
@@ -798,6 +800,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _confettiLeft.dispose();
     _confettiRight.dispose();
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(WakelockPlus.disable());
     unawaited(_bgPlayer.stop());
     super.dispose();
   }
