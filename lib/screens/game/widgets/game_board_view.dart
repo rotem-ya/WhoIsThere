@@ -193,9 +193,7 @@ class _TileState extends State<_Tile> {
                         ]
                       : null,
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: VaultCover(
+                child: VaultCover(
                   isRevealed: widget.isRevealed,
                   isFocused: _canTap,
                   child: _ImageSlice(
@@ -204,7 +202,6 @@ class _TileState extends State<_Tile> {
                     tileSize: widget.tileSize,
                     imageUrl: widget.imageUrl,
                   ),
-                ),
                 ),
               ),
             ),
