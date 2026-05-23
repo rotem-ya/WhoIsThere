@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/game_constants.dart';
@@ -56,267 +54,163 @@ class TopHud extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isEndgame = revealRatio >= 0.75;
+    final isGuessMode = turnPhase == TurnPhase.guessMode;
+
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 400),
-          padding: const EdgeInsets.fromLTRB(10, 7, 10, 7),
-          decoration: BoxDecoration(
-            color: const Color(0xFF081E3A).withOpacity(0.90),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isEndgame
-                  ? const Color(0xFFFF9F43).withOpacity(0.55)
-                  : const Color(0xFF1890D0).withOpacity(0.65),
-              width: 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0040A0).withOpacity(0.35),
-                blurRadius: 24,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  _BackButton(onTap: onBack),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _TurnInfo(
-                      name: currentPlayerName,
-                      revealedText: revealedText,
-                      isMyTurn: isMyTurn,
-                      turnPhase: turnPhase,
-                      isMyGuessOpportunity: isMyGuessOpportunity,
-                      isMyGuessModeActive: isMyGuessModeActive,
-                      guessModePlayerName: guessModePlayerName,
-                      guessOpportunityDeadlineMs: guessOpportunityDeadlineMs,
-                      isLastTile: isLastTile,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const CoinDisplay(compact: true),
-                      const SizedBox(height: 3),
-                      if (potTotal > 0)
-                        _PotChip(potTotal: potTotal)
-                      else
-                        _PrizePotentialChip(
-                          isSolo: isSolo,
-                          revealedCount: revealedCount,
-                          totalTiles: totalTiles,
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-              if (players.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                SizedBox(
-                  height: 24,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: players.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 5),
-                    itemBuilder: (context, index) {
-                      final player = players[index];
-                      return _PlayerChip(player: player, active: false);
-                    },
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BackButton extends StatelessWidget {
-  final VoidCallback onTap;
-  const _BackButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: const Color(0xFF0E3A68).withOpacity(0.70),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF20A0E0).withOpacity(0.70), width: 1.0),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0050B0).withOpacity(0.40),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 17),
-      ),
-    );
-  }
-}
-
-class _TurnInfo extends StatefulWidget {
-  final String name;
-  final String revealedText;
-  final bool isMyTurn;
-  final TurnPhase turnPhase;
-  final bool isMyGuessOpportunity;
-  final bool isMyGuessModeActive;
-  final String guessModePlayerName;
-  final int? guessOpportunityDeadlineMs;
-  final bool isLastTile;
-
-  const _TurnInfo({
-    required this.name,
-    required this.revealedText,
-    required this.isMyTurn,
-    required this.turnPhase,
-    required this.isMyGuessOpportunity,
-    required this.isMyGuessModeActive,
-    required this.guessModePlayerName,
-    this.guessOpportunityDeadlineMs,
-    this.isLastTile = false,
-  });
-
-  @override
-  State<_TurnInfo> createState() => _TurnInfoState();
-}
-
-class _TurnInfoState extends State<_TurnInfo> {
-  Timer? _t;
-  int _nowMs = DateTime.now().millisecondsSinceEpoch;
-
-  @override
-  void initState() {
-    super.initState();
-    _t = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _nowMs = DateTime.now().millisecondsSinceEpoch);
-    });
-  }
-
-  @override
-  void dispose() {
-    _t?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final (label, labelColor) = _phaseLabel();
-    final isGuessMode = widget.turnPhase == TurnPhase.guessMode;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (isGuessMode) ...[
-          // During guessMode: small phase label + big guesser name
-          Text(
-            label,
-            style: TextStyle(color: labelColor, fontSize: 12, fontWeight: FontWeight.w900, height: 1),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            widget.isMyGuessModeActive
-                ? 'אתה מנחש!'
-                : (widget.guessModePlayerName.isEmpty ? 'יריב' : widget.guessModePlayerName),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1),
-          ),
-        ] else ...[
-          // In race mode: phase label IS the main text, no player name
-          Text(
-            label,
-            style: TextStyle(color: labelColor, fontSize: 17, fontWeight: FontWeight.w900, height: 1),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'גלויות ${widget.revealedText}',
-            style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12, fontWeight: FontWeight.w800),
-          ),
-        ],
-      ],
-    );
-  }
-
-  (String, Color) _phaseLabel() {
-    switch (widget.turnPhase) {
-      case TurnPhase.revealTurn:
-        if (widget.isLastTile) {
-          return ('גילוי אחרון!', const Color(0xFFFF3B30));
-        }
-        return ('מגלה אוטומטי...', const Color(0xFF6A9CC4));
-      case TurnPhase.guessOpportunity:
-        if (widget.isMyGuessOpportunity) {
-          return ('האם אתה יודע? לחץ!', const Color(0xFFFFE082));
-        }
-        return ('מרוץ ניחושים!', const Color(0xFF87CEEB).withOpacity(0.80));
-      case TurnPhase.guessMode:
-        return widget.isMyGuessModeActive
-            ? ('🎯 זמן לנחש!', const Color(0xFF00F2FF))
-            : ('מנחש:', const Color(0xFFFF6B35));
-      case TurnPhase.resolvingGuess:
-      case TurnPhase.roundOver:
-        return ('סיום סיבוב', Colors.white54);
-    }
-  }
-}
-
-class _PlayerChip extends StatelessWidget {
-  final PlayerModel player;
-  final bool active;
-  const _PlayerChip({required this.player, required this.active});
-
-  @override
-  Widget build(BuildContext context) {
-    if (active) {
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: const Color(0xFF103860),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0xFF40B0E0).withOpacity(0.65), width: 1.2),
-        ),
+        padding: const EdgeInsets.fromLTRB(6, 8, 12, 6),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 72),
-              child: Text(player.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
+            // Back button — outside the card, small and clean
+            Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: _SmallBackButton(onTap: onBack),
             ),
-            const SizedBox(width: 4),
-            Text('${player.score}',
-                style: TextStyle(color: Colors.white.withOpacity(0.70), fontSize: 11, fontWeight: FontWeight.w900)),
+            const SizedBox(width: 6),
+            // Main HUD card
+            Expanded(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
+                padding: const EdgeInsets.fromLTRB(10, 7, 10, 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF081E3A).withOpacity(0.90),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isEndgame
+                        ? const Color(0xFFFF9F43).withOpacity(0.55)
+                        : const Color(0xFF1890D0).withOpacity(0.65),
+                    width: 1.0,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0040A0).withOpacity(0.35),
+                      blurRadius: 24,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        // Left: revealed count + optional guesser indicator (no phase labels)
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isGuessMode) ...[
+                                Text(
+                                  isMyGuessModeActive
+                                      ? 'אתה מנחש! 🎯'
+                                      : 'מנחש: ${guessModePlayerName.isEmpty ? 'יריב' : guessModePlayerName}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: isMyGuessModeActive
+                                        ? const Color(0xFF00F2FF)
+                                        : const Color(0xFFFF6B35),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                              ],
+                              Text(
+                                'גלויות $revealedText',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.55),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Right: coin balance + pot/prize chip
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const CoinDisplay(compact: true),
+                            const SizedBox(height: 3),
+                            if (potTotal > 0)
+                              _PotChip(potTotal: potTotal)
+                            else
+                              _PrizePotentialChip(
+                                isSolo: isSolo,
+                                revealedCount: revealedCount,
+                                totalTiles: totalTiles,
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    // Dedicated player names row — full name, up to 10 chars, up to 8 players
+                    if (players.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        height: 26,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: players.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 5),
+                          itemBuilder: (context, index) {
+                            return _PlayerNameChip(player: players[index]);
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
-      );
-    }
+      ),
+    );
+  }
+}
 
-    // Inactive: compact initial circle + score only
-    final initial = player.name.isNotEmpty ? player.name[0].toUpperCase() : '?';
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+class _SmallBackButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _SmallBackButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: const Color(0xFF0D1E30).withOpacity(0.75),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: const Color(0xFF2A5070).withOpacity(0.45),
+            width: 0.8,
+          ),
+        ),
+        child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white60, size: 13),
+      ),
+    );
+  }
+}
+
+class _PlayerNameChip extends StatelessWidget {
+  final PlayerModel player;
+  const _PlayerNameChip({required this.player});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = player.name.length > 10 ? player.name.substring(0, 10) : player.name;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: const Color(0xFF0D1E30).withOpacity(0.60),
         borderRadius: BorderRadius.circular(999),
@@ -325,29 +219,29 @@ class _PlayerChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF2A5878).withOpacity(0.55),
-            ),
-            child: Center(
-              child: Text(initial,
-                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900, height: 1)),
+          Text(
+            name,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(width: 4),
-          Text('${player.score}',
-              style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 11, fontWeight: FontWeight.w900)),
+          Text(
+            '${player.score}',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.45),
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-// Prize Potential chip — shows actual achievable coins from RewardCalculator.
-// Animates on every reveal: scale pulse + orange flash + lateral shake.
 class _PotChip extends StatelessWidget {
   final int potTotal;
   const _PotChip({required this.potTotal});
