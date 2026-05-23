@@ -41,7 +41,9 @@ final walletProvider = StreamProvider.autoDispose<UserEconomyModel?>((ref) {
   return userAsync.maybeWhen(
     data: (user) {
       if (user == null) return Stream.value(null);
-      return ref.watch(economyServiceProvider).walletStream(user.uid);
+      // Idempotent — only grants if wallet never initialized (totalEarned==0)
+      ref.read(economyServiceProvider).initWallet(user.uid).ignore();
+      return ref.read(economyServiceProvider).walletStream(user.uid);
     },
     orElse: () => Stream.value(null),
   );

@@ -5,12 +5,14 @@ class VaultCover extends StatefulWidget {
   final bool isRevealed;
   final bool isFocused;
   final Widget child;
+  final String cardSkinId;
 
   const VaultCover({
     super.key,
     required this.isRevealed,
     required this.child,
     this.isFocused = false,
+    this.cardSkinId = 'default',
   });
 
   @override
@@ -67,7 +69,10 @@ class _VaultCoverState extends State<VaultCover>
               if (_anim.value >= 0.995) return const SizedBox.shrink();
               return RepaintBoundary(
                 child: CustomPaint(
-                  painter: _AperturePainter(progress: _anim.value),
+                  painter: _AperturePainter(
+                    progress: _anim.value,
+                    cardSkinId: widget.cardSkinId,
+                  ),
                 ),
               );
             },
@@ -111,10 +116,11 @@ class _VaultCoverState extends State<VaultCover>
 
 class _AperturePainter extends CustomPainter {
   final double progress;
+  final String cardSkinId;
 
   static const int _bladeCount = 10;
 
-  const _AperturePainter({required this.progress});
+  const _AperturePainter({required this.progress, this.cardSkinId = 'default'});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -229,5 +235,5 @@ class _AperturePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _AperturePainter old) =>
-      old.progress != progress;
+      old.progress != progress || old.cardSkinId != cardSkinId;
 }

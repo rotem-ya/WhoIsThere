@@ -71,6 +71,7 @@ flutter:
     - assets/game_places/data/
     - assets/sounds/
     - assets/icons/
+    - assets/skins/
 
 flutter_launcher_icons:
   android: true

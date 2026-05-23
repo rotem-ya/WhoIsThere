@@ -17,6 +17,7 @@ class GameBoardView extends StatefulWidget {
   final bool enabled;
   final bool glowEnabled;
   final void Function(int)? onReveal;
+  final String cardSkinId;
 
   const GameBoardView({
     super.key,
@@ -27,6 +28,7 @@ class GameBoardView extends StatefulWidget {
     required this.enabled,
     required this.glowEnabled,
     required this.onReveal,
+    this.cardSkinId = 'default',
   });
 
   @override
@@ -88,6 +90,7 @@ class _GameBoardViewState extends State<GameBoardView> {
                         isAvailable: widget.availableCells.contains(index),
                         enabled: widget.enabled,
                         onReveal: widget.onReveal != null ? _handleReveal : null,
+                        cardSkinId: widget.cardSkinId,
                       ),
                   ],
                 ),
@@ -109,6 +112,7 @@ class _Tile extends StatefulWidget {
   final bool isAvailable;
   final bool enabled;
   final void Function(int)? onReveal;
+  final String cardSkinId;
 
   const _Tile({
     required this.index,
@@ -119,6 +123,7 @@ class _Tile extends StatefulWidget {
     required this.isAvailable,
     required this.enabled,
     required this.onReveal,
+    this.cardSkinId = 'default',
   });
 
   @override
@@ -221,6 +226,7 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
             child: VaultCover(
               isRevealed: widget.isRevealed,
               isFocused: _canTap,
+              cardSkinId: widget.cardSkinId,
               child: _ImageSlice(
                 index: widget.index,
                 gridSize: widget.gridSize,

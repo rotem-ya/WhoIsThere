@@ -213,6 +213,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   // Economy
   bool _rewardApplied = false;
+  bool _entryFeePaid = false;
   DateTime? _gameStartTime;
   MatchRewardBreakdown? _rewardBreakdown;
 
@@ -1620,6 +1621,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     _lastPressureStateForLog = _pState;
                     QaLoggerService.instance.log('GAME', 'PRESSURE_STATE_CHANGED state=$_pState');
                   }
+                }
+
+                // Pay entry fee exactly once when game transitions to playing
+                if (room.phase == GamePhase.playing &&
+                    !_entryFeePaid &&
+                    room.entryFee > 0 &&
+                    currentUserId != null &&
+                    !room.entryFeePaidPlayerIds.contains(currentUserId)) {
+                  _entryFeePaid = true;
+                  unawaited(ref.read(roomServiceProvider).payMyEntryFee(
+                    roomId: widget.roomId,
+                    userId: currentUserId,
+                  ));
                 }
 
                 _scheduleBotTurn(room);

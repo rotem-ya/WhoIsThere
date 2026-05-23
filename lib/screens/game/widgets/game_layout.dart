@@ -137,6 +137,7 @@ class GameLayout extends StatelessWidget {
                   enabled: false,
                   glowEnabled: false,
                   onReveal: onReveal,
+                  cardSkinId: room.cardSkinId,
                 ),
               ),
             ),

@@ -37,6 +37,8 @@ class RoomModel extends Equatable {
   final int entryFee;
   final int potTotal;
   final Map<String, int> guessClaimCounts;
+  final List<String> entryFeePaidPlayerIds;
+  final String cardSkinId;
 
   const RoomModel({
     required this.id,
@@ -72,6 +74,8 @@ class RoomModel extends Equatable {
     this.entryFee = 0,
     this.potTotal = 0,
     this.guessClaimCounts = const {},
+    this.entryFeePaidPlayerIds = const [],
+    this.cardSkinId = 'default',
   });
 
   bool isBlockedFromGuessing(String userId) {
@@ -176,6 +180,8 @@ class RoomModel extends Equatable {
       entryFee: (data['entryFee'] as num?)?.toInt() ?? 0,
       potTotal: (data['potTotal'] as num?)?.toInt() ?? 0,
       guessClaimCounts: guessClaimCounts,
+      entryFeePaidPlayerIds: List<String>.from(data['entryFeePaidPlayerIds'] ?? []),
+      cardSkinId: data['cardSkinId'] as String? ?? 'default',
     );
   }
 
@@ -212,6 +218,8 @@ class RoomModel extends Equatable {
         'entryFee': entryFee,
         'potTotal': potTotal,
         'guessClaimCounts': guessClaimCounts,
+        'entryFeePaidPlayerIds': entryFeePaidPlayerIds,
+        'cardSkinId': cardSkinId,
       };
 
   RoomModel copyWith({
@@ -244,6 +252,8 @@ class RoomModel extends Equatable {
     int? entryFee,
     int? potTotal,
     Map<String, int>? guessClaimCounts,
+    List<String>? entryFeePaidPlayerIds,
+    String? cardSkinId,
   }) =>
       RoomModel(
         id: id,
@@ -283,6 +293,8 @@ class RoomModel extends Equatable {
         entryFee: entryFee ?? this.entryFee,
         potTotal: potTotal ?? this.potTotal,
         guessClaimCounts: guessClaimCounts ?? this.guessClaimCounts,
+        entryFeePaidPlayerIds: entryFeePaidPlayerIds ?? this.entryFeePaidPlayerIds,
+        cardSkinId: cardSkinId ?? this.cardSkinId,
       );
 
   @override
@@ -316,5 +328,7 @@ class RoomModel extends Equatable {
         entryFee,
         potTotal,
         guessClaimCounts,
+        entryFeePaidPlayerIds,
+        cardSkinId,
       ];
 }

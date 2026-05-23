@@ -2,7 +2,7 @@ class EconomyConfig {
   EconomyConfig._();
 
   // Starting balance for new users (granted on first install)
-  static const int initialCoins = 50;
+  static const int initialCoins = 100;
 
   // ── Game entry & pot ─────────────────────────────────────────
   static const int gameEntryFee = 20;
@@ -71,7 +71,7 @@ class EconomyConfig {
   static const int efficiencyTier3MaxTiles = 6;
 
   // ── Daily login reward ────────────────────────────────────────
-  static const int dailyRewardBase = 5;
+  static const int dailyRewardBase = 20;
   // Consecutive day streak multipliers (index = streak day, capped at 7)
   static const List<int> streakBonusCoins = [0, 0, 2, 3, 5, 7, 10, 12];
 

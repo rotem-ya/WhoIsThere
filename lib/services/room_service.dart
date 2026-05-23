@@ -368,7 +368,6 @@ class RoomService {
     RoomModel room,
     Difficulty difficulty,
   ) async {
-    final entryFee = room.entryFee;
     final playerIds = room.players.keys.toList()..shuffle();
     final startScore = difficulty.startingPoints;
     final nowMs = DateTime.now().millisecondsSinceEpoch;
@@ -406,11 +405,8 @@ class RoomService {
       'revealCount': 0,
       'blockedGuessers': {},
       'potTotal': 0,
+      'entryFeePaidPlayerIds': [],
     });
-
-    if (entryFee > 0) {
-      unawaited(_collectEntryFees(roomId, room.players, entryFee));
-    }
   }
 
   Future<void> _collectEntryFees(
@@ -460,6 +456,54 @@ class RoomService {
       });
       QaLoggerService.instance.log('ECONOMY',
           'ENTRY_FEES_COLLECTED total=$potCollected players=${humanIds.length}');
+    }
+  }
+
+  /// Called by each player's own client when the game starts.
+  /// Uses an idempotency list (entryFeePaidPlayerIds) so double-payment is impossible.
+  Future<void> payMyEntryFee({
+    required String roomId,
+    required String userId,
+  }) async {
+    try {
+      await _firestore.runTransaction((tx) async {
+        final roomDoc = await tx.get(_rooms.doc(roomId));
+        if (!roomDoc.exists) return;
+        final room = RoomModel.fromFirestore(roomDoc);
+
+        // Idempotency guard
+        if (room.entryFeePaidPlayerIds.contains(userId)) return;
+        if (room.entryFee <= 0) return;
+        if (room.phase != GamePhase.playing) return;
+
+        final walletDoc = await tx.get(_walletRef(userId));
+        final wallet = walletDoc.exists
+            ? UserEconomyModel.fromFirestore(userId, walletDoc.data() as Map<String, dynamic>)
+            : null;
+        final before = wallet?.coins ?? 0;
+        final after = before - room.entryFee; // Allow debt
+
+        tx.set(_walletRef(userId), {'coins': after}, SetOptions(merge: true));
+
+        final txId = _uuid.v4();
+        tx.set(_txRef(userId, txId), EconomyTransactionModel(
+          id: txId,
+          type: TransactionType.roomEntryFee,
+          delta: -room.entryFee,
+          balanceAfter: after,
+          roomId: roomId,
+          createdAt: DateTime.now().toUtc(),
+          meta: {'entryFee': room.entryFee},
+        ).toFirestore());
+
+        tx.update(_rooms.doc(roomId), {
+          'potTotal': FieldValue.increment(room.entryFee),
+          'entryFeePaidPlayerIds': FieldValue.arrayUnion([userId]),
+        });
+      });
+      QaLoggerService.instance.log('ECONOMY', 'ENTRY_FEE_PAID userId=${userId.substring(0, userId.length.clamp(0, 6))}');
+    } catch (e) {
+      QaLoggerService.instance.log('ECONOMY', 'ENTRY_FEE_PAY_ERROR error=$e');
     }
   }
 
