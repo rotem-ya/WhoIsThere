@@ -54,128 +54,66 @@ class TopHud extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isEndgame = revealRatio >= 0.75;
-    final isGuessMode = turnPhase == TurnPhase.guessMode;
 
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(6, 8, 12, 6),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Back button — outside the card, small and clean
-            Padding(
-              padding: const EdgeInsets.only(top: 3),
-              child: _SmallBackButton(onTap: onBack),
+            // ── Top info row — outside the card, free for future info ──────
+            Row(
+              children: [
+                // Left: my coins + prize potential
+                const CoinDisplay(compact: true),
+                const SizedBox(width: 8),
+                if (potTotal > 0)
+                  _PotChip(potTotal: potTotal)
+                else
+                  _PrizePotentialChip(
+                    isSolo: isSolo,
+                    revealedCount: revealedCount,
+                    totalTiles: totalTiles,
+                  ),
+                const Spacer(),
+                // Right: back to lobby
+                _SmallBackButton(onTap: onBack),
+              ],
             ),
-            const SizedBox(width: 6),
-            // Main HUD card
-            Expanded(
-              child: AnimatedContainer(
+            const SizedBox(height: 6),
+            // ── Player names card — 2 per row ─────────────────────────────
+            if (players.isNotEmpty)
+              AnimatedContainer(
                 duration: const Duration(milliseconds: 400),
-                padding: const EdgeInsets.fromLTRB(10, 7, 10, 7),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
                   color: const Color(0xFF081E3A).withOpacity(0.90),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isEndgame
                         ? const Color(0xFFFF9F43).withOpacity(0.55)
-                        : const Color(0xFF1890D0).withOpacity(0.65),
+                        : const Color(0xFF1890D0).withOpacity(0.50),
                     width: 1.0,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF0040A0).withOpacity(0.35),
-                      blurRadius: 24,
-                      offset: const Offset(0, 6),
+                      color: const Color(0xFF0040A0).withOpacity(0.30),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        // Left: revealed count + optional guesser indicator (no phase labels)
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (isGuessMode) ...[
-                                Text(
-                                  isMyGuessModeActive
-                                      ? 'אתה מנחש! 🎯'
-                                      : 'מנחש: ${guessModePlayerName.isEmpty ? 'יריב' : guessModePlayerName}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: isMyGuessModeActive
-                                        ? const Color(0xFF00F2FF)
-                                        : const Color(0xFFFF6B35),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w900,
-                                    height: 1,
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                              ],
-                              Text(
-                                'גלויות $revealedText',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.55),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Right: coin balance + pot/prize chip
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            const CoinDisplay(compact: true),
-                            const SizedBox(height: 3),
-                            if (potTotal > 0)
-                              _PotChip(potTotal: potTotal)
-                            else
-                              _PrizePotentialChip(
-                                isSolo: isSolo,
-                                revealedCount: revealedCount,
-                                totalTiles: totalTiles,
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    // Dedicated player names row — full name, up to 10 chars, up to 8 players
-                    if (players.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      SizedBox(
-                        height: 26,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: players.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 5),
-                          itemBuilder: (context, index) {
-                            return _PlayerNameChip(player: players[index]);
-                          },
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+                child: _PlayerGrid(players: players),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 }
+
+// ── Small back button (outside card) ──────────────────────────────────────────
 
 class _SmallBackButton extends StatelessWidget {
   final VoidCallback onTap;
@@ -186,8 +124,8 @@ class _SmallBackButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 32,
-        height: 32,
+        width: 30,
+        height: 30,
         decoration: BoxDecoration(
           color: const Color(0xFF0D1E30).withOpacity(0.75),
           shape: BoxShape.circle,
@@ -196,15 +134,42 @@ class _SmallBackButton extends StatelessWidget {
             width: 0.8,
           ),
         ),
-        child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white60, size: 13),
+        child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white60, size: 12),
       ),
     );
   }
 }
 
-class _PlayerNameChip extends StatelessWidget {
+// ── Player grid — 2 columns, pairs stacked ────────────────────────────────────
+
+class _PlayerGrid extends StatelessWidget {
+  final List<PlayerModel> players;
+  const _PlayerGrid({required this.players});
+
+  @override
+  Widget build(BuildContext context) {
+    // Build pairs: [0,1], [2,3], [4,5], [6,7]
+    final rows = <Widget>[];
+    for (var i = 0; i < players.length; i += 2) {
+      if (rows.isNotEmpty) rows.add(const SizedBox(height: 4));
+      rows.add(Row(
+        children: [
+          Expanded(child: _PlayerCell(player: players[i])),
+          if (i + 1 < players.length) ...[
+            const SizedBox(width: 6),
+            Expanded(child: _PlayerCell(player: players[i + 1])),
+          ] else
+            const Expanded(child: SizedBox()),
+        ],
+      ));
+    }
+    return Column(mainAxisSize: MainAxisSize.min, children: rows);
+  }
+}
+
+class _PlayerCell extends StatelessWidget {
   final PlayerModel player;
-  const _PlayerNameChip({required this.player});
+  const _PlayerCell({required this.player});
 
   @override
   Widget build(BuildContext context) {
@@ -212,19 +177,22 @@ class _PlayerNameChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1E30).withOpacity(0.60),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFF2A5070).withOpacity(0.35), width: 0.8),
+        color: const Color(0xFF0D1E30).withOpacity(0.55),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF2A5070).withOpacity(0.30), width: 0.8),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            name,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
+          Expanded(
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           const SizedBox(width: 4),
@@ -241,6 +209,8 @@ class _PlayerNameChip extends StatelessWidget {
     );
   }
 }
+
+// ── Pot chip ──────────────────────────────────────────────────────────────────
 
 class _PotChip extends StatelessWidget {
   final int potTotal;
@@ -274,6 +244,8 @@ class _PotChip extends StatelessWidget {
     );
   }
 }
+
+// ── Prize potential chip ──────────────────────────────────────────────────────
 
 class _PrizePotentialChip extends StatefulWidget {
   final bool isSolo;
@@ -381,7 +353,7 @@ class _PrizePotentialChipState extends State<_PrizePotentialChip>
         );
       },
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           if (pressureLabel != null)
