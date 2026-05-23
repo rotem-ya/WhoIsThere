@@ -25,6 +25,7 @@ import '../../services/hint_economy_guard.dart';
 import '../../services/reward_calculator.dart';
 import '../../services/qa_logger_service.dart';
 import '../../widgets/game/animated_reward.dart';
+import '../../widgets/game/letter_bank_input.dart';
 import 'widgets/game_top_hud.dart';
 import 'widgets/game_board_view.dart';
 
