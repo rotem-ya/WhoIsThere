@@ -76,11 +76,12 @@ class GameLayout extends StatelessWidget {
     final isGuessModeActive = room.turnPhase == TurnPhase.guessMode;
     final guessModePlayerName = room.players[room.guessModePlayerId]?.name ?? '';
     final isLastTile = room.availablePieceIndices.length == 1;
-    final myScore = currentUserId != null ? (room.players[currentUserId]?.score ?? 0) : 0;
+    final userId = currentUserId;
+    final myScore = userId != null ? (room.players[userId]?.score ?? 0) : 0;
     final leaderScore = room.sortedPlayers.isNotEmpty ? room.sortedPlayers.first.score : 0;
     final isScoreCliff = canGuessNow && (leaderScore - myScore) <= 1;
-    final isBlocked = currentUserId != null && room.isBlockedFromGuessing(currentUserId);
-    final blockedUntil = currentUserId != null ? (room.blockedGuessers[currentUserId] ?? 0) : 0;
+    final isBlocked = userId != null && room.isBlockedFromGuessing(userId);
+    final blockedUntil = userId != null ? (room.blockedGuessers[userId] ?? 0) : 0;
     final blockedRemaining = isBlocked ? (blockedUntil - room.revealCount).clamp(0, 99) : 0;
 
     return Column(

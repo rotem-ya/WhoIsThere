@@ -1052,7 +1052,7 @@ class RoomService {
           'revealCycleId': FieldValue.increment(1),
         });
         QaLoggerService.instance.log('TURN',
-            'GUESS_OPP_TIMEOUT_ADVANCE_COMMIT oldCycle=${room.revealCycleId} newCycle=${room.revealCycleId + 1} newTurnUid=$newTurnUid');
+            'GUESS_OPP_TIMEOUT_ADVANCE_COMMIT oldCycle=${room.revealCycleId} newCycle=${room.revealCycleId + 1} newTurnIndex=${room.currentTurnIndex + 1}');
         QaLoggerService.instance.log('TURN',
             'TX_COMMIT name=expireGuessOpportunity latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
         committed = true;
