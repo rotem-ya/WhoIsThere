@@ -10,6 +10,7 @@ import '../../models/card_skin.dart';
 import '../../providers/providers.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/economy/coin_display.dart';
+import '../../widgets/game/vault_cover.dart';
 
 final selectedSkinProvider = StreamProvider.autoDispose<String>((ref) {
   final userAsync = ref.watch(firebaseUserProvider);
@@ -457,7 +458,7 @@ class _Chip extends StatelessWidget {
   }
 }
 
-// ── Skin preview ──────────────────────────────────────────────────────────────
+// ── Skin preview — renders the closed iris exactly as in-game ─────────────────
 
 class _SkinPreview extends StatelessWidget {
   final CardSkin skin;
@@ -465,59 +466,10 @@ class _SkinPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (skin.assetPath != null) {
-      return Image.asset(
-        skin.assetPath!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _ColorSwatch(skinId: skin.id),
-      );
-    }
-    return _ColorSwatch(skinId: skin.id);
-  }
-}
-
-class _ColorSwatch extends StatelessWidget {
-  final String skinId;
-  const _ColorSwatch({required this.skinId});
-
-  static const _palettes = <String, List<Color>>{
-    'classic':   [Color(0xFF1A1A2E), Color(0xFFB0B0C8)],
-    'ocean':     [Color(0xFF001A33), Color(0xFF00BCD4)],
-    'forest':    [Color(0xFF071A07), Color(0xFF4CAF50)],
-    'sand':      [Color(0xFF2A1F0A), Color(0xFFD4A54A)],
-    'blue':      [Color(0xFF030D1A), Color(0xFF87CEEB)],
-    'red':       [Color(0xFF1A0303), Color(0xFFFF6B6B)],
-    'copper':    [Color(0xFF1A0D05), Color(0xFFB87333)],
-    'dark':      [Color(0xFF05050F), Color(0xFF8B6FFF)],
-    'emerald':   [Color(0xFF011A0D), Color(0xFF00C853)],
-    'ruby':      [Color(0xFF1A0008), Color(0xFFE91E63)],
-    'rose_gold': [Color(0xFF1A0D10), Color(0xFFB76E79)],
-    'galaxy':    [Color(0xFF03001A), Color(0xFF9C27B0)],
-    'obsidian':  [Color(0xFF000000), Color(0xFF606060)],
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = _palettes[skinId] ??
-        [const Color(0xFF07101F), const Color(0xFFD4AF37)];
-    final base = colors[0];
-    final accent = colors[1];
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [base, accent.withOpacity(0.45)],
-        ),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.auto_awesome_rounded,
-          color: accent.withOpacity(0.75),
-          size: 28,
-        ),
-      ),
+    return VaultCover(
+      isRevealed: false,
+      cardSkinId: skin.id,
+      child: const SizedBox.expand(),
     );
   }
 }
