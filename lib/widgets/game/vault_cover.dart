@@ -1,5 +1,8 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../models/card_skin.dart';
 
 class VaultCover extends StatefulWidget {
   final bool isRevealed;
@@ -22,8 +25,9 @@ class VaultCover extends StatefulWidget {
 class _VaultCoverState extends State<VaultCover>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
-  // _anim drives the iris opening (eased)
   late final Animation<double> _anim;
+
+  ui.Image? _skinImage;
 
   @override
   void initState() {
@@ -35,6 +39,7 @@ class _VaultCoverState extends State<VaultCover>
     _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic);
 
     if (widget.isRevealed) _ctrl.value = 1.0;
+    _loadSkinImage(widget.cardSkinId);
   }
 
   @override
@@ -44,6 +49,27 @@ class _VaultCoverState extends State<VaultCover>
       _ctrl.forward();
     } else if (!widget.isRevealed && oldWidget.isRevealed) {
       _ctrl.reverse();
+    }
+    if (widget.cardSkinId != oldWidget.cardSkinId) {
+      _loadSkinImage(widget.cardSkinId);
+    }
+  }
+
+  Future<void> _loadSkinImage(String skinId) async {
+    final skin = kAvailableCardSkins.firstWhere(
+      (s) => s.id == skinId,
+      orElse: () => kAvailableCardSkins.first,
+    );
+    if (skin.assetPath == null) {
+      if (mounted) setState(() => _skinImage = null);
+      return;
+    }
+    try {
+      final data = await rootBundle.load(skin.assetPath!);
+      final image = await ui.decodeImageFromList(data.buffer.asUint8List());
+      if (mounted) setState(() => _skinImage = image);
+    } catch (_) {
+      if (mounted) setState(() => _skinImage = null);
     }
   }
 
@@ -72,6 +98,7 @@ class _VaultCoverState extends State<VaultCover>
                   painter: _AperturePainter(
                     progress: _anim.value,
                     cardSkinId: widget.cardSkinId,
+                    skinImage: _skinImage,
                   ),
                 ),
               );
@@ -117,10 +144,15 @@ class _VaultCoverState extends State<VaultCover>
 class _AperturePainter extends CustomPainter {
   final double progress;
   final String cardSkinId;
+  final ui.Image? skinImage;
 
   static const int _bladeCount = 10;
 
-  const _AperturePainter({required this.progress, this.cardSkinId = 'default'});
+  const _AperturePainter({
+    required this.progress,
+    this.cardSkinId = 'default',
+    this.skinImage,
+  });
 
   // ── Per-skin colour scheme ─────────────────────────────────────────────────
   static _SkinPalette _palette(String id) {
@@ -183,8 +215,14 @@ class _AperturePainter extends CustomPainter {
 
     canvas.saveLayer(rect, Paint());
 
-    // ── Dark base (skin-tinted) ───────────────────────────────────────────
-    canvas.drawRect(rect, Paint()..color = pal.base);
+    // ── Base: skin image if loaded, otherwise solid colour ────────────────
+    if (skinImage != null) {
+      final src = Rect.fromLTWH(
+          0, 0, skinImage!.width.toDouble(), skinImage!.height.toDouble());
+      canvas.drawImageRect(skinImage!, src, rect, Paint());
+    } else {
+      canvas.drawRect(rect, Paint()..color = pal.base);
+    }
 
     // ── Metallic rotating blades (skin colours) ───────────────────────────
     final rotation = progress * math.pi * 0.52;
@@ -280,7 +318,9 @@ class _AperturePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _AperturePainter old) =>
-      old.progress != progress || old.cardSkinId != cardSkinId;
+      old.progress != progress ||
+      old.cardSkinId != cardSkinId ||
+      old.skinImage != skinImage;
 }
 
 // ── Skin colour palette ───────────────────────────────────────────────────────
