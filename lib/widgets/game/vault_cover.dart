@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -55,6 +57,12 @@ class _VaultCoverState extends State<VaultCover>
     }
   }
 
+  static Future<ui.Image> _decodeUiImage(Uint8List bytes) {
+    final completer = Completer<ui.Image>();
+    ui.decodeImageFromList(bytes, completer.complete);
+    return completer.future;
+  }
+
   Future<void> _loadSkinImage(String skinId) async {
     final skin = kAvailableCardSkins.firstWhere(
       (s) => s.id == skinId,
@@ -66,7 +74,7 @@ class _VaultCoverState extends State<VaultCover>
     }
     try {
       final data = await rootBundle.load(skin.assetPath!);
-      final image = await ui.decodeImageFromList(data.buffer.asUint8List());
+      final image = await _decodeUiImage(data.buffer.asUint8List());
       if (mounted) setState(() => _skinImage = image);
     } catch (_) {
       if (mounted) setState(() => _skinImage = null);
