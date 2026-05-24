@@ -464,3 +464,64 @@ class _SkinPalette {
     required this.rimInner,
   });
 }
+
+// ── Store preview widget ──────────────────────────────────────────────────────
+// Shows the iris at a fixed 45 % open so blade colours AND the centre
+// image (mandala etc.) are simultaneously visible.
+
+class CardSkinPreview extends StatefulWidget {
+  final String cardSkinId;
+  const CardSkinPreview({super.key, required this.cardSkinId});
+
+  @override
+  State<CardSkinPreview> createState() => _CardSkinPreviewState();
+}
+
+class _CardSkinPreviewState extends State<CardSkinPreview> {
+  ui.Image? _skinImage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage(widget.cardSkinId);
+  }
+
+  @override
+  void didUpdateWidget(covariant CardSkinPreview old) {
+    super.didUpdateWidget(old);
+    if (widget.cardSkinId != old.cardSkinId) _loadImage(widget.cardSkinId);
+  }
+
+  Future<void> _loadImage(String skinId) async {
+    final skin = kAvailableCardSkins.firstWhere(
+      (s) => s.id == skinId,
+      orElse: () => kAvailableCardSkins.first,
+    );
+    if (skin.assetPath == null) {
+      if (mounted) setState(() => _skinImage = null);
+      return;
+    }
+    try {
+      final data = await rootBundle.load(skin.assetPath!);
+      final completer = Completer<ui.Image>();
+      ui.decodeImageFromList(data.buffer.asUint8List(), completer.complete);
+      final image = await completer.future;
+      if (mounted) setState(() => _skinImage = image);
+    } catch (_) {
+      if (mounted) setState(() => _skinImage = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: CustomPaint(
+        painter: _AperturePainter(
+          progress: 0.45,
+          cardSkinId: widget.cardSkinId,
+          skinImage: _skinImage,
+        ),
+      ),
+    );
+  }
+}

@@ -10,7 +10,7 @@ import '../../models/card_skin.dart';
 import '../../providers/providers.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/economy/coin_display.dart';
-import '../../widgets/game/vault_cover.dart';
+import '../../widgets/game/vault_cover.dart'; // CardSkinPreview
 
 final selectedSkinProvider = StreamProvider.autoDispose<String>((ref) {
   final userAsync = ref.watch(firebaseUserProvider);
@@ -458,7 +458,7 @@ class _Chip extends StatelessWidget {
   }
 }
 
-// ── Skin preview — renders the closed iris exactly as in-game ─────────────────
+// ── Skin preview ──────────────────────────────────────────────────────────────
 
 class _SkinPreview extends StatelessWidget {
   final CardSkin skin;
@@ -466,10 +466,6 @@ class _SkinPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return VaultCover(
-      isRevealed: false,
-      cardSkinId: skin.id,
-      child: const SizedBox.expand(),
-    );
+    return CardSkinPreview(cardSkinId: skin.id);
   }
 }
