@@ -11,7 +11,6 @@ import '../../providers/providers.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/economy/coin_display.dart';
 
-/// Provider that reads the current user's selected card skin from Firestore.
 final selectedSkinProvider = StreamProvider.autoDispose<String>((ref) {
   final userAsync = ref.watch(firebaseUserProvider);
   return userAsync.maybeWhen(
@@ -20,13 +19,13 @@ final selectedSkinProvider = StreamProvider.autoDispose<String>((ref) {
       return FirebaseFirestore.instance
           .doc('users/${user.uid}')
           .snapshots()
-          .map((snap) => (snap.data()?['selectedCardSkin'] as String?) ?? 'default');
+          .map((snap) =>
+              (snap.data()?['selectedCardSkin'] as String?) ?? 'default');
     },
     orElse: () => Stream.value('default'),
   );
 });
 
-/// Provider that reads the current user's owned skins list from Firestore.
 final ownedSkinsProvider = StreamProvider.autoDispose<List<String>>((ref) {
   final userAsync = ref.watch(firebaseUserProvider);
   return userAsync.maybeWhen(
@@ -36,10 +35,11 @@ final ownedSkinsProvider = StreamProvider.autoDispose<List<String>>((ref) {
           .doc('users/${user.uid}')
           .snapshots()
           .map((snap) {
-            final owned = List<String>.from(snap.data()?['ownedSkins'] ?? ['default']);
-            if (!owned.contains('default')) owned.insert(0, 'default');
-            return owned;
-          });
+        final owned =
+            List<String>.from(snap.data()?['ownedSkins'] ?? ['default']);
+        if (!owned.contains('default')) owned.insert(0, 'default');
+        return owned;
+      });
     },
     orElse: () => Stream.value(['default']),
   );
@@ -48,61 +48,74 @@ final ownedSkinsProvider = StreamProvider.autoDispose<List<String>>((ref) {
 class CardSkinsScreen extends ConsumerWidget {
   const CardSkinsScreen({super.key});
 
+  static final _freeSkins =
+      kAvailableCardSkins.where((s) => s.isFree).toList();
+  static final _premiumSkins =
+      kAvailableCardSkins.where((s) => !s.isFree).toList();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final walletAsync = ref.watch(walletProvider);
-    final coins = walletAsync.valueOrNull?.coins ?? 0;
-    final selectedSkinAsync = ref.watch(selectedSkinProvider);
-    final ownedSkinsAsync = ref.watch(ownedSkinsProvider);
-
-    final selectedSkin = selectedSkinAsync.valueOrNull ?? 'default';
-    final ownedSkins = ownedSkinsAsync.valueOrNull ?? ['default'];
+    final coins = ref.watch(walletProvider).valueOrNull?.coins ?? 0;
+    final selectedSkin =
+        ref.watch(selectedSkinProvider).valueOrNull ?? 'default';
+    final ownedSkins =
+        ref.watch(ownedSkinsProvider).valueOrNull ?? ['default'];
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.zero,
       child: Column(
         children: [
-          AppHeader(
-            title: 'עיצובי קלפים',
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              onPressed: () => Navigator.maybePop(context),
-            ),
-            trailing: const CoinDisplay(compact: true),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'בחר עיצוב לכרטיסיות המשחק',
-            style: AppTextStyles.subtitleLight,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: AppSpacing.md,
-                mainAxisSpacing: AppSpacing.md,
-                childAspectRatio: 0.80,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
+            child: AppHeader(
+              title: 'עיצובי קלפים',
+              leading: IconButton(
+                icon:
+                    const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                onPressed: () => Navigator.maybePop(context),
               ),
-              itemCount: kAvailableCardSkins.length,
-              itemBuilder: (context, index) {
-                final skin = kAvailableCardSkins[index];
-                final isOwned = ownedSkins.contains(skin.id);
-                final isSelected = selectedSkin == skin.id;
-                final canAfford = coins >= skin.price;
-
-                return _SkinCard(
-                  skin: skin,
-                  isOwned: isOwned,
-                  isSelected: isSelected,
-                  canAfford: canAfford,
+              trailing: const CoinDisplay(compact: true),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+            child: Text(
+              'בחר עיצוב לכרטיסיות המשחק',
+              style: AppTextStyles.subtitleLight,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.lg),
+              children: [
+                _SectionHeader(label: 'חינמי', icon: Icons.star_outline_rounded),
+                const SizedBox(height: AppSpacing.sm),
+                _SkinGrid(
+                  skins: _freeSkins,
                   coins: coins,
-                  onBuy: () => _buySkin(context, ref, skin, coins),
-                  onEquip: () => _equipSkin(context, ref, skin),
-                );
-              },
+                  selectedSkin: selectedSkin,
+                  ownedSkins: ownedSkins,
+                  onBuy: (skin) => _buySkin(context, ref, skin, coins),
+                  onEquip: (skin) => _equipSkin(context, ref, skin),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _SectionHeader(
+                    label: 'פרימיום', icon: Icons.auto_awesome_rounded),
+                const SizedBox(height: AppSpacing.sm),
+                _SkinGrid(
+                  skins: _premiumSkins,
+                  coins: coins,
+                  selectedSkin: selectedSkin,
+                  ownedSkins: ownedSkins,
+                  onBuy: (skin) => _buySkin(context, ref, skin, coins),
+                  onEquip: (skin) => _equipSkin(context, ref, skin),
+                ),
+              ],
             ),
           ),
         ],
@@ -128,18 +141,22 @@ class CardSkinsScreen extends ConsumerWidget {
 
     try {
       await FirebaseFirestore.instance.runTransaction((tx) async {
-        final walletRef = FirebaseFirestore.instance.doc('users/$uid/economy/wallet');
+        final walletRef =
+            FirebaseFirestore.instance.doc('users/$uid/economy/wallet');
         final userRef = FirebaseFirestore.instance.doc('users/$uid');
 
         final walletSnap = await tx.get(walletRef);
-        final before = (walletSnap.data()?['coins'] as num?)?.toInt() ?? 0;
+        final before =
+            (walletSnap.data()?['coins'] as num?)?.toInt() ?? 0;
         if (before < skin.price) throw Exception('insufficient_coins');
 
         final userSnap = await tx.get(userRef);
-        final owned = List<String>.from(userSnap.data()?['ownedSkins'] ?? ['default']);
-        if (owned.contains(skin.id)) return; // already owned
+        final owned = List<String>.from(
+            userSnap.data()?['ownedSkins'] ?? ['default']);
+        if (owned.contains(skin.id)) return;
 
-        tx.set(walletRef, {'coins': before - skin.price}, SetOptions(merge: true));
+        tx.set(walletRef, {'coins': before - skin.price},
+            SetOptions(merge: true));
         tx.set(userRef, {
           'ownedSkins': FieldValue.arrayUnion([skin.id]),
         }, SetOptions(merge: true));
@@ -166,15 +183,14 @@ class CardSkinsScreen extends ConsumerWidget {
     if (uid == null) return;
 
     try {
-      await FirebaseFirestore.instance.doc('users/$uid').set(
-        {'selectedCardSkin': skin.id},
-        SetOptions(merge: true),
-      );
+      await FirebaseFirestore.instance
+          .doc('users/$uid')
+          .set({'selectedCardSkin': skin.id}, SetOptions(merge: true));
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${skin.name} הוצמד בהצלחה!')),
+        SnackBar(content: Text('${skin.name} הוצמד!')),
       );
-    } catch (e) {
+    } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('שגיאה בהצמדת העיצוב')),
@@ -183,111 +199,181 @@ class CardSkinsScreen extends ConsumerWidget {
   }
 }
 
-// ── Skin card widget ─────────────────────────────────────────────────────────
+// ── Section header ────────────────────────────────────────────────────────────
 
-class _SkinCard extends StatelessWidget {
-  final CardSkin skin;
-  final bool isOwned;
-  final bool isSelected;
-  final bool canAfford;
+class _SectionHeader extends StatelessWidget {
+  final String label;
+  final IconData icon;
+
+  const _SectionHeader({required this.label, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFFD4AF37), size: 18),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFFD4AF37),
+            fontWeight: FontWeight.w800,
+            fontSize: 15,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Container(
+            height: 1,
+            color: const Color(0xFFD4AF37).withOpacity(0.25),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Skin grid ─────────────────────────────────────────────────────────────────
+
+class _SkinGrid extends StatelessWidget {
+  final List<CardSkin> skins;
   final int coins;
-  final VoidCallback onBuy;
-  final VoidCallback onEquip;
+  final String selectedSkin;
+  final List<String> ownedSkins;
+  final void Function(CardSkin) onBuy;
+  final void Function(CardSkin) onEquip;
 
-  const _SkinCard({
-    required this.skin,
-    required this.isOwned,
-    required this.isSelected,
-    required this.canAfford,
+  const _SkinGrid({
+    required this.skins,
     required this.coins,
+    required this.selectedSkin,
+    required this.ownedSkins,
     required this.onBuy,
     required this.onEquip,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0A1A2E),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isSelected
-              ? const Color(0xFFD4AF37)
-              : const Color(0xFF8B6FFF).withOpacity(0.35),
-          width: isSelected ? 2.0 : 1.0,
-        ),
-        boxShadow: isSelected
-            ? [
-                BoxShadow(
-                  color: const Color(0xFFD4AF37).withOpacity(0.25),
-                  blurRadius: 14,
-                  spreadRadius: 2,
-                ),
-              ]
-            : null,
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: AppSpacing.sm,
+        mainAxisSpacing: AppSpacing.sm,
+        childAspectRatio: 0.72,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+      itemCount: skins.length,
+      itemBuilder: (context, index) {
+        final skin = skins[index];
+        final isOwned = ownedSkins.contains(skin.id);
+        final isSelected = selectedSkin == skin.id;
+        final canAfford = coins >= skin.price;
+
+        return _SkinTile(
+          skin: skin,
+          isOwned: isOwned,
+          isSelected: isSelected,
+          canAfford: canAfford,
+          onTap: () {
+            if (isOwned || skin.isFree) {
+              if (!isSelected) onEquip(skin);
+            } else {
+              onBuy(skin);
+            }
+          },
+        );
+      },
+    );
+  }
+}
+
+// ── Compact skin tile ─────────────────────────────────────────────────────────
+
+class _SkinTile extends StatelessWidget {
+  final CardSkin skin;
+  final bool isOwned;
+  final bool isSelected;
+  final bool canAfford;
+  final VoidCallback onTap;
+
+  const _SkinTile({
+    required this.skin,
+    required this.isOwned,
+    required this.isSelected,
+    required this.canAfford,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const gold = Color(0xFFD4AF37);
+    const purple = Color(0xFF8B6FFF);
+
+    final borderColor = isSelected
+        ? gold
+        : isOwned
+            ? purple.withOpacity(0.6)
+            : const Color(0xFF2A2A4A);
+
+    return GestureDetector(
+      onTap: isSelected ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0A1228),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor, width: isSelected ? 2.0 : 1.0),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: gold.withOpacity(0.28),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  )
+                ]
+              : null,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Skin preview ───────────────────────────────────────
+            // Preview square
             Expanded(
-              child: _SkinPreview(skin: skin),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-
-            // ── Name ───────────────────────────────────────────────
-            Text(
-              skin.name,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                fontSize: 15,
+              child: ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(13)),
+                child: _SkinPreview(skin: skin),
               ),
             ),
 
-            // ── Status badge ───────────────────────────────────────
-            if (isSelected)
-              Container(
-                margin: const EdgeInsets.only(top: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD4AF37).withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(8),
+            // Name + badge row
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: Text(
+                skin.name,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
                 ),
-                child: const Text(
-                  'מוצמד',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFFD4AF37),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              )
-            else
-              const SizedBox(height: AppSpacing.sm),
-
-            // ── Action button ──────────────────────────────────────
-            if (skin.price == 0 || isOwned)
-              _ActionButton(
-                label: isSelected ? 'מוצמד' : 'הצמד',
-                enabled: !isSelected,
-                onTap: isSelected ? null : onEquip,
-                color: const Color(0xFF8B6FFF),
-              )
-            else
-              _ActionButton(
-                label: '🪙 ${skin.price}',
-                enabled: canAfford,
-                onTap: canAfford ? onBuy : null,
-                color: canAfford
-                    ? const Color(0xFFD4AF37)
-                    : Colors.grey,
               ),
+            ),
+
+            // Status chip
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+              child: _StatusChip(
+                skin: skin,
+                isOwned: isOwned,
+                isSelected: isSelected,
+                canAfford: canAfford,
+              ),
+            ),
           ],
         ),
       ),
@@ -295,27 +381,98 @@ class _SkinCard extends StatelessWidget {
   }
 }
 
+class _StatusChip extends StatelessWidget {
+  final CardSkin skin;
+  final bool isOwned;
+  final bool isSelected;
+  final bool canAfford;
+
+  const _StatusChip({
+    required this.skin,
+    required this.isOwned,
+    required this.isSelected,
+    required this.canAfford,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const gold = Color(0xFFD4AF37);
+    const purple = Color(0xFF8B6FFF);
+
+    if (isSelected) {
+      return _Chip(label: 'מוצמד', color: gold, icon: Icons.check_rounded);
+    }
+    if (isOwned || skin.isFree) {
+      return _Chip(label: 'הצמד', color: purple, icon: Icons.touch_app_rounded);
+    }
+    // Not owned, premium
+    return _Chip(
+      label: '${skin.price} 🪙',
+      color: canAfford ? gold : Colors.grey,
+      icon: null,
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData? icon;
+
+  const _Chip({required this.label, required this.color, this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, color: color, size: 10),
+            const SizedBox(width: 3),
+          ],
+          Flexible(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w800,
+                fontSize: 10,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Skin preview ──────────────────────────────────────────────────────────────
+
 class _SkinPreview extends StatelessWidget {
   final CardSkin skin;
   const _SkinPreview({required this.skin});
 
   @override
   Widget build(BuildContext context) {
-    // Show asset if available, otherwise show color swatch
     if (skin.assetPath != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Image.asset(
-          skin.assetPath!,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _ColorSwatch(skinId: skin.id),
-        ),
+      return Image.asset(
+        skin.assetPath!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _ColorSwatch(skinId: skin.id),
       );
     }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: _ColorSwatch(skinId: skin.id),
-    );
+    return _ColorSwatch(skinId: skin.id);
   }
 }
 
@@ -323,93 +480,42 @@ class _ColorSwatch extends StatelessWidget {
   final String skinId;
   const _ColorSwatch({required this.skinId});
 
-  Color get _baseColor {
-    switch (skinId) {
-      case 'blue':
-        return const Color(0xFF1E3A5F);
-      case 'red':
-        return const Color(0xFF5F1E1E);
-      case 'dark':
-        return const Color(0xFF0D0D1A);
-      default:
-        return const Color(0xFF07101F);
-    }
-  }
-
-  Color get _accentColor {
-    switch (skinId) {
-      case 'blue':
-        return const Color(0xFF87CEEB);
-      case 'red':
-        return const Color(0xFFFF6B6B);
-      case 'dark':
-        return const Color(0xFF4A4A8A);
-      default:
-        return const Color(0xFFD4AF37);
-    }
-  }
+  static const _palettes = <String, List<Color>>{
+    'classic':   [Color(0xFF1A1A2E), Color(0xFFB0B0C8)],
+    'ocean':     [Color(0xFF001A33), Color(0xFF00BCD4)],
+    'forest':    [Color(0xFF071A07), Color(0xFF4CAF50)],
+    'sand':      [Color(0xFF2A1F0A), Color(0xFFD4A54A)],
+    'blue':      [Color(0xFF030D1A), Color(0xFF87CEEB)],
+    'red':       [Color(0xFF1A0303), Color(0xFFFF6B6B)],
+    'copper':    [Color(0xFF1A0D05), Color(0xFFB87333)],
+    'dark':      [Color(0xFF05050F), Color(0xFF8B6FFF)],
+    'emerald':   [Color(0xFF011A0D), Color(0xFF00C853)],
+    'ruby':      [Color(0xFF1A0008), Color(0xFFE91E63)],
+    'rose_gold': [Color(0xFF1A0D10), Color(0xFFB76E79)],
+    'galaxy':    [Color(0xFF03001A), Color(0xFF9C27B0)],
+    'obsidian':  [Color(0xFF000000), Color(0xFF606060)],
+  };
 
   @override
   Widget build(BuildContext context) {
+    final colors = _palettes[skinId] ??
+        [const Color(0xFF07101F), const Color(0xFFD4AF37)];
+    final base = colors[0];
+    final accent = colors[1];
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [_baseColor, _accentColor.withOpacity(0.4)],
-        ),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: _accentColor.withOpacity(0.5),
-          width: 1,
+          colors: [base, accent.withOpacity(0.45)],
         ),
       ),
       child: Center(
         child: Icon(
           Icons.auto_awesome_rounded,
-          color: _accentColor.withOpacity(0.7),
-          size: 36,
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final bool enabled;
-  final VoidCallback? onTap;
-  final Color color;
-
-  const _ActionButton({
-    required this.label,
-    required this.enabled,
-    required this.onTap,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: enabled ? color.withOpacity(0.15) : Colors.grey.withOpacity(0.10),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: enabled ? color.withOpacity(0.60) : Colors.grey.withOpacity(0.25),
-          ),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: enabled ? color : Colors.grey,
-            fontWeight: FontWeight.w800,
-            fontSize: 13,
-          ),
+          color: accent.withOpacity(0.75),
+          size: 28,
         ),
       ),
     );

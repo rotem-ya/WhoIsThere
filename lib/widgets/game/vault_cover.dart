@@ -165,6 +165,50 @@ class _AperturePainter extends CustomPainter {
   // ── Per-skin colour scheme ─────────────────────────────────────────────────
   static _SkinPalette _palette(String id) {
     switch (id) {
+      case 'classic':
+        return const _SkinPalette(
+          base:          Color(0xFF1A1A2E),
+          bladeLight:    Color(0xFFE8E8F0),
+          bladeMid:      Color(0xFFB0B0C8),
+          bladeDark:     Color(0xFF6060A0),
+          bladeShadow:   Color(0xFF0D0D1E),
+          seam:          Color(0xFFFFFFFF),
+          rimOuter:      Color(0xFFB0B0C8),
+          rimInner:      Color(0xFF8080C0),
+        );
+      case 'ocean':
+        return const _SkinPalette(
+          base:          Color(0xFF001A33),
+          bladeLight:    Color(0xFF80FFEE),
+          bladeMid:      Color(0xFF00BCD4),
+          bladeDark:     Color(0xFF006080),
+          bladeShadow:   Color(0xFF001020),
+          seam:          Color(0xFFB2FFF5),
+          rimOuter:      Color(0xFF00BCD4),
+          rimInner:      Color(0xFF00E5FF),
+        );
+      case 'forest':
+        return const _SkinPalette(
+          base:          Color(0xFF071A07),
+          bladeLight:    Color(0xFFB8FFB8),
+          bladeMid:      Color(0xFF4CAF50),
+          bladeDark:     Color(0xFF1B5E20),
+          bladeShadow:   Color(0xFF030D03),
+          seam:          Color(0xFFCCFFCC),
+          rimOuter:      Color(0xFF4CAF50),
+          rimInner:      Color(0xFF69F070),
+        );
+      case 'sand':
+        return const _SkinPalette(
+          base:          Color(0xFF2A1F0A),
+          bladeLight:    Color(0xFFFFF8DC),
+          bladeMid:      Color(0xFFD4A54A),
+          bladeDark:     Color(0xFF8B6914),
+          bladeShadow:   Color(0xFF1A1005),
+          seam:          Color(0xFFFFFAE0),
+          rimOuter:      Color(0xFFD4A54A),
+          rimInner:      Color(0xFFFFD060),
+        );
       case 'blue':
         return const _SkinPalette(
           base:          Color(0xFF030D1A),
@@ -187,6 +231,17 @@ class _AperturePainter extends CustomPainter {
           rimOuter:      Color(0xFFFF6B6B),
           rimInner:      Color(0xFFFF3B30),
         );
+      case 'copper':
+        return const _SkinPalette(
+          base:          Color(0xFF1A0D05),
+          bladeLight:    Color(0xFFFFCBA0),
+          bladeMid:      Color(0xFFB87333),
+          bladeDark:     Color(0xFF6B3D0A),
+          bladeShadow:   Color(0xFF100803),
+          seam:          Color(0xFFFFDDB8),
+          rimOuter:      Color(0xFFB87333),
+          rimInner:      Color(0xFFFF9050),
+        );
       case 'dark':
         return const _SkinPalette(
           base:          Color(0xFF05050F),
@@ -198,7 +253,62 @@ class _AperturePainter extends CustomPainter {
           rimOuter:      Color(0xFF8B6FFF),
           rimInner:      Color(0xFF6464FF),
         );
-      default: // 'default' — gold
+      case 'emerald':
+        return const _SkinPalette(
+          base:          Color(0xFF011A0D),
+          bladeLight:    Color(0xFF80FFD0),
+          bladeMid:      Color(0xFF00C853),
+          bladeDark:     Color(0xFF00571E),
+          bladeShadow:   Color(0xFF010D06),
+          seam:          Color(0xFFB0FFE0),
+          rimOuter:      Color(0xFF00C853),
+          rimInner:      Color(0xFF69FFB4),
+        );
+      case 'ruby':
+        return const _SkinPalette(
+          base:          Color(0xFF1A0008),
+          bladeLight:    Color(0xFFFFB0C8),
+          bladeMid:      Color(0xFFE91E63),
+          bladeDark:     Color(0xFF880025),
+          bladeShadow:   Color(0xFF120005),
+          seam:          Color(0xFFFFCCDD),
+          rimOuter:      Color(0xFFE91E63),
+          rimInner:      Color(0xFFFF4088),
+        );
+      case 'rose_gold':
+        return const _SkinPalette(
+          base:          Color(0xFF1A0D10),
+          bladeLight:    Color(0xFFFFD6CC),
+          bladeMid:      Color(0xFFB76E79),
+          bladeDark:     Color(0xFF7A3040),
+          bladeShadow:   Color(0xFF120809),
+          seam:          Color(0xFFFFE8E2),
+          rimOuter:      Color(0xFFB76E79),
+          rimInner:      Color(0xFFFFAABB),
+        );
+      case 'galaxy':
+        return const _SkinPalette(
+          base:          Color(0xFF03001A),
+          bladeLight:    Color(0xFFE0C0FF),
+          bladeMid:      Color(0xFF9C27B0),
+          bladeDark:     Color(0xFF4A0072),
+          bladeShadow:   Color(0xFF020010),
+          seam:          Color(0xFFF0D8FF),
+          rimOuter:      Color(0xFF9C27B0),
+          rimInner:      Color(0xFFCE93D8),
+        );
+      case 'obsidian':
+        return const _SkinPalette(
+          base:          Color(0xFF000000),
+          bladeLight:    Color(0xFF909090),
+          bladeMid:      Color(0xFF404040),
+          bladeDark:     Color(0xFF1A1A1A),
+          bladeShadow:   Color(0xFF000000),
+          seam:          Color(0xFFC0C0C0),
+          rimOuter:      Color(0xFF606060),
+          rimInner:      Color(0xFF909090),
+        );
+      default: // 'default' — gold mandala
         return const _SkinPalette(
           base:          Color(0xFF07101F),
           bladeLight:    Color(0xFFFFF3B8),
