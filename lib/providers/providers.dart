@@ -39,8 +39,9 @@ final hintEconomyGuardProvider = Provider<HintEconomyGuard>(
 // Fires true exactly once when the onboarding wallet grant succeeds (first install).
 final firstTimeBonusProvider = StateProvider<bool>((ref) => false);
 
-// Wallet stream for the currently authenticated user
-final walletProvider = StreamProvider.autoDispose<UserEconomyModel?>((ref) {
+// Wallet stream for the currently authenticated user.
+// Not autoDispose — keeps the ref alive so initWallet's .then() always runs.
+final walletProvider = StreamProvider<UserEconomyModel?>((ref) {
   final userAsync = ref.watch(firebaseUserProvider);
   return userAsync.maybeWhen(
     data: (user) {
@@ -50,11 +51,14 @@ final walletProvider = StreamProvider.autoDispose<UserEconomyModel?>((ref) {
           .initWallet(user.uid)
           .then(
             (granted) {
+              QaLoggerService.instance.log('ECONOMY', 'INIT_WALLET_THEN granted=$granted');
               if (granted) {
                 ref.read(firstTimeBonusProvider.notifier).state = true;
               }
             },
-            onError: (_) {},
+            onError: (e) {
+              QaLoggerService.instance.log('ECONOMY', 'INIT_WALLET_THEN_ERROR ${e.toString().substring(0, e.toString().length.clamp(0, 60))}');
+            },
           );
       return ref.read(economyServiceProvider).walletStream(user.uid);
     },

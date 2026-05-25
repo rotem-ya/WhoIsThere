@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/economy_config.dart';
 import '../../providers/providers.dart';
+import '../../services/qa_logger_service.dart';
 import '../../services/reward_calculator.dart';
 
 void showDailyRewardSheet(BuildContext context, WidgetRef ref) {
@@ -69,8 +70,19 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
       } else {
         if (mounted) setState(() => _isClaiming = false);
       }
-    } catch (_) {
-      if (mounted) setState(() => _isClaiming = false);
+    } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log('ECONOMY', 'DAILY_REWARD_UI_ERROR ${msg.length > 80 ? msg.substring(0, 80) : msg}');
+      if (mounted) {
+        setState(() => _isClaiming = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('שגיאה בקבלת הפרס, נסה שוב'),
+            duration: Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 

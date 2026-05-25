@@ -6,6 +6,7 @@ import '../models/economy/economy_transaction_model.dart';
 import '../models/economy/match_reward_breakdown.dart';
 import '../models/economy/user_economy_model.dart';
 import 'local_economy_cache.dart';
+import 'qa_logger_service.dart';
 import 'reward_calculator.dart';
 
 class EconomyService {
@@ -69,8 +70,14 @@ class EconomyService {
         }
         granted = true;
       });
-    } catch (_) {}
-    if (granted) await _cache?.setCoins(EconomyConfig.initialCoins);
+    } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log('ECONOMY', 'INIT_WALLET_ERROR ${msg.length > 80 ? msg.substring(0, 80) : msg}');
+    }
+    if (granted) {
+      QaLoggerService.instance.log('ECONOMY', 'INIT_WALLET_GRANTED uid=${uid.substring(0, uid.length.clamp(0, 8))}');
+      await _cache?.setCoins(EconomyConfig.initialCoins);
+    }
     return granted;
   }
 
@@ -148,48 +155,57 @@ class EconomyService {
 
     ({int coins, int streak})? result;
 
-    await _db.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      final wallet = snap.exists
-          ? UserEconomyModel.fromFirestore(uid, snap.data()!)
-          : UserEconomyModel.empty(uid);
+    try {
+      await _db.runTransaction((tx) async {
+        final snap = await tx.get(ref);
+        final wallet = snap.exists
+            ? UserEconomyModel.fromFirestore(uid, snap.data()!)
+            : UserEconomyModel.empty(uid);
 
-      // Guard: already claimed today (UTC)
-      final last = wallet.lastDailyRewardAt;
-      if (last != null) {
-        final sameDay = last.year == now.year &&
-            last.month == now.month &&
-            last.day == now.day;
-        if (sameDay) return; // already claimed
-      }
+        // Guard: already claimed today (UTC)
+        final last = wallet.lastDailyRewardAt;
+        if (last != null) {
+          final sameDay = last.year == now.year &&
+              last.month == now.month &&
+              last.day == now.day;
+          if (sameDay) {
+            QaLoggerService.instance.log('ECONOMY', 'DAILY_REWARD_ALREADY_CLAIMED');
+            return;
+          }
+        }
 
-      final newStreak = RewardCalculator.computeNewStreak(
-        wallet.dailyStreak,
-        wallet.lastDailyRewardAt,
-        now,
-      );
-      final coins = RewardCalculator.calculateDailyReward(newStreak);
+        final newStreak = RewardCalculator.computeNewStreak(
+          wallet.dailyStreak,
+          wallet.lastDailyRewardAt,
+          now,
+        );
+        final coins = RewardCalculator.calculateDailyReward(newStreak);
 
-      final updated = wallet.copyWith(
-        coins: wallet.coins + coins,
-        totalEarned: wallet.totalEarned + coins,
-        dailyStreak: newStreak,
-        lastDailyRewardAt: now,
-      );
-      tx.set(ref, updated.toFirestore());
+        final updated = wallet.copyWith(
+          coins: wallet.coins + coins,
+          totalEarned: wallet.totalEarned + coins,
+          dailyStreak: newStreak,
+          lastDailyRewardAt: now,
+        );
+        tx.set(ref, updated.toFirestore());
 
-      final txId = _uuid.v4();
-      tx.set(_txCol(uid).doc(txId), EconomyTransactionModel(
-        id: txId,
-        type: TransactionType.dailyReward,
-        delta: coins,
-        balanceAfter: updated.coins,
-        createdAt: now,
-        meta: {'streak': newStreak},
-      ).toFirestore());
+        final txId = _uuid.v4();
+        tx.set(_txCol(uid).doc(txId), EconomyTransactionModel(
+          id: txId,
+          type: TransactionType.dailyReward,
+          delta: coins,
+          balanceAfter: updated.coins,
+          createdAt: now,
+          meta: {'streak': newStreak},
+        ).toFirestore());
 
-      result = (coins: coins, streak: newStreak);
-    });
+        result = (coins: coins, streak: newStreak);
+      });
+    } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log('ECONOMY', 'DAILY_REWARD_ERROR ${msg.length > 80 ? msg.substring(0, 80) : msg}');
+      rethrow;
+    }
 
     if (result != null) {
       await _syncCache(uid);
