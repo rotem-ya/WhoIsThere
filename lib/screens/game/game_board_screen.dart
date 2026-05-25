@@ -11,6 +11,7 @@ import 'package:confetti/confetti.dart';
 import '../../core/theme/app_styles.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
