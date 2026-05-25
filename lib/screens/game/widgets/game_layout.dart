@@ -1,9 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/economy_config.dart';
 import '../../../core/constants/game_constants.dart';
 import '../../../models/game_image_model.dart';
 import '../../../models/room_model.dart';
@@ -104,13 +101,6 @@ class GameLayout extends StatelessWidget {
               guessOpportunityDeadlineMs: room.guessOpportunityDeadlineMs,
               isLastTile: isLastTile,
               potTotal: potTotal,
-            ),
-            _TurnPhaseCountdownBar(
-              turnPhase: room.turnPhase,
-              revealDeadlineMs: room.revealDeadlineMs,
-              guessOpportunityDeadlineMs: room.guessOpportunityDeadlineMs,
-              guessModeDeadlineMs: room.guessModeDeadlineMs,
-              revealRatio: revealRatio,
             ),
             if (kDebugMode)
               _DebugPhaseBadge(
@@ -217,110 +207,4 @@ class _DebugPhaseBadge extends StatelessWidget {
   }
 }
 
-// Isolated countdown bar — has its own 1s timer so only this widget rebuilds per-second.
-class _TurnPhaseCountdownBar extends StatefulWidget {
-  final TurnPhase turnPhase;
-  final int? revealDeadlineMs;
-  final int? guessOpportunityDeadlineMs;
-  final int? guessModeDeadlineMs;
-  final double revealRatio;
-
-  const _TurnPhaseCountdownBar({
-    required this.turnPhase,
-    this.revealDeadlineMs,
-    this.guessOpportunityDeadlineMs,
-    this.guessModeDeadlineMs,
-    this.revealRatio = 0.0,
-  });
-
-  @override
-  State<_TurnPhaseCountdownBar> createState() => _TurnPhaseCountdownBarState();
-}
-
-class _TurnPhaseCountdownBarState extends State<_TurnPhaseCountdownBar> {
-  Timer? _t;
-  int _nowMs = DateTime.now().millisecondsSinceEpoch;
-
-  @override
-  void initState() {
-    super.initState();
-    _t = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _nowMs = DateTime.now().millisecondsSinceEpoch);
-    });
-  }
-
-  @override
-  void dispose() {
-    _t?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    int? deadlineMs;
-    int totalMs;
-    Color barColor;
-
-    final ratio = widget.revealRatio;
-    final isEndgame = ratio >= 0.75;
-
-    switch (widget.turnPhase) {
-      case TurnPhase.revealTurn:
-        deadlineMs = widget.revealDeadlineMs;
-        totalMs = EconomyConfig.autoRevealIntervalMs;
-        barColor = isEndgame
-            ? const Color(0xFFFF9F43)
-            : const Color(0xFF3A7BA8);
-      case TurnPhase.guessOpportunity:
-        deadlineMs = widget.guessOpportunityDeadlineMs;
-        // Match server-side _guessOppTimerMs formula
-        if (ratio <= 0.50) totalMs = 7000;
-        else if (ratio <= 0.75) totalMs = 5000;
-        else totalMs = 3500;
-        barColor = const Color(0xFFD4AF37); // gold
-      case TurnPhase.guessMode:
-        deadlineMs = widget.guessModeDeadlineMs;
-        totalMs = 20000;
-        barColor = const Color(0xFFFF6B35); // orange
-      default:
-        return const SizedBox(height: 3);
-    }
-
-    if (deadlineMs == null) return const SizedBox(height: 3);
-
-    final remainingMs = (deadlineMs - _nowMs).clamp(0, totalMs);
-    final fraction = remainingMs / totalMs;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final maxWidth = constraints.maxWidth;
-        return SizedBox(
-          height: 3,
-          child: Stack(
-            children: [
-              Container(
-                width: maxWidth,
-                height: 3,
-                color: Colors.white.withOpacity(0.06),
-              ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 900),
-                curve: Curves.linear,
-                width: maxWidth * fraction,
-                height: 3,
-                decoration: BoxDecoration(
-                  color: barColor,
-                  borderRadius: const BorderRadius.only(
-                    topRight: Radius.circular(2),
-                    bottomRight: Radius.circular(2),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
 
