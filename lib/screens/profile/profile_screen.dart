@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -49,11 +50,15 @@ class ProfileScreen extends ConsumerWidget {
                 leading: IconButton(
                   icon:
                       const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                  onPressed: () => Navigator.maybePop(context),
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.maybePop(context);
+                  },
                 ),
                 trailing: IconButton(
                   icon: const Icon(Icons.logout_rounded, color: Colors.white),
                   onPressed: () async {
+                    HapticFeedback.lightImpact();
                     await ref.read(authServiceProvider).signOut();
                     if (context.mounted) context.go('/auth');
                   },
@@ -88,8 +93,10 @@ class ProfileScreen extends ConsumerWidget {
                                 ),
                                 const SizedBox(width: AppSpacing.xs),
                                 InkWell(
-                                  onTap: () => _showEditNameDialog(
-                                      context, ref, user.id, user.name),
+                                  onTap: () {
+                                    HapticFeedback.lightImpact();
+                                    _showEditNameDialog(context, ref, user.id, user.name);
+                                  },
                                   borderRadius: BorderRadius.circular(20),
                                   child: Padding(
                                     padding: const EdgeInsets.all(4),

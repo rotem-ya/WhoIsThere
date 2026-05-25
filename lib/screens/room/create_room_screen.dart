@@ -73,6 +73,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
   }
 
   void _leaveDraftAndPop() {
+    HapticFeedback.lightImpact();
     if (_roomId != null) {
       final userId = ref.read(currentUserProvider).value?.id;
       if (userId != null) {
@@ -323,7 +324,10 @@ class _EntryFeeCard extends StatelessWidget {
                   child: _FeeButton(
                     fee: fee,
                     selected: selected == fee,
-                    onTap: () => onChanged(fee),
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      onChanged(fee);
+                    },
                   ),
                 ),
                 if (fee != EconomyConfig.entryFeeOptions.last)

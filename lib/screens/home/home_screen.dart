@@ -623,6 +623,7 @@ class _DailyRewardButton extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
+        HapticFeedback.lightImpact();
         if (isAvailable) {
           showDailyRewardSheet(context, ref);
         } else {
@@ -707,6 +708,7 @@ class _ProfileIconButton extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () {
+          HapticFeedback.lightImpact();
           QaLoggerService.instance.log('HOME', 'TAP_PROFILE');
           context.push('/profile');
         },

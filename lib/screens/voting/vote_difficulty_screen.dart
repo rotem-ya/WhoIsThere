@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
@@ -105,6 +106,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
                   icon: const Icon(Icons.exit_to_app_rounded,
                       color: Colors.white),
                   onPressed: () async {
+                    HapticFeedback.lightImpact();
                     await ref
                         .read(roomServiceProvider)
                         .leaveRoom(widget.roomId, currentUser.id);
@@ -133,7 +135,10 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
                           selected: selected,
                           votes: votes,
                           onTap: myVote == null
-                              ? () => setState(() => _selected = difficulty)
+                              ? () {
+                                  HapticFeedback.lightImpact();
+                                  setState(() => _selected = difficulty);
+                                }
                               : null,
                         ),
                       ),

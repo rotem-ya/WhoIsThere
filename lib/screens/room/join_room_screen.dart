@@ -113,6 +113,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
   }
 
   Future<void> _pasteCode() async {
+    HapticFeedback.lightImpact();
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final raw = (data?.text ?? '').trim();
     if (raw.isEmpty) {
@@ -165,7 +166,10 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
             title: 'הצטרפות',
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              onPressed: () => context.pop(),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                context.pop();
+              },
             ),
           ),
           Expanded(

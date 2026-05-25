@@ -46,6 +46,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 
   void _shareToWhatsApp(String code) {
+    HapticFeedback.lightImpact();
     QaLoggerService.instance.log('LOBBY', 'SHARE_ROOM_TAPPED code=$code');
     final msg = StringBuffer();
     msg.writeln('בואו לגלות מה בתמונה 📸');
@@ -178,6 +179,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                       label: _isStarting ? 'מכין צמצמים...' : 'התחל משחק',
                                       enabled: canStart && !_isStarting,
                                       onTap: () async {
+                                        HapticFeedback.mediumImpact();
                                         debugPrint('Lobby start tapped: roomId=${widget.roomId}');
                                         setState(() => _isStarting = true);
                                         try {
@@ -233,6 +235,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         // Back / leave button
         GestureDetector(
           onTap: () async {
+            HapticFeedback.lightImpact();
             if (currentUser != null) {
               await ref
                   .read(roomServiceProvider)

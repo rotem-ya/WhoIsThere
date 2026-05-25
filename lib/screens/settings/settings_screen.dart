@@ -25,7 +25,10 @@ class SettingsScreen extends ConsumerWidget {
             title: 'הגדרות',
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              onPressed: () => Navigator.maybePop(context),
+              onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.maybePop(context);
+            },
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -107,7 +110,10 @@ class _SoundSection extends StatelessWidget {
           Row(
             children: [
               GestureDetector(
-                onTap: onMuteToggle,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  onMuteToggle();
+                },
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 180),
                   child: Icon(
