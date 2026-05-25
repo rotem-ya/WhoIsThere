@@ -36,14 +36,26 @@ final hintEconomyGuardProvider = Provider<HintEconomyGuard>(
   (ref) => HintEconomyGuard(ref.watch(economyServiceProvider)),
 );
 
+// Fires true exactly once when the onboarding wallet grant succeeds (first install).
+final firstTimeBonusProvider = StateProvider<bool>((ref) => false);
+
 // Wallet stream for the currently authenticated user
 final walletProvider = StreamProvider.autoDispose<UserEconomyModel?>((ref) {
   final userAsync = ref.watch(firebaseUserProvider);
   return userAsync.maybeWhen(
     data: (user) {
       if (user == null) return Stream.value(null);
-      // Idempotent — only grants if wallet never initialized (totalEarned==0)
-      ref.read(economyServiceProvider).initWallet(user.uid).ignore();
+      ref
+          .read(economyServiceProvider)
+          .initWallet(user.uid)
+          .then(
+            (granted) {
+              if (granted) {
+                ref.read(firstTimeBonusProvider.notifier).state = true;
+              }
+            },
+            onError: (_) {},
+          );
       return ref.read(economyServiceProvider).walletStream(user.uid);
     },
     orElse: () => Stream.value(null),

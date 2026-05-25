@@ -45,31 +45,33 @@ class EconomyService {
 
   // ── Initialise new user ───────────────────────────────────────
 
-  Future<void> initWallet(String uid) async {
+  /// Returns true the ONE time coins are first granted (first install).
+  Future<bool> initWallet(String uid) async {
     final ref = _walletRef(uid);
     bool granted = false;
-    await _db.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      if (snap.exists) {
-        final existing = UserEconomyModel.fromFirestore(
-            uid, snap.data() as Map<String, dynamic>);
-        // Wallet exists but was never properly initialised (totalEarned == 0)
-        // — grant the onboarding coins now.
-        if (existing.totalEarned > 0) return;
-        tx.update(ref, {
-          'coins': FieldValue.increment(EconomyConfig.initialCoins),
-          'totalEarned': EconomyConfig.initialCoins,
-        });
-      } else {
-        final wallet = UserEconomyModel.empty(uid).copyWith(
-          coins: EconomyConfig.initialCoins,
-          totalEarned: EconomyConfig.initialCoins,
-        );
-        tx.set(ref, wallet.toFirestore());
-      }
-      granted = true;
-    });
+    try {
+      await _db.runTransaction((tx) async {
+        final snap = await tx.get(ref);
+        if (snap.exists) {
+          final existing = UserEconomyModel.fromFirestore(
+              uid, snap.data() as Map<String, dynamic>);
+          if (existing.totalEarned > 0) return;
+          tx.update(ref, {
+            'coins': FieldValue.increment(EconomyConfig.initialCoins),
+            'totalEarned': EconomyConfig.initialCoins,
+          });
+        } else {
+          final wallet = UserEconomyModel.empty(uid).copyWith(
+            coins: EconomyConfig.initialCoins,
+            totalEarned: EconomyConfig.initialCoins,
+          );
+          tx.set(ref, wallet.toFirestore());
+        }
+        granted = true;
+      });
+    } catch (_) {}
     if (granted) await _cache?.setCoins(EconomyConfig.initialCoins);
+    return granted;
   }
 
   // ── Match reward — only writes to the calling user's wallet ───
