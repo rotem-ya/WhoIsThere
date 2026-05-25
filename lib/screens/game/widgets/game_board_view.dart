@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../utils/game_constants.dart';
 import '../../../widgets/game/vault_cover.dart';
 
@@ -283,29 +284,9 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
                   Positioned.fill(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        color: Colors.white,
-                        child: Center(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            transitionBuilder: (child, anim) => ScaleTransition(
-                              scale: Tween<double>(begin: 0.6, end: 1.0)
-                                  .animate(CurvedAnimation(
-                                      parent: anim, curve: Curves.easeOutBack)),
-                              child: FadeTransition(opacity: anim, child: child),
-                            ),
-                            child: Text(
-                              '$_secondsLeft',
-                              key: ValueKey(_secondsLeft),
-                              style: TextStyle(
-                                color: const Color(0xFF1565C0),
-                                fontSize: widget.tileSize * 0.44,
-                                fontWeight: FontWeight.w900,
-                                height: 1,
-                              ),
-                            ),
-                          ),
-                        ),
+                      child: _CountdownOverlay(
+                        secondsLeft: _secondsLeft,
+                        tileSize: widget.tileSize,
                       ),
                     ),
                   ),
@@ -317,6 +298,71 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
     );
   }
 }
+
+// ── Countdown overlay ────────────────────────────────────────────────────────
+
+class _CountdownOverlay extends StatelessWidget {
+  final int secondsLeft;
+  final double tileSize;
+
+  const _CountdownOverlay({required this.secondsLeft, required this.tileSize});
+
+  @override
+  Widget build(BuildContext context) {
+    final isUrgent = secondsLeft <= 2;
+    final ringColor = isUrgent ? AppColors.danger : AppColors.primary;
+    final ringSize = tileSize * 0.60;
+
+    return Container(
+      color: const Color(0xF0050A14),
+      child: Center(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: ringSize,
+              height: ringSize,
+              child: CircularProgressIndicator(
+                value: secondsLeft / 5.0,
+                strokeWidth: tileSize * 0.055,
+                backgroundColor: Colors.white12,
+                valueColor: AlwaysStoppedAnimation<Color>(ringColor),
+                strokeCap: StrokeCap.round,
+              ),
+            ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              transitionBuilder: (child, anim) => ScaleTransition(
+                scale: Tween<double>(begin: 0.5, end: 1.0).animate(
+                  CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+                ),
+                child: FadeTransition(opacity: anim, child: child),
+              ),
+              child: Text(
+                '$secondsLeft',
+                key: ValueKey(secondsLeft),
+                style: TextStyle(
+                  color: ringColor,
+                  fontSize: tileSize * 0.34,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                  shadows: [
+                    Shadow(
+                      color: ringColor.withOpacity(0.55),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Image slice ───────────────────────────────────────────────────────────────
 
 class _ImageSlice extends StatelessWidget {
   final int index;
