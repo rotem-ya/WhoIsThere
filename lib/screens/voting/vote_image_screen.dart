@@ -90,7 +90,7 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
 
         return PopScope(
           canPop: false,
-          onPopInvokedWithResult: (didPop, _) {
+          onPopInvoked: (didPop) {
             if (!didPop) context.go('/home');
           },
           child: AppScaffold(

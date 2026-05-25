@@ -89,7 +89,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
         return PopScope(
           canPop: false,
-          onPopInvokedWithResult: (didPop, _) {
+          onPopInvoked: (didPop) {
             if (!didPop) context.go('/home');
           },
           child: Scaffold(

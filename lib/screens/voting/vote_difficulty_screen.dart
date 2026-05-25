@@ -91,7 +91,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
 
         return PopScope(
           canPop: false,
-          onPopInvokedWithResult: (didPop, _) {
+          onPopInvoked: (didPop) {
             if (!didPop) context.go('/home');
           },
           child: AppScaffold(

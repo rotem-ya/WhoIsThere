@@ -99,7 +99,7 @@ class _WinScreenState extends ConsumerState<WinScreen>
 
         return PopScope(
           canPop: false,
-          onPopInvokedWithResult: (didPop, _) {
+          onPopInvoked: (didPop) {
             if (!didPop) {
               ref.read(currentRoomIdProvider.notifier).state = null;
               context.go('/home');

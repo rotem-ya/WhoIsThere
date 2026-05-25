@@ -150,7 +150,7 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
 
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
+      onPopInvoked: (didPop) {
         if (!didPop) _cancel();
       },
       child: Scaffold(
