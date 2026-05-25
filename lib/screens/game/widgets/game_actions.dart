@@ -45,8 +45,7 @@ class GameActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final prize = RewardCalculator.calculateCurrentPrizePotential(
-      isSolo: isSolo,
+    final earlyBonus = RewardCalculator.calculateEarlyGuessBonus(
       revealedCount: revealedCount,
       totalTiles: totalTiles,
     );
@@ -69,8 +68,8 @@ class GameActions extends ConsumerWidget {
     final primaryGlow = guessActive;
     final primaryOnTap = (!isBlocked && onGuess != null) ? onGuess : (!isBlocked ? () {} : null);
 
-    // Show reward chip on the guess opportunity CTA only
-    final showReward = canGuessNow && prize != null;
+    // Show the decaying early-guess bonus always (hides itself when it hits 0)
+    final showReward = earlyBonus > 0;
 
     return SafeArea(
       top: false,
@@ -100,7 +99,7 @@ class GameActions extends ConsumerWidget {
                 isActive: primaryIsActive,
                 glow: primaryGlow,
                 onTap: primaryOnTap,
-                reward: showReward ? prize : null,
+                reward: showReward ? earlyBonus : null,
               ),
               // Hint button — only in solo mode (shown regardless of turn state)
               if (isSolo && onRevealHint != null) ...[

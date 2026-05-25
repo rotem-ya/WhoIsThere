@@ -97,6 +97,18 @@ class RewardCalculator {
     return base + earlyGuess + EconomyConfig.noWrongGuessBonus + perfect;
   }
 
+  /// Returns only the early-guess bonus component (the part that decays to 0).
+  /// Used by the guess-button to always show a decreasing countdown bonus.
+  static int calculateEarlyGuessBonus({
+    required int revealedCount,
+    required int totalTiles,
+  }) {
+    final ratio = totalTiles <= 0
+        ? 1.0
+        : (revealedCount / totalTiles).clamp(0.0, 1.0);
+    return _earlyGuessBonus(ratio);
+  }
+
   // ── Daily reward ──────────────────────────────────────────────
 
   /// Returns the total coins to award for a daily login.

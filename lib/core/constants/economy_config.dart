@@ -44,7 +44,7 @@ class EconomyConfig {
   static const double earlyGuessTier1MaxRatio = 0.20;
   static const double earlyGuessTier2MaxRatio = 0.35;
   static const double earlyGuessTier3MaxRatio = 0.50;
-  static const double earlyGuessTier4MaxRatio = 0.70;
+  static const double earlyGuessTier4MaxRatio = 0.80;
   static const int earlyGuessBonusTier1 = 15; // ≤ 20% revealed
   static const int earlyGuessBonusTier2 = 10; // ≤ 35% revealed
   static const int earlyGuessBonusTier3 = 7;  // ≤ 50% revealed
