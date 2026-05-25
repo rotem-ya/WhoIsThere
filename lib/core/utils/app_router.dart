@@ -11,6 +11,7 @@ import '../../screens/home/home_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/room/create_room_screen.dart';
 import '../../screens/room/join_room_screen.dart';
+import '../../screens/room/finding_players_screen.dart';
 import '../../screens/room/lobby_screen.dart';
 import '../../screens/splash/splash_screen.dart';
 import '../../screens/settings/settings_screen.dart';
@@ -58,6 +59,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/lobby/:roomId',
         builder: (context, state) =>
             LobbyScreen(roomId: state.pathParameters['roomId']!),
+      ),
+      GoRoute(
+        path: '/finding-players/:roomId',
+        builder: (context, state) => FindingPlayersScreen(
+          roomId: state.pathParameters['roomId']!,
+          targetPlayers: int.tryParse(
+                  state.uri.queryParameters['target'] ?? '2') ??
+              2,
+        ),
       ),
       GoRoute(
         path: '/vote-image/:roomId',

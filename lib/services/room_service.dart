@@ -213,6 +213,27 @@ class RoomService {
     return RoomModel.fromFirestore(await doc.reference.get());
   }
 
+  /// Adds a single bot player to an existing waiting room.
+  Future<void> addBotToRoom(String roomId, int botIndex) async {
+    final doc = await _rooms.doc(roomId).get();
+    if (!doc.exists) return;
+    final room = RoomModel.fromFirestore(doc);
+    if (room.phase != GamePhase.waiting) return;
+
+    final virtualId = 'virtual_${botIndex}_$roomId';
+    if (room.players.containsKey(virtualId)) return;
+
+    final botPlayer = PlayerModel(
+      id: virtualId,
+      name: 'שחקן $botIndex',
+      score: 0,
+      isBot: true,
+    );
+    await _rooms.doc(roomId).update({
+      'players.$virtualId': botPlayer.toMap(),
+    });
+  }
+
   Future<RoomModel?> findRoomByCode(String code) async {
     final query = await _rooms
         .where('code', isEqualTo: code.toUpperCase())

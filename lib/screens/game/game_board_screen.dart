@@ -277,10 +277,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static final AudioPlayer _victoryPlayer = AudioPlayer(playerId: 'victory-fanfare');
   static final AssetSource _victorySound = AssetSource('sounds/victory_fanfare.mp3');
 
-  // Tick sounds — aperture_open gives a sharper mechanical click suited for countdowns
   static final AudioPlayer _revealTickPlayer = AudioPlayer(playerId: 'reveal-tick');
   static final AudioPlayer _guessModeTickPlayer = AudioPlayer(playerId: 'guess-tick');
-  static final AssetSource _tickSound = AssetSource('sounds/aperture_open.wav');
+  static final AssetSource _tickSound = AssetSource('sounds/correct_ding.wav');
 
   // Sync tick to displayed countdown second — one tick per whole-second transition
   int _lastRevealTickSecond = -1;
@@ -320,7 +319,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     return null;
   }
 
-  static Future<void> _playRevealTick({double volume = 0.07}) async {
+  static Future<void> _playRevealTick({double volume = 0.045}) async {
     try {
       await _revealTickPlayer.stop();
       await _revealTickPlayer.setVolume(volume * _sfxScale);
@@ -328,7 +327,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     } catch (_) {}
   }
 
-  static Future<void> _playGuessModeTick({double volume = 0.17}) async {
+  static Future<void> _playGuessModeTick({double volume = 0.11}) async {
     try {
       await _guessModeTickPlayer.stop();
       await _guessModeTickPlayer.setVolume(volume * _sfxScale);
@@ -935,7 +934,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             pieceIndex: index,
             difficulty: difficulty,
           );
-      unawaited(_playRevealSound());
       if (isLastTile) {
         await ref.read(roomServiceProvider).endGameNoWinner(room.id);
       } else {

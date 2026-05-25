@@ -27,9 +27,7 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseController;
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   late final bool _doIntro;
   bool _isCreating = false;
   int? _loadingPlayers;
@@ -40,17 +38,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.initState();
     _doIntro = !HomeScreen._introPlayed;
     HomeScreen._introPlayed = true;
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
     QaLoggerService.instance.log('HOME', 'HOME_SCREEN_OPENED');
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
   }
 
   Future<void> _startQuickGame(int targetPlayers) async {
@@ -67,20 +55,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       if (user == null) return;
 
       QaLoggerService.instance.log('HOME', 'QUICK_GAME_ATTEMPT players=$targetPlayers');
+      // Create room with only the human player; bots join on the waiting screen.
       final room = await ref.read(roomServiceProvider).createRoom(
             hostId: user.id,
             hostName: user.name,
             hostPhotoUrl: user.photoUrl,
-            playerCount: targetPlayers,
+            playerCount: 1,
           );
 
-      await ref.read(roomServiceProvider).startGameDirectly(room.id);
       ref.read(currentRoomIdProvider.notifier).state = room.id;
 
       final shortId = room.id.substring(0, room.id.length.clamp(0, 6));
       QaLoggerService.instance.log('HOME', 'QUICK_GAME_SUCCESS code=${room.code} id=$shortId');
-      QaLoggerService.instance.log('HOME', 'QUICK_GAME_NAVIGATED dest=/game/$shortId');
-      if (mounted) context.go('/game/${room.id}');
+      QaLoggerService.instance.log('HOME', 'QUICK_GAME_NAVIGATED dest=/finding-players/$shortId target=$targetPlayers');
+      if (mounted) context.go('/finding-players/${room.id}?target=$targetPlayers');
     } catch (e) {
       final msg = e.toString();
       QaLoggerService.instance.log('HOME', 'QUICK_GAME_ERROR ${msg.length > 60 ? msg.substring(0, 60) : msg}');
@@ -305,40 +293,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               ),
                               const SizedBox(height: 10),
                               _step(
-                                _MainVaultButton(
-                                  pulseController: _pulseController,
-                                  label: 'שחק עכשיו',
-                                  subtitle: 'דו־קרב מהיר · 2 שחקנים',
-                                  height: verySmall ? 62 : compact ? 66 : 72,
-                                  isLoading: _isCreating && _loadingPlayers == 2,
-                                  onTap: _isCreating ? null : () => _startQuickGame(2),
-                                ),
-                                delayMs: 380, durationMs: 260, dy: 5,
-                              ),
-                              const SizedBox(height: 14),
-                              _step(
-                                Row(
+                                Column(
                                   children: [
-                                    Expanded(
-                                      child: _GlassButton(
-                                        label: '3 שחקנים',
-                                        height: verySmall ? 50 : compact ? 54 : 58,
-                                        isLoading: _isCreating && _loadingPlayers == 3,
-                                        onTap: _isCreating ? null : () => _startQuickGame(3),
-                                      ),
+                                    _QuickGameButton(
+                                      players: 2,
+                                      rewardCoins: 35,
+                                      height: verySmall ? 56 : compact ? 60 : 66,
+                                      isLoading: _isCreating && _loadingPlayers == 2,
+                                      onTap: _isCreating ? null : () => _startQuickGame(2),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: _GlassButton(
-                                        label: '4 שחקנים',
-                                        height: verySmall ? 50 : compact ? 54 : 58,
-                                        isLoading: _isCreating && _loadingPlayers == 4,
-                                        onTap: _isCreating ? null : () => _startQuickGame(4),
-                                      ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: _QuickGameButton(
+                                            players: 3,
+                                            rewardCoins: 30,
+                                            height: verySmall ? 52 : compact ? 56 : 60,
+                                            isLoading: _isCreating && _loadingPlayers == 3,
+                                            onTap: _isCreating ? null : () => _startQuickGame(3),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: _QuickGameButton(
+                                            players: 4,
+                                            rewardCoins: 30,
+                                            height: verySmall ? 52 : compact ? 56 : 60,
+                                            isLoading: _isCreating && _loadingPlayers == 4,
+                                            onTap: _isCreating ? null : () => _startQuickGame(4),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                                delayMs: 450, durationMs: 240, dy: 5,
+                                delayMs: 380, durationMs: 260, dy: 5,
                               ),
                               SizedBox(height: verySmall ? 10 : 16),
                               _step(
@@ -383,7 +373,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     children: [
                       const _ProfileIconButton(),
                       const SizedBox(width: 8),
-                      const _SettingsIconButton(),
+                      const _StoreIconButton(),
                       const SizedBox(width: 8),
                       const CoinDisplay(),
                     ],
@@ -456,116 +446,28 @@ class _Dot extends StatelessWidget {
   }
 }
 
-class _MainVaultButton extends StatelessWidget {
-  final AnimationController pulseController;
-  final String label;
-  final String subtitle;
+// ── Equal quick-game button for 2/3/4 players ─────────────────────────────
+
+class _QuickGameButton extends StatelessWidget {
+  final int players;
+  final int rewardCoins;
   final double height;
   final bool isLoading;
   final VoidCallback? onTap;
 
-  const _MainVaultButton({required this.pulseController, required this.label, required this.subtitle, required this.height, required this.isLoading, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: Tween<double>(begin: 1.0, end: 1.04).animate(CurvedAnimation(parent: pulseController, curve: Curves.easeInOut)),
-      child: GestureDetector(
-        onTap: onTap == null ? null : () {
-          HapticFeedback.mediumImpact();
-          onTap!();
-        },
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 160),
-          opacity: onTap == null ? 0.65 : 1,
-          child: Container(
-            height: height,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.42), blurRadius: 25, offset: const Offset(0, 10))],
-            ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (onTap != null)
-                  const _GoldShine()
-                      .animate(onPlay: (c) => c.repeat())
-                      .slideX(begin: -1.4, end: 1.4, duration: 2200.ms),
-                Center(
-                  child: isLoading
-                      ? const SizedBox(width: 25, height: 25, child: CircularProgressIndicator(color: Color(0xFF07101F), strokeWidth: 2.7))
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.bolt_rounded, color: Color(0xFF07101F), size: 30),
-                            const SizedBox(width: 10),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(label, style: const TextStyle(color: Color(0xFF07101F), fontSize: 28, fontWeight: FontWeight.w900, height: 1)),
-                                const SizedBox(height: 4),
-                                Text(subtitle, style: TextStyle(color: const Color(0xFF07101F).withOpacity(0.68), fontSize: 14, fontWeight: FontWeight.w800, height: 1)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GoldShine extends StatelessWidget {
-  const _GoldShine();
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: FractionallySizedBox(
-        widthFactor: 0.30,
-        heightFactor: 1.0,
-        child: Transform.rotate(
-          angle: -0.30,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white.withOpacity(0),
-                  Colors.white.withOpacity(0.18),
-                  Colors.white.withOpacity(0),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlassButton extends StatelessWidget {
-  final String label;
-  final double height;
-  final bool isLoading;
-  final VoidCallback? onTap;
-
-  const _GlassButton({required this.label, required this.height, required this.isLoading, required this.onTap});
+  const _QuickGameButton({
+    required this.players,
+    required this.rewardCoins,
+    required this.height,
+    required this.isLoading,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return PressableScale(
       onTap: onTap == null ? null : () {
-        HapticFeedback.lightImpact();
+        HapticFeedback.mediumImpact();
         onTap!();
       },
       child: AnimatedOpacity(
@@ -578,14 +480,32 @@ class _GlassButton extends StatelessWidget {
             child: Container(
               height: height,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.065),
+                color: Colors.white.withOpacity(0.075),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.34), width: 1.2),
+                border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.38), width: 1.2),
               ),
               child: Center(
                 child: isLoading
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4))
-                    : Text(label, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '$players שחקנים',
+                            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, height: 1.1),
+                          ),
+                          const SizedBox(height: 3),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'חינם  •  עד $rewardCoins 🪙',
+                                style: TextStyle(color: const Color(0xFFD4AF37).withOpacity(0.80), fontSize: 11, fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
               ),
             ),
           ),
@@ -818,10 +738,10 @@ class _ProfileIconButton extends StatelessWidget {
   }
 }
 
-// ── Settings icon button (top-left, next to profile) ─────────────────────
+// ── Store icon button (top-left, next to profile) ─────────────────────────
 
-class _SettingsIconButton extends StatelessWidget {
-  const _SettingsIconButton();
+class _StoreIconButton extends StatelessWidget {
+  const _StoreIconButton();
 
   @override
   Widget build(BuildContext context) {
@@ -831,8 +751,9 @@ class _SettingsIconButton extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () {
-          QaLoggerService.instance.log('HOME', 'TAP_SETTINGS');
-          context.push('/settings');
+          HapticFeedback.lightImpact();
+          QaLoggerService.instance.log('HOME', 'TAP_STORE');
+          context.push('/store');
         },
         child: SizedBox(
           width: 44,
@@ -850,7 +771,7 @@ class _SettingsIconButton extends StatelessWidget {
                 ),
               ),
               child: const Icon(
-                Icons.settings_rounded,
+                Icons.store_rounded,
                 color: Colors.white70,
                 size: 20,
               ),
