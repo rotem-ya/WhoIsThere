@@ -221,10 +221,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int? _lastExpiredRevealDeadline;
   int? _lastExpiredGuessOpportunityDeadline;
   int? _lastExpiredGuessModeDeadline;
-  // Per-phase retry cooldowns (2s) — prevents tick-spam on failed attempts
+  // Per-phase retry cooldowns — prevents tick-spam on failed attempts
   int? _revealTimeoutLastAttemptMs;
   int? _guessOppTimeoutLastAttemptMs;
   int? _guessModeTimeoutLastAttemptMs;
+  // Exponential backoff for auto-reveal when Firestore is unavailable
+  int _revealBackoffMs = 2000;
+  static const int _revealBackoffMax = 32000;
   // In-flight guard — suppresses concurrent timer ticks for the same deadline
   int? _inFlightRevealDeadline;
   // Non-owner observation dedup — log once per expired deadline
@@ -471,8 +474,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
               'TIMEOUT_ATTEMPT_SUPPRESSED reason=in_flight deadline=${room.revealDeadlineMs}');
         } else {
           final lastAttempt = _revealTimeoutLastAttemptMs;
-          if (lastAttempt != null && now - lastAttempt < 2000) {
-            // within cooldown — wait for retry window
+          if (lastAttempt != null && now - lastAttempt < _revealBackoffMs) {
+            // within backoff window — wait
           } else {
             _inFlightRevealDeadline = room.revealDeadlineMs;
             _revealTimeoutLastAttemptMs = now;
@@ -489,9 +492,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 _lastExpiredRevealDeadline = room.revealDeadlineMs;
                 _dedupSkipCount_reveal = 0;
                 _lastDedupSkipLogMs_reveal = null;
+                _revealBackoffMs = 2000; // reset on success
               } else {
                 QaLoggerService.instance.log('TURN',
                     'EXPIRY_RETRY_ALLOWED phase=revealTurn deadline=${room.revealDeadlineMs}');
+              }
+            } catch (e) {
+              if (e is FirebaseException && e.code == 'unavailable') {
+                _revealBackoffMs = (_revealBackoffMs * 2).clamp(2000, _revealBackoffMax);
+                QaLoggerService.instance.log('REVEAL',
+                    'TX_ERROR name=autoRevealPiece error=$e');
+                QaLoggerService.instance.log('REVEAL',
+                    'BACKOFF_APPLIED nextRetryMs=$_revealBackoffMs');
               }
             } finally {
               _inFlightRevealDeadline = null;

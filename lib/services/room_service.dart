@@ -997,36 +997,40 @@ class RoomService {
           return;
         }
 
-        // Charge the guess-claim fee — increments by 2 each time this player claims
+        // Bots (virtual_*) have no wallet — skip fee logic entirely to avoid
+        // permission-denied on the wallet document read.
+        final isBot = userId.startsWith('virtual_');
         final claimCount = room.guessClaimCounts[userId] ?? 0;
-        final claimCost = EconomyConfig.baseGuessClaimCost +
-            (claimCount * EconomyConfig.guessClaimCostIncrement);
+        int actualCost = 0;
 
-        final walletDoc = await tx.get(_walletRef(userId));
-        final wallet = walletDoc.exists
-            ? UserEconomyModel.fromFirestore(
-                userId, walletDoc.data() as Map<String, dynamic>)
-            : null;
-        final coinsBefore = wallet?.coins ?? 0;
-        // Always charge full cost — balance can go negative (debt)
-        final actualCost = claimCost;
-        final coinsAfter = coinsBefore - actualCost;
+        if (!isBot) {
+          final claimCost = EconomyConfig.baseGuessClaimCost +
+              (claimCount * EconomyConfig.guessClaimCostIncrement);
+          final walletDoc = await tx.get(_walletRef(userId));
+          final wallet = walletDoc.exists
+              ? UserEconomyModel.fromFirestore(
+                  userId, walletDoc.data() as Map<String, dynamic>)
+              : null;
+          final coinsBefore = wallet?.coins ?? 0;
+          actualCost = claimCost;
+          final coinsAfter = coinsBefore - actualCost;
 
-        if (actualCost > 0) {
-          tx.set(_walletRef(userId), {'coins': coinsAfter}, SetOptions(merge: true));
-          final txId = _uuid.v4();
-          tx.set(
-            _txRef(userId, txId),
-            EconomyTransactionModel(
-              id: txId,
-              type: TransactionType.guessClaimFee,
-              delta: -actualCost,
-              balanceAfter: coinsAfter,
-              roomId: roomId,
-              createdAt: DateTime.now().toUtc(),
-              meta: {'claimNumber': claimCount + 1, 'claimCost': actualCost},
-            ).toFirestore(),
-          );
+          if (actualCost > 0) {
+            tx.set(_walletRef(userId), {'coins': coinsAfter}, SetOptions(merge: true));
+            final txId = _uuid.v4();
+            tx.set(
+              _txRef(userId, txId),
+              EconomyTransactionModel(
+                id: txId,
+                type: TransactionType.guessClaimFee,
+                delta: -actualCost,
+                balanceAfter: coinsAfter,
+                roomId: roomId,
+                createdAt: DateTime.now().toUtc(),
+                meta: {'claimNumber': claimCount + 1, 'claimCost': actualCost},
+              ).toFirestore(),
+            );
+          }
         }
 
         // Atomically claim the guess slot, enter guessMode, track claim count, add to pot
