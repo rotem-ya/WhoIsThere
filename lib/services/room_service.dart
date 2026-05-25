@@ -16,6 +16,30 @@ import '../core/constants/game_constants.dart';
 import '../core/utils/room_code_generator.dart';
 import 'qa_logger_service.dart';
 
+/// Picks a tile index using a checkerboard-first strategy.
+/// Prefers tiles that have no revealed neighbour (up/down/left/right).
+/// Falls back to any available tile only when every candidate is adjacent.
+int _pickCheckerboardTile(
+  List<int> available,
+  Set<int> revealed,
+  int gridSize,
+  Random rng,
+) {
+  bool _hasRevealedNeighbour(int idx) {
+    final r = idx ~/ gridSize;
+    final c = idx % gridSize;
+    if (r > 0 && revealed.contains(idx - gridSize)) return true;
+    if (r < gridSize - 1 && revealed.contains(idx + gridSize)) return true;
+    if (c > 0 && revealed.contains(idx - 1)) return true;
+    if (c < gridSize - 1 && revealed.contains(idx + 1)) return true;
+    return false;
+  }
+
+  final isolated = available.where((i) => !_hasRevealedNeighbour(i)).toList();
+  final pool = isolated.isNotEmpty ? isolated : available;
+  return pool[rng.nextInt(pool.length)];
+}
+
 class RoomService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -840,8 +864,13 @@ class RoomService {
 
         // ── Phase 1: no pending tile → pick one and start 5-second countdown ─
         final rng = Random();
-        final pieceIndex = room.availablePieceIndices[
-            rng.nextInt(room.availablePieceIndices.length)];
+        final revealedSet = room.placedPieces.keys.toSet();
+        final pieceIndex = _pickCheckerboardTile(
+          room.availablePieceIndices,
+          revealedSet,
+          room.gridSize,
+          rng,
+        );
 
         tx.update(_rooms.doc(roomId), {
           'pendingRevealTileIndex': pieceIndex,
