@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants/game_constants.dart';
+import '../../core/constants/player_rank.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/player_model.dart';
@@ -456,16 +457,23 @@ class _PlayerAvatarTile extends StatelessWidget {
           ),
           const SizedBox(width: 8),
 
-          // Single-line name (crown inline for host)
+          // Name + rank
           Expanded(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppStyles.bodyMedium.copyWith(
-                color: isMe ? AppStyles.cyanGlow : Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppStyles.bodyMedium.copyWith(
+                    color: isMe ? AppStyles.cyanGlow : Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                _RankBadge(rank: PlayerRankX.fromPoints(player.totalPoints)),
+              ],
             ),
           ),
         ],
@@ -577,6 +585,28 @@ class _GlossyActionButtonState extends State<_GlossyActionButton> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Rank badge ─────────────────────────────────────────────────────────────
+
+class _RankBadge extends StatelessWidget {
+  final PlayerRank rank;
+  const _RankBadge({required this.rank});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      '${rank.emoji} ${rank.label}',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        color: rank.color,
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
+        height: 1.2,
       ),
     );
   }

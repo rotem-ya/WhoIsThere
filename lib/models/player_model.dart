@@ -5,6 +5,7 @@ class PlayerModel extends Equatable {
   final String name;
   final String? photoUrl;
   final int score;
+  final int totalPoints;
   final int letterCards;
   final bool isEliminated;
   final bool isHost;
@@ -15,6 +16,7 @@ class PlayerModel extends Equatable {
     required this.name,
     this.photoUrl,
     required this.score,
+    this.totalPoints = 0,
     this.letterCards = 0,
     this.isEliminated = false,
     this.isHost = false,
@@ -27,6 +29,7 @@ class PlayerModel extends Equatable {
       name: data['name'] ?? '',
       photoUrl: data['photoUrl'],
       score: data['score'] ?? 0,
+      totalPoints: data['totalPoints'] ?? 0,
       letterCards: data['letterCards'] ?? 0,
       isEliminated: data['isEliminated'] ?? false,
       isHost: data['isHost'] ?? false,
@@ -38,6 +41,7 @@ class PlayerModel extends Equatable {
         'name': name,
         'photoUrl': photoUrl,
         'score': score,
+        'totalPoints': totalPoints,
         'letterCards': letterCards,
         'isEliminated': isEliminated,
         'isHost': isHost,
@@ -48,6 +52,7 @@ class PlayerModel extends Equatable {
     String? name,
     String? photoUrl,
     int? score,
+    int? totalPoints,
     int? letterCards,
     bool? isEliminated,
     bool? isHost,
@@ -58,6 +63,7 @@ class PlayerModel extends Equatable {
         name: name ?? this.name,
         photoUrl: photoUrl ?? this.photoUrl,
         score: score ?? this.score,
+        totalPoints: totalPoints ?? this.totalPoints,
         letterCards: letterCards ?? this.letterCards,
         isEliminated: isEliminated ?? this.isEliminated,
         isHost: isHost ?? this.isHost,
@@ -69,6 +75,7 @@ class PlayerModel extends Equatable {
         id,
         name,
         score,
+        totalPoints,
         letterCards,
         isEliminated,
         isHost,

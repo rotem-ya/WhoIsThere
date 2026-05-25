@@ -129,15 +129,17 @@ class RoomService {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
 
-    // Read the host's selected card skin so all players see it
+    // Read the host's selected card skin and total points
     final userSnap = await _firestore.doc('users/$hostId').get();
     final cardSkinId = (userSnap.data()?['selectedCardSkin'] as String?) ?? 'default';
+    final hostTotalPoints = (userSnap.data()?['totalPoints'] as int?) ?? 0;
 
     final host = PlayerModel(
       id: hostId,
       name: hostName,
       photoUrl: hostPhotoUrl,
       score: 0,
+      totalPoints: hostTotalPoints,
       isHost: true,
     );
 
@@ -193,11 +195,15 @@ class RoomService {
       return RoomModel.fromFirestore(await doc.reference.get());
     }
 
+    final joiningUserSnap = await _firestore.doc('users/$userId').get();
+    final joiningTotalPoints = (joiningUserSnap.data()?['totalPoints'] as int?) ?? 0;
+
     final newPlayer = PlayerModel(
       id: userId,
       name: userName,
       photoUrl: userPhotoUrl,
       score: 0,
+      totalPoints: joiningTotalPoints,
     );
 
     await doc.reference.update({

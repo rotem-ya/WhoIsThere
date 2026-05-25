@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/build_info.dart';
+import '../../core/constants/player_rank.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
@@ -102,8 +103,7 @@ class ProfileScreen extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: AppSpacing.xs),
-                            Text('שחקן פעיל',
-                                style: AppTextStyles.subtitleDark),
+                            _ProfileRankBadge(totalPoints: user.totalPoints),
                           ],
                         ),
                       ),
@@ -392,6 +392,58 @@ class _StatCard extends StatelessWidget {
           Text(label, style: AppTextStyles.subtitleDark),
         ],
       ),
+    );
+  }
+}
+
+class _ProfileRankBadge extends StatelessWidget {
+  final int totalPoints;
+  const _ProfileRankBadge({required this.totalPoints});
+
+  @override
+  Widget build(BuildContext context) {
+    final rank = PlayerRankX.fromPoints(totalPoints);
+    final nextRank = rank.index + 1 < PlayerRank.values.length
+        ? PlayerRank.values[rank.index + 1]
+        : null;
+
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: rank.color.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: rank.color.withOpacity(0.50), width: 1.2),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(rank.emoji, style: const TextStyle(fontSize: 16)),
+              const SizedBox(width: 6),
+              Text(
+                rank.label,
+                style: TextStyle(
+                  color: rank.color,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (nextRank != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'לדרגה הבאה: ${nextRank.minPoints - totalPoints} נק׳',
+            style: TextStyle(
+              color: AppColors.primary.withOpacity(0.55),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

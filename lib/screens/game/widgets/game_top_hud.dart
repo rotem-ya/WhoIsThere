@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/game_constants.dart';
+import '../../../core/constants/player_rank.dart';
 import '../../../models/player_model.dart';
 import '../../../services/reward_calculator.dart';
 import '../../../widgets/economy/coin_display.dart';
@@ -179,6 +180,7 @@ class _PlayerCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = player.name.length > 10 ? player.name.substring(0, 10) : player.name;
+    final rank = PlayerRankX.fromPoints(player.totalPoints);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -195,6 +197,8 @@ class _PlayerCell extends StatelessWidget {
       ),
       child: Row(
         children: [
+          Text(rank.emoji, style: const TextStyle(fontSize: 9)),
+          const SizedBox(width: 3),
           Expanded(
             child: Text(
               name,
