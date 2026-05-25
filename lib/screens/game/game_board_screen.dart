@@ -40,10 +40,24 @@ class GameBoardScreen extends ConsumerStatefulWidget {
   ConsumerState<GameBoardScreen> createState() => _GameBoardScreenState();
 
   /// Called from settings screen to update bg music volume immediately.
+  /// If music isn't playing, starts a 2-second preview then pauses.
   static void applyLiveMusicScale(double scale) {
-    _GameBoardScreenState._bgPlayer
-        .setVolume(_GameBoardScreenState._currentMusicBase * scale)
-        .ignore();
+    final player = _GameBoardScreenState._bgPlayer;
+    final vol = _GameBoardScreenState._currentMusicBase * scale;
+    player.setVolume(vol).ignore();
+    if (player.state != PlayerState.playing) {
+      () async {
+        try {
+          await player.setReleaseMode(ReleaseMode.loop);
+          await player.setVolume(vol);
+          await player.play(_GameBoardScreenState._bgMusic);
+          await Future.delayed(const Duration(seconds: 2));
+          if (player.state == PlayerState.playing) {
+            await player.pause();
+          }
+        } catch (_) {}
+      }();
+    }
   }
 
   /// Called from settings screen to play a preview ding at the given SFX scale.
