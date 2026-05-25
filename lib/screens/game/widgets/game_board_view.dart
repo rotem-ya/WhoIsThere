@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -18,6 +19,8 @@ class GameBoardView extends StatefulWidget {
   final bool glowEnabled;
   final void Function(int)? onReveal;
   final String cardSkinId;
+  final int? pendingRevealTileIndex;
+  final int? revealDeadlineMs;
 
   const GameBoardView({
     super.key,
@@ -29,6 +32,8 @@ class GameBoardView extends StatefulWidget {
     required this.glowEnabled,
     required this.onReveal,
     this.cardSkinId = 'default',
+    this.pendingRevealTileIndex,
+    this.revealDeadlineMs,
   });
 
   @override
@@ -91,6 +96,8 @@ class _GameBoardViewState extends State<GameBoardView> {
                         enabled: widget.enabled,
                         onReveal: widget.onReveal != null ? _handleReveal : null,
                         cardSkinId: widget.cardSkinId,
+                        isPendingReveal: index == widget.pendingRevealTileIndex,
+                        revealDeadlineMs: widget.revealDeadlineMs,
                       ),
                   ],
                 ),
@@ -113,6 +120,8 @@ class _Tile extends StatefulWidget {
   final bool enabled;
   final void Function(int)? onReveal;
   final String cardSkinId;
+  final bool isPendingReveal;
+  final int? revealDeadlineMs;
 
   const _Tile({
     required this.index,
@@ -124,6 +133,8 @@ class _Tile extends StatefulWidget {
     required this.enabled,
     required this.onReveal,
     this.cardSkinId = 'default',
+    this.isPendingReveal = false,
+    this.revealDeadlineMs,
   });
 
   @override
@@ -134,6 +145,8 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
   bool _pressed = false;
   late AnimationController _popCtrl;
   late Animation<double> _popScale;
+  Timer? _countdownTimer;
+  int _secondsLeft = 5;
 
   @override
   void initState() {
@@ -148,6 +161,7 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
       TweenSequenceItem(tween: Tween(begin: 1.10, end: 0.96), weight: 32),
       TweenSequenceItem(tween: Tween(begin: 0.96, end: 1.0), weight: 40),
     ]).animate(_popCtrl);
+    if (widget.isPendingReveal) _startCountdown();
   }
 
   @override
@@ -156,10 +170,39 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
     if (widget.isRevealed && !oldWidget.isRevealed) {
       _popCtrl.forward(from: 0.0);
     }
+    if (widget.isPendingReveal && !oldWidget.isPendingReveal) {
+      _startCountdown();
+    } else if (!widget.isPendingReveal && oldWidget.isPendingReveal) {
+      _stopCountdown();
+    } else if (widget.isPendingReveal && widget.revealDeadlineMs != oldWidget.revealDeadlineMs) {
+      _updateSecondsLeft();
+    }
+  }
+
+  void _startCountdown() {
+    _updateSecondsLeft();
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (mounted) _updateSecondsLeft();
+    });
+  }
+
+  void _updateSecondsLeft() {
+    final deadline = widget.revealDeadlineMs;
+    if (deadline == null) return;
+    final remaining = deadline - DateTime.now().millisecondsSinceEpoch;
+    final secs = (remaining / 1000).ceil().clamp(0, 5);
+    if (mounted && secs != _secondsLeft) setState(() => _secondsLeft = secs);
+  }
+
+  void _stopCountdown() {
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
   }
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _popCtrl.dispose();
     super.dispose();
   }
@@ -223,16 +266,50 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
                     ]
                   : null,
             ),
-            child: VaultCover(
-              isRevealed: widget.isRevealed,
-              isFocused: _canTap,
-              cardSkinId: widget.cardSkinId,
-              child: _ImageSlice(
-                index: widget.index,
-                gridSize: widget.gridSize,
-                tileSize: widget.tileSize,
-                imageUrl: widget.imageUrl,
-              ),
+            child: Stack(
+              children: [
+                VaultCover(
+                  isRevealed: widget.isRevealed,
+                  isFocused: _canTap,
+                  cardSkinId: widget.cardSkinId,
+                  child: _ImageSlice(
+                    index: widget.index,
+                    gridSize: widget.gridSize,
+                    tileSize: widget.tileSize,
+                    imageUrl: widget.imageUrl,
+                  ),
+                ),
+                if (widget.isPendingReveal && !widget.isRevealed)
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        color: Colors.white,
+                        child: Center(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            transitionBuilder: (child, anim) => ScaleTransition(
+                              scale: Tween<double>(begin: 0.6, end: 1.0)
+                                  .animate(CurvedAnimation(
+                                      parent: anim, curve: Curves.easeOutBack)),
+                              child: FadeTransition(opacity: anim, child: child),
+                            ),
+                            child: Text(
+                              '$_secondsLeft',
+                              key: ValueKey(_secondsLeft),
+                              style: TextStyle(
+                                color: const Color(0xFF1565C0),
+                                fontSize: widget.tileSize * 0.44,
+                                fontWeight: FontWeight.w900,
+                                height: 1,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),

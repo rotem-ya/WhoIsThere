@@ -779,59 +779,77 @@ class RoomService {
           QaLoggerService.instance.log('REVEAL', 'AUTO_REVEAL_ABORT reason=deadline_not_expired');
           return;
         }
-        if (room.availablePieceIndices.isEmpty) {
+        if (room.availablePieceIndices.isEmpty && room.pendingRevealTileIndex == null) {
           QaLoggerService.instance.log('REVEAL', 'AUTO_REVEAL_ABORT reason=no_tiles_left');
           return;
         }
 
-        final rng = Random();
-        final pieceIndex = room.availablePieceIndices[
-            rng.nextInt(room.availablePieceIndices.length)];
-        final newHidden = room.availablePieceIndices
-            .where((i) => i != pieceIndex)
-            .toList();
-        final newRevealCount = room.revealCount + 1;
+        // ── Phase 2: pending tile exists → reveal it ─────────────────────────
+        if (room.pendingRevealTileIndex != null) {
+          final pieceIndex = room.pendingRevealTileIndex!;
+          final newHidden = room.availablePieceIndices
+              .where((i) => i != pieceIndex)
+              .toList();
+          final newRevealCount = room.revealCount + 1;
 
-        if (newHidden.isEmpty) {
+          if (newHidden.isEmpty) {
+            tx.update(_rooms.doc(roomId), {
+              'placedPieces.${pieceIndex.toString()}': 'system',
+              'availablePieceIndices': newHidden,
+              'pendingRevealTileIndex': FieldValue.delete(),
+              'phase': GamePhase.finished.name,
+              'turnPhase': TurnPhase.roundOver.name,
+              'guessOpportunityPlayerId': null,
+              'guessModePlayerId': null,
+              'guessOpportunityDeadlineMs': null,
+              'guessModeDeadlineMs': null,
+              'lastRevealedByPlayerId': null,
+              'revealCount': newRevealCount,
+              'revealCycleId': FieldValue.increment(1),
+            });
+            QaLoggerService.instance.log('GAME', 'AUTO_REVEAL_LAST_TILE_NO_WINNER');
+            committed = true;
+            noWinner = true;
+            playerIdsForRefund = room.players.keys.toList();
+            return;
+          }
+
+          final totalTiles = room.gridSize * room.gridSize;
+          final revealedAfter = totalTiles - newHidden.length;
+          final guessOppMs = _guessOppTimerMs(revealedAfter, totalTiles);
+
           tx.update(_rooms.doc(roomId), {
             'placedPieces.${pieceIndex.toString()}': 'system',
             'availablePieceIndices': newHidden,
-            'phase': GamePhase.finished.name,
-            'turnPhase': TurnPhase.roundOver.name,
+            'pendingRevealTileIndex': FieldValue.delete(),
+            'turnPhase': TurnPhase.guessOpportunity.name,
             'guessOpportunityPlayerId': null,
-            'guessModePlayerId': null,
-            'guessOpportunityDeadlineMs': null,
-            'guessModeDeadlineMs': null,
+            'guessOpportunityDeadlineMs': now + guessOppMs,
             'lastRevealedByPlayerId': null,
             'revealCount': newRevealCount,
             'revealCycleId': FieldValue.increment(1),
           });
-          QaLoggerService.instance.log('GAME', 'AUTO_REVEAL_LAST_TILE_NO_WINNER');
+
+          QaLoggerService.instance.log('REVEAL',
+              'AUTO_REVEAL_COMMIT pieceIndex=$pieceIndex revealCount=$newRevealCount guessOppMs=$guessOppMs');
+          QaLoggerService.instance.log('REVEAL',
+              'TX_COMMIT name=autoRevealPiece latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
           committed = true;
-          noWinner = true;
-          playerIdsForRefund = room.players.keys.toList();
           return;
         }
 
-        final totalTiles = room.gridSize * room.gridSize;
-        final revealedAfter = totalTiles - newHidden.length;
-        final guessOppMs = _guessOppTimerMs(revealedAfter, totalTiles);
+        // ── Phase 1: no pending tile → pick one and start 5-second countdown ─
+        final rng = Random();
+        final pieceIndex = room.availablePieceIndices[
+            rng.nextInt(room.availablePieceIndices.length)];
 
         tx.update(_rooms.doc(roomId), {
-          'placedPieces.${pieceIndex.toString()}': 'system',
-          'availablePieceIndices': newHidden,
-          'turnPhase': TurnPhase.guessOpportunity.name,
-          'guessOpportunityPlayerId': null,
-          'guessOpportunityDeadlineMs': now + guessOppMs,
-          'lastRevealedByPlayerId': null,
-          'revealCount': newRevealCount,
+          'pendingRevealTileIndex': pieceIndex,
+          'revealDeadlineMs': now + 5000,
           'revealCycleId': FieldValue.increment(1),
         });
-
         QaLoggerService.instance.log('REVEAL',
-            'AUTO_REVEAL_COMMIT pieceIndex=$pieceIndex revealCount=$newRevealCount guessOppMs=$guessOppMs');
-        QaLoggerService.instance.log('REVEAL',
-            'TX_COMMIT name=autoRevealPiece latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
+            'AUTO_REVEAL_PENDING pieceIndex=$pieceIndex countdownMs=5000');
         committed = true;
       });
     } catch (e) {

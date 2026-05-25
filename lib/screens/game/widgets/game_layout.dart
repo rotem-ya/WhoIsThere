@@ -138,6 +138,8 @@ class GameLayout extends StatelessWidget {
                   glowEnabled: false,
                   onReveal: onReveal,
                   cardSkinId: room.cardSkinId,
+                  pendingRevealTileIndex: room.pendingRevealTileIndex,
+                  revealDeadlineMs: room.revealDeadlineMs,
                 ),
               ),
             ),

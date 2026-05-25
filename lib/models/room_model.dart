@@ -39,6 +39,7 @@ class RoomModel extends Equatable {
   final Map<String, int> guessClaimCounts;
   final List<String> entryFeePaidPlayerIds;
   final String cardSkinId;
+  final int? pendingRevealTileIndex;
 
   const RoomModel({
     required this.id,
@@ -76,6 +77,7 @@ class RoomModel extends Equatable {
     this.guessClaimCounts = const {},
     this.entryFeePaidPlayerIds = const [],
     this.cardSkinId = 'default',
+    this.pendingRevealTileIndex,
   });
 
   bool isBlockedFromGuessing(String userId) {
@@ -182,6 +184,7 @@ class RoomModel extends Equatable {
       guessClaimCounts: guessClaimCounts,
       entryFeePaidPlayerIds: List<String>.from(data['entryFeePaidPlayerIds'] ?? []),
       cardSkinId: data['cardSkinId'] as String? ?? 'default',
+      pendingRevealTileIndex: (data['pendingRevealTileIndex'] as num?)?.toInt(),
     );
   }
 
@@ -220,6 +223,7 @@ class RoomModel extends Equatable {
         'guessClaimCounts': guessClaimCounts,
         'entryFeePaidPlayerIds': entryFeePaidPlayerIds,
         'cardSkinId': cardSkinId,
+        if (pendingRevealTileIndex != null) 'pendingRevealTileIndex': pendingRevealTileIndex,
       };
 
   RoomModel copyWith({
@@ -254,6 +258,7 @@ class RoomModel extends Equatable {
     Map<String, int>? guessClaimCounts,
     List<String>? entryFeePaidPlayerIds,
     String? cardSkinId,
+    int? pendingRevealTileIndex,
   }) =>
       RoomModel(
         id: id,
@@ -295,6 +300,7 @@ class RoomModel extends Equatable {
         guessClaimCounts: guessClaimCounts ?? this.guessClaimCounts,
         entryFeePaidPlayerIds: entryFeePaidPlayerIds ?? this.entryFeePaidPlayerIds,
         cardSkinId: cardSkinId ?? this.cardSkinId,
+        pendingRevealTileIndex: pendingRevealTileIndex ?? this.pendingRevealTileIndex,
       );
 
   @override
@@ -330,5 +336,6 @@ class RoomModel extends Equatable {
         guessClaimCounts,
         entryFeePaidPlayerIds,
         cardSkinId,
+        pendingRevealTileIndex,
       ];
 }

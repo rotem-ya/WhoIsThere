@@ -326,8 +326,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             'ENDGAME_PRESSURE_ACTIVE ratio=${ratio.toStringAsFixed(2)}');
       }
 
-      // Reveal soft tick — last 3s; volume escalates at endgame (+40%)
-      if (room.turnPhase == TurnPhase.revealTurn && room.revealDeadlineMs != null) {
+      // During pending-reveal countdown (5 s): tick every second on the chosen tile
+      if (room.turnPhase == TurnPhase.revealTurn &&
+          room.pendingRevealTileIndex != null &&
+          room.revealDeadlineMs != null) {
+        final remaining = room.revealDeadlineMs! - now;
+        if (remaining > 0 && remaining <= 5500) {
+          unawaited(_playRevealTick(volume: isEndgame ? 0.08 : 0.05));
+        }
+      }
+      // Reveal soft tick — last 3s before tile SELECTION (no pending tile yet)
+      if (room.turnPhase == TurnPhase.revealTurn &&
+          room.pendingRevealTileIndex == null &&
+          room.revealDeadlineMs != null) {
         final tickRemaining = room.revealDeadlineMs! - now;
         if (tickRemaining > 0 && tickRemaining <= 3500) {
           unawaited(_playRevealTick(volume: isEndgame ? 0.10 : 0.07));
