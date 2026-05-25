@@ -688,10 +688,18 @@ class _JoinRoomButton extends StatelessWidget {
 class _DailyRewardButton extends ConsumerWidget {
   const _DailyRewardButton();
 
+  static bool _isDailyRewardAvailable(DateTime? lastDailyRewardAt) {
+    if (lastDailyRewardAt == null) return true;
+    final now = DateTime.now().toUtc();
+    final lastDay = DateTime.utc(lastDailyRewardAt.year, lastDailyRewardAt.month, lastDailyRewardAt.day);
+    final today = DateTime.utc(now.year, now.month, now.day);
+    return lastDay.isBefore(today);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isAvailable =
-        ref.watch(localEconomyCacheProvider).valueOrNull?.isDailyRewardAvailable ?? false;
+    final wallet = ref.watch(walletProvider).valueOrNull;
+    final isAvailable = _isDailyRewardAvailable(wallet?.lastDailyRewardAt);
 
     return GestureDetector(
       onTap: () {
