@@ -97,7 +97,15 @@ class _WinScreenState extends ConsumerState<WinScreen>
                     ?.score ??
                 0;
 
-        return AppScaffold(
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) {
+              ref.read(currentRoomIdProvider.notifier).state = null;
+              context.go('/home');
+            }
+          },
+          child: AppScaffold(
           backgroundGradient:
               isWinner ? AppColors.primaryGradient : AppColors.pageBackground,
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -231,7 +239,8 @@ class _WinScreenState extends ConsumerState<WinScreen>
               ],
             ),
           ),
-        );
+        ), // AppScaffold
+        ); // PopScope
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),

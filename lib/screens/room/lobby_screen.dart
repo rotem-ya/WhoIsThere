@@ -86,7 +86,12 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         final hostName = rawHostName.isEmpty ? 'המארח' : rawHostName;
         final canStart = room.players.length >= GameConstants.minPlayers;
 
-        return Scaffold(
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) context.go('/home');
+          },
+          child: Scaffold(
           body: Container(
             decoration: const BoxDecoration(
               gradient: AppStyles.backgroundGradient,
@@ -202,7 +207,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
               ),
             ),
           ),
-        );
+        ), // Scaffold
+        ); // PopScope
       },
       loading: () => const Scaffold(
         backgroundColor: AppStyles.navyTop,

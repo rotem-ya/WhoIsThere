@@ -88,7 +88,12 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
           ImageCategory.landmark,
         ];
 
-        return AppScaffold(
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) context.go('/home');
+          },
+          child: AppScaffold(
           backgroundGradient: AppStyles.backgroundGradient,
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
@@ -159,7 +164,8 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                 ),
             ],
           ),
-        );
+        ), // AppScaffold
+        ); // PopScope
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),

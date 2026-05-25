@@ -89,7 +89,12 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
         final myVote = room.difficultyVotes[currentUser.id];
         const choices = [Difficulty.easy, Difficulty.medium, Difficulty.hard];
 
-        return AppScaffold(
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) context.go('/home');
+          },
+          child: AppScaffold(
           backgroundGradient: AppStyles.backgroundGradient,
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
@@ -162,7 +167,8 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
                 ),
             ],
           ),
-        );
+        ), // AppScaffold
+        ); // PopScope
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
