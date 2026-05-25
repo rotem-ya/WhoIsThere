@@ -30,6 +30,7 @@ class TopHud extends StatelessWidget {
   final int? guessOpportunityDeadlineMs;
   final bool isLastTile;
   final int potTotal;
+  final String? guessModePlayerId;
 
   const TopHud({
     required this.players,
@@ -49,6 +50,7 @@ class TopHud extends StatelessWidget {
     this.guessOpportunityDeadlineMs,
     this.isLastTile = false,
     this.potTotal = 0,
+    this.guessModePlayerId,
   });
 
   @override
@@ -105,7 +107,7 @@ class TopHud extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: _PlayerGrid(players: players),
+                child: _PlayerGrid(players: players, guessModePlayerId: guessModePlayerId),
               ),
           ],
         ),
@@ -145,7 +147,8 @@ class _SmallBackButton extends StatelessWidget {
 
 class _PlayerGrid extends StatelessWidget {
   final List<PlayerModel> players;
-  const _PlayerGrid({required this.players});
+  final String? guessModePlayerId;
+  const _PlayerGrid({required this.players, this.guessModePlayerId});
 
   @override
   Widget build(BuildContext context) {
@@ -155,10 +158,10 @@ class _PlayerGrid extends StatelessWidget {
       if (rows.isNotEmpty) rows.add(const SizedBox(height: 4));
       rows.add(Row(
         children: [
-          Expanded(child: _PlayerCell(player: players[i])),
+          Expanded(child: _PlayerCell(player: players[i], isGuessing: players[i].id == guessModePlayerId)),
           if (i + 1 < players.length) ...[
             const SizedBox(width: 6),
-            Expanded(child: _PlayerCell(player: players[i + 1])),
+            Expanded(child: _PlayerCell(player: players[i + 1], isGuessing: players[i + 1].id == guessModePlayerId)),
           ] else
             const Expanded(child: SizedBox()),
         ],
@@ -170,7 +173,8 @@ class _PlayerGrid extends StatelessWidget {
 
 class _PlayerCell extends StatelessWidget {
   final PlayerModel player;
-  const _PlayerCell({required this.player});
+  final bool isGuessing;
+  const _PlayerCell({required this.player, this.isGuessing = false});
 
   @override
   Widget build(BuildContext context) {
@@ -178,9 +182,16 @@ class _PlayerCell extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1E30).withOpacity(0.55),
+        color: isGuessing
+            ? const Color(0xFF1A2E10).withOpacity(0.75)
+            : const Color(0xFF0D1E30).withOpacity(0.55),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF2A5070).withOpacity(0.30), width: 0.8),
+        border: Border.all(
+          color: isGuessing
+              ? const Color(0xFF4CAF50).withOpacity(0.50)
+              : const Color(0xFF2A5070).withOpacity(0.30),
+          width: isGuessing ? 1.0 : 0.8,
+        ),
       ),
       child: Row(
         children: [
@@ -189,13 +200,21 @@ class _PlayerCell extends StatelessWidget {
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: isGuessing ? const Color(0xFF80C080) : Colors.white70,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ),
+          if (isGuessing)
+            const Padding(
+              padding: EdgeInsets.only(left: 4),
+              child: Text(
+                '✍',
+                style: TextStyle(fontSize: 10),
+              ),
+            ),
           const SizedBox(width: 4),
           Text(
             '${player.score}',

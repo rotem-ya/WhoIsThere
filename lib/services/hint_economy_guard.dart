@@ -42,4 +42,20 @@ class HintEconomyGuard {
       roomId: roomId,
     );
   }
+
+  /// Returns true if the hint was granted with a custom cost.
+  Future<bool> useHintWithCost({
+    required String uid,
+    required int cost,
+    required UserEconomyModel wallet,
+    String? roomId,
+  }) async {
+    if (wallet.coins < cost) return false;
+    return _economyService.spendCoins(
+      uid: uid,
+      amount: cost,
+      type: TransactionType.hintRevealTile,
+      roomId: roomId,
+    );
+  }
 }

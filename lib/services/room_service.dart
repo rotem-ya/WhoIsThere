@@ -55,14 +55,8 @@ class RoomService {
 
   static const double _letterCardBonusChance = 0.12;
 
-  // Returns reveal timer duration in ms based on how much of the board is open.
-  static int _revealTimerMs(int revealedCount, int totalTiles) {
-    final ratio = totalTiles > 0 ? revealedCount / totalTiles : 0.0;
-    if (ratio <= 0.25) return 8000;
-    if (ratio <= 0.50) return 6500;
-    if (ratio <= 0.75) return 5000;
-    return 3500;
-  }
+  // Returns reveal timer duration in ms — flat 10 seconds regardless of board state.
+  static int _revealTimerMs(int revealedCount, int totalTiles) => 10000;
 
   // Returns guess-opportunity timer duration in ms based on board state after the latest reveal.
   static int _guessOppTimerMs(int revealedCount, int totalTiles) {
@@ -874,11 +868,11 @@ class RoomService {
 
         tx.update(_rooms.doc(roomId), {
           'pendingRevealTileIndex': pieceIndex,
-          'revealDeadlineMs': now + 5000,
+          'revealDeadlineMs': now + 10000,
           'revealCycleId': FieldValue.increment(1),
         });
         QaLoggerService.instance.log('REVEAL',
-            'AUTO_REVEAL_PENDING pieceIndex=$pieceIndex countdownMs=5000');
+            'AUTO_REVEAL_PENDING pieceIndex=$pieceIndex countdownMs=10000');
         committed = true;
       });
     } catch (e) {

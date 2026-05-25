@@ -27,6 +27,8 @@ class GameLayout extends StatelessWidget {
   final VoidCallback onBack;
   final void Function(int)? onReveal;
   final VoidCallback? onRevealHint;
+  final int purchasedHintCount;
+  final VoidCallback? onBuySecondHint;
   final VoidCallback? onGuess;
   final Future<bool> Function(String)? onGuessSubmit;
   final double revealRatio;
@@ -50,6 +52,8 @@ class GameLayout extends StatelessWidget {
     required this.onRevealHint,
     required this.onGuess,
     required this.onGuessSubmit,
+    this.purchasedHintCount = 0,
+    this.onBuySecondHint,
     this.revealRatio = 0.0,
     this.potTotal = 0,
   });
@@ -94,6 +98,7 @@ class GameLayout extends StatelessWidget {
               isMyGuessOpportunity: isMyGuessOpportunity,
               isMyGuessModeActive: isMyGuessModeActive,
               guessModePlayerName: guessModePlayerName,
+              guessModePlayerId: room.guessModePlayerId,
               revealRatio: revealRatio,
               isSolo: isSolo,
               revealedCount: revealedCount,
@@ -147,13 +152,15 @@ class GameLayout extends StatelessWidget {
               isBlocked: isBlocked,
               blockedRemaining: blockedRemaining,
               onRevealHint: onRevealHint,
+              purchasedHintCount: purchasedHintCount,
+              onBuySecondHint: onBuySecondHint,
               onGuess: onGuess,
             ),
           ],
         ),
 
-        // ── Dramatic guess overlay — shown for ALL players during guessMode ─
-        if (isGuessModeActive)
+        // ── Dramatic guess overlay — shown only for the active guesser ─
+        if (isMyGuessModeActive)
           GuessModeOverlay(
             key: ValueKey('guess-overlay-${room.guessModeDeadlineMs}'),
             guesserName: guessModePlayerName,

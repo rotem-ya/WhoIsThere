@@ -16,6 +16,7 @@ import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_constants.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
@@ -89,6 +90,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   // Hint fact cycling
   int _nextFactIndex = 0;
+  List<String> _purchasedFacts = [];
 
   // Guess-event banner
   int _lastShownGuessCount = -1;
@@ -384,8 +386,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (room.turnPhase == TurnPhase.revealTurn && room.revealDeadlineMs != null) {
         final isPending = room.pendingRevealTileIndex != null;
         final remaining = room.revealDeadlineMs! - now;
-        final maxMs = isPending ? 5500 : 3500;
-        final tickSec = (remaining / 1000).ceil().clamp(0, 5);
+        final maxMs = isPending ? 10500 : 10500;
+        final tickSec = (remaining / 1000).ceil().clamp(0, 10);
         if (remaining > 0 && remaining <= maxMs) {
           if (room.revealDeadlineMs != _lastRevealDeadlineForTick) {
             _lastRevealDeadlineForTick = room.revealDeadlineMs;
@@ -1184,38 +1186,67 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   Future<void> _useRevealHint(RoomModel room, String userId) async {
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
-    if (!isSolo) return; // multiplayer: blocked
-
-    final wallet = ref.read(walletProvider).valueOrNull;
-    if (wallet == null) return;
-
-    final guard = ref.read(hintEconomyGuardProvider);
-    if (!guard.canAfford(wallet, HintType.revealTile)) return;
-
-    final granted = await guard.useHint(
-      uid: userId,
-      hint: HintType.revealTile,
-      wallet: wallet,
-      roomId: room.id,
-    );
-
-    if (!granted || !mounted) return;
+    if (!isSolo) return;
 
     final facts = _image?.facts ?? const [];
-    if (facts.isEmpty) {
-      showDialog(
-        context: context,
-        builder: (_) => const _FactDialog(fact: null),
-      );
+
+    // Re-view: already have purchased hints — show them for free
+    if (_purchasedFacts.isNotEmpty) {
+      _showPurchasedHints();
       return;
     }
 
-    final fact = facts[_nextFactIndex % facts.length];
-    _nextFactIndex++;
+    // First purchase: costs 40 coins
+    final cost = EconomyConfig.hintFirstPrice;
+    final wallet = ref.read(walletProvider).valueOrNull;
+    if (wallet == null || wallet.coins < cost) return;
 
+    final granted = await ref.read(hintEconomyGuardProvider).useHintWithCost(
+      uid: userId,
+      cost: cost,
+      wallet: wallet,
+      roomId: room.id,
+    );
+    if (!granted || !mounted) return;
+
+    final fact = facts.isEmpty ? null : facts[0];
+    if (mounted) setState(() {
+      _purchasedFacts = [if (fact != null) fact];
+    });
+    _showPurchasedHints();
+  }
+
+  Future<void> _buySecondHint(RoomModel room, String userId) async {
+    final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
+    if (!isSolo || _purchasedFacts.isEmpty) return;
+
+    final facts = _image?.facts ?? const [];
+    if (facts.length <= _purchasedFacts.length) return; // no more facts
+
+    final cost = EconomyConfig.hintSecondPrice;
+    final wallet = ref.read(walletProvider).valueOrNull;
+    if (wallet == null || wallet.coins < cost) return;
+
+    final granted = await ref.read(hintEconomyGuardProvider).useHintWithCost(
+      uid: userId,
+      cost: cost,
+      wallet: wallet,
+      roomId: room.id,
+    );
+    if (!granted || !mounted) return;
+
+    final fact = facts[_purchasedFacts.length % facts.length];
+    if (mounted) setState(() {
+      _purchasedFacts = [..._purchasedFacts, fact];
+    });
+    _showPurchasedHints();
+  }
+
+  void _showPurchasedHints() {
+    if (!mounted || _purchasedFacts.isEmpty) return;
     showDialog(
       context: context,
-      builder: (_) => _FactDialog(fact: fact),
+      builder: (_) => _PurchasedHintsDialog(facts: _purchasedFacts),
     );
   }
 
@@ -1828,7 +1859,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   onRevealHint: currentUserId == null
                       ? null
                       : () => _useRevealHint(room, currentUserId),
-                  onGuess: canGuessNow ? () => _enterGuessMode(room, currentUserId!) : null,
+                  purchasedHintCount: _purchasedFacts.length,
+                  onBuySecondHint: (isSolo && currentUserId != null && _purchasedFacts.length == 1 && (_image?.facts?.length ?? 0) > 1)
+                      ? () => _buySecondHint(room, currentUserId!)
+                      : null,
+                  onGuess: canGuessNow ? () => _enterGuessMode(room, currentUserId!) : () {},
                   onGuessSubmit: (currentUserId != null &&
                           room.turnPhase == TurnPhase.guessMode &&
                           room.guessModePlayerId == currentUserId)
@@ -2190,6 +2225,76 @@ class _FactDialog extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
           child: const Text(
             'הבנתי',
+            style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.w900),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PurchasedHintsDialog extends StatelessWidget {
+  final List<String> facts;
+  const _PurchasedHintsDialog({required this.facts});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF07101F),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.5)),
+      ),
+      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+      contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      title: const Row(
+        children: [
+          Icon(Icons.lightbulb_rounded, color: Color(0xFFD4AF37), size: 20),
+          SizedBox(width: 8),
+          Text(
+            'רמזים',
+            style: TextStyle(
+              color: Color(0xFFD4AF37),
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < facts.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0A1A2E),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.25)),
+              ),
+              child: Text(
+                facts[i],
+                textAlign: TextAlign.right,
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text(
+            'סגור',
             style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.w900),
           ),
         ),

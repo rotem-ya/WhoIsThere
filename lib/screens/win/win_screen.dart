@@ -108,135 +108,144 @@ class _WinScreenState extends ConsumerState<WinScreen>
           child: AppScaffold(
           backgroundGradient:
               isWinner ? AppColors.primaryGradient : AppColors.pageBackground,
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: AppSpacing.md),
+          padding: EdgeInsets.zero,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: AppSpacing.sm),
 
-                // ── 1. Title entrance: fade + scale 0.96 → 1.0 ────────
-                Text(
-                  isWinner ? 'ניצחון!' : 'המשחק נגמר',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.titleLight.copyWith(fontSize: 34),
-                )
-                    .animate()
-                    .fadeIn(duration: 280.ms, curve: Curves.easeOut)
-                    .scaleXY(
-                        begin: 0.96,
-                        end: 1.0,
-                        duration: 280.ms,
-                        curve: Curves.easeOut),
+                  // ── 1. Title entrance: fade + scale 0.96 → 1.0 ────────
+                  Text(
+                    isWinner ? '🏆 ניצחון!' : 'המשחק נגמר',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.titleLight.copyWith(fontSize: 30),
+                  )
+                      .animate()
+                      .fadeIn(duration: 280.ms, curve: Curves.easeOut)
+                      .scaleXY(
+                          begin: 0.96,
+                          end: 1.0,
+                          duration: 280.ms,
+                          curve: Curves.easeOut),
 
-                const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.xs),
 
-                // ── 2. Winner text fades in after title ────────────────
-                Text(
-                  winner == null
-                      ? 'הנה התוצאות'
-                      : isWinner
-                          ? 'זיהית את המקום לפני כולם'
-                          : '${winner.name.isNotEmpty ? winner.name : 'שחקן'} ניצח/ה בסיבוב',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.subtitleLight,
-                )
-                    .animate()
-                    .fadeIn(
-                        delay: 160.ms,
-                        duration: 260.ms,
-                        curve: Curves.easeOut),
+                  // ── 2. Winner text fades in after title ────────────────
+                  Text(
+                    winner == null
+                        ? 'הנה התוצאות'
+                        : isWinner
+                            ? 'זיהית את המקום לפני כולם'
+                            : '${winner.name.isNotEmpty ? winner.name : 'שחקן'} ניצח/ה בסיבוב',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.subtitleLight,
+                  )
+                      .animate()
+                      .fadeIn(
+                          delay: 160.ms,
+                          duration: 260.ms,
+                          curve: Curves.easeOut),
 
-                const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.sm),
 
-                if (_gameImage != null)
-                  AppCard(
-                    padding: EdgeInsets.zero,
-                    child: Column(
-                      children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(24)),
-                          child: CachedNetworkImage(
-                            imageUrl: _gameImage!.imageUrl,
-                            height: 220,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
+                  // ── Image + answer card ────────────────────────────────
+                  if (_gameImage != null)
+                    AppCard(
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(24)),
+                            child: CachedNetworkImage(
+                              imageUrl: _gameImage!.imageUrl,
+                              height: 140,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(AppSpacing.md),
-                          child: Column(
-                            children: [
-                              Text(
-                                _gameImage!.answer,
-                                textAlign: TextAlign.center,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.titleDark,
-                              ),
-                              const SizedBox(height: AppSpacing.xs),
-                              Text(
-                                _gameImage!.category.label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.subtitleDark,
-                              ),
-                            ],
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                            child: Column(
+                              children: [
+                                Text(
+                                  _gameImage!.answer,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.titleDark,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _gameImage!.category.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.subtitleDark,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // ── 3. Score card with staggered rows ─────────────────
+                  Flexible(
+                    child: AppCard(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('תוצאות', style: AppTextStyles.titleDark)
+                              .animate()
+                              .fadeIn(
+                                  delay: 240.ms,
+                                  duration: 260.ms,
+                                  curve: Curves.easeOut),
+                          const SizedBox(height: AppSpacing.sm),
+                          ...sortedPlayers.asMap().entries.map(
+                                (entry) => _ScoreRow(
+                                  rank: entry.key + 1,
+                                  player: entry.value,
+                                  isWinner: entry.value.id == room.winnerId,
+                                  isCurrentUser:
+                                      entry.value.id == currentUser?.id,
+                                  delay: Duration(
+                                      milliseconds: 320 + entry.key * 60),
+                                ),
+                              ),
+                        ],
+                      ),
                     ),
                   ),
 
-                const SizedBox(height: AppSpacing.lg),
+                  // ── 4. Total reward box (current user's score) ─────────
+                  if (myScore > 0) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    _TotalRewardBox(
+                      score: myScore,
+                      counterController: _counterController,
+                      shineController: _shineController,
+                    ),
+                  ],
 
-                // ── 3. Score card with staggered rows ─────────────────
-                AppCard(
-                  child: Column(
-                    children: [
-                      Text('תוצאות', style: AppTextStyles.titleDark)
-                          .animate()
-                          .fadeIn(
-                              delay: 240.ms,
-                              duration: 260.ms,
-                              curve: Curves.easeOut),
-                      const SizedBox(height: AppSpacing.md),
-                      ...sortedPlayers.asMap().entries.map(
-                            (entry) => _ScoreRow(
-                              rank: entry.key + 1,
-                              player: entry.value,
-                              isWinner: entry.value.id == room.winnerId,
-                              isCurrentUser:
-                                  entry.value.id == currentUser?.id,
-                              delay: Duration(
-                                  milliseconds: 320 + entry.key * 60),
-                            ),
-                          ),
-                    ],
-                  ),
-                ),
+                  const SizedBox(height: AppSpacing.sm),
 
-                // ── 4. Total reward box (current user's score) ─────────
-                if (myScore > 0) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  _TotalRewardBox(
-                    score: myScore,
-                    counterController: _counterController,
-                    shineController: _shineController,
+                  // ── 6. Tactile home button ─────────────────────────────
+                  _HomeButton(
+                    onTap: () {
+                      ref.read(currentRoomIdProvider.notifier).state = null;
+                      context.go('/home');
+                    },
                   ),
+                  const SizedBox(height: AppSpacing.sm),
                 ],
-
-                const SizedBox(height: AppSpacing.lg),
-
-                // ── 6. Tactile home button ─────────────────────────────
-                _HomeButton(
-                  onTap: () {
-                    ref.read(currentRoomIdProvider.notifier).state = null;
-                    context.go('/home');
-                  },
-                ),
-              ],
+              ),
             ),
           ),
         ), // AppScaffold

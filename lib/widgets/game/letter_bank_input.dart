@@ -131,38 +131,31 @@ class _LetterBankInputState extends State<LetterBankInput> {
   @override
   Widget build(BuildContext context) {
     final enabled = widget.enabled && !_isSubmitting;
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _AnswerSlots(filled: _filled, wordLengths: _wordLengths),
-              SizedBox(
-                height: 22,
-                child: AnimatedOpacity(
-                  opacity: _showError ? 1 : 0,
-                  duration: const Duration(milliseconds: 150),
-                  child: const Center(
-                    child: Text(
-                      'לא נכון, התור עובר',
-                      style: TextStyle(color: _goldLight, fontSize: 12, fontWeight: FontWeight.w900),
-                    ),
-                  ),
-                ),
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _AnswerSlots(filled: _filled, wordLengths: _wordLengths),
+        SizedBox(
+          height: 22,
+          child: AnimatedOpacity(
+            opacity: _showError ? 1 : 0,
+            duration: const Duration(milliseconds: 150),
+            child: const Center(
+              child: Text(
+                'לא נכון, התור עובר',
+                style: TextStyle(color: _goldLight, fontSize: 12, fontWeight: FontWeight.w900),
               ),
-              const SizedBox(height: 10),
-              _HebrewKeyboard(enabled: enabled, onLetter: _tapLetter),
-              const SizedBox(height: 10),
-              _UndoAction(enabled: _canUndo, onTap: _undoLastLetter),
-              const SizedBox(height: 10),
-              _SubmitAction(enabled: enabled && _isComplete, isSubmitting: _isSubmitting, onTap: _submit),
-            ],
+            ),
           ),
         ),
-      ),
+        const SizedBox(height: 8),
+        _HebrewKeyboard(enabled: enabled, onLetter: _tapLetter),
+        const SizedBox(height: 8),
+        _UndoAction(enabled: _canUndo, onTap: _undoLastLetter),
+        const SizedBox(height: 8),
+        _SubmitAction(enabled: enabled && _isComplete, isSubmitting: _isSubmitting, onTap: _submit),
+      ],
     );
   }
 }

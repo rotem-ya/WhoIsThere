@@ -21,7 +21,9 @@ class EconomyConfig {
   static const int wrongGuessBlockTurns = 2;
 
   // ── Hint prices ──────────────────────────────────────────────
-  static const int hintRevealTilePrice = 5;   // letter-reveal hint
+  static const int hintFirstPrice = 40;       // first hint purchase
+  static const int hintSecondPrice = 80;      // second hint purchase
+  static const int hintRevealTilePrice = 40;  // legacy alias (= hintFirstPrice)
   static const int hintExtraGuessPrice = 60;
 
   // ── Match rewards: solo ───────────────────────────────────────

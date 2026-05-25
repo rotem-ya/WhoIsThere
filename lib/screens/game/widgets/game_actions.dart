@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/economy_config.dart';
 import '../../../providers/providers.dart';
 import '../../../services/feedback_service.dart';
-import '../../../services/hint_economy_guard.dart';
+
 import '../../../services/reward_calculator.dart';
 import '../../../widgets/game/animated_reward.dart';
 
@@ -19,6 +19,8 @@ class GameActions extends ConsumerWidget {
   final bool isScoreCliff;
   final String guessModePlayerName;
   final VoidCallback? onRevealHint;
+  final int purchasedHintCount;
+  final VoidCallback? onBuySecondHint;
   final VoidCallback? onGuess;
   final bool isBlocked;
   final int blockedRemaining;
@@ -34,6 +36,8 @@ class GameActions extends ConsumerWidget {
     required this.guessModePlayerName,
     required this.onRevealHint,
     required this.onGuess,
+    this.purchasedHintCount = 0,
+    this.onBuySecondHint,
     this.isScoreCliff = false,
     this.isBlocked = false,
     this.blockedRemaining = 0,
@@ -50,27 +54,20 @@ class GameActions extends ConsumerWidget {
 
     // Hint affordability — solo only; guard already enforces this server-side
     final wallet = isSolo ? ref.watch(walletProvider).valueOrNull : null;
-    final guard = isSolo ? ref.watch(hintEconomyGuardProvider) : null;
-    final canAffordHint = wallet != null &&
-        guard != null &&
-        guard.canAfford(wallet, HintType.revealTile);
+    final canAffordFirstHint = wallet != null && wallet.coins >= EconomyConfig.hintFirstPrice;
+    final canAffordSecondHint = wallet != null && wallet.coins >= EconomyConfig.hintSecondPrice;
 
-    // Primary button label driven by state machine phase
+    // Primary button label — always "נחש עכשיו!" unless blocked
     final String primaryLabel;
     if (isBlocked) {
       primaryLabel = blockedRemaining > 0 ? 'חסום ($blockedRemaining גילויים)' : 'חסום';
-    } else if (canGuessNow) {
-      primaryLabel = 'נחש עכשיו!';
-    } else if (isGuessModeActive) {
-      final name = guessModePlayerName.isEmpty ? 'יריב' : guessModePlayerName;
-      primaryLabel = '$name מנחש...';
     } else {
-      primaryLabel = 'ממתין לגילוי...';
+      primaryLabel = 'נחש עכשיו!';
     }
 
-    final primaryIsActive = guessActive;
+    final primaryIsActive = !isBlocked;
     final primaryGlow = guessActive;
-    final primaryOnTap = guessActive ? onGuess : null;
+    final primaryOnTap = (!isBlocked && onGuess != null) ? onGuess : (!isBlocked ? () {} : null);
 
     // Show reward chip on the guess opportunity CTA only
     final showReward = canGuessNow && prize != null;
@@ -109,10 +106,24 @@ class GameActions extends ConsumerWidget {
               if (isSolo && onRevealHint != null) ...[
                 const SizedBox(height: 6),
                 _HintButton(
-                  canAfford: canAffordHint,
-                  isBusy: isBusy,
-                  onTap: canAffordHint && !isBusy ? onRevealHint : null,
+                  label: purchasedHintCount >= 1
+                      ? 'ראה רמז'
+                      : 'רמז  (${EconomyConfig.hintFirstPrice} 🪙)',
+                  canAfford: purchasedHintCount >= 1 || (canAffordFirstHint && !isBusy),
+                  isBusy: isBusy && purchasedHintCount == 0,
+                  onTap: (purchasedHintCount >= 1 || (canAffordFirstHint && !isBusy))
+                      ? onRevealHint
+                      : null,
                 ),
+                if (onBuySecondHint != null) ...[
+                  const SizedBox(height: 6),
+                  _HintButton(
+                    label: 'רמז נוסף  (${EconomyConfig.hintSecondPrice} 🪙)',
+                    canAfford: canAffordSecondHint && !isBusy,
+                    isBusy: isBusy,
+                    onTap: canAffordSecondHint && !isBusy ? onBuySecondHint : null,
+                  ),
+                ],
               ],
             ],
           ),
@@ -123,11 +134,13 @@ class GameActions extends ConsumerWidget {
 }
 
 class _HintButton extends StatelessWidget {
+  final String label;
   final bool canAfford;
   final bool isBusy;
   final VoidCallback? onTap;
 
   const _HintButton({
+    required this.label,
     required this.canAfford,
     required this.isBusy,
     required this.onTap,
@@ -163,7 +176,7 @@ class _HintButton extends StatelessWidget {
                   color: Color(0xFF5A9BBB), size: 18),
               const SizedBox(width: 6),
               Text(
-                'רמז  (${EconomyConfig.hintRevealTilePrice} 🪙)',
+                label,
                 textDirection: TextDirection.rtl,
                 style: const TextStyle(
                   color: Color(0xFF5A9BBB),

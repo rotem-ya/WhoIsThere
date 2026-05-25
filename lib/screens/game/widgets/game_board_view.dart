@@ -147,7 +147,7 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
   late AnimationController _popCtrl;
   late Animation<double> _popScale;
   Timer? _countdownTimer;
-  int _secondsLeft = 5;
+  int _secondsLeft = 10;
 
   @override
   void initState() {
@@ -192,7 +192,7 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
     final deadline = widget.revealDeadlineMs;
     if (deadline == null) return;
     final remaining = deadline - DateTime.now().millisecondsSinceEpoch;
-    final secs = (remaining / 1000).ceil().clamp(0, 5);
+    final secs = (remaining / 1000).ceil().clamp(0, 10);
     if (mounted && secs != _secondsLeft) setState(() => _secondsLeft = secs);
   }
 
@@ -323,7 +323,7 @@ class _CountdownOverlay extends StatelessWidget {
               width: ringSize,
               height: ringSize,
               child: CircularProgressIndicator(
-                value: secondsLeft / 5.0,
+                value: secondsLeft / 10.0,
                 strokeWidth: tileSize * 0.055,
                 backgroundColor: Colors.white12,
                 valueColor: AlwaysStoppedAnimation<Color>(ringColor),
