@@ -37,7 +37,10 @@ class SettingsScreen extends ConsumerWidget {
                   volume: settings.musicVolume,
                   onChanged: (v) =>
                       ref.read(settingsProvider.notifier).setMusicVolume(v),
-                  onChangeEnd: GameBoardScreen.applyLiveMusicScale,
+                  onChangeEnd: (v) {
+                    HapticFeedback.lightImpact();
+                    GameBoardScreen.applyLiveMusicScale(v);
+                  },
                   onMuteToggle: () =>
                       ref.read(settingsProvider.notifier).toggleMusicMute(),
                 ),
@@ -48,7 +51,10 @@ class SettingsScreen extends ConsumerWidget {
                   volume: settings.sfxVolume,
                   onChanged: (v) =>
                       ref.read(settingsProvider.notifier).setSfxVolume(v),
-                  onChangeEnd: GameBoardScreen.playSfxPreview,
+                  onChangeEnd: (v) {
+                    HapticFeedback.lightImpact();
+                    GameBoardScreen.playSfxPreview(v);
+                  },
                   onMuteToggle: () =>
                       ref.read(settingsProvider.notifier).toggleSfxMute(),
                 ),
@@ -201,7 +207,10 @@ class _VibrationSection extends StatelessWidget {
           ),
           Switch(
             value: enabled,
-            onChanged: onChanged,
+            onChanged: (v) {
+              if (v) HapticFeedback.mediumImpact();
+              onChanged(v);
+            },
             activeColor: AppColors.primary,
             activeTrackColor: AppColors.primary.withOpacity(0.35),
             inactiveThumbColor: Colors.white30,
