@@ -244,6 +244,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     const SizedBox(width: 8),
                                     const _StoreIconButton(),
                                     const SizedBox(width: 8),
+                                    const _SettingsIconButton(),
+                                    const SizedBox(width: 8),
                                     const CoinDisplay(),
                                     const Spacer(),
                                     const _DailyRewardButton(),
@@ -765,6 +767,50 @@ class _StoreIconButton extends StatelessWidget {
               ),
               child: const Icon(
                 Icons.store_rounded,
+                color: Colors.white70,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Settings icon button (top-left, next to store) ───────────────────────
+
+class _SettingsIconButton extends StatelessWidget {
+  const _SettingsIconButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          context.push('/settings');
+        },
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF050A14).withOpacity(0.60),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.15),
+                  width: 1.0,
+                ),
+              ),
+              child: const Icon(
+                Icons.settings_rounded,
                 color: Colors.white70,
                 size: 20,
               ),

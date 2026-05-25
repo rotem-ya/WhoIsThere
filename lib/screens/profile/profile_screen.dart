@@ -224,12 +224,6 @@ class ProfileScreen extends ConsumerWidget {
                     icon: Icons.store_rounded,
                     onPressed: () => context.push('/store'),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  AppButton(
-                    label: 'הגדרות',
-                    icon: Icons.settings_rounded,
-                    onPressed: () => context.push('/settings'),
-                  ),
                 ],
               ),
               const SizedBox(height: 4),
