@@ -33,7 +33,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           Expanded(
-            child: ListView(
+            child: Column(
               children: [
                 _SoundSection(
                   icon: Icons.music_note_rounded,

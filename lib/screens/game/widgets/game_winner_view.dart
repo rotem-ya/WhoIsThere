@@ -67,21 +67,23 @@ class _GameWinnerViewState extends State<GameWinnerView> {
           gravity: 0.16,
           shouldLoop: false,
         ),
-        SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: AnimatedScale(
-            scale: _showCard ? 1 : 0.86,
-            duration: const Duration(milliseconds: 420),
-            curve: Curves.easeOutBack,
-            child: AnimatedOpacity(
-              opacity: _showCard ? 1 : 0,
-              duration: const Duration(milliseconds: 260),
-              child: _WinnerCard(
-                winnerName: widget.winnerName,
-                placeName: widget.placeName,
-                rewardBreakdown: widget.rewardBreakdown,
-                showButton: _showButton,
-                onHome: widget.onHome,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Center(
+            child: AnimatedScale(
+              scale: _showCard ? 1 : 0.86,
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeOutBack,
+              child: AnimatedOpacity(
+                opacity: _showCard ? 1 : 0,
+                duration: const Duration(milliseconds: 260),
+                child: _WinnerCard(
+                  winnerName: widget.winnerName,
+                  placeName: widget.placeName,
+                  rewardBreakdown: widget.rewardBreakdown,
+                  showButton: _showButton,
+                  onHome: widget.onHome,
+                ),
               ),
             ),
           ),
@@ -123,7 +125,7 @@ class _WinnerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(22, 28, 22, 22),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
         color: const Color(0xFF07101F).withOpacity(0.96),
         borderRadius: BorderRadius.circular(28),
@@ -144,30 +146,30 @@ class _WinnerCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🏆', style: TextStyle(fontSize: 82, height: 1)),
-          const SizedBox(height: 14),
+          const Text('🏆', style: TextStyle(fontSize: 56, height: 1)),
+          const SizedBox(height: 6),
           const Text(
             'ניצחון!',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFFD4AF37),
-              fontSize: 38,
+              fontSize: 32,
               fontWeight: FontWeight.w900,
               height: 1,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Text(
             '$winnerName גילה את המקום',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 22,
+              fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
           ),
           if (placeName != null && placeName!.isNotEmpty) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               'המקום: $placeName',
               textAlign: TextAlign.center,
@@ -175,33 +177,33 @@ class _WinnerCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Color(0xFFD4AF37),
-                fontSize: 17,
+                fontSize: 15,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.4,
               ),
             ),
           ],
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             'כל הכבוד. זה היה ניחוש מנצח.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white.withOpacity(0.68),
-              fontSize: 15,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
           ),
           if (rewardBreakdown != null) ...[
-            const SizedBox(height: 18),
+            const SizedBox(height: 10),
             _RewardSummary(breakdown: rewardBreakdown!),
           ],
-          const SizedBox(height: 26),
+          const SizedBox(height: 14),
           AnimatedOpacity(
             opacity: showButton ? 1 : 0,
             duration: const Duration(milliseconds: 280),
             child: SizedBox(
               width: double.infinity,
-              height: 54,
+              height: 48,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
@@ -301,7 +303,7 @@ class _RewardSummaryState extends State<_RewardSummary> {
   Widget build(BuildContext context) {
     final b = widget.breakdown;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.04),
         borderRadius: BorderRadius.circular(16),

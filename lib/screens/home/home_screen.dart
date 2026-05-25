@@ -224,150 +224,147 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   builder: (context, constraints) {
                     final verySmall = constraints.maxHeight < 640;
                     final compact = constraints.maxHeight < 760;
-                    final iconSize = verySmall ? 156.0 : compact ? 188.0 : 218.0;
-                    return SingleChildScrollView(
-                      physics: const ClampingScrollPhysics(),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: compact ? 20 : 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              SizedBox(height: verySmall ? 6 : 10),
-                              // ── Top bar ──────────────────────────────────
-                              _step(
-                                Row(
-                                  textDirection: TextDirection.ltr,
-                                  children: [
-                                    const _ProfileIconButton(),
-                                    const SizedBox(width: 8),
-                                    const _StoreIconButton(),
-                                    const SizedBox(width: 8),
-                                    const _SettingsIconButton(),
-                                    const SizedBox(width: 8),
-                                    const CoinDisplay(),
-                                    const Spacer(),
-                                    const _DailyRewardButton(),
-                                  ],
-                                ),
-                                delayMs: 0, durationMs: 380, dy: -10,
-                              ),
-                              SizedBox(height: verySmall ? 10 : compact ? 14 : 20),
-                              _step(
-                                Center(child: RepaintBoundary(child: _HomeHeroPeekGrid(size: iconSize))),
+                    final iconSize = verySmall ? 140.0 : compact ? 170.0 : 200.0;
+                    return Padding(
+                      padding: EdgeInsets.symmetric(horizontal: compact ? 20 : 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(height: verySmall ? 4 : 8),
+                          // ── Top bar ──────────────────────────────────
+                          _step(
+                            Row(
+                              textDirection: TextDirection.ltr,
+                              children: [
+                                const _ProfileIconButton(),
+                                const SizedBox(width: 8),
+                                const _StoreIconButton(),
+                                const SizedBox(width: 8),
+                                const _SettingsIconButton(),
+                                const SizedBox(width: 8),
+                                const CoinDisplay(),
+                                const Spacer(),
+                                const _DailyRewardButton(),
+                              ],
+                            ),
+                            delayMs: 0, durationMs: 380, dy: -10,
+                          ),
+                          // ── Hero grid takes all remaining vertical space ──
+                          Expanded(
+                            child: Center(
+                              child: _step(
+                                RepaintBoundary(child: _HomeHeroPeekGrid(size: iconSize)),
                                 delayMs: 80, durationMs: 500, dy: 14,
                               ),
-                              SizedBox(height: verySmall ? 10 : compact ? 16 : 20),
-                              _step(
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    'מה בתמונה?',
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 56,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -1.7,
-                                      height: 1,
-                                      shadows: const [
-                                        Shadow(color: Color(0xFFD4AF37), blurRadius: 16),
-                                        Shadow(color: Colors.black87, offset: Offset(0, 4), blurRadius: 10),
-                                        Shadow(color: Color(0x55D4AF37), blurRadius: 48, offset: Offset(0, 8)),
-                                      ],
-                                    ),
-                                  ),
+                            ),
+                          ),
+                          _step(
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'מה בתמונה?',
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 52,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -1.7,
+                                  height: 1,
+                                  shadows: const [
+                                    Shadow(color: Color(0xFFD4AF37), blurRadius: 16),
+                                    Shadow(color: Colors.black87, offset: Offset(0, 4), blurRadius: 10),
+                                    Shadow(color: Color(0x55D4AF37), blurRadius: 48, offset: Offset(0, 8)),
+                                  ],
                                 ),
-                                delayMs: 200, durationMs: 380, dy: 8,
                               ),
-                              const SizedBox(height: 10),
-                              _step(
-                                Text(
-                                  'מי יזהה את המקום ראשון?',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: const Color(0xFF87CEEB).withOpacity(0.86),
-                                    fontSize: verySmall ? 16 : compact ? 18 : 20,
-                                    fontWeight: FontWeight.w800,
-                                    height: 1.2,
-                                  ),
+                            ),
+                            delayMs: 200, durationMs: 380, dy: 8,
+                          ),
+                          const SizedBox(height: 6),
+                          _step(
+                            Text(
+                              'מי יזהה את המקום ראשון?',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: const Color(0xFF87CEEB).withOpacity(0.86),
+                                fontSize: verySmall ? 15 : compact ? 17 : 19,
+                                fontWeight: FontWeight.w800,
+                                height: 1.2,
+                              ),
+                            ),
+                            delayMs: 300, durationMs: 320,
+                          ),
+                          SizedBox(height: verySmall ? 10 : compact ? 14 : 20),
+                          _step(
+                            const Text(
+                              'בחר מצב',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white30,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.8,
+                              ),
+                            ),
+                            delayMs: 380, durationMs: 260,
+                          ),
+                          const SizedBox(height: 8),
+                          _step(
+                            Column(
+                              children: [
+                                _QuickGameButton(
+                                  players: 2,
+                                  rewardCoins: 35,
+                                  height: verySmall ? 52 : compact ? 56 : 62,
+                                  isLoading: _isCreating && _loadingPlayers == 2,
+                                  onTap: _isCreating ? null : () => _startQuickGame(2),
                                 ),
-                                delayMs: 300, durationMs: 320,
-                              ),
-                              SizedBox(height: verySmall ? 12 : compact ? 18 : 26),
-                              _step(
-                                const Text(
-                                  'בחר מצב',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.white30,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 1.8,
-                                  ),
-                                ),
-                                delayMs: 380, durationMs: 260,
-                              ),
-                              const SizedBox(height: 10),
-                              _step(
-                                Column(
+                                const SizedBox(height: 8),
+                                Row(
                                   children: [
-                                    _QuickGameButton(
-                                      players: 2,
-                                      rewardCoins: 35,
-                                      height: verySmall ? 56 : compact ? 60 : 66,
-                                      isLoading: _isCreating && _loadingPlayers == 2,
-                                      onTap: _isCreating ? null : () => _startQuickGame(2),
+                                    Expanded(
+                                      child: _QuickGameButton(
+                                        players: 3,
+                                        rewardCoins: 30,
+                                        height: verySmall ? 48 : compact ? 52 : 56,
+                                        isLoading: _isCreating && _loadingPlayers == 3,
+                                        onTap: _isCreating ? null : () => _startQuickGame(3),
+                                      ),
                                     ),
-                                    const SizedBox(height: 10),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: _QuickGameButton(
-                                            players: 3,
-                                            rewardCoins: 30,
-                                            height: verySmall ? 52 : compact ? 56 : 60,
-                                            isLoading: _isCreating && _loadingPlayers == 3,
-                                            onTap: _isCreating ? null : () => _startQuickGame(3),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: _QuickGameButton(
-                                            players: 4,
-                                            rewardCoins: 30,
-                                            height: verySmall ? 52 : compact ? 56 : 60,
-                                            isLoading: _isCreating && _loadingPlayers == 4,
-                                            onTap: _isCreating ? null : () => _startQuickGame(4),
-                                          ),
-                                        ),
-                                      ],
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _QuickGameButton(
+                                        players: 4,
+                                        rewardCoins: 30,
+                                        height: verySmall ? 48 : compact ? 52 : 56,
+                                        isLoading: _isCreating && _loadingPlayers == 4,
+                                        onTap: _isCreating ? null : () => _startQuickGame(4),
+                                      ),
                                     ),
                                   ],
                                 ),
-                                delayMs: 460, durationMs: 260, dy: 5,
-                              ),
-                              SizedBox(height: verySmall ? 10 : 16),
-                              _step(
-                                _PrivateRoomButton(
-                                  isLoading: _isCreating && _loadingPlayers == null,
-                                  onTap: _isCreating ? null : _createPrivateRoom,
-                                ),
-                                delayMs: 600, durationMs: 240,
-                              ),
-                              const SizedBox(height: 10),
-                              _step(
-                                _JoinRoomButton(
-                                  onTap: _isCreating ? null : _showJoinDialog,
-                                ),
-                                delayMs: 670, durationMs: 240,
-                              ),
-                              SizedBox(height: verySmall ? 14 : compact ? 20 : 30),
-                            ],
+                              ],
+                            ),
+                            delayMs: 460, durationMs: 260, dy: 5,
                           ),
-                        ),
+                          SizedBox(height: verySmall ? 8 : 12),
+                          _step(
+                            _PrivateRoomButton(
+                              isLoading: _isCreating && _loadingPlayers == null,
+                              onTap: _isCreating ? null : _createPrivateRoom,
+                            ),
+                            delayMs: 600, durationMs: 240,
+                          ),
+                          const SizedBox(height: 8),
+                          _step(
+                            _JoinRoomButton(
+                              onTap: _isCreating ? null : _showJoinDialog,
+                            ),
+                            delayMs: 670, durationMs: 240,
+                          ),
+                          SizedBox(height: verySmall ? 10 : compact ? 14 : 20),
+                        ],
                       ),
                     );
                   },

@@ -65,137 +65,140 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
               Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      AppCard(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Column(
-                          children: [
-                            PlayerAvatar(
-                              name: user.name,
-                              photoUrl: user.photoUrl,
-                              radius: 50,
-                            ).animate().fadeIn(duration: 300.ms).scaleXY(begin: 0.93, duration: 300.ms, curve: Curves.easeOut),
-                            const SizedBox(height: AppSpacing.md),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    user.name,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppTextStyles.titleDark,
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.xs),
-                                InkWell(
-                                  onTap: () {
-                                    HapticFeedback.lightImpact();
-                                    _showEditNameDialog(context, ref, user.id, user.name);
-                                  },
-                                  borderRadius: BorderRadius.circular(20),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(4),
-                                    child: Icon(
-                                      Icons.edit_rounded,
-                                      size: 18,
-                                      color: AppColors.primary.withOpacity(0.75),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            _ProfileRankBadge(totalPoints: user.totalPoints),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Row(
+                child: Column(
+                  children: [
+                    AppCard(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                      child: Column(
                         children: [
-                          Expanded(
-                              child: _StatCard(
-                                  label: 'נקודות',
-                                  value: '${user.totalPoints}',
-                                  icon: Icons.star_rounded)
-                                  .animate().fadeIn(delay: 60.ms, duration: 250.ms)
-                                  .scaleXY(begin: 0.96, delay: 60.ms, duration: 250.ms, curve: Curves.easeOut)),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                              child: _StatCard(
-                                  label: 'תמונות',
-                                  value: '${user.purchasedImageIds.length}',
-                                  icon: Icons.image_rounded)
-                                  .animate().fadeIn(delay: 110.ms, duration: 250.ms)
-                                  .scaleXY(begin: 0.96, delay: 110.ms, duration: 250.ms, curve: Curves.easeOut)),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Row(
-                        children: [
-                          Expanded(
-                              child: _StatCard(
-                                  label: 'ערכות',
-                                  value: '${user.purchasedThemeIds.length}',
-                                  icon: Icons.palette_rounded)
-                                  .animate().fadeIn(delay: 160.ms, duration: 250.ms)
-                                  .scaleXY(begin: 0.96, delay: 160.ms, duration: 250.ms, curve: Curves.easeOut)),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                              child: _StatCard(
-                                  label: 'ניצחון',
-                                  value: '+10~40',
-                                  icon: Icons.emoji_events_rounded)
-                                  .animate().fadeIn(delay: 210.ms, duration: 250.ms)
-                                  .scaleXY(begin: 0.96, delay: 210.ms, duration: 250.ms, curve: Curves.easeOut)),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      AppCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            _PointInfo('🧩 הנח חתיכה', '+1 עד +4 נק׳'),
-                            _PointInfo('🏆 ניחוש נכון', '+10 עד +40 נק׳'),
-                            _PointInfo('❌ ניחוש שגוי', '-1 עד -4 נק׳'),
-                            _PointInfo('👑 הצבעת מארח', '×2'),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      // ── QA tools (inside scroll — no sticky overlap) ──
-                      TextButton.icon(
-                        onPressed: () async {
-                          await QaLoggerService.instance.copyToClipboard();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    'הועתקו ${QaLoggerService.instance.eventCount} אירועים ללוחית'),
-                                duration: const Duration(seconds: 2),
-                                backgroundColor: Colors.green.shade800,
+                          PlayerAvatar(
+                            name: user.name,
+                            photoUrl: user.photoUrl,
+                            radius: 36,
+                          ).animate().fadeIn(duration: 300.ms).scaleXY(begin: 0.93, duration: 300.ms, curve: Curves.easeOut),
+                          const SizedBox(height: AppSpacing.sm),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  user.name,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.titleDark,
+                                ),
                               ),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.content_copy_rounded, size: 16),
-                        label: const Text('העתק לוג QA'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white38,
-                          textStyle: const TextStyle(fontSize: 12),
+                              const SizedBox(width: AppSpacing.xs),
+                              InkWell(
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  _showEditNameDialog(context, ref, user.id, user.name);
+                                },
+                                borderRadius: BorderRadius.circular(20),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Icon(
+                                    Icons.edit_rounded,
+                                    size: 16,
+                                    color: AppColors.primary.withOpacity(0.75),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          _ProfileRankBadge(totalPoints: user.totalPoints),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        Expanded(
+                            child: _StatCard(
+                                label: 'נקודות',
+                                value: '${user.totalPoints}',
+                                icon: Icons.star_rounded)
+                                .animate().fadeIn(delay: 60.ms, duration: 250.ms)
+                                .scaleXY(begin: 0.96, delay: 60.ms, duration: 250.ms, curve: Curves.easeOut)),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                            child: _StatCard(
+                                label: 'תמונות',
+                                value: '${user.purchasedImageIds.length}',
+                                icon: Icons.image_rounded)
+                                .animate().fadeIn(delay: 110.ms, duration: 250.ms)
+                                .scaleXY(begin: 0.96, delay: 110.ms, duration: 250.ms, curve: Curves.easeOut)),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        Expanded(
+                            child: _StatCard(
+                                label: 'ערכות',
+                                value: '${user.purchasedThemeIds.length}',
+                                icon: Icons.palette_rounded)
+                                .animate().fadeIn(delay: 160.ms, duration: 250.ms)
+                                .scaleXY(begin: 0.96, delay: 160.ms, duration: 250.ms, curve: Curves.easeOut)),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                            child: _StatCard(
+                                label: 'ניצחון',
+                                value: '+10~40',
+                                icon: Icons.emoji_events_rounded)
+                                .animate().fadeIn(delay: 210.ms, duration: 250.ms)
+                                .scaleXY(begin: 0.96, delay: 210.ms, duration: 250.ms, curve: Curves.easeOut)),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          _PointInfo('🧩 הנח חתיכה', '+1 עד +4 נק׳'),
+                          _PointInfo('🏆 ניחוש נכון', '+10 עד +40 נק׳'),
+                          _PointInfo('❌ ניחוש שגוי', '-1 עד -4 נק׳'),
+                          _PointInfo('👑 הצבעת מארח', '×2'),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    // ── QA + build label ──────────────────────────────
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton.icon(
+                          onPressed: () async {
+                            await QaLoggerService.instance.copyToClipboard();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      'הועתקו ${QaLoggerService.instance.eventCount} אירועים ללוחית'),
+                                  duration: const Duration(seconds: 2),
+                                  backgroundColor: Colors.green.shade800,
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.content_copy_rounded, size: 14),
+                          label: const Text('QA'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white24,
+                            textStyle: const TextStyle(fontSize: 11),
+                          ),
                         ),
-                      ),
-                      const Text(
-                        kBuildLabel,
-                        style: TextStyle(color: Colors.white24, fontSize: 10, letterSpacing: 0.5),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                  ),
+                        const Text(
+                          kBuildLabel,
+                          style: TextStyle(color: Colors.white24, fontSize: 10, letterSpacing: 0.5),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
               Stack(

@@ -99,114 +99,103 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
               gradient: AppStyles.backgroundGradient,
             ),
             child: SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // ── Header ──────────────────────────────────────
-                            _buildHeader(context, currentUser, hostName),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Column(
+                  children: [
+                    // ── Header ──────────────────────────────────────
+                    _buildHeader(context, currentUser, hostName),
 
-                            const SizedBox(height: 12),
+                    const SizedBox(height: 12),
 
-                            // ── Room Code Card ───────────────────────────────
-                            _GlossyRoomCode(
-                              code: room.code,
-                              isCopied: _codeCopied,
-                              onCopy: () => _copyCode(room.code),
-                              onShare: () => _shareToWhatsApp(room.code),
-                            ),
+                    // ── Room Code Card ───────────────────────────────
+                    _GlossyRoomCode(
+                      code: room.code,
+                      isCopied: _codeCopied,
+                      onCopy: () => _copyCode(room.code),
+                      onShare: () => _shareToWhatsApp(room.code),
+                    ),
 
-                            const SizedBox(height: 12),
+                    const SizedBox(height: 12),
 
-                            // ── Section label ─────────────────────────────────
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: Text(
-                                'שחקנים בסטודיו',
-                                style: AppStyles.heading3.copyWith(
-                                  shadows: [
-                                    Shadow(
-                                      color: AppStyles.cyanGlow.withOpacity(0.8),
-                                      blurRadius: 10,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 6),
-
-                            // ── Players grid (2 × 4 = 8 fixed slots) ──────────
-                            _PlayerGrid(
-                              players: room.players.values.toList(),
-                              currentUserId: currentUser?.id,
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            // ── Min-players hint (host only, when not enough players) ──
-                            if (isHost && !canStart) ...[
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Text(
-                                  'צריך לפחות 2 שחקנים כדי להתחיל',
-                                  textAlign: TextAlign.center,
-                                  style: AppStyles.bodySmall.copyWith(
-                                    color: const Color(0xFFFFE082).withOpacity(0.85),
-                                  ),
-                                ),
-                              ),
-                            ],
-
-                            // ── Action button / waiting footer ─────────────────
-                            SizedBox(
-                              height: 52,
-                              width: double.infinity,
-                              child: isHost
-                                  ? GestureDetector(
-                                      onTap: !canStart
-                                          ? () => QaLoggerService.instance.log(
-                                              'LOBBY', 'START_GAME_BLOCKED_MIN_PLAYERS players=${room.players.length}')
-                                          : null,
-                                      child: _GlossyActionButton(
-                                      label: _isStarting ? 'מכין צמצמים...' : 'התחל משחק',
-                                      enabled: canStart && !_isStarting,
-                                      onTap: () async {
-                                        HapticFeedback.mediumImpact();
-                                        debugPrint('Lobby start tapped: roomId=${widget.roomId}');
-                                        setState(() => _isStarting = true);
-                                        try {
-                                          await ref
-                                              .read(roomServiceProvider)
-                                              .startGameDirectly(widget.roomId);
-                                          debugPrint('Lobby start success');
-                                        } catch (e) {
-                                          debugPrint('Lobby startGameDirectly error: $e');
-                                          if (mounted) {
-                                            setState(() => _isStarting = false);
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text('לא ניתן להתחיל משחק: $e')),
-                                            );
-                                          }
-                                        }
-                                      },
-                                    ),
-                                    )
-                                  : const _WaitingFooter(),
+                    // ── Section label ─────────────────────────────────
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        'שחקנים בסטודיו',
+                        style: AppStyles.heading3.copyWith(
+                          shadows: [
+                            Shadow(
+                              color: AppStyles.cyanGlow.withOpacity(0.8),
+                              blurRadius: 10,
                             ),
                           ],
                         ),
                       ),
                     ),
-                  );
-                },
+
+                    const SizedBox(height: 6),
+
+                    // ── Players grid (2 × 4 = 8 fixed slots) ──────────
+                    _PlayerGrid(
+                      players: room.players.values.toList(),
+                      currentUserId: currentUser?.id,
+                    ),
+
+                    const Spacer(),
+
+                    // ── Min-players hint (host only, when not enough players) ──
+                    if (isHost && !canStart)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          'צריך לפחות 2 שחקנים כדי להתחיל',
+                          textAlign: TextAlign.center,
+                          style: AppStyles.bodySmall.copyWith(
+                            color: const Color(0xFFFFE082).withOpacity(0.85),
+                          ),
+                        ),
+                      ),
+
+                    // ── Action button / waiting footer ─────────────────
+                    SizedBox(
+                      height: 52,
+                      width: double.infinity,
+                      child: isHost
+                          ? GestureDetector(
+                              onTap: !canStart
+                                  ? () => QaLoggerService.instance.log(
+                                      'LOBBY', 'START_GAME_BLOCKED_MIN_PLAYERS players=${room.players.length}')
+                                  : null,
+                              child: _GlossyActionButton(
+                              label: _isStarting ? 'מכין צמצמים...' : 'התחל משחק',
+                              enabled: canStart && !_isStarting,
+                              onTap: () async {
+                                HapticFeedback.mediumImpact();
+                                debugPrint('Lobby start tapped: roomId=${widget.roomId}');
+                                setState(() => _isStarting = true);
+                                try {
+                                  await ref
+                                      .read(roomServiceProvider)
+                                      .startGameDirectly(widget.roomId);
+                                  debugPrint('Lobby start success');
+                                } catch (e) {
+                                  debugPrint('Lobby startGameDirectly error: $e');
+                                  if (mounted) {
+                                    setState(() => _isStarting = false);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('לא ניתן להתחיל משחק: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                            )
+                          : const _WaitingFooter(),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
               ),
             ),
           ),
