@@ -38,6 +38,24 @@ class GameBoardScreen extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<GameBoardScreen> createState() => _GameBoardScreenState();
+
+  /// Called from settings screen to update bg music volume immediately.
+  static void applyLiveMusicScale(double scale) {
+    _GameBoardScreenState._bgPlayer
+        .setVolume(_GameBoardScreenState._currentMusicBase * scale)
+        .ignore();
+  }
+
+  /// Called from settings screen to play a preview ding at the given SFX scale.
+  static void playSfxPreview(double scale) {
+    _GameBoardScreenState._correctDingPlayer.stop().then((_) async {
+      try {
+        await _GameBoardScreenState._correctDingPlayer.setVolume(scale);
+        await _GameBoardScreenState._correctDingPlayer
+            .play(_GameBoardScreenState._correctDingSound);
+      } catch (_) {}
+    }).ignore();
+  }
 }
 
 class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
@@ -65,6 +83,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   // Dynamic music volume — escalates with board fill
   double _lastMusicVolume = 0.44;
+  static double _currentMusicBase = 0.44;
 
   // Bot typing simulation
   bool _showBotTyping = false;
@@ -138,6 +157,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final totalTiles = room.gridSize * room.gridSize;
     final ratio = totalTiles > 0 ? room.placedPieces.length / totalTiles : 0.0;
     final double base = ratio >= 0.75 ? 0.72 : ratio >= 0.50 ? 0.58 : 0.44;
+    _currentMusicBase = base;
     final double target = base * _musicScale;
     if (target != _lastMusicVolume) {
       _lastMusicVolume = target;

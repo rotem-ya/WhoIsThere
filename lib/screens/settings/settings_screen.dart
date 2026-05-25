@@ -6,6 +6,7 @@ import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../providers/providers.dart';
 import '../../widgets/common/app_header.dart';
+import '../game/game_board_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -36,6 +37,7 @@ class SettingsScreen extends ConsumerWidget {
                   volume: settings.musicVolume,
                   onChanged: (v) =>
                       ref.read(settingsProvider.notifier).setMusicVolume(v),
+                  onChangeEnd: GameBoardScreen.applyLiveMusicScale,
                   onMuteToggle: () =>
                       ref.read(settingsProvider.notifier).toggleMusicMute(),
                 ),
@@ -46,6 +48,7 @@ class SettingsScreen extends ConsumerWidget {
                   volume: settings.sfxVolume,
                   onChanged: (v) =>
                       ref.read(settingsProvider.notifier).setSfxVolume(v),
+                  onChangeEnd: GameBoardScreen.playSfxPreview,
                   onMuteToggle: () =>
                       ref.read(settingsProvider.notifier).toggleSfxMute(),
                 ),
@@ -72,6 +75,7 @@ class _SoundSection extends StatelessWidget {
   final String label;
   final double volume;
   final ValueChanged<double> onChanged;
+  final ValueChanged<double>? onChangeEnd;
   final VoidCallback onMuteToggle;
 
   const _SoundSection({
@@ -79,6 +83,7 @@ class _SoundSection extends StatelessWidget {
     required this.label,
     required this.volume,
     required this.onChanged,
+    this.onChangeEnd,
     required this.onMuteToggle,
   });
 
@@ -151,6 +156,7 @@ class _SoundSection extends StatelessWidget {
               max: 1,
               divisions: 20,
               onChanged: onChanged,
+              onChangeEnd: onChangeEnd,
             ),
           ),
         ],
