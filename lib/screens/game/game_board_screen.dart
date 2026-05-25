@@ -275,10 +275,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static final AudioPlayer _victoryPlayer = AudioPlayer(playerId: 'victory-fanfare');
   static final AssetSource _victorySound = AssetSource('sounds/victory_fanfare.mp3');
 
-  // Tick sounds — reuse correct_ding at low volume; swap file when dedicated tick.wav is added
+  // Tick sounds — aperture_open gives a sharper mechanical click suited for countdowns
   static final AudioPlayer _revealTickPlayer = AudioPlayer(playerId: 'reveal-tick');
   static final AudioPlayer _guessModeTickPlayer = AudioPlayer(playerId: 'guess-tick');
-  static final AssetSource _tickSound = AssetSource('sounds/correct_ding.wav');
+  static final AssetSource _tickSound = AssetSource('sounds/aperture_open.wav');
+
+  // Sync tick to displayed countdown second — one tick per whole-second transition
+  int _lastRevealTickSecond = -1;
+  int? _lastRevealDeadlineForTick;
+  int _lastGuessModeTickSecond = -1;
+  int? _lastGuessModeDeadlineForTick;
 
   // Endgame pressure tracking
   bool _endgamePressureLogged = false;
@@ -374,33 +380,42 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             'ENDGAME_PRESSURE_ACTIVE ratio=${ratio.toStringAsFixed(2)}');
       }
 
-      // During pending-reveal countdown (5 s): tick every second on the chosen tile
-      if (room.turnPhase == TurnPhase.revealTurn &&
-          room.pendingRevealTileIndex != null &&
-          room.revealDeadlineMs != null) {
+      // Reveal tick — one tick per displayed countdown second; pending tile (5s) + selection (3s)
+      if (room.turnPhase == TurnPhase.revealTurn && room.revealDeadlineMs != null) {
+        final isPending = room.pendingRevealTileIndex != null;
         final remaining = room.revealDeadlineMs! - now;
-        if (remaining > 0 && remaining <= 5500) {
-          unawaited(_playRevealTick(volume: isEndgame ? 0.08 : 0.05));
-        }
-      }
-      // Reveal soft tick — last 3s before tile SELECTION (no pending tile yet)
-      if (room.turnPhase == TurnPhase.revealTurn &&
-          room.pendingRevealTileIndex == null &&
-          room.revealDeadlineMs != null) {
-        final tickRemaining = room.revealDeadlineMs! - now;
-        if (tickRemaining > 0 && tickRemaining <= 3500) {
-          unawaited(_playRevealTick(volume: isEndgame ? 0.10 : 0.07));
+        final maxMs = isPending ? 5500 : 3500;
+        final tickSec = (remaining / 1000).ceil().clamp(0, 5);
+        if (remaining > 0 && remaining <= maxMs) {
+          if (room.revealDeadlineMs != _lastRevealDeadlineForTick) {
+            _lastRevealDeadlineForTick = room.revealDeadlineMs;
+            _lastRevealTickSecond = -1;
+          }
+          if (tickSec > 0 && tickSec != _lastRevealTickSecond) {
+            _lastRevealTickSecond = tickSec;
+            unawaited(_playRevealTick(volume: isPending
+                ? (isEndgame ? 0.08 : 0.05)
+                : (isEndgame ? 0.10 : 0.07)));
+          }
         }
       }
 
-      // GuessMode stronger tick — last 5s, only for the active guesser; volume +35% at endgame
+      // GuessMode stronger tick — one per displayed second, active guesser only; +35% at endgame
       if (room.turnPhase == TurnPhase.guessMode &&
           room.guessModeDeadlineMs != null &&
           uid != null &&
           room.guessModePlayerId == uid) {
         final tickRemaining = room.guessModeDeadlineMs! - now;
+        final tickSec = (tickRemaining / 1000).ceil().clamp(0, 20);
         if (tickRemaining > 0 && tickRemaining <= 5500) {
-          unawaited(_playGuessModeTick(volume: isEndgame ? 0.23 : 0.17));
+          if (room.guessModeDeadlineMs != _lastGuessModeDeadlineForTick) {
+            _lastGuessModeDeadlineForTick = room.guessModeDeadlineMs;
+            _lastGuessModeTickSecond = -1;
+          }
+          if (tickSec > 0 && tickSec != _lastGuessModeTickSecond) {
+            _lastGuessModeTickSecond = tickSec;
+            unawaited(_playGuessModeTick(volume: isEndgame ? 0.23 : 0.17));
+          }
         }
       }
 
