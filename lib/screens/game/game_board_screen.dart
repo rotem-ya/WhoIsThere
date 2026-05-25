@@ -907,6 +907,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (imageId.isEmpty || imageId == _loadedImageId) return;
     _loadedImageId = imageId;
     _nextFactIndex = 0;
+    _purchasedFacts = [];
     try {
       final image = await ref.read(roomServiceProvider).getImage(imageId);
       if (mounted) setState(() => _image = image);
@@ -1860,7 +1861,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       ? null
                       : () => _useRevealHint(room, currentUserId),
                   purchasedHintCount: _purchasedFacts.length,
-                  onBuySecondHint: (isSolo && currentUserId != null && _purchasedFacts.length == 1 && (_image?.facts?.length ?? 0) > 1)
+                  onBuySecondHint: (isSolo && currentUserId != null && _purchasedFacts.length == 1 && (_image?.facts.length ?? 0) > 1)
                       ? () => _buySecondHint(room, currentUserId!)
                       : null,
                   onGuess: canGuessNow ? () => _enterGuessMode(room, currentUserId!) : () {},

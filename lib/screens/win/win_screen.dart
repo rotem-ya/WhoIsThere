@@ -109,6 +109,7 @@ class _WinScreenState extends ConsumerState<WinScreen>
           backgroundGradient:
               isWinner ? AppColors.primaryGradient : AppColors.pageBackground,
           padding: EdgeInsets.zero,
+          safeArea: false,
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
