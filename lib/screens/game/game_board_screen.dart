@@ -241,6 +241,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   final Set<String> _watchdogConfirmedIssues = {};
   // Audio recovery — only attempt when app is in foreground
   bool _appIsInForeground = true;
+  // Music interruption recovery (e.g. WhatsApp notification sound steals focus)
+  bool _musicShouldBePlaying = false;
+  StreamSubscription<PlayerState>? _bgPlayerStateSub;
   // Offline UX — local-only UI state, never written to Firestore
   bool _isOffline = false;
   bool _showRecoveredBanner = false;
@@ -332,7 +335,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _confettiRight = ConfettiController(duration: const Duration(seconds: 2));
     WidgetsBinding.instance.addObserver(this);
     unawaited(WakelockPlus.enable());
+    _musicShouldBePlaying = true;
     unawaited(_startBackgroundMusic());
+    _bgPlayerStateSub = _bgPlayer.onPlayerStateChanged.listen((ps) {
+      if (!_musicShouldBePlaying || !_appIsInForeground) return;
+      if (ps == PlayerState.stopped || ps == PlayerState.paused) {
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (_musicShouldBePlaying && _appIsInForeground && mounted) {
+            unawaited(_startBackgroundMusic());
+          }
+        });
+      }
+    });
     unawaited(_primeRevealSound());
     unawaited(_primeGuessSounds());
     unawaited(_primeTickSounds());
@@ -747,6 +761,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       _appIsInForeground = false;
+      _musicShouldBePlaying = false;
       _bgPlayer.stop().ignore();
       _revealSoundPlayer.stop().ignore();
       _wrongBuzzPlayer.stop().ignore();
@@ -756,6 +771,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       _guessModeTickPlayer.stop().ignore();
     } else if (state == AppLifecycleState.resumed) {
       _appIsInForeground = true;
+      _musicShouldBePlaying = true;
+      unawaited(_startBackgroundMusic());
     }
   }
 
@@ -849,6 +866,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         ' unresolvedWatchdogIssues=${_watchdogActiveIssues.length}'
         ' finalPhase=${_lastKnownPhase?.name ?? 'unknown'}'
         ' finalTurnPhase=${_lastKnownTurnPhase?.name ?? 'unknown'}');
+    _musicShouldBePlaying = false;
+    _bgPlayerStateSub?.cancel();
     _expiryTimer?.cancel();
     _guessController.dispose();
     _confettiLeft.dispose();
