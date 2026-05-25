@@ -234,10 +234,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              SizedBox(height: verySmall ? 8 : compact ? 14 : 24),
+                              SizedBox(height: verySmall ? 6 : 10),
+                              // ── Top bar ──────────────────────────────────
+                              _step(
+                                Row(
+                                  textDirection: TextDirection.ltr,
+                                  children: [
+                                    const _ProfileIconButton(),
+                                    const SizedBox(width: 8),
+                                    const _StoreIconButton(),
+                                    const SizedBox(width: 8),
+                                    const CoinDisplay(),
+                                    const Spacer(),
+                                    const _DailyRewardButton(),
+                                  ],
+                                ),
+                                delayMs: 0, durationMs: 380, dy: -10,
+                              ),
+                              SizedBox(height: verySmall ? 10 : compact ? 14 : 20),
                               _step(
                                 Center(child: RepaintBoundary(child: _HomeHeroPeekGrid(size: iconSize))),
-                                delayMs: 0, durationMs: 500, dy: 14,
+                                delayMs: 80, durationMs: 500, dy: 14,
                               ),
                               SizedBox(height: verySmall ? 10 : compact ? 16 : 20),
                               _step(
@@ -261,7 +278,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     ),
                                   ),
                                 ),
-                                delayMs: 120, durationMs: 380, dy: 8,
+                                delayMs: 200, durationMs: 380, dy: 8,
                               ),
                               const SizedBox(height: 10),
                               _step(
@@ -275,7 +292,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     height: 1.2,
                                   ),
                                 ),
-                                delayMs: 220, durationMs: 320,
+                                delayMs: 300, durationMs: 320,
                               ),
                               SizedBox(height: verySmall ? 12 : compact ? 18 : 26),
                               _step(
@@ -289,7 +306,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     letterSpacing: 1.8,
                                   ),
                                 ),
-                                delayMs: 300, durationMs: 260,
+                                delayMs: 380, durationMs: 260,
                               ),
                               const SizedBox(height: 10),
                               _step(
@@ -328,7 +345,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     ),
                                   ],
                                 ),
-                                delayMs: 380, durationMs: 260, dy: 5,
+                                delayMs: 460, durationMs: 260, dy: 5,
                               ),
                               SizedBox(height: verySmall ? 10 : 16),
                               _step(
@@ -336,14 +353,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   isLoading: _isCreating && _loadingPlayers == null,
                                   onTap: _isCreating ? null : _createPrivateRoom,
                                 ),
-                                delayMs: 520, durationMs: 240,
+                                delayMs: 600, durationMs: 240,
                               ),
                               const SizedBox(height: 10),
                               _step(
                                 _JoinRoomButton(
                                   onTap: _isCreating ? null : _showJoinDialog,
                                 ),
-                                delayMs: 590, durationMs: 240,
+                                delayMs: 670, durationMs: 240,
                               ),
                               SizedBox(height: verySmall ? 14 : compact ? 20 : 30),
                             ],
@@ -352,32 +369,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     );
                   },
-                ),
-              ),
-              // Both of these must be after the ScrollView in the Stack so their
-              // taps are not absorbed by SingleChildScrollView's opaque hit testing.
-              const Positioned(
-                top: 12,
-                right: 16,
-                child: SafeArea(child: _DailyRewardButton()),
-              ),
-              Positioned(
-                top: 12,
-                left: 16,
-                child: SafeArea(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    // Force LTR so ProfileIcon is always at physical left (x=16)
-                    // regardless of ambient RTL directionality.
-                    textDirection: TextDirection.ltr,
-                    children: [
-                      const _ProfileIconButton(),
-                      const SizedBox(width: 8),
-                      const _StoreIconButton(),
-                      const SizedBox(width: 8),
-                      const CoinDisplay(),
-                    ],
-                  ),
                 ),
               ),
             ],
@@ -1004,8 +995,10 @@ class _HomeHeroPeekGrid extends StatefulWidget {
 }
 
 class _HomeHeroPeekGridState extends State<_HomeHeroPeekGrid>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _breath;
+  late final AnimationController _float;
+  late final Animation<double> _floatAnim;
 
   // Tile indices where the image shows through
   static const Set<int> _open = {1, 3, 7};
@@ -1021,11 +1014,20 @@ class _HomeHeroPeekGridState extends State<_HomeHeroPeekGrid>
       vsync: this,
       duration: const Duration(milliseconds: 2700),
     )..repeat(reverse: true);
+
+    _float = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3200),
+    )..repeat(reverse: true);
+    _floatAnim = Tween<double>(begin: -5, end: 5).animate(
+      CurvedAnimation(parent: _float, curve: Curves.easeInOut),
+    );
   }
 
   @override
   void dispose() {
     _breath.dispose();
+    _float.dispose();
     super.dispose();
   }
 
@@ -1035,7 +1037,13 @@ class _HomeHeroPeekGridState extends State<_HomeHeroPeekGrid>
     final r = s * 0.115;
     final gap = s * 0.030;
 
-    return Container(
+    return AnimatedBuilder(
+      animation: _floatAnim,
+      builder: (_, child) => Transform.translate(
+        offset: Offset(0, _floatAnim.value),
+        child: child,
+      ),
+      child: Container(
       width: s,
       height: s,
       decoration: BoxDecoration(
@@ -1096,7 +1104,8 @@ class _HomeHeroPeekGridState extends State<_HomeHeroPeekGrid>
           ],
         ),
       ),
-    );
+    ),   // end Container (child of AnimatedBuilder)
+    );   // end AnimatedBuilder
   }
 
   Widget _buildCell(int idx) {
