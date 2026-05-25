@@ -13,6 +13,7 @@ import 'core/utils/app_router.dart';
 import 'firebase_options.dart';
 import 'providers/providers.dart';
 import 'services/qa_logger_service.dart';
+import 'services/settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +46,7 @@ void main() async {
   );
 
   await QaLoggerService.instance.init();
+  await SettingsService.init();
   QaLoggerService.instance.log('APP', 'APP_START build=$kBuildLabel');
 
   if (firebaseError != null) {

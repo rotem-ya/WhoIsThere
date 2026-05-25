@@ -13,6 +13,7 @@ import '../../screens/room/create_room_screen.dart';
 import '../../screens/room/join_room_screen.dart';
 import '../../screens/room/lobby_screen.dart';
 import '../../screens/splash/splash_screen.dart';
+import '../../screens/settings/settings_screen.dart';
 import '../../screens/store/store_screen.dart';
 import '../../screens/store/card_skins_screen.dart';
 import '../../screens/voting/vote_difficulty_screen.dart';
@@ -89,6 +90,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/store/skins',
         builder: (context, state) => const CardSkinsScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

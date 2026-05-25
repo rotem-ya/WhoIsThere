@@ -10,6 +10,7 @@ import '../services/hint_economy_guard.dart';
 import '../services/local_economy_cache.dart';
 import '../services/qa_logger_service.dart';
 import '../services/room_service.dart';
+import '../services/settings_service.dart';
 import '../models/user_model.dart';
 import '../models/room_model.dart';
 import '../models/game_image_model.dart';
@@ -165,3 +166,89 @@ final turnStateProvider =
     StateNotifierProvider<TurnStateNotifier, TurnState>(
   (ref) => TurnStateNotifier(),
 );
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+
+class AppSettings {
+  final double musicVolume;
+  final double sfxVolume;
+  final bool vibrationEnabled;
+  // Previous non-zero volume, restored when un-muting
+  final double _prevMusicVolume;
+  final double _prevSfxVolume;
+
+  const AppSettings({
+    this.musicVolume = 1.0,
+    this.sfxVolume = 1.0,
+    this.vibrationEnabled = true,
+    double prevMusicVolume = 1.0,
+    double prevSfxVolume = 1.0,
+  })  : _prevMusicVolume = prevMusicVolume,
+        _prevSfxVolume = prevSfxVolume;
+
+  AppSettings copyWith({
+    double? musicVolume,
+    double? sfxVolume,
+    bool? vibrationEnabled,
+    double? prevMusicVolume,
+    double? prevSfxVolume,
+  }) =>
+      AppSettings(
+        musicVolume: musicVolume ?? this.musicVolume,
+        sfxVolume: sfxVolume ?? this.sfxVolume,
+        vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
+        prevMusicVolume: prevMusicVolume ?? _prevMusicVolume,
+        prevSfxVolume: prevSfxVolume ?? _prevSfxVolume,
+      );
+}
+
+class SettingsNotifier extends StateNotifier<AppSettings> {
+  final SettingsService _svc;
+
+  SettingsNotifier(this._svc)
+      : super(AppSettings(
+          musicVolume: _svc.musicVolume,
+          sfxVolume: _svc.sfxVolume,
+          vibrationEnabled: _svc.vibrationEnabled,
+          prevMusicVolume: _svc.musicVolume > 0 ? _svc.musicVolume : 1.0,
+          prevSfxVolume: _svc.sfxVolume > 0 ? _svc.sfxVolume : 1.0,
+        ));
+
+  void setMusicVolume(double v) {
+    final prev = v > 0 ? v : state._prevMusicVolume;
+    state = state.copyWith(musicVolume: v, prevMusicVolume: prev);
+    _svc.setMusicVolume(v).ignore();
+  }
+
+  void setSfxVolume(double v) {
+    final prev = v > 0 ? v : state._prevSfxVolume;
+    state = state.copyWith(sfxVolume: v, prevSfxVolume: prev);
+    _svc.setSfxVolume(v).ignore();
+  }
+
+  void setVibrationEnabled(bool v) {
+    state = state.copyWith(vibrationEnabled: v);
+    _svc.setVibrationEnabled(v).ignore();
+  }
+
+  void toggleMusicMute() {
+    if (state.musicVolume > 0) {
+      setMusicVolume(0);
+    } else {
+      setMusicVolume(state._prevMusicVolume);
+    }
+  }
+
+  void toggleSfxMute() {
+    if (state.sfxVolume > 0) {
+      setSfxVolume(0);
+    } else {
+      setSfxVolume(state._prevSfxVolume);
+    }
+  }
+}
+
+final settingsProvider =
+    StateNotifierProvider<SettingsNotifier, AppSettings>((ref) {
+  return SettingsNotifier(SettingsService.instance);
+});

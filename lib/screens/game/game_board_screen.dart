@@ -22,6 +22,7 @@ import '../../models/player_model.dart';
 import '../../models/room_model.dart';
 import '../../models/economy/match_reward_breakdown.dart';
 import '../../providers/providers.dart';
+import '../../services/settings_service.dart';
 import '../../services/hint_economy_guard.dart';
 import '../../services/reward_calculator.dart';
 import '../../services/qa_logger_service.dart';
@@ -90,6 +91,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static Future<void> _playRevealSound() async {
     try {
       await _revealSoundPlayer.stop();
+      await _revealSoundPlayer.setVolume(_sfxScale);
       await _revealSoundPlayer.play(_revealSound);
     } catch (_) {}
   }
@@ -108,6 +110,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static Future<void> _playWrongBuzz() async {
     try {
       await _wrongBuzzPlayer.stop();
+      await _wrongBuzzPlayer.setVolume(_sfxScale);
       await _wrongBuzzPlayer.play(_wrongBuzzSound);
     } catch (_) {}
   }
@@ -115,14 +118,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static Future<void> _playCorrectDing() async {
     try {
       await _correctDingPlayer.stop();
+      await _correctDingPlayer.setVolume(_sfxScale);
       await _correctDingPlayer.play(_correctDingSound);
     } catch (_) {}
   }
 
+  static double get _musicScale => SettingsService.instance.musicVolume;
+  static double get _sfxScale => SettingsService.instance.sfxVolume;
+
   static Future<void> _startBackgroundMusic() async {
     try {
       await _bgPlayer.setReleaseMode(ReleaseMode.loop);
-      await _bgPlayer.setVolume(0.44);
+      await _bgPlayer.setVolume(0.44 * _musicScale);
       await _bgPlayer.play(_bgMusic);
     } catch (_) {}
   }
@@ -130,7 +137,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   void _syncMusicVolume(RoomModel room) {
     final totalTiles = room.gridSize * room.gridSize;
     final ratio = totalTiles > 0 ? room.placedPieces.length / totalTiles : 0.0;
-    final double target = ratio >= 0.75 ? 0.72 : ratio >= 0.50 ? 0.58 : 0.44;
+    final double base = ratio >= 0.75 ? 0.72 : ratio >= 0.50 ? 0.58 : 0.44;
+    final double target = base * _musicScale;
     if (target != _lastMusicVolume) {
       _lastMusicVolume = target;
       _bgPlayer.setVolume(target).ignore();
@@ -270,7 +278,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static Future<void> _playRevealTick({double volume = 0.07}) async {
     try {
       await _revealTickPlayer.stop();
-      await _revealTickPlayer.setVolume(volume);
+      await _revealTickPlayer.setVolume(volume * _sfxScale);
       await _revealTickPlayer.play(_tickSound);
     } catch (_) {}
   }
@@ -278,7 +286,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static Future<void> _playGuessModeTick({double volume = 0.17}) async {
     try {
       await _guessModeTickPlayer.stop();
-      await _guessModeTickPlayer.setVolume(volume);
+      await _guessModeTickPlayer.setVolume(volume * _sfxScale);
       await _guessModeTickPlayer.play(_tickSound);
     } catch (_) {}
   }
@@ -355,7 +363,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         final remaining = room.availablePieceIndices.length;
         if (remaining <= 3 && remaining > 0 && remaining != _lastHapticAvailableCount) {
           _lastHapticAvailableCount = remaining;
-          HapticFeedback.lightImpact().ignore();
+          if (SettingsService.instance.vibrationEnabled) HapticFeedback.lightImpact().ignore();
         }
       }
 
@@ -809,6 +817,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static Future<void> _playVictorySound() async {
     try {
       await _victoryPlayer.stop();
+      await _victoryPlayer.setVolume(_sfxScale);
       await _victoryPlayer.play(_victorySound);
     } catch (_) {}
   }
@@ -1385,7 +1394,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_FROZEN phase=guessMode');
                     QaLoggerService.instance.log('TURN', 'BOARD_DIMMED_GUESS_MODE');
                     QaLoggerService.instance.log('TURN', 'REVEAL_BAR_HIDDEN_GUESS_MODE');
-                    HapticFeedback.mediumImpact().ignore();
+                    if (SettingsService.instance.vibrationEnabled) HapticFeedback.mediumImpact().ignore();
                     if (currentUserId != null && room.guessModePlayerId == currentUserId) {
                       QaLoggerService.instance.log('GUESS', 'GUESS_MODE_UI_ENTER');
                     }
