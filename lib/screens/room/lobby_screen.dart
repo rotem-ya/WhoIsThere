@@ -420,42 +420,41 @@ class _PlayerAvatarTile extends StatelessWidget {
     final base = isMe ? 'אני' : (player.name.isNotEmpty ? player.name : 'שחקן');
     final label = player.isHost ? '$base 👑' : base;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: AppStyles.glassCard(radius: 16, opacity: 0.18).copyWith(
-        boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.7) : null,
-        border: Border.all(
-          color: isMe
-              ? AppStyles.cyanGlow.withOpacity(0.7)
-              : Colors.white.withOpacity(0.20),
-          width: isMe ? 1.5 : 1.0,
-        ),
-      ),
-      child: Row(
-        textDirection: TextDirection.rtl,
-        children: [
-          // Avatar with cyan ring for current user
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isMe ? AppStyles.cyanGlow : Colors.white38,
-                width: 2,
-              ),
-              boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.5) : null,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: AppStyles.glassCard(radius: 16, opacity: 0.18).copyWith(
+            boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.7) : null,
+            border: Border.all(
+              color: isMe
+                  ? AppStyles.cyanGlow.withOpacity(0.7)
+                  : Colors.white.withOpacity(0.20),
+              width: isMe ? 1.5 : 1.0,
             ),
-            child: PlayerAvatar(name: player.name, radius: 14),
           ),
-          const SizedBox(width: 8),
+          child: Row(
+            textDirection: TextDirection.rtl,
+            children: [
+              // Avatar with cyan ring for current user
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isMe ? AppStyles.cyanGlow : Colors.white38,
+                    width: 2,
+                  ),
+                  boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.5) : null,
+                ),
+                child: PlayerAvatar(name: player.name, radius: 14),
+              ),
+              const SizedBox(width: 8),
 
-          // Name + rank
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+              // Name only
+              Expanded(
+                child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -464,12 +463,17 @@ class _PlayerAvatarTile extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                _DiscoveredBadge(count: player.discoveredCount),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        // Discovered count badge — top-left corner (RTL = top-start)
+        Positioned(
+          top: -6,
+          left: -6,
+          child: _DiscoveredBadge(count: player.discoveredCount),
+        ),
+      ],
     )
         .animate()
         .fadeIn(delay: delay, duration: 280.ms, curve: Curves.easeOut)
@@ -591,23 +595,24 @@ class _DiscoveredBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       decoration: BoxDecoration(
-        color: const Color(0xFF0A1828).withOpacity(0.7),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF4A8BAA).withOpacity(0.4), width: 0.8),
+        color: const Color(0xFF061422),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF4A8BAA).withOpacity(0.55), width: 0.8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🌍', style: TextStyle(fontSize: 11)),
-          const SizedBox(width: 3),
+          const Text('🌍', style: TextStyle(fontSize: 9)),
+          const SizedBox(width: 2),
           Text(
             '$count',
             style: const TextStyle(
               color: Color(0xFF87CEEB),
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              height: 1,
             ),
           ),
         ],

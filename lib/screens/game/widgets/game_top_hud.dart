@@ -179,55 +179,91 @@ class _PlayerCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = player.name.length > 10 ? player.name.substring(0, 10) : player.name;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isGuessing
-            ? const Color(0xFF1A2E10).withOpacity(0.75)
-            : const Color(0xFF0D1E30).withOpacity(0.55),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isGuessing
-              ? const Color(0xFF4CAF50).withOpacity(0.50)
-              : const Color(0xFF2A5070).withOpacity(0.30),
-          width: isGuessing ? 1.0 : 0.8,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: isGuessing
+                ? const Color(0xFF1A2E10).withOpacity(0.75)
+                : const Color(0xFF0D1E30).withOpacity(0.55),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isGuessing
+                  ? const Color(0xFF4CAF50).withOpacity(0.50)
+                  : const Color(0xFF2A5070).withOpacity(0.30),
+              width: isGuessing ? 1.0 : 0.8,
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isGuessing ? const Color(0xFF80C080) : Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (isGuessing)
+                const Padding(
+                  padding: EdgeInsets.only(left: 4),
+                  child: Text('✍', style: TextStyle(fontSize: 10)),
+                ),
+              const SizedBox(width: 4),
+              Text(
+                '${player.score}',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.45),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
         ),
+        Positioned(
+          top: -7,
+          right: -5,
+          child: _DiscoveredMicroBadge(count: player.discoveredCount),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Discovered micro badge (superscript corner) ───────────────────────────────
+
+class _DiscoveredMicroBadge extends StatelessWidget {
+  final int count;
+  const _DiscoveredMicroBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: const Color(0xFF04101E),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFF4A8BAA).withOpacity(0.5), width: 0.7),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🌍', style: TextStyle(fontSize: 9)),
-          const SizedBox(width: 3),
-          Expanded(
-            child: Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: isGuessing ? const Color(0xFF80C080) : Colors.white70,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
+          const Text('🌍', style: TextStyle(fontSize: 7)),
+          const SizedBox(width: 1),
           Text(
-            ' ${player.discoveredCount}',
-            style: const TextStyle(color: Color(0xFF87CEEB), fontSize: 10, fontWeight: FontWeight.w700),
-          ),
-          if (isGuessing)
-            const Padding(
-              padding: EdgeInsets.only(left: 4),
-              child: Text(
-                '✍',
-                style: TextStyle(fontSize: 10),
-              ),
-            ),
-          const SizedBox(width: 4),
-          Text(
-            '${player.score}',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.45),
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
+            '$count',
+            style: const TextStyle(
+              color: Color(0xFF87CEEB),
+              fontSize: 8,
+              fontWeight: FontWeight.w900,
+              height: 1,
             ),
           ),
         ],
