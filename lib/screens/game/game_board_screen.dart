@@ -281,13 +281,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static final AudioPlayer _victoryPlayer = AudioPlayer(playerId: 'victory-fanfare');
   static final AssetSource _victorySound = AssetSource('sounds/victory_fanfare.mp3');
 
-  static final AudioPlayer _revealTickPlayer = AudioPlayer(playerId: 'reveal-tick');
   static final AudioPlayer _guessModeTickPlayer = AudioPlayer(playerId: 'guess-tick');
-  static final AssetSource _tickSound = AssetSource('sounds/correct_ding.wav');
+  static final AssetSource _guessTickSound = AssetSource('sounds/guess_tick.wav');
 
   // Sync tick to displayed countdown second — one tick per whole-second transition
-  int _lastRevealTickSecond = -1;
-  int? _lastRevealDeadlineForTick;
   int _lastGuessModeTickSecond = -1;
   int? _lastGuessModeDeadlineForTick;
 
@@ -309,10 +306,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   static Future<void> _primeTickSounds() async {
     try {
-      await _revealTickPlayer.setPlayerMode(PlayerMode.lowLatency);
-      await _revealTickPlayer.setSource(_tickSound);
       await _guessModeTickPlayer.setPlayerMode(PlayerMode.lowLatency);
-      await _guessModeTickPlayer.setSource(_tickSound);
+      await _guessModeTickPlayer.setSource(_guessTickSound);
     } catch (_) {}
   }
 
@@ -323,19 +318,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     return null;
   }
 
-  static Future<void> _playRevealTick({double volume = 0.045}) async {
-    try {
-      await _revealTickPlayer.stop();
-      await _revealTickPlayer.setVolume(volume * _sfxScale);
-      await _revealTickPlayer.play(_tickSound);
-    } catch (_) {}
-  }
-
-  static Future<void> _playGuessModeTick({double volume = 0.11}) async {
+  static Future<void> _playGuessModeTick({double volume = 0.22}) async {
     try {
       await _guessModeTickPlayer.stop();
       await _guessModeTickPlayer.setVolume(volume * _sfxScale);
-      await _guessModeTickPlayer.play(_tickSound);
+      await _guessModeTickPlayer.play(_guessTickSound);
     } catch (_) {}
   }
 
@@ -383,26 +370,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         _endgamePressureLogged = true;
         QaLoggerService.instance.log('GAME',
             'ENDGAME_PRESSURE_ACTIVE ratio=${ratio.toStringAsFixed(2)}');
-      }
-
-      // Reveal tick — one tick per displayed countdown second; pending tile (5s) + selection (3s)
-      if (room.turnPhase == TurnPhase.revealTurn && room.revealDeadlineMs != null) {
-        final isPending = room.pendingRevealTileIndex != null;
-        final remaining = room.revealDeadlineMs! - now;
-        final maxMs = isPending ? 10500 : 10500;
-        final tickSec = (remaining / 1000).ceil().clamp(0, 10);
-        if (remaining > 0 && remaining <= maxMs) {
-          if (room.revealDeadlineMs != _lastRevealDeadlineForTick) {
-            _lastRevealDeadlineForTick = room.revealDeadlineMs;
-            _lastRevealTickSecond = -1;
-          }
-          if (tickSec > 0 && tickSec != _lastRevealTickSecond) {
-            _lastRevealTickSecond = tickSec;
-            unawaited(_playRevealTick(volume: isPending
-                ? (isEndgame ? 0.08 : 0.05)
-                : (isEndgame ? 0.10 : 0.07)));
-          }
-        }
       }
 
       // GuessMode stronger tick — one per displayed second, active guesser only; +35% at endgame
@@ -796,7 +763,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       _wrongBuzzPlayer.stop().ignore();
       _correctDingPlayer.stop().ignore();
       _victoryPlayer.stop().ignore();
-      _revealTickPlayer.stop().ignore();
       _guessModeTickPlayer.stop().ignore();
     } else if (state == AppLifecycleState.resumed) {
       _appIsInForeground = true;
