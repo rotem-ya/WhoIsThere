@@ -74,10 +74,10 @@ class GameActions extends ConsumerWidget {
       primaryLabel = 'נחש עכשיו!';
     }
 
-    // Button is active (full opacity + tappable) only during the guess window
-    final primaryIsActive = guessActive;
+    // Button is always visible and tappable; server enforces timing
+    final primaryIsActive = !isBlocked;
     final primaryGlow = guessActive;
-    final primaryOnTap = guessActive ? onGuess : null;
+    final primaryOnTap = isBlocked ? null : onGuess;
 
     // Show the decaying early-guess bonus always (hides itself when it hits 0)
     final showReward = earlyBonus > 0;
