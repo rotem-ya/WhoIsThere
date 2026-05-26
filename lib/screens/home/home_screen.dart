@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
@@ -315,7 +316,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               children: [
                                 _QuickGameButton(
                                   players: 2,
-                                  rewardCoins: 35,
                                   height: verySmall ? 52 : compact ? 56 : 62,
                                   isLoading: _isCreating && _loadingPlayers == 2,
                                   onTap: _isCreating ? null : () => _startQuickGame(2),
@@ -326,7 +326,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     Expanded(
                                       child: _QuickGameButton(
                                         players: 3,
-                                        rewardCoins: 30,
                                         height: verySmall ? 48 : compact ? 52 : 56,
                                         isLoading: _isCreating && _loadingPlayers == 3,
                                         onTap: _isCreating ? null : () => _startQuickGame(3),
@@ -336,7 +335,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     Expanded(
                                       child: _QuickGameButton(
                                         players: 4,
-                                        rewardCoins: 30,
                                         height: verySmall ? 48 : compact ? 52 : 56,
                                         isLoading: _isCreating && _loadingPlayers == 4,
                                         onTap: _isCreating ? null : () => _startQuickGame(4),
@@ -440,14 +438,12 @@ class _Dot extends StatelessWidget {
 
 class _QuickGameButton extends StatelessWidget {
   final int players;
-  final int rewardCoins;
   final double height;
   final bool isLoading;
   final VoidCallback? onTap;
 
   const _QuickGameButton({
     required this.players,
-    required this.rewardCoins,
     required this.height,
     required this.isLoading,
     required this.onTap,
@@ -489,7 +485,7 @@ class _QuickGameButton extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'חינם  •  עד $rewardCoins 🪙',
+                                '${EconomyConfig.gameEntryFee} 🪙  •  קופה ${EconomyConfig.gameEntryFee * players} 🪙',
                                 style: TextStyle(color: const Color(0xFFD4AF37).withOpacity(0.80), fontSize: 11, fontWeight: FontWeight.w700),
                               ),
                             ],
