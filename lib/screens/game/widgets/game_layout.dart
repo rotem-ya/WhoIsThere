@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/game_constants.dart';
 import '../../../models/game_image_model.dart';
+import '../../../models/player_model.dart';
 import '../../../models/room_model.dart';
 import 'answer_slots.dart';
 import 'game_actions.dart';
@@ -33,6 +34,8 @@ class GameLayout extends StatelessWidget {
   final Future<bool> Function(String)? onGuessSubmit;
   final double revealRatio;
   final int potTotal;
+  final int stunCardCount;
+  final Future<void> Function(String targetId)? onStunCard;
 
   const GameLayout({
     required this.room,
@@ -56,6 +59,8 @@ class GameLayout extends StatelessWidget {
     this.onBuySecondHint,
     this.revealRatio = 0.0,
     this.potTotal = 0,
+    this.stunCardCount = 0,
+    this.onStunCard,
   });
 
   @override
@@ -82,6 +87,20 @@ class GameLayout extends StatelessWidget {
     final blockedUntil = userId != null ? (room.blockedGuessers[userId] ?? 0) : 0;
     final blockedRemaining = isBlocked ? (blockedUntil - room.revealCount).clamp(0, 99) : 0;
 
+    // Stun card: eligible targets = other human non-eliminated players
+    final stunnedPlayerIds = room.blockedGuessers.entries
+        .where((e) => room.revealCount < e.value)
+        .map((e) => e.key)
+        .toSet();
+    final stunTargets = room.players.values
+        .where((p) => !p.isBot && !p.isEliminated && p.id != currentUserId)
+        .toList();
+    final canUseStunCard = !isSolo &&
+        stunCardCount > 0 &&
+        stunTargets.isNotEmpty &&
+        room.turnPhase != TurnPhase.guessMode &&
+        room.phase != GamePhase.finished;
+
     return Stack(
       children: [
         // ── Main game column ───────────────────────────────────────────────
@@ -89,6 +108,7 @@ class GameLayout extends StatelessWidget {
           children: [
             TopHud(
               players: room.sortedPlayers,
+              stunnedPlayerIds: stunnedPlayerIds,
               currentPlayerId: room.currentTurnUserId,
               currentPlayerName: currentPlayer?.name ?? '',
               revealedText: '$revealedCount/$total',
@@ -155,6 +175,10 @@ class GameLayout extends StatelessWidget {
               purchasedHintCount: purchasedHintCount,
               onBuySecondHint: onBuySecondHint,
               onGuess: onGuess,
+              stunCardCount: stunCardCount,
+              canUseStunCard: canUseStunCard,
+              stunTargets: stunTargets,
+              onStunCard: onStunCard,
             ),
           ],
         ),

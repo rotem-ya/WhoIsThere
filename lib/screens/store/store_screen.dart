@@ -28,7 +28,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 3, vsync: this);
+    _tab = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -91,6 +91,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
             tabs: const [
               Tab(text: '💎 רכישה'),
               Tab(text: '💡 רמזים'),
+              Tab(text: '🎴 כרטיסים'),
               Tab(text: '🎨 עיצובים'),
             ],
           ),
@@ -102,6 +103,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
               children: [
                 _PurchaseTab(coins: coins, ref: ref),
                 _HintsTab(coins: coins, ref: ref),
+                _CardsTab(coins: coins, ref: ref),
                 const _SkinsTab(),
               ],
             ),
@@ -226,7 +228,194 @@ class _HintsTab extends StatelessWidget {
   }
 }
 
-// ── Tab 3: עיצובים ────────────────────────────────────────────────────────────
+// ── Tab 3: כרטיסים ────────────────────────────────────────────────────────────
+
+class _CardsTab extends StatelessWidget {
+  final int coins;
+  final WidgetRef ref;
+  const _CardsTab({required this.coins, required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(currentUserProvider).valueOrNull;
+    final stunCount = user?.stunCardCount ?? 0;
+    final canAfford = coins >= EconomyConfig.stunCardPrice;
+
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'כרטיסים שנרכשו נשמרים ומשמשים מחוץ למשחק',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white54, fontSize: 13),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _StunCardTile(
+            stunCount: stunCount,
+            canAfford: canAfford,
+            onBuy: () => _buyStunCard(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _buyStunCard(BuildContext context) async {
+    HapticFeedback.lightImpact();
+    AppFeedback.selection();
+    final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
+    if (uid == null) return;
+
+    if (coins < EconomyConfig.stunCardPrice) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('אין מספיק מטבעות!')),
+      );
+      return;
+    }
+
+    final granted = await ref.read(economyServiceProvider).buyStunCard(uid);
+    if (!context.mounted) return;
+
+    if (granted) {
+      AppFeedback.success();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✅ כרטיס עצור נרכש!')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('הרכישה נכשלה, נסה שוב')),
+      );
+    }
+  }
+}
+
+class _StunCardTile extends StatelessWidget {
+  final int stunCount;
+  final bool canAfford;
+  final VoidCallback onBuy;
+  const _StunCardTile({
+    required this.stunCount,
+    required this.canAfford,
+    required this.onBuy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0A1A30), Color(0xFF1A0A20)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFF8B4FBF).withOpacity(0.55),
+          width: 1.4,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B4FBF).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Center(child: Text('🔒', style: TextStyle(fontSize: 28))),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'כרטיס עצור',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'חסום שחקן אחר מניחוש לתור אחד',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.65),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B4FBF).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF8B4FBF).withOpacity(0.35)),
+                ),
+                child: Text(
+                  'ברשותך: $stunCount',
+                  style: const TextStyle(
+                    color: Color(0xFFCF9FFF),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              PressableScale(
+                onTap: canAfford ? onBuy : null,
+                scale: 0.93,
+                child: AnimatedOpacity(
+                  opacity: canAfford ? 1.0 : 0.45,
+                  duration: const Duration(milliseconds: 160),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    decoration: BoxDecoration(
+                      gradient: canAfford
+                          ? const LinearGradient(
+                              colors: [Color(0xFF8B4FBF), Color(0xFF5A1A8A)],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            )
+                          : null,
+                      color: canAfford ? null : Colors.white12,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      '${EconomyConfig.stunCardPrice} 🪙',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Tab 4: עיצובים ────────────────────────────────────────────────────────────
 
 class _SkinsTab extends StatelessWidget {
   const _SkinsTab();

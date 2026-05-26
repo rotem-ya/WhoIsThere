@@ -93,4 +93,8 @@ class EconomyConfig {
 
   // ── Entry fee options (for future host selection UI) ─────────
   static const List<int> entryFeeOptions = [0, 10, 25, 50];
+
+  // ── Stun card ─────────────────────────────────────────────────
+  static const int stunCardPrice = 30;
+  static const int stunCardBlockTurns = 2;
 }

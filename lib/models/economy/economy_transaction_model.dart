@@ -17,6 +17,7 @@ enum TransactionType {
   wrongGuessPotPenalty,
   potWin,
   potRefund,
+  stunCardPurchase,
 }
 
 class EconomyTransactionModel {

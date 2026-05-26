@@ -1504,6 +1504,44 @@ class RoomService {
     });
   }
 
+  /// Atomically consumes one stun card from actorUid's inventory and
+  /// blocks targetUid from guessing for [stunCardBlockTurns] reveal cycles.
+  Future<bool> applyStunCard({
+    required String roomId,
+    required String actorUid,
+    required String targetUid,
+  }) async {
+    bool success = false;
+    try {
+      await _firestore.runTransaction((tx) async {
+        final userSnap = await tx.get(_firestore.doc('users/$actorUid'));
+        final count = (userSnap.data()?['stunCardCount'] as int?) ?? 0;
+        if (count <= 0) return;
+
+        final roomSnap = await tx.get(_rooms.doc(roomId));
+        if (!roomSnap.exists) return;
+        final room = RoomModel.fromFirestore(roomSnap);
+        if (room.phase == GamePhase.finished) return;
+
+        final blockUntil = room.revealCount + EconomyConfig.stunCardBlockTurns;
+        tx.update(_firestore.doc('users/$actorUid'), {
+          'stunCardCount': FieldValue.increment(-1),
+        });
+        tx.update(_rooms.doc(roomId), {
+          'blockedGuessers.$targetUid': blockUntil,
+        });
+        success = true;
+      });
+    } catch (e) {
+      QaLoggerService.instance.log('STUN', 'STUN_CARD_ERROR error=$e');
+    }
+    if (success) {
+      QaLoggerService.instance.log('STUN',
+          'STUN_CARD_APPLIED actor=${actorUid.substring(0, actorUid.length.clamp(0, 6))} target=${targetUid.substring(0, targetUid.length.clamp(0, 6))}');
+    }
+    return success;
+  }
+
   Future<void> _checkLastPlayerStanding(String roomId) async {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);

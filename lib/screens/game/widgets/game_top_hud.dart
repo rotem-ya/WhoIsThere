@@ -31,6 +31,7 @@ class TopHud extends StatelessWidget {
   final bool isLastTile;
   final int potTotal;
   final String? guessModePlayerId;
+  final Set<String> stunnedPlayerIds;
 
   const TopHud({
     required this.players,
@@ -51,6 +52,7 @@ class TopHud extends StatelessWidget {
     this.isLastTile = false,
     this.potTotal = 0,
     this.guessModePlayerId,
+    this.stunnedPlayerIds = const {},
   });
 
   @override
@@ -107,7 +109,11 @@ class TopHud extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: _PlayerGrid(players: players, guessModePlayerId: guessModePlayerId),
+                child: _PlayerGrid(
+                  players: players,
+                  guessModePlayerId: guessModePlayerId,
+                  stunnedPlayerIds: stunnedPlayerIds,
+                ),
               ),
           ],
         ),
@@ -148,7 +154,12 @@ class _SmallBackButton extends StatelessWidget {
 class _PlayerGrid extends StatelessWidget {
   final List<PlayerModel> players;
   final String? guessModePlayerId;
-  const _PlayerGrid({required this.players, this.guessModePlayerId});
+  final Set<String> stunnedPlayerIds;
+  const _PlayerGrid({
+    required this.players,
+    this.guessModePlayerId,
+    this.stunnedPlayerIds = const {},
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -158,10 +169,10 @@ class _PlayerGrid extends StatelessWidget {
       if (rows.isNotEmpty) rows.add(const SizedBox(height: 4));
       rows.add(Row(
         children: [
-          Expanded(child: _PlayerCell(player: players[i], isGuessing: players[i].id == guessModePlayerId)),
+          Expanded(child: _PlayerCell(player: players[i], isGuessing: players[i].id == guessModePlayerId, isStunned: stunnedPlayerIds.contains(players[i].id))),
           if (i + 1 < players.length) ...[
             const SizedBox(width: 6),
-            Expanded(child: _PlayerCell(player: players[i + 1], isGuessing: players[i + 1].id == guessModePlayerId)),
+            Expanded(child: _PlayerCell(player: players[i + 1], isGuessing: players[i + 1].id == guessModePlayerId, isStunned: stunnedPlayerIds.contains(players[i + 1].id))),
           ] else
             const Expanded(child: SizedBox()),
         ],
@@ -174,7 +185,8 @@ class _PlayerGrid extends StatelessWidget {
 class _PlayerCell extends StatelessWidget {
   final PlayerModel player;
   final bool isGuessing;
-  const _PlayerCell({required this.player, this.isGuessing = false});
+  final bool isStunned;
+  const _PlayerCell({required this.player, this.isGuessing = false, this.isStunned = false});
 
   @override
   Widget build(BuildContext context) {
@@ -185,15 +197,19 @@ class _PlayerCell extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: isGuessing
-                ? const Color(0xFF1A2E10).withOpacity(0.75)
-                : const Color(0xFF0D1E30).withOpacity(0.55),
+            color: isStunned
+                ? const Color(0xFF2A1040).withOpacity(0.75)
+                : isGuessing
+                    ? const Color(0xFF1A2E10).withOpacity(0.75)
+                    : const Color(0xFF0D1E30).withOpacity(0.55),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isGuessing
-                  ? const Color(0xFF4CAF50).withOpacity(0.50)
-                  : const Color(0xFF2A5070).withOpacity(0.30),
-              width: isGuessing ? 1.0 : 0.8,
+              color: isStunned
+                  ? const Color(0xFF8B4FBF).withOpacity(0.55)
+                  : isGuessing
+                      ? const Color(0xFF4CAF50).withOpacity(0.50)
+                      : const Color(0xFF2A5070).withOpacity(0.30),
+              width: isStunned || isGuessing ? 1.0 : 0.8,
             ),
           ),
           child: Row(
@@ -210,7 +226,12 @@ class _PlayerCell extends StatelessWidget {
                   ),
                 ),
               ),
-              if (isGuessing)
+              if (isStunned)
+                const Padding(
+                  padding: EdgeInsets.only(left: 3),
+                  child: Text('🔒', style: TextStyle(fontSize: 9)),
+                )
+              else if (isGuessing)
                 const Padding(
                   padding: EdgeInsets.only(left: 4),
                   child: Text('✍', style: TextStyle(fontSize: 10)),

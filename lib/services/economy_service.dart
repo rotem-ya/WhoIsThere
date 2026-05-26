@@ -315,6 +315,22 @@ class EconomyService {
     return success;
   }
 
+  // ── Stun card purchase ────────────────────────────────────────
+
+  Future<bool> buyStunCard(String uid) async {
+    const price = EconomyConfig.stunCardPrice;
+    final success = await spendCoins(
+      uid: uid,
+      amount: price,
+      type: TransactionType.stunCardPurchase,
+    );
+    if (success) {
+      await _db.doc('users/$uid').update({'stunCardCount': FieldValue.increment(1)});
+      QaLoggerService.instance.log('ECONOMY', 'STUN_CARD_PURCHASED uid=${uid.substring(0, uid.length.clamp(0, 6))} price=$price');
+    }
+    return success;
+  }
+
   // ── Private helpers ───────────────────────────────────────────
 
   Future<void> _applyDelta({

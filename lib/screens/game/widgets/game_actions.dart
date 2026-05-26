@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/economy_config.dart';
+import '../../../models/player_model.dart';
 import '../../../providers/providers.dart';
 import '../../../services/feedback_service.dart';
-
 import '../../../services/reward_calculator.dart';
 import '../../../widgets/game/animated_reward.dart';
 
@@ -24,6 +25,10 @@ class GameActions extends ConsumerWidget {
   final VoidCallback? onGuess;
   final bool isBlocked;
   final int blockedRemaining;
+  final int stunCardCount;
+  final bool canUseStunCard;
+  final List<PlayerModel> stunTargets;
+  final Future<void> Function(String targetId)? onStunCard;
 
   const GameActions({
     required this.isMyTurn,
@@ -41,6 +46,10 @@ class GameActions extends ConsumerWidget {
     this.isScoreCliff = false,
     this.isBlocked = false,
     this.blockedRemaining = 0,
+    this.stunCardCount = 0,
+    this.canUseStunCard = false,
+    this.stunTargets = const [],
+    this.onStunCard,
   });
 
   @override
@@ -124,6 +133,15 @@ class GameActions extends ConsumerWidget {
                     onTap: canAffordSecondHint && !isBusy ? onBuySecondHint : null,
                   ),
                 ],
+              ],
+              // Stun card — only in multiplayer when user has cards
+              if (canUseStunCard && onStunCard != null) ...[
+                const SizedBox(height: 6),
+                _StunCardButton(
+                  stunCardCount: stunCardCount,
+                  targets: stunTargets,
+                  onStun: onStunCard!,
+                ),
               ],
             ],
           ),
@@ -342,6 +360,99 @@ class _ActionButton extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Stun card button ──────────────────────────────────────────────────────────
+
+class _StunCardButton extends StatelessWidget {
+  final int stunCardCount;
+  final List<PlayerModel> targets;
+  final Future<void> Function(String targetId) onStun;
+
+  const _StunCardButton({
+    required this.stunCardCount,
+    required this.targets,
+    required this.onStun,
+  });
+
+  Future<void> _showTargetPicker(BuildContext context) async {
+    HapticFeedback.lightImpact();
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF0D1A2E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Text('🔒', style: TextStyle(fontSize: 22)),
+              SizedBox(width: 8),
+              Text(
+                'בחר שחקן לחסימה',
+                style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: targets.map((p) => ListTile(
+              onTap: () => Navigator.pop(ctx, p.id),
+              leading: const Text('👤', style: TextStyle(fontSize: 20)),
+              title: Text(
+                p.name,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            )).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('ביטול', style: TextStyle(color: Colors.white54)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (chosen != null) {
+      await onStun(chosen);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showTargetPicker(context),
+      child: Container(
+        height: 42,
+        decoration: BoxDecoration(
+          color: const Color(0xFF07101F).withOpacity(0.56),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: const Color(0xFF8B4FBF).withOpacity(0.45),
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('🔒', style: TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+            Text(
+              'עצור שחקן ($stunCardCount)',
+              textDirection: TextDirection.rtl,
+              style: const TextStyle(
+                color: Color(0xFFCF9FFF),
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
         ),
       ),
     );

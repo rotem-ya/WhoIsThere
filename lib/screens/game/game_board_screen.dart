@@ -1881,6 +1881,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                           room.guessModePlayerId == currentUserId)
                       ? (value) => _submitGuess(room, currentUserId!, value)
                       : null,
+                  stunCardCount: user?.stunCardCount ?? 0,
+                  onStunCard: currentUserId == null ? null : (targetId) async {
+                    final success = await ref.read(roomServiceProvider).applyStunCard(
+                      roomId: room.id,
+                      actorUid: currentUserId,
+                      targetUid: targetId,
+                    );
+                    if (!success && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('הכרטיס לא הופעל — נסה שוב')),
+                      );
+                    }
+                  },
                 );
               },
             ),
