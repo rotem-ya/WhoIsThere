@@ -129,10 +129,12 @@ class RoomService {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
 
-    // Read the host's selected card skin and total points
+    // Read the host's selected card skin, total points and discovered count
     final userSnap = await _firestore.doc('users/$hostId').get();
     final cardSkinId = (userSnap.data()?['selectedCardSkin'] as String?) ?? 'default';
     final hostTotalPoints = (userSnap.data()?['totalPoints'] as int?) ?? 0;
+    final hostDiscoveredCount =
+        (userSnap.data()?['discoveredImageIds'] as List?)?.length ?? 0;
 
     final host = PlayerModel(
       id: hostId,
@@ -140,6 +142,7 @@ class RoomService {
       photoUrl: hostPhotoUrl,
       score: 0,
       totalPoints: hostTotalPoints,
+      discoveredCount: hostDiscoveredCount,
       isHost: true,
     );
 
