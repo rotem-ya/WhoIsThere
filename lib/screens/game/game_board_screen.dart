@@ -1844,7 +1844,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   onBuySecondHint: (isSolo && currentUserId != null && _purchasedFacts.length == 1 && (_image?.facts.length ?? 0) > 1)
                       ? () => _buySecondHint(room, currentUserId!)
                       : null,
-                  onGuess: canGuessNow ? () => _enterGuessMode(room, currentUserId!) : () {},
+                  onGuess: (!_isFinished && currentUserId != null) ? () => _enterGuessMode(room, currentUserId!) : null,
                   onGuessSubmit: (currentUserId != null &&
                           room.turnPhase == TurnPhase.guessMode &&
                           room.guessModePlayerId == currentUserId)

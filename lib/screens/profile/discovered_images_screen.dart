@@ -172,18 +172,6 @@ class DiscoveredImagesScreen extends ConsumerWidget {
                 ),
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Text(
-              'גילית ${discoveredImageIds.length} מתוך ${_placePositions.length} מקומות',
-              style: const TextStyle(
-                color: Colors.white54,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
         ],
       ),
     );

@@ -89,7 +89,7 @@ class _GuessBannerState extends State<GuessBanner>
             children: [
               Flexible(
                 child: Text(
-                  '$playerName ניחש: "$guess"',
+                  isCorrect ? '$playerName ניחש נכון!' : '$playerName ניסה לנחש',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
