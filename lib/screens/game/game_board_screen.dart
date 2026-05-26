@@ -2034,17 +2034,14 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
       builder: (context, constraints) {
         final imgSize = min(
           constraints.maxWidth - 32,
-          min(constraints.maxHeight * 0.58, 280.0),
+          min(constraints.maxHeight * 0.52, 240.0),
         );
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
                   children: [
                     if (widget.imageUrl != null) ...[
                       ClipRRect(
@@ -2184,9 +2181,7 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
                   ],
                 ),
               ),
-            ),
-          ),
-        );
+            );
       },
     );
   }

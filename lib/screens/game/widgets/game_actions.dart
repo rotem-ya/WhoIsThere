@@ -56,7 +56,7 @@ class GameActions extends ConsumerWidget {
     final canAffordFirstHint = wallet != null && wallet.coins >= EconomyConfig.hintFirstPrice;
     final canAffordSecondHint = wallet != null && wallet.coins >= EconomyConfig.hintSecondPrice;
 
-    // Primary button label — always "נחש עכשיו!" unless blocked
+    // Primary button label
     final String primaryLabel;
     if (isBlocked) {
       primaryLabel = blockedRemaining > 0 ? 'חסום ($blockedRemaining גילויים)' : 'חסום';
@@ -64,9 +64,10 @@ class GameActions extends ConsumerWidget {
       primaryLabel = 'נחש עכשיו!';
     }
 
-    final primaryIsActive = !isBlocked;
+    // Button is active (full opacity + tappable) only during the guess window
+    final primaryIsActive = guessActive;
     final primaryGlow = guessActive;
-    final primaryOnTap = (!isBlocked && onGuess != null) ? onGuess : (!isBlocked ? () {} : null);
+    final primaryOnTap = guessActive ? onGuess : null;
 
     // Show the decaying early-guess bonus always (hides itself when it hits 0)
     final showReward = earlyBonus > 0;
