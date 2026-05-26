@@ -245,6 +245,7 @@ class _IsraelMapView extends StatelessWidget {
                   left: px - tapSize / 2,
                   top: py - tapSize / 2,
                   child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () => _onDotTap(context, id),
                     child: SizedBox(
                       width: tapSize,
@@ -472,13 +473,7 @@ class _PlaceSheet extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: image.thumbnailUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: image.thumbnailUrl,
-                      height: 170,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => const _SheetImagePlaceholder(),
-                    )
+                  ? _PlaceImage(url: image.thumbnailUrl)
                   : const _SheetImagePlaceholder(),
             ),
           ),
@@ -526,6 +521,32 @@ class _PlaceSheet extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// Loads local assets (assets/...) with Image.asset, network URLs with CachedNetworkImage.
+class _PlaceImage extends StatelessWidget {
+  final String url;
+  const _PlaceImage({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.startsWith('assets/')) {
+      return Image.asset(
+        url,
+        height: 170,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const _SheetImagePlaceholder(),
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: url,
+      height: 170,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorWidget: (_, __, ___) => const _SheetImagePlaceholder(),
     );
   }
 }
