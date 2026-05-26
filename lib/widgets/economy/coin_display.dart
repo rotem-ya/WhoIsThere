@@ -107,10 +107,12 @@ class _AnimatedCoinChipState extends State<_AnimatedCoinChip>
                   ),
                 ),
                 child: Text(
-                  '$displayed',
+                  displayed < 0 ? '−${displayed.abs()}' : '$displayed',
                   key: ValueKey(displayed),
                   style: TextStyle(
-                    color: const Color(0xFF07101F),
+                    color: displayed < 0
+                        ? const Color(0xFFFF6B6B)
+                        : const Color(0xFF07101F),
                     fontSize: fontSize,
                     fontWeight: FontWeight.w900,
                     height: 1,

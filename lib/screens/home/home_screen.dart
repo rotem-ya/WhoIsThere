@@ -481,14 +481,12 @@ class _QuickGameButton extends StatelessWidget {
                             style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, height: 1.1),
                           ),
                           const SizedBox(height: 3),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '${EconomyConfig.gameEntryFee} 🪙  •  קופה ${EconomyConfig.gameEntryFee * players} 🪙',
-                                style: TextStyle(color: const Color(0xFFD4AF37).withOpacity(0.80), fontSize: 11, fontWeight: FontWeight.w700),
-                              ),
-                            ],
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '${EconomyConfig.gameEntryFee} 🪙  •  קופה ${EconomyConfig.gameEntryFee * players} 🪙',
+                              style: TextStyle(color: const Color(0xFFD4AF37).withOpacity(0.80), fontSize: 11, fontWeight: FontWeight.w700),
+                            ),
                           ),
                         ],
                       ),

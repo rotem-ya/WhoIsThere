@@ -81,8 +81,8 @@ class GameActions extends ConsumerWidget {
       primaryLabel = 'נחש עכשיו!';
     }
 
-    // Button is always visible and tappable; server enforces timing
-    final primaryIsActive = !_anyBlocked;
+    // Active (full opacity) during guessOpportunity or when showing a block message
+    final primaryIsActive = canGuessNow || _anyBlocked;
     final primaryGlow = guessActive && !_anyBlocked;
     final primaryOnTap = _anyBlocked ? null : onGuess;
 

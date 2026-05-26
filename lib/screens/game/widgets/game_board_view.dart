@@ -242,7 +242,7 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
                   HapticFeedback.lightImpact();
                   _setPressed(true);
                 }
-              : null,
+              : (_) => HapticFeedback.selectionClick(),
           onTapCancel: () => _setPressed(false),
           onTapUp: _canTap
               ? (_) {

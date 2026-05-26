@@ -1425,6 +1425,31 @@ class RoomService {
       }
 
       // Wrong guess — dynamic penalty: 2 coins for 1st wrong, +2 for each subsequent (goes to pot)
+      // Bots have no wallet document — skip wallet operations entirely
+      if (userId.startsWith('virtual_')) {
+        final currentWrongCountBot = room.wrongGuessCounts[userId] ?? 0;
+        final currentScoreBot = room.players[userId]?.score ?? 0;
+        final nextTurnIndexBot = room.currentTurnIndex + 1;
+        tx.update(_rooms.doc(roomId), {
+          'currentTurnIndex': nextTurnIndexBot,
+          'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
+          'guessCount': FieldValue.increment(1),
+          'turnPhase': TurnPhase.revealTurn.name,
+          'revealDeadlineMs': nowMs + EconomyConfig.autoRevealIntervalMs,
+          'guessModePlayerId': null,
+          'guessOpportunityPlayerId': null,
+          'guessOpportunityDeadlineMs': null,
+          'guessModeDeadlineMs': null,
+          'wrongGuessCounts.$userId': currentWrongCountBot + 1,
+          'revealCycleId': FieldValue.increment(1),
+          'blockedGuessers.$userId': room.revealCount + EconomyConfig.wrongGuessBlockTurns,
+          'players.$userId.score': FieldValue.increment(-difficulty.wrongGuessPenalty),
+        });
+        QaLoggerService.instance.log('GUESS',
+            'TX_COMMIT name=submitAnswer result=wrong latencyMs=${DateTime.now().millisecondsSinceEpoch - txStartMs}');
+        return;
+      }
+
       final walletDoc = await tx.get(_walletRef(userId));
       final wallet = walletDoc.exists
           ? UserEconomyModel.fromFirestore(
