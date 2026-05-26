@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
@@ -220,22 +221,26 @@ class _IsraelMapView extends StatelessWidget {
         final w = constraints.maxWidth;
         final h = constraints.maxHeight;
 
+        final placeEntries = _placePositions.entries.toList();
         return ClipRect(
           child: Stack(
             children: [
-              // Neon map border
+              // Neon map border — fades in
               CustomPaint(
                 size: Size(w, h),
                 painter: _IsraelMapPainter(),
-              ),
-              // Place dots — dim for undiscovered, glowing for discovered
-              ..._placePositions.entries.map((entry) {
+              ).animate().fadeIn(duration: 600.ms, curve: Curves.easeOut),
+              // Place dots — staggered reveal
+              ...placeEntries.asMap().entries.map((indexed) {
+                final i = indexed.key;
+                final entry = indexed.value;
                 final id = entry.key;
                 final pos = entry.value;
                 final discovered = discoveredSet.contains(id);
                 final px = pos.dx * w;
                 final py = pos.dy * h;
                 const tapSize = 28.0;
+                final delayMs = discovered ? (260 + i * 18) : (60 + i * 8);
                 return Positioned(
                   left: px - tapSize / 2,
                   top: py - tapSize / 2,
@@ -245,19 +250,31 @@ class _IsraelMapView extends StatelessWidget {
                       width: tapSize,
                       height: tapSize,
                       child: Center(
-                        child: discovered
-                            ? const _GlowDot(radius: 4.5)
-                            : const _DimDot(radius: 2.0),
+                        child: (discovered
+                                ? const _GlowDot(radius: 4.5)
+                                : const _DimDot(radius: 2.0))
+                            .animate(
+                              delay: Duration(milliseconds: delayMs),
+                            )
+                            .fadeIn(duration: 250.ms, curve: Curves.easeOut)
+                            .scaleXY(
+                              begin: 0.0,
+                              end: 1.0,
+                              duration: 300.ms,
+                              curve: Curves.elasticOut,
+                            ),
                       ),
                     ),
                   ),
                 );
               }),
-              // North indicator
-              const Positioned(
+              // North indicator — appears last
+              Positioned(
                 top: 6,
                 left: 6,
-                child: _NorthIndicator(),
+                child: const _NorthIndicator()
+                    .animate(delay: 650.ms)
+                    .fadeIn(duration: 300.ms),
               ),
             ],
           ),

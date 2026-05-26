@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/economy_config.dart';
@@ -231,7 +232,7 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasReward = reward != null;
 
-    return GestureDetector(
+    final btn = GestureDetector(
       onTap: onTap == null
           ? null
           : () {
@@ -363,6 +364,17 @@ class _ActionButton extends StatelessWidget {
         ),
       ),
     );
+    if (glow) {
+      return btn
+          .animate(onPlay: (c) => c.repeat(reverse: true))
+          .scaleXY(
+            begin: 1.0,
+            end: 1.018,
+            duration: 860.ms,
+            curve: Curves.easeInOut,
+          );
+    }
+    return btn;
   }
 }
 

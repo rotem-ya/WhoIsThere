@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -129,10 +130,22 @@ class _PurchaseTab extends StatelessWidget {
       child: Column(
         children: [
           // Starter Pack
-          Expanded(flex: 3, child: _StarterPackCard(coins: coins)),
+          Expanded(
+            flex: 3,
+            child: _StarterPackCard(coins: coins)
+                .animate(delay: 80.ms)
+                .fadeIn(duration: 340.ms, curve: Curves.easeOut)
+                .slideY(begin: 0.06, end: 0, duration: 340.ms, curve: Curves.easeOut),
+          ),
           const SizedBox(height: AppSpacing.md),
           // Rewarded Ad
-          Expanded(flex: 2, child: _RewardedAdTile(ref: ref)),
+          Expanded(
+            flex: 2,
+            child: _RewardedAdTile(ref: ref)
+                .animate(delay: 180.ms)
+                .fadeIn(duration: 340.ms, curve: Curves.easeOut)
+                .slideY(begin: 0.06, end: 0, duration: 340.ms, curve: Curves.easeOut),
+          ),
         ],
       ),
     );
@@ -171,7 +184,10 @@ class _HintsTab extends StatelessWidget {
                     coins: coins,
                     onBuy: () => _buyHint(
                         context, ref, HintType.revealTile, coins),
-                  ),
+                  )
+                      .animate(delay: 80.ms)
+                      .fadeIn(duration: 340.ms, curve: Curves.easeOut)
+                      .slideY(begin: 0.06, end: 0, duration: 340.ms),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
@@ -183,7 +199,10 @@ class _HintsTab extends StatelessWidget {
                     coins: coins,
                     onBuy: () => _buyHint(
                         context, ref, HintType.extraGuess, coins),
-                  ),
+                  )
+                      .animate(delay: 160.ms)
+                      .fadeIn(duration: 340.ms, curve: Curves.easeOut)
+                      .slideY(begin: 0.06, end: 0, duration: 340.ms),
                 ),
               ],
             ),
@@ -256,7 +275,10 @@ class _CardsTab extends StatelessWidget {
             stunCount: stunCount,
             canAfford: canAfford,
             onBuy: () => _buyStunCard(context),
-          ),
+          )
+              .animate(delay: 80.ms)
+              .fadeIn(duration: 340.ms, curve: Curves.easeOut)
+              .slideY(begin: 0.06, end: 0, duration: 340.ms),
         ],
       ),
     );
