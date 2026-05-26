@@ -412,6 +412,13 @@ class RoomService {
           {imageId: FieldValue.increment(1)},
           SetOptions(merge: true),
         ).ignore();
+      }
+    }
+  }
+
+  void _recordDiscoveredForAll(Map<String, PlayerModel> players, String imageId) {
+    for (final entry in players.entries) {
+      if (!entry.value.isBot) {
         _firestore.doc('users/${entry.key}').update({
           'discoveredImageIds': FieldValue.arrayUnion([imageId]),
         }).ignore();
@@ -807,6 +814,8 @@ class RoomService {
     bool committed = false;
     bool noWinner = false;
     List<String>? playerIdsForRefund;
+    Map<String, PlayerModel>? noWinnerPlayers;
+    String? noWinnerImageId;
 
     try {
       await _firestore.runTransaction((tx) async {
@@ -862,6 +871,8 @@ class RoomService {
             committed = true;
             noWinner = true;
             playerIdsForRefund = room.players.keys.toList();
+            noWinnerPlayers = room.players;
+            noWinnerImageId = room.selectedImageId;
             return;
           }
 
@@ -915,6 +926,9 @@ class RoomService {
 
     if (noWinner && playerIdsForRefund != null) {
       unawaited(refundPot(roomId));
+      if (noWinnerPlayers != null && noWinnerImageId != null && noWinnerImageId!.isNotEmpty) {
+        _recordDiscoveredForAll(noWinnerPlayers!, noWinnerImageId!);
+      }
     }
 
     return committed;
@@ -1467,6 +1481,14 @@ class RoomService {
 
     if (isCorrect) {
       unawaited(distributePot(roomId, userId));
+      // Record discovered image for all players only when game ends with a correct answer
+      final roomSnap = await _rooms.doc(roomId).get();
+      if (roomSnap.exists) {
+        final endRoom = RoomModel.fromFirestore(roomSnap);
+        if (endRoom.selectedImageId != null && endRoom.selectedImageId!.isNotEmpty) {
+          _recordDiscoveredForAll(endRoom.players, endRoom.selectedImageId!);
+        }
+      }
     } else if (needsEliminationCheck) {
       await _checkLastPlayerStanding(roomId);
     }
