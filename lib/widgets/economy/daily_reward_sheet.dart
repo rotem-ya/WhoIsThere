@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +6,7 @@ import '../../core/constants/economy_config.dart';
 import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
 import '../../services/reward_calculator.dart';
+import '../../services/settings_service.dart';
 
 void showDailyRewardSheet(BuildContext context, WidgetRef ref) {
   showModalBottomSheet<void>(
@@ -29,6 +31,8 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
   int _earnedCoins = 0;
 
   late final AnimationController _claimAnim;
+  static final AudioPlayer _coinsPlayer = AudioPlayer(playerId: 'daily-coins');
+  static final AssetSource _coinsSound = AssetSource('sounds/daily_coins.mp3');
 
   @override
   void initState() {
@@ -65,6 +69,11 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
           _isClaiming = false;
         });
         _claimAnim.forward();
+        final sfxScale = SettingsService.instance.sfxVolume;
+        _coinsPlayer.stop().then((_) async {
+          await _coinsPlayer.setVolume(sfxScale);
+          await _coinsPlayer.play(_coinsSound);
+        }).ignore();
         await Future.delayed(const Duration(milliseconds: 2200));
         if (mounted) Navigator.pop(context);
       } else {
