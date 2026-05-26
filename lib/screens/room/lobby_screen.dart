@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/player_model.dart';
 import '../../services/qa_logger_service.dart';
+import '../../services/settings_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../widgets/common/app_feedback.dart';
@@ -28,6 +30,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   bool _isStarting = false;
   bool _codeCopied = false;
   bool _lobbyLogged = false;
+  int _lastPlayerCount = 0;
+  static final AudioPlayer _joinPlayer = AudioPlayer(playerId: 'player-join');
+  static final AssetSource _joinSound = AssetSource('sounds/player_join.wav');
 
   @override
   void initState() {
@@ -62,6 +67,19 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   Widget build(BuildContext context) {
     final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
     final currentUser = ref.watch(currentUserProvider).value;
+
+    ref.listen(roomStreamProvider(widget.roomId), (prev, next) {
+      final prevCount = prev?.valueOrNull?.players.length ?? 0;
+      final nextCount = next.valueOrNull?.players.length ?? 0;
+      if (nextCount > prevCount && nextCount > _lastPlayerCount) {
+        _lastPlayerCount = nextCount;
+        final sfxScale = SettingsService.instance.sfxVolume;
+        _joinPlayer.stop().then((_) async {
+          await _joinPlayer.setVolume(sfxScale);
+          await _joinPlayer.play(_joinSound);
+        }).ignore();
+      }
+    });
 
     return roomAsync.when(
       data: (room) {
