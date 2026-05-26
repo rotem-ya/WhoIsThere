@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/constants/build_info.dart';
 
 /// Persistent QA event log. Events survive app restarts (up to [_maxEvents]).
 /// Call [init] once from main() before runApp. Call [log] anywhere.
@@ -25,7 +26,7 @@ class QaLoggerService {
       while (_events.length > _maxEvents) _events.removeAt(0);
     } catch (_) {}
     _initialized = true;
-    log('QA', 'SESSION_START stored=${_events.length - 1}');
+    log('QA', 'SESSION_START stored=${_events.length - 1} build=$kBuildLabel branch=$kGitBranch version=$kAppVersion');
   }
 
   void log(String tag, String message) {
