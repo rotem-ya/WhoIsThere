@@ -1233,7 +1233,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (image == null || value.trim().isEmpty) return false;
 
     // Stop tick sounds immediately on submission
-    _revealTickPlayer.stop().ignore();
     _guessModeTickPlayer.stop().ignore();
 
     setState(() => _hasGuessedThisTurn = true);
@@ -1490,7 +1489,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
                   if (_lastKnownTurnPhase == TurnPhase.guessMode && room.turnPhase != TurnPhase.guessMode) {
                     QaLoggerService.instance.log('GUESS', 'GUESS_MODE_UI_EXIT');
-                    _revealTickPlayer.stop().ignore();
                     _guessModeTickPlayer.stop().ignore();
                   }
 
@@ -1775,14 +1773,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 // In auto-reveal mode, nobody has a manual reveal turn.
                 const isMyTurn = false;
                 // canGuessNow: I have the guess opportunity window and deadline has not passed
+                final _nowMs = DateTime.now().millisecondsSinceEpoch;
+                final _guessBlockedUntil = currentUserId != null
+                    ? (room.guessBlockedUntilMs[currentUserId] ?? 0)
+                    : 0;
+                final _isTimeBlocked = _guessBlockedUntil > _nowMs;
                 final canGuessNow = !_isFinished &&
                     currentUserId != null &&
                     room.turnPhase == TurnPhase.guessOpportunity &&
                     room.guessOpportunityPlayerId == null &&
                     !room.isBlockedFromGuessing(currentUserId) &&
+                    !_isTimeBlocked &&
                     (room.guessOpportunityDeadlineMs == null ||
-                        room.guessOpportunityDeadlineMs! >
-                            DateTime.now().millisecondsSinceEpoch);
+                        room.guessOpportunityDeadlineMs! > _nowMs);
                 final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
                 final _totalTiles = room.gridSize * room.gridSize;
                 final revealRatio = _totalTiles > 0 ? room.placedPieces.length / _totalTiles : 0.0;
@@ -1860,6 +1863,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       );
                     }
                   },
+                  guessBlock5Count: user?.guessBlock5Count ?? 0,
+                  guessBlock10Count: user?.guessBlock10Count ?? 0,
+                  blackoutCardCount: user?.blackoutCardCount ?? 0,
+                  guessBlockedUntilMs: room.guessBlockedUntilMs,
+                  blackoutActiveUntilMs: room.blackoutActiveUntilMs,
                 );
               },
             ),

@@ -1552,6 +1552,74 @@ class RoomService {
     return success;
   }
 
+  /// Blocks [targetUid] from guessing for [durationMs] milliseconds.
+  /// Decrements actor's guessBlock5Count or guessBlock10Count.
+  Future<bool> applyGuessBlockCard({
+    required String roomId,
+    required String actorUid,
+    required String targetUid,
+    required bool is10s,
+  }) async {
+    final field = is10s ? 'guessBlock10Count' : 'guessBlock5Count';
+    final duration = is10s ? EconomyConfig.guessBlock10DurationMs : EconomyConfig.guessBlock5DurationMs;
+    bool success = false;
+    try {
+      await _firestore.runTransaction((tx) async {
+        final userSnap = await tx.get(_firestore.doc('users/$actorUid'));
+        if (!userSnap.exists) return;
+        final count = (userSnap.data() as Map<String, dynamic>)[field] as int? ?? 0;
+        if (count <= 0) return;
+        final roomSnap = await tx.get(_rooms.doc(roomId));
+        if (!roomSnap.exists) return;
+        final room = RoomModel.fromFirestore(roomSnap);
+        if (room.phase == GamePhase.finished) return;
+        final unblockAt = DateTime.now().millisecondsSinceEpoch + duration;
+        tx.update(_firestore.doc('users/$actorUid'), {field: FieldValue.increment(-1)});
+        tx.update(_rooms.doc(roomId), {'guessBlockedUntilMs.$targetUid': unblockAt});
+        success = true;
+      });
+    } catch (e) {
+      QaLoggerService.instance.log('CARD', 'GUESS_BLOCK_ERROR error=$e');
+    }
+    if (success) {
+      QaLoggerService.instance.log('CARD',
+          'GUESS_BLOCK_APPLIED is10s=$is10s actor=${actorUid.substring(0, actorUid.length.clamp(0, 6))} target=${targetUid.substring(0, targetUid.length.clamp(0, 6))}');
+    }
+    return success;
+  }
+
+  /// Activates blackout on [targetUid]'s image area for [blackoutDurationMs] ms.
+  Future<bool> applyBlackoutCard({
+    required String roomId,
+    required String actorUid,
+    required String targetUid,
+  }) async {
+    bool success = false;
+    try {
+      await _firestore.runTransaction((tx) async {
+        final userSnap = await tx.get(_firestore.doc('users/$actorUid'));
+        if (!userSnap.exists) return;
+        final count = (userSnap.data() as Map<String, dynamic>)['blackoutCardCount'] as int? ?? 0;
+        if (count <= 0) return;
+        final roomSnap = await tx.get(_rooms.doc(roomId));
+        if (!roomSnap.exists) return;
+        final room = RoomModel.fromFirestore(roomSnap);
+        if (room.phase == GamePhase.finished) return;
+        final expiresAt = DateTime.now().millisecondsSinceEpoch + EconomyConfig.blackoutDurationMs;
+        tx.update(_firestore.doc('users/$actorUid'), {'blackoutCardCount': FieldValue.increment(-1)});
+        tx.update(_rooms.doc(roomId), {'blackoutActiveUntilMs.$targetUid': expiresAt});
+        success = true;
+      });
+    } catch (e) {
+      QaLoggerService.instance.log('CARD', 'BLACKOUT_ERROR error=$e');
+    }
+    if (success) {
+      QaLoggerService.instance.log('CARD',
+          'BLACKOUT_APPLIED actor=${actorUid.substring(0, actorUid.length.clamp(0, 6))} target=${targetUid.substring(0, targetUid.length.clamp(0, 6))}');
+    }
+    return success;
+  }
+
   Future<void> _checkLastPlayerStanding(String roomId) async {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);

@@ -26,6 +26,8 @@ class GameActions extends ConsumerWidget {
   final VoidCallback? onGuess;
   final bool isBlocked;
   final int blockedRemaining;
+  final bool isTimeBlocked;
+  final int timeBlockSecsLeft;
   final int stunCardCount;
   final bool canUseStunCard;
   final List<PlayerModel> stunTargets;
@@ -47,6 +49,8 @@ class GameActions extends ConsumerWidget {
     this.isScoreCliff = false,
     this.isBlocked = false,
     this.blockedRemaining = 0,
+    this.isTimeBlocked = false,
+    this.timeBlockSecsLeft = 0,
     this.stunCardCount = 0,
     this.canUseStunCard = false,
     this.stunTargets = const [],
@@ -67,17 +71,20 @@ class GameActions extends ConsumerWidget {
     final canAffordSecondHint = wallet != null && wallet.coins >= EconomyConfig.hintSecondPrice;
 
     // Primary button label
+    final _anyBlocked = isBlocked || isTimeBlocked;
     final String primaryLabel;
-    if (isBlocked) {
+    if (isTimeBlocked && timeBlockSecsLeft > 0) {
+      primaryLabel = 'חסום (${timeBlockSecsLeft}s)';
+    } else if (isBlocked) {
       primaryLabel = blockedRemaining > 0 ? 'חסום ($blockedRemaining גילויים)' : 'חסום';
     } else {
       primaryLabel = 'נחש עכשיו!';
     }
 
     // Button is always visible and tappable; server enforces timing
-    final primaryIsActive = !isBlocked;
-    final primaryGlow = guessActive;
-    final primaryOnTap = isBlocked ? null : onGuess;
+    final primaryIsActive = !_anyBlocked;
+    final primaryGlow = guessActive && !_anyBlocked;
+    final primaryOnTap = _anyBlocked ? null : onGuess;
 
     // Show the decaying early-guess bonus always (hides itself when it hits 0)
     final showReward = earlyBonus > 0;

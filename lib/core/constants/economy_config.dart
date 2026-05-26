@@ -97,4 +97,14 @@ class EconomyConfig {
   // ── Stun card ─────────────────────────────────────────────────
   static const int stunCardPrice = 30;
   static const int stunCardBlockTurns = 2;
+
+  // ── Guess-block cards (time-based) ────────────────────────────
+  static const int guessBlock5Price = 20;   // blocks target for 5 seconds
+  static const int guessBlock10Price = 35;  // blocks target for 10 seconds
+  static const int guessBlock5DurationMs = 5000;
+  static const int guessBlock10DurationMs = 10000;
+
+  // ── Blackout card ─────────────────────────────────────────────
+  static const int blackoutCardPrice = 25;
+  static const int blackoutDurationMs = 5000;
 }

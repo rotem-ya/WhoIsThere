@@ -258,25 +258,68 @@ class _CardsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider).valueOrNull;
     final stunCount = user?.stunCardCount ?? 0;
-    final canAfford = coins >= EconomyConfig.stunCardPrice;
+    final block5Count = user?.guessBlock5Count ?? 0;
+    final block10Count = user?.guessBlock10Count ?? 0;
+    final blackoutCount = user?.blackoutCardCount ?? 0;
 
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: ListView(
         children: [
           const Text(
-            'כרטיסים שנרכשו נשמרים ומשמשים מחוץ למשחק',
+            'כרטיסים שנרכשו נשמרים ומשמשים במהלך משחק',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.white54, fontSize: 13),
           ),
           const SizedBox(height: AppSpacing.lg),
           _StunCardTile(
             stunCount: stunCount,
-            canAfford: canAfford,
-            onBuy: () => _buyStunCard(context),
+            canAfford: coins >= EconomyConfig.stunCardPrice,
+            onBuy: () => _buyCard(context, 'stun'),
           )
               .animate(delay: 80.ms)
+              .fadeIn(duration: 340.ms, curve: Curves.easeOut)
+              .slideY(begin: 0.06, end: 0, duration: 340.ms),
+          const SizedBox(height: AppSpacing.md),
+          _ActionCardTile(
+            emoji: '⏱',
+            title: 'חסימת ניחוש — 5 שניות',
+            description: 'מונע מיריב לנחש למשך 5 שניות',
+            price: EconomyConfig.guessBlock5Price,
+            owned: block5Count,
+            canAfford: coins >= EconomyConfig.guessBlock5Price,
+            accentColor: const Color(0xFF1890D0),
+            onBuy: () => _buyCard(context, 'block5'),
+          )
+              .animate(delay: 140.ms)
+              .fadeIn(duration: 340.ms, curve: Curves.easeOut)
+              .slideY(begin: 0.06, end: 0, duration: 340.ms),
+          const SizedBox(height: AppSpacing.md),
+          _ActionCardTile(
+            emoji: '⏱',
+            title: 'חסימת ניחוש — 10 שניות',
+            description: 'מונע מיריב לנחש למשך 10 שניות',
+            price: EconomyConfig.guessBlock10Price,
+            owned: block10Count,
+            canAfford: coins >= EconomyConfig.guessBlock10Price,
+            accentColor: const Color(0xFF1060A0),
+            onBuy: () => _buyCard(context, 'block10'),
+          )
+              .animate(delay: 200.ms)
+              .fadeIn(duration: 340.ms, curve: Curves.easeOut)
+              .slideY(begin: 0.06, end: 0, duration: 340.ms),
+          const SizedBox(height: AppSpacing.md),
+          _ActionCardTile(
+            emoji: '🕶',
+            title: 'כרטיס החשכה',
+            description: 'מסתיר את הלוח מיריב למשך 5 שניות',
+            price: EconomyConfig.blackoutCardPrice,
+            owned: blackoutCount,
+            canAfford: coins >= EconomyConfig.blackoutCardPrice,
+            accentColor: const Color(0xFF8B4FBF),
+            onBuy: () => _buyCard(context, 'blackout'),
+          )
+              .animate(delay: 260.ms)
               .fadeIn(duration: 340.ms, curve: Curves.easeOut)
               .slideY(begin: 0.06, end: 0, duration: 340.ms),
         ],
@@ -284,32 +327,61 @@ class _CardsTab extends StatelessWidget {
     );
   }
 
-  Future<void> _buyStunCard(BuildContext context) async {
+  Future<void> _buyCard(BuildContext context, String type) async {
     HapticFeedback.lightImpact();
     AppFeedback.selection();
     final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
     if (uid == null) return;
 
-    if (coins < EconomyConfig.stunCardPrice) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('אין מספיק מטבעות!')),
-      );
+    final economy = ref.read(economyServiceProvider);
+    final Future<bool> Function() buyFn;
+    final String label;
+    final int price;
+
+    if (type == 'stun') {
+      price = EconomyConfig.stunCardPrice;
+      buyFn = () => economy.buyStunCard(uid);
+      label = 'כרטיס עצור';
+    } else if (type == 'block5') {
+      price = EconomyConfig.guessBlock5Price;
+      buyFn = () => economy.buyGuessBlock5Card(uid);
+      label = 'חסימת ניחוש 5s';
+    } else if (type == 'block10') {
+      price = EconomyConfig.guessBlock10Price;
+      buyFn = () => economy.buyGuessBlock10Card(uid);
+      label = 'חסימת ניחוש 10s';
+    } else if (type == 'blackout') {
+      price = EconomyConfig.blackoutCardPrice;
+      buyFn = () => economy.buyBlackoutCard(uid);
+      label = 'כרטיס החשכה';
+    } else {
       return;
     }
 
-    final granted = await ref.read(economyServiceProvider).buyStunCard(uid);
+    if (coins < price) {
+      if (context.mounted) _showNoCoins(context);
+      return;
+    }
+
+    final granted = await buyFn();
     if (!context.mounted) return;
 
     if (granted) {
       AppFeedback.success();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ כרטיס עצור נרכש!')),
+        SnackBar(content: Text('✅ $label נרכש!')),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('הרכישה נכשלה, נסה שוב')),
       );
     }
+  }
+
+  void _showNoCoins(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('אין מספיק מטבעות!')),
+    );
   }
 }
 
@@ -420,6 +492,130 @@ class _StunCardTile extends StatelessWidget {
                     ),
                     child: Text(
                       '${EconomyConfig.stunCardPrice} 🪙',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Generic action card tile ──────────────────────────────────────────────────
+
+class _ActionCardTile extends StatelessWidget {
+  final String emoji;
+  final String title;
+  final String description;
+  final int price;
+  final int owned;
+  final bool canAfford;
+  final Color accentColor;
+  final VoidCallback onBuy;
+
+  const _ActionCardTile({
+    required this.emoji,
+    required this.title,
+    required this.description,
+    required this.price,
+    required this.owned,
+    required this.canAfford,
+    required this.accentColor,
+    required this.onBuy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [const Color(0xFF0A1A30), Color.lerp(const Color(0xFF0A1A30), accentColor, 0.12)!],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accentColor.withOpacity(0.50), width: 1.4),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Center(child: Text(emoji, style: const TextStyle(fontSize: 28))),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: TextStyle(color: Colors.white.withOpacity(0.60), fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: accentColor.withOpacity(0.30)),
+                ),
+                child: Text(
+                  'ברשותך: $owned',
+                  style: TextStyle(
+                    color: accentColor.withOpacity(0.90),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              PressableScale(
+                onTap: canAfford ? onBuy : null,
+                scale: 0.93,
+                child: AnimatedOpacity(
+                  opacity: canAfford ? 1.0 : 0.45,
+                  duration: const Duration(milliseconds: 160),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: canAfford ? accentColor : Colors.white12,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      '$price 🪙',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 15,

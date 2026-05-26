@@ -40,6 +40,8 @@ class RoomModel extends Equatable {
   final List<String> entryFeePaidPlayerIds;
   final String cardSkinId;
   final int? pendingRevealTileIndex;
+  final Map<String, int> guessBlockedUntilMs;   // uid → epoch ms when block expires
+  final Map<String, int> blackoutActiveUntilMs;  // uid → epoch ms when blackout expires
 
   const RoomModel({
     required this.id,
@@ -78,6 +80,8 @@ class RoomModel extends Equatable {
     this.entryFeePaidPlayerIds = const [],
     this.cardSkinId = 'default',
     this.pendingRevealTileIndex,
+    this.guessBlockedUntilMs = const {},
+    this.blackoutActiveUntilMs = const {},
   });
 
   bool isBlockedFromGuessing(String userId) {
@@ -185,6 +189,12 @@ class RoomModel extends Equatable {
       entryFeePaidPlayerIds: List<String>.from(data['entryFeePaidPlayerIds'] ?? []),
       cardSkinId: data['cardSkinId'] as String? ?? 'default',
       pendingRevealTileIndex: (data['pendingRevealTileIndex'] as num?)?.toInt(),
+      guessBlockedUntilMs: Map<String, dynamic>.from(
+              data['guessBlockedUntilMs'] as Map? ?? {})
+          .map((k, v) => MapEntry(k, (v as num).toInt())),
+      blackoutActiveUntilMs: Map<String, dynamic>.from(
+              data['blackoutActiveUntilMs'] as Map? ?? {})
+          .map((k, v) => MapEntry(k, (v as num).toInt())),
     );
   }
 
@@ -224,6 +234,8 @@ class RoomModel extends Equatable {
         'entryFeePaidPlayerIds': entryFeePaidPlayerIds,
         'cardSkinId': cardSkinId,
         if (pendingRevealTileIndex != null) 'pendingRevealTileIndex': pendingRevealTileIndex,
+        'guessBlockedUntilMs': guessBlockedUntilMs,
+        'blackoutActiveUntilMs': blackoutActiveUntilMs,
       };
 
   RoomModel copyWith({
@@ -259,6 +271,8 @@ class RoomModel extends Equatable {
     List<String>? entryFeePaidPlayerIds,
     String? cardSkinId,
     int? pendingRevealTileIndex,
+    Map<String, int>? guessBlockedUntilMs,
+    Map<String, int>? blackoutActiveUntilMs,
   }) =>
       RoomModel(
         id: id,
@@ -301,6 +315,8 @@ class RoomModel extends Equatable {
         entryFeePaidPlayerIds: entryFeePaidPlayerIds ?? this.entryFeePaidPlayerIds,
         cardSkinId: cardSkinId ?? this.cardSkinId,
         pendingRevealTileIndex: pendingRevealTileIndex ?? this.pendingRevealTileIndex,
+        guessBlockedUntilMs: guessBlockedUntilMs ?? this.guessBlockedUntilMs,
+        blackoutActiveUntilMs: blackoutActiveUntilMs ?? this.blackoutActiveUntilMs,
       );
 
   @override
@@ -337,5 +353,7 @@ class RoomModel extends Equatable {
         entryFeePaidPlayerIds,
         cardSkinId,
         pendingRevealTileIndex,
+        guessBlockedUntilMs,
+        blackoutActiveUntilMs,
       ];
 }

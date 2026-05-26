@@ -331,6 +331,38 @@ class EconomyService {
     return success;
   }
 
+  // ── Guess-block & blackout card purchases ─────────────────────
+
+  Future<bool> buyGuessBlock5Card(String uid) async {
+    const price = EconomyConfig.guessBlock5Price;
+    final success = await spendCoins(uid: uid, amount: price, type: TransactionType.guessBlock5Purchase);
+    if (success) {
+      await _db.doc('users/$uid').update({'guessBlock5Count': FieldValue.increment(1)});
+      QaLoggerService.instance.log('ECONOMY', 'GUESS_BLOCK5_PURCHASED uid=${uid.substring(0, uid.length.clamp(0, 6))}');
+    }
+    return success;
+  }
+
+  Future<bool> buyGuessBlock10Card(String uid) async {
+    const price = EconomyConfig.guessBlock10Price;
+    final success = await spendCoins(uid: uid, amount: price, type: TransactionType.guessBlock10Purchase);
+    if (success) {
+      await _db.doc('users/$uid').update({'guessBlock10Count': FieldValue.increment(1)});
+      QaLoggerService.instance.log('ECONOMY', 'GUESS_BLOCK10_PURCHASED uid=${uid.substring(0, uid.length.clamp(0, 6))}');
+    }
+    return success;
+  }
+
+  Future<bool> buyBlackoutCard(String uid) async {
+    const price = EconomyConfig.blackoutCardPrice;
+    final success = await spendCoins(uid: uid, amount: price, type: TransactionType.blackoutCardPurchase);
+    if (success) {
+      await _db.doc('users/$uid').update({'blackoutCardCount': FieldValue.increment(1)});
+      QaLoggerService.instance.log('ECONOMY', 'BLACKOUT_CARD_PURCHASED uid=${uid.substring(0, uid.length.clamp(0, 6))}');
+    }
+    return success;
+  }
+
   // ── Private helpers ───────────────────────────────────────────
 
   Future<void> _applyDelta({

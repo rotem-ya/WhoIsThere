@@ -36,6 +36,11 @@ class GameLayout extends StatelessWidget {
   final int potTotal;
   final int stunCardCount;
   final Future<void> Function(String targetId)? onStunCard;
+  final int guessBlock5Count;
+  final int guessBlock10Count;
+  final int blackoutCardCount;
+  final Map<String, int> guessBlockedUntilMs;
+  final Map<String, int> blackoutActiveUntilMs;
 
   const GameLayout({
     required this.room,
@@ -61,6 +66,11 @@ class GameLayout extends StatelessWidget {
     this.potTotal = 0,
     this.stunCardCount = 0,
     this.onStunCard,
+    this.guessBlock5Count = 0,
+    this.guessBlock10Count = 0,
+    this.blackoutCardCount = 0,
+    this.guessBlockedUntilMs = const {},
+    this.blackoutActiveUntilMs = const {},
   });
 
   @override
@@ -68,6 +78,21 @@ class GameLayout extends StatelessWidget {
     final currentPlayer = room.players[room.currentTurnUserId];
     final revealedCount = room.placedPieces.length;
     final total = room.gridSize * room.gridSize;
+    final _nowMs = DateTime.now().millisecondsSinceEpoch;
+
+    // Blackout: am I currently blacked out?
+    final _myBlackoutExpiry = currentUserId != null
+        ? (blackoutActiveUntilMs[currentUserId] ?? 0)
+        : 0;
+    final _isBlackedOut = _myBlackoutExpiry > _nowMs;
+
+    // Time-based guess block countdown in seconds
+    final _myGuessBlockExpiry = currentUserId != null
+        ? (guessBlockedUntilMs[currentUserId] ?? 0)
+        : 0;
+    final _guessBlockSecsLeft = _myGuessBlockExpiry > _nowMs
+        ? ((_myGuessBlockExpiry - _nowMs) / 1000).ceil()
+        : 0;
 
     // In race mode, guessOpportunityPlayerId is null when the window is open to all.
     final isMyGuessOpportunity = canGuessNow;
@@ -126,6 +151,11 @@ class GameLayout extends StatelessWidget {
               guessOpportunityDeadlineMs: room.guessOpportunityDeadlineMs,
               isLastTile: isLastTile,
               potTotal: potTotal,
+              roomId: room.id,
+              localUserId: currentUserId,
+              guessBlock5Count: guessBlock5Count,
+              guessBlock10Count: guessBlock10Count,
+              blackoutCardCount: blackoutCardCount,
             ),
             if (kDebugMode)
               _DebugPhaseBadge(
@@ -144,17 +174,57 @@ class GameLayout extends StatelessWidget {
               ),
             Expanded(
               child: Center(
-                child: GameBoardView(
-                  gridSize: room.gridSize,
-                  revealedCells: room.revealedCells,
-                  availableCells: room.availablePieceIndices,
-                  imageUrl: image?.imageUrl,
-                  enabled: false,
-                  glowEnabled: false,
-                  onReveal: onReveal,
-                  cardSkinId: room.cardSkinId,
-                  pendingRevealTileIndex: room.pendingRevealTileIndex,
-                  revealDeadlineMs: room.revealDeadlineMs,
+                child: Stack(
+                  children: [
+                    GameBoardView(
+                      gridSize: room.gridSize,
+                      revealedCells: room.revealedCells,
+                      availableCells: room.availablePieceIndices,
+                      imageUrl: _isBlackedOut ? null : image?.imageUrl,
+                      enabled: false,
+                      glowEnabled: false,
+                      onReveal: onReveal,
+                      cardSkinId: room.cardSkinId,
+                      pendingRevealTileIndex: room.pendingRevealTileIndex,
+                      revealDeadlineMs: room.revealDeadlineMs,
+                    ),
+                    if (_isBlackedOut)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF000000).withOpacity(0.88),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.visibility_off_rounded, color: Colors.white54, size: 40),
+                                SizedBox(height: 10),
+                                Text(
+                                  'המסך הוחשך!',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900,
+                                    shadows: [Shadow(color: Colors.black87, blurRadius: 8)],
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'שחקן אחר החשיך לך את הלוח',
+                                  style: TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -171,6 +241,8 @@ class GameLayout extends StatelessWidget {
               guessModePlayerName: guessModePlayerName,
               isBlocked: isBlocked,
               blockedRemaining: blockedRemaining,
+              isTimeBlocked: _guessBlockSecsLeft > 0,
+              timeBlockSecsLeft: _guessBlockSecsLeft,
               onRevealHint: onRevealHint,
               purchasedHintCount: purchasedHintCount,
               onBuySecondHint: onBuySecondHint,
