@@ -197,6 +197,8 @@ class RoomService {
 
     final joiningUserSnap = await _firestore.doc('users/$userId').get();
     final joiningTotalPoints = (joiningUserSnap.data()?['totalPoints'] as int?) ?? 0;
+    final joiningDiscoveredCount =
+        (joiningUserSnap.data()?['discoveredImageIds'] as List?)?.length ?? 0;
 
     final newPlayer = PlayerModel(
       id: userId,
@@ -204,6 +206,7 @@ class RoomService {
       photoUrl: userPhotoUrl,
       score: 0,
       totalPoints: joiningTotalPoints,
+      discoveredCount: joiningDiscoveredCount,
     );
 
     await doc.reference.update({
@@ -409,6 +412,9 @@ class RoomService {
           {imageId: FieldValue.increment(1)},
           SetOptions(merge: true),
         ).ignore();
+        _firestore.doc('users/${entry.key}').update({
+          'discoveredImageIds': FieldValue.arrayUnion([imageId]),
+        }).ignore();
       }
     }
   }

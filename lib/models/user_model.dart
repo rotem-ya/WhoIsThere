@@ -13,6 +13,7 @@ class UserModel extends Equatable {
   final int totalPoints;
   final List<String> purchasedImageIds;
   final List<String> purchasedThemeIds;
+  final List<String> discoveredImageIds;
 
   const UserModel({
     required this.id,
@@ -26,6 +27,7 @@ class UserModel extends Equatable {
     this.totalPoints = 0,
     this.purchasedImageIds = const [],
     this.purchasedThemeIds = const [],
+    this.discoveredImageIds = const [],
   });
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -42,6 +44,7 @@ class UserModel extends Equatable {
       totalPoints: data['totalPoints'] ?? 0,
       purchasedImageIds: List<String>.from(data['purchasedImageIds'] ?? []),
       purchasedThemeIds: List<String>.from(data['purchasedThemeIds'] ?? []),
+      discoveredImageIds: List<String>.from(data['discoveredImageIds'] ?? []),
     );
   }
 
@@ -58,6 +61,7 @@ class UserModel extends Equatable {
         'totalPoints': totalPoints,
         'purchasedImageIds': purchasedImageIds,
         'purchasedThemeIds': purchasedThemeIds,
+        'discoveredImageIds': discoveredImageIds,
         // createdAt / lastLoginAt / lastSeenAt written via FieldValue in AuthService
       };
 
@@ -72,6 +76,7 @@ class UserModel extends Equatable {
     int? totalPoints,
     List<String>? purchasedImageIds,
     List<String>? purchasedThemeIds,
+    List<String>? discoveredImageIds,
   }) =>
       UserModel(
         id: id,
@@ -85,6 +90,7 @@ class UserModel extends Equatable {
         totalPoints: totalPoints ?? this.totalPoints,
         purchasedImageIds: purchasedImageIds ?? this.purchasedImageIds,
         purchasedThemeIds: purchasedThemeIds ?? this.purchasedThemeIds,
+        discoveredImageIds: discoveredImageIds ?? this.discoveredImageIds,
       );
 
   @override
@@ -97,5 +103,6 @@ class UserModel extends Equatable {
         totalPoints,
         purchasedImageIds,
         purchasedThemeIds,
+        discoveredImageIds,
       ];
 }

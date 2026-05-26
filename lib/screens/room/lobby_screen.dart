@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants/game_constants.dart';
-import '../../core/constants/player_rank.dart';
+// player_rank removed — using discoveredCount badge instead;
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/player_model.dart';
@@ -464,7 +464,7 @@ class _PlayerAvatarTile extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                _RankBadge(rank: PlayerRankX.fromPoints(player.totalPoints)),
+                _DiscoveredBadge(count: player.discoveredCount),
               ],
             ),
           ),
@@ -582,23 +582,35 @@ class _GlossyActionButtonState extends State<_GlossyActionButton> {
   }
 }
 
-// ── Rank badge ─────────────────────────────────────────────────────────────
+// ── Discovered badge ───────────────────────────────────────────────────────
 
-class _RankBadge extends StatelessWidget {
-  final PlayerRank rank;
-  const _RankBadge({required this.rank});
+class _DiscoveredBadge extends StatelessWidget {
+  final int count;
+  const _DiscoveredBadge({required this.count});
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      '${rank.emoji} ${rank.label}',
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        color: rank.color,
-        fontSize: 10,
-        fontWeight: FontWeight.w800,
-        height: 1.2,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A1828).withOpacity(0.7),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF4A8BAA).withOpacity(0.4), width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🌍', style: TextStyle(fontSize: 11)),
+          const SizedBox(width: 3),
+          Text(
+            '$count',
+            style: const TextStyle(
+              color: Color(0xFF87CEEB),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }

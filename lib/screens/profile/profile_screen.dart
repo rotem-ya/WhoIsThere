@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/build_info.dart';
-import '../../core/constants/player_rank.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
@@ -13,16 +11,14 @@ import '../../core/utils/display_name_sanitizer.dart';
 import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
 import '../../widgets/common/app_button.dart';
-import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
-import '../../widgets/common/pressable_scale.dart';
+import 'discovered_images_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  Future<void> _showEditNameDialog(
-      BuildContext context, WidgetRef ref, String userId, String currentName) async {
+  Future<void> _showEditNameDialog(BuildContext context, WidgetRef ref, String userId, String currentName) async {
     await showDialog<void>(
       context: context,
       builder: (_) => _EditNameDialog(userId: userId, currentName: currentName, ref: ref),
@@ -35,208 +31,322 @@ class ProfileScreen extends ConsumerWidget {
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.zero,
       child: userAsync.when(
         data: (user) {
-          if (user == null) {
-            return const Center(
-                child: CircularProgressIndicator(color: AppColors.accent));
-          }
+          if (user == null) return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+
+          final discoveredCount = user.discoveredImageIds.length;
 
           return Column(
             children: [
-              AppHeader(
-                title: 'פרופיל',
-                leading: IconButton(
-                  icon:
-                      const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    Navigator.maybePop(context);
-                  },
-                ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.logout_rounded, color: Colors.white),
-                  onPressed: () async {
-                    HapticFeedback.lightImpact();
-                    await ref.read(authServiceProvider).signOut();
-                    if (context.mounted) context.go('/auth');
-                  },
+              // ── Header ──────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
+                child: AppHeader(
+                  title: 'פרופיל',
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                    onPressed: () { HapticFeedback.lightImpact(); Navigator.maybePop(context); },
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.logout_rounded, color: Colors.white),
+                    onPressed: () async {
+                      HapticFeedback.lightImpact();
+                      await ref.read(authServiceProvider).signOut();
+                      if (context.mounted) context.go('/auth');
+                    },
+                  ),
                 ),
               ),
-              Expanded(
-                child: Column(
-                  children: [
-                    AppCard(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-                      child: Column(
-                        children: [
-                          PlayerAvatar(
-                            name: user.name,
-                            photoUrl: user.photoUrl,
-                            radius: 36,
-                          ).animate().fadeIn(duration: 300.ms).scaleXY(begin: 0.93, duration: 300.ms, curve: Curves.easeOut),
-                          const SizedBox(height: AppSpacing.sm),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  user.name,
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.titleDark,
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.xs),
-                              InkWell(
-                                onTap: () {
-                                  HapticFeedback.lightImpact();
-                                  _showEditNameDialog(context, ref, user.id, user.name);
-                                },
-                                borderRadius: BorderRadius.circular(20),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(4),
-                                  child: Icon(
-                                    Icons.edit_rounded,
-                                    size: 16,
-                                    color: AppColors.primary.withOpacity(0.75),
+
+              // ── Hero card ────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF0D2137), Color(0xFF091828)],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: const Color(0xFF1E4060).withOpacity(0.8), width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      // Avatar
+                      PlayerAvatar(name: user.name, photoUrl: user.photoUrl, radius: 34),
+                      const SizedBox(width: 16),
+                      // Name + edit
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    user.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          _ProfileRankBadge(totalPoints: user.totalPoints),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      children: [
-                        Expanded(
-                            child: _StatCard(
-                                label: 'נקודות',
-                                value: '${user.totalPoints}',
-                                icon: Icons.star_rounded)
-                                .animate().fadeIn(delay: 60.ms, duration: 250.ms)
-                                .scaleXY(begin: 0.96, delay: 60.ms, duration: 250.ms, curve: Curves.easeOut)),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                            child: _StatCard(
-                                label: 'תמונות',
-                                value: '${user.purchasedImageIds.length}',
-                                icon: Icons.image_rounded)
-                                .animate().fadeIn(delay: 110.ms, duration: 250.ms)
-                                .scaleXY(begin: 0.96, delay: 110.ms, duration: 250.ms, curve: Curves.easeOut)),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      children: [
-                        Expanded(
-                            child: _StatCard(
-                                label: 'ערכות',
-                                value: '${user.purchasedThemeIds.length}',
-                                icon: Icons.palette_rounded)
-                                .animate().fadeIn(delay: 160.ms, duration: 250.ms)
-                                .scaleXY(begin: 0.96, delay: 160.ms, duration: 250.ms, curve: Curves.easeOut)),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                            child: _StatCard(
-                                label: 'ניצחון',
-                                value: '+10~40',
-                                icon: Icons.emoji_events_rounded)
-                                .animate().fadeIn(delay: 210.ms, duration: 250.ms)
-                                .scaleXY(begin: 0.96, delay: 210.ms, duration: 250.ms, curve: Curves.easeOut)),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    AppCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          _PointInfo('🧩 הנח חתיכה', '+1 עד +4 נק׳'),
-                          _PointInfo('🏆 ניחוש נכון', '+10 עד +40 נק׳'),
-                          _PointInfo('❌ ניחוש שגוי', '-1 עד -4 נק׳'),
-                          _PointInfo('👑 הצבעת מארח', '×2'),
-                        ],
-                      ),
-                    ),
-                    const Spacer(),
-                    // ── QA + build label ──────────────────────────────
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        TextButton.icon(
-                          onPressed: () async {
-                            await QaLoggerService.instance.copyToClipboard();
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                      'הועתקו ${QaLoggerService.instance.eventCount} אירועים ללוחית'),
-                                  duration: const Duration(seconds: 2),
-                                  backgroundColor: Colors.green.shade800,
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: () {
+                                    HapticFeedback.lightImpact();
+                                    _showEditNameDialog(context, ref, user.id, user.name);
+                                  },
+                                  child: Icon(Icons.edit_rounded, size: 15, color: AppColors.primary.withOpacity(0.7)),
                                 ),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.content_copy_rounded, size: 14),
-                          label: const Text('QA'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white24,
-                            textStyle: const TextStyle(fontSize: 11),
-                          ),
-                        ),
-                        const Text(
-                          kBuildLabel,
-                          style: TextStyle(color: Colors.white24, fontSize: 10, letterSpacing: 0.5),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Stack(
-                children: [
-                  Positioned.fill(
-                    child: SoftPulse(
-                      minOpacity: 0.0,
-                      maxOpacity: 0.20,
-                      period: const Duration(milliseconds: 2800),
-                      child: const DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.all(Radius.circular(16)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0xFFD4AF37),
-                              blurRadius: 24,
-                              spreadRadius: 2,
+                              ],
                             ),
+                            const SizedBox(height: 4),
+                            // Wallet coins display inline
+                            _WalletCoinsInline(userId: user.id),
                           ],
                         ),
                       ),
+                      // Discovered count big display
+                      Column(
+                        children: [
+                          Text(
+                            '$discoveredCount',
+                            style: const TextStyle(
+                              color: Color(0xFF87CEEB),
+                              fontSize: 36,
+                              fontWeight: FontWeight.w900,
+                              height: 1,
+                            ),
+                          ),
+                          const Text(
+                            'גילויים',
+                            style: TextStyle(
+                              color: Color(0xFF4A8BAA),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.md),
+
+              // ── Stats row ────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Row(
+                  children: [
+                    Expanded(child: _MiniStat(icon: Icons.star_rounded, value: '${user.totalPoints}', label: 'נקודות')),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(child: _MiniStat(icon: Icons.palette_rounded, value: '${user.purchasedThemeIds.length}', label: 'ערכות')),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(child: _MiniStat(icon: Icons.image_rounded, value: '${user.purchasedImageIds.length}', label: 'תמונות')),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.sm),
+
+              // ── Discoveries CTA ──────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DiscoveredImagesScreen(
+                          discoveredImageIds: user.discoveredImageIds,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0A1828),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.25), width: 0.8),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF87CEEB).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Center(child: Text('🌍', style: TextStyle(fontSize: 22))),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'המקומות שגיליתי',
+                                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800),
+                              ),
+                              Text(
+                                discoveredCount == 0 ? 'עדיין לא גילית מקומות' : '$discoveredCount מקומות ברחבי העולם',
+                                style: const TextStyle(color: Color(0xFF4A8BAA), fontSize: 12, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded, color: Color(0xFF4A8BAA), size: 22),
+                      ],
                     ),
                   ),
-                  AppButton(
-                    label: 'עבור לחנות',
-                    icon: Icons.store_rounded,
-                    onPressed: () => context.push('/store'),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.sm),
+
+              // ── Economy info ─────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0A1828),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF1E3A5A).withOpacity(0.6), width: 0.8),
                   ),
+                  child: Column(
+                    children: const [
+                      _PointRow('🧩 הנח חתיכה', '+1 עד +4 נק׳'),
+                      _PointRow('🏆 ניחוש נכון', '+10 עד +40 נק׳'),
+                      _PointRow('❌ ניחוש שגוי', '-1 עד -4 נק׳'),
+                      _PointRow('👑 הצבעת מארח', '×2'),
+                    ],
+                  ),
+                ),
+              ),
+
+              const Spacer(),
+
+              // ── QA row ───────────────────────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton.icon(
+                    onPressed: () async {
+                      await QaLoggerService.instance.copyToClipboard();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('הועתקו ${QaLoggerService.instance.eventCount} אירועים'),
+                            duration: const Duration(seconds: 2),
+                            backgroundColor: Colors.green.shade800,
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.content_copy_rounded, size: 13),
+                    label: const Text('QA'),
+                    style: TextButton.styleFrom(foregroundColor: Colors.white24, textStyle: const TextStyle(fontSize: 11)),
+                  ),
+                  const Text(kBuildLabel, style: TextStyle(color: Colors.white24, fontSize: 10)),
                 ],
               ),
-              const SizedBox(height: 4),
+
+              // ── Store button ─────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
+                child: AppButton(
+                  label: 'עבור לחנות',
+                  icon: Icons.store_rounded,
+                  onPressed: () => context.push('/store'),
+                ),
+              ),
             ],
           );
         },
-        loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.accent)),
-        error: (e, _) => Center(
-            child: Text('שגיאה: $e', style: AppTextStyles.subtitleLight)),
+        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        error: (e, _) => Center(child: Text('שגיאה: $e', style: AppTextStyles.subtitleLight)),
+      ),
+    );
+  }
+}
+
+class _WalletCoinsInline extends ConsumerWidget {
+  final String userId;
+  const _WalletCoinsInline({required this.userId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final wallet = ref.watch(walletProvider).valueOrNull;
+    final coins = wallet?.coins ?? 0;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.monetization_on, color: Colors.amber, size: 14),
+        const SizedBox(width: 4),
+        Text(
+          '$coins מטבעות',
+          style: const TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+  const _MiniStat({required this.icon, required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A1828),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1E3A5A).withOpacity(0.6), width: 0.8),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: AppColors.primary, size: 22),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900), textDirection: TextDirection.ltr),
+          Text(label, style: const TextStyle(color: Color(0xFF4A8BAA), fontSize: 10, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+class _PointRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _PointRow(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600))),
+          Text(value, style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w800), textDirection: TextDirection.ltr),
+        ],
       ),
     );
   }
@@ -333,11 +443,11 @@ class _EditNameDialogState extends State<_EditNameDialog> {
                 errorMaxLines: 2,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white24),
+                  borderSide: const BorderSide(color: Colors.white24),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white24),
+                  borderSide: const BorderSide(color: Colors.white24),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -368,106 +478,6 @@ class _EditNameDialogState extends State<_EditNameDialog> {
                         color: AppColors.primary,
                         fontWeight: FontWeight.w900)),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-
-  const _StatCard(
-      {required this.label, required this.value, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: AppColors.primary, size: 28),
-          const SizedBox(height: AppSpacing.sm),
-          Text(value,
-              textDirection: TextDirection.ltr, style: AppTextStyles.titleDark),
-          Text(label, style: AppTextStyles.subtitleDark),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileRankBadge extends StatelessWidget {
-  final int totalPoints;
-  const _ProfileRankBadge({required this.totalPoints});
-
-  @override
-  Widget build(BuildContext context) {
-    final rank = PlayerRankX.fromPoints(totalPoints);
-    final nextRank = rank.index + 1 < PlayerRank.values.length
-        ? PlayerRank.values[rank.index + 1]
-        : null;
-
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: rank.color.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: rank.color.withOpacity(0.50), width: 1.2),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(rank.emoji, style: const TextStyle(fontSize: 16)),
-              const SizedBox(width: 6),
-              Text(
-                rank.label,
-                style: TextStyle(
-                  color: rank.color,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (nextRank != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            'לדרגה הבאה: ${nextRank.minPoints - totalPoints} נק׳',
-            style: TextStyle(
-              color: AppColors.primary.withOpacity(0.55),
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _PointInfo extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _PointInfo(this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Row(
-        children: [
-          Expanded(child: Text(label, style: AppTextStyles.body)),
-          Text(value,
-              textDirection: TextDirection.ltr,
-              style: AppTextStyles.body.copyWith(color: AppColors.primary)),
         ],
       ),
     );
