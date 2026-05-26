@@ -1502,6 +1502,7 @@ class RoomService {
     await _rooms.doc(roomId).update({
       'phase': GamePhase.finished.name,
     });
+    unawaited(refundPot(roomId));
   }
 
   /// Atomically consumes one stun card from actorUid's inventory and
