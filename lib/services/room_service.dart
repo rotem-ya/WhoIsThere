@@ -16,6 +16,15 @@ import '../core/constants/game_constants.dart';
 import '../core/utils/room_code_generator.dart';
 import 'qa_logger_service.dart';
 
+const List<String> _botNames = [
+  'אריאל', 'נועה', 'עמית', 'שירה', 'דניאל', 'מאיה', 'ליאור', 'איתי',
+  'שני', 'אדם', 'מור', 'רועי', 'תמר', 'אורי', 'גל', 'עידו',
+  'ירדן', 'ניר', 'לירון', 'דנה', 'אייל', 'הילה', 'ניב', 'שחר',
+  'יעל', 'בן', 'אורן', 'מיכל', 'יוסף', 'אבי',
+];
+
+String _botName(int index) => _botNames[index % _botNames.length];
+
 /// Picks a tile index using a checkerboard-first strategy.
 /// Prefers tiles that have no revealed neighbour (up/down/left/right).
 /// Falls back to any available tile only when every candidate is adjacent.
@@ -152,7 +161,7 @@ class RoomService {
       final virtualId = 'virtual_${i}_${docRef.id}';
       players[virtualId] = PlayerModel(
         id: virtualId,
-        name: 'שחקן $i',
+        name: _botName(i),
         score: 0,
         isBot: true,
       );
@@ -231,7 +240,7 @@ class RoomService {
 
     final botPlayer = PlayerModel(
       id: virtualId,
-      name: 'שחקן $botIndex',
+      name: _botName(botIndex),
       score: 0,
       isBot: true,
     );
