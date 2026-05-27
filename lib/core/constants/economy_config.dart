@@ -78,7 +78,7 @@ class EconomyConfig {
   static const List<int> streakBonusCoins = [0, 0, 2, 3, 5, 7, 10, 12];
 
   // ── Ad-watch reward ───────────────────────────────────────────
-  static const int adRewardCoins = 10;
+  static const int adRewardCoins = 20;
   static const int maxAdRewardsPerDay = 2;
 
   // ── Coin pack prices (store SKUs) ────────────────────────────

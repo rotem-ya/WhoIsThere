@@ -514,7 +514,8 @@ class RoomService {
                   uid, walletDoc.data() as Map<String, dynamic>)
               : null;
           final before = wallet?.coins ?? 0;
-          final after = (before - entryFee).clamp(0, 999999);
+          if (before < entryFee) return; // insufficient — UI should have blocked this
+          final after = before - entryFee;
           tx.set(_walletRef(uid), {'coins': after}, SetOptions(merge: true));
           final txId = _uuid.v4();
           tx.set(_txRef(uid, txId), EconomyTransactionModel(
@@ -565,7 +566,8 @@ class RoomService {
             ? UserEconomyModel.fromFirestore(userId, walletDoc.data() as Map<String, dynamic>)
             : null;
         final before = wallet?.coins ?? 0;
-        final after = (before - room.entryFee).clamp(0, 999999);
+        if (before < room.entryFee) return; // insufficient — UI should have blocked this
+        final after = before - room.entryFee;
 
         tx.set(_walletRef(userId), {'coins': after}, SetOptions(merge: true));
 

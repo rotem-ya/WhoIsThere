@@ -46,6 +46,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (_isCreating) return;
     QaLoggerService.instance.log('HOME', 'TAP_QUICK_GAME players=$targetPlayers');
     FeedbackService.click();
+
+    // Block entry if insufficient coins
+    final wallet = ref.read(walletProvider).valueOrNull;
+    final coins = wallet?.coins ?? 0;
+    if (coins < EconomyConfig.gameEntryFee) {
+      QaLoggerService.instance.log('HOME', 'QUICK_GAME_BLOCKED_INSUFFICIENT_COINS coins=$coins');
+      if (mounted) _showInsufficientCoinsDialog();
+      return;
+    }
+
     setState(() {
       _isCreating = true;
       _loadingPlayers = targetPlayers;
@@ -102,6 +112,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (_isCreating) return;
     QaLoggerService.instance.log('HOME', 'TAP_CREATE_ROOM');
     FeedbackService.click();
+
+    final wallet = ref.read(walletProvider).valueOrNull;
+    final coins = wallet?.coins ?? 0;
+    if (coins < EconomyConfig.gameEntryFee) {
+      QaLoggerService.instance.log('HOME', 'CREATE_ROOM_BLOCKED_INSUFFICIENT_COINS coins=$coins');
+      if (mounted) _showInsufficientCoinsDialog();
+      return;
+    }
+
     setState(() {
       _isCreating = true;
       _loadingPlayers = null;
@@ -138,6 +157,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         });
       }
     }
+  }
+
+  void _showInsufficientCoinsDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+        decoration: const BoxDecoration(
+          color: Color(0xFF0D1E30),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🪙', style: TextStyle(fontSize: 40)),
+            const SizedBox(height: 12),
+            const Text(
+              'אין מספיק מטבעות',
+              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+              textDirection: TextDirection.rtl,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'כניסה למשחק עולה ${EconomyConfig.gameEntryFee} 🪙',
+              style: const TextStyle(color: Colors.white60, fontSize: 14),
+              textDirection: TextDirection.rtl,
+            ),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/store');
+              },
+              child: Container(
+                width: double.infinity,
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF20A8E0), Color(0xFF0868A8)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Center(
+                  child: Text(
+                    'צפה בסרטון וקבל 20 🪙',
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+                    textDirection: TextDirection.rtl,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Wraps [w] with a fade+rise entrance only on first visit.
