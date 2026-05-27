@@ -196,6 +196,23 @@ game_images/{imageId}            תמונות מהאדמין (עתידי)
 
 ---
 
+## מערכת נעילת כרטיסים לפי התקדמות (לממש)
+
+כרטיסי פעולה נפתחים לרכישה בהתאם ל-`discoveredImageIds.length`:
+
+| גילויים | כרטיס |
+|---------|-------|
+| 10+ | חסימת ניחוש 5s |
+| 20+ | החשכה |
+| 30+ | חסימת ניחוש 10s |
+| 40+ | כרטיס עצור (stun) |
+
+**עיקרון**: הצג כרטיסים נעולים (אפור + מנעול + "גלה X מקומות") — לא להסתיר, כדי לתמרץ התקדמות.
+`_PlayingCard` → הוסף `locked: bool` + `requiredDiscoveries: int`.
+קרא: `ref.watch(currentUserProvider).valueOrNull?.discoveredImageIds.length ?? 0`
+
+---
+
 ## CI/CD
 
 Push ל-`claude/**` → GitHub Actions → APK אוטומטי.
