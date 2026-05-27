@@ -48,25 +48,34 @@ jobs:
             echo "$KEYSTORE_B64" | base64 -d > android/app/keystore.jks
           fi
 
-      - name: Print release keystore SHA-1 (add to Firebase Console)
+      - name: Extract SHA-1 fingerprint
         env:
           KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
           KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
         run: |
+          mkdir -p /tmp/sha1-output
           if [ -f android/app/keystore.jks ]; then
-            echo "=== RELEASE KEYSTORE SHA-1 (add this to Firebase Console) ==="
-            keytool -list -v \
+            SHA1=$(keytool -list -v \
               -keystore android/app/keystore.jks \
               -storepass "$KEYSTORE_STORE_PASS" \
-              -alias "$KEYSTORE_ALIAS" 2>/dev/null | grep -E "SHA1|SHA-1"
-            echo "============================================================"
+              -alias "$KEYSTORE_ALIAS" 2>/dev/null | grep "SHA1:" | awk '{print $2}')
           else
-            echo "No keystore found, using debug signing"
-            keytool -list -v \
+            SHA1=$(keytool -list -v \
               -keystore ~/.android/debug.keystore \
               -storepass android \
-              -alias androiddebugkey 2>/dev/null | grep -E "SHA1|SHA-1"
+              -alias androiddebugkey 2>/dev/null | grep "SHA1:" | awk '{print $2}')
           fi
+          echo "SHA-1: $SHA1"
+          echo "$SHA1" > /tmp/sha1-output/sha1.txt
+          echo "ADD THIS SHA-1 TO FIREBASE CONSOLE -> Android App -> Add fingerprint:"
+          echo "$SHA1"
+
+      - name: Upload SHA-1 as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-keystore-sha1
+          path: /tmp/sha1-output/sha1.txt
+          retention-days: 30
 
       - name: Clean Flutter and pub cache
         run: |
