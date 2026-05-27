@@ -73,8 +73,12 @@ class RoomService {
 
   static const double _letterCardBonusChance = 0.12;
 
-  // Returns reveal timer duration in ms — flat 10 seconds regardless of board state.
-  static int _revealTimerMs(int revealedCount, int totalTiles) => 10000;
+  // Returns reveal countdown ring duration: fast early, slower as image becomes clearer.
+  static int _revealTimerMs(int revealedCount, int totalTiles) {
+    if (revealedCount < 3) return 3000;
+    if (revealedCount < 13) return 6000;
+    return 9000;
+  }
 
   // Returns guess-opportunity timer duration in ms based on board state after the latest reveal.
   static int _guessOppTimerMs(int revealedCount, int totalTiles) {
@@ -922,7 +926,7 @@ class RoomService {
           return;
         }
 
-        // ── Phase 1: no pending tile → pick one and start 5-second countdown ─
+        // ── Phase 1: no pending tile → pick one and start countdown ─
         final rng = Random();
         final revealedSet = room.placedPieces.keys.toSet();
         final pieceIndex = _pickCheckerboardTile(
@@ -931,14 +935,15 @@ class RoomService {
           room.gridSize,
           rng,
         );
+        final ringMs = _revealTimerMs(room.placedPieces.length, room.gridSize * room.gridSize);
 
         tx.update(_rooms.doc(roomId), {
           'pendingRevealTileIndex': pieceIndex,
-          'revealDeadlineMs': now + 10000,
+          'revealDeadlineMs': now + ringMs,
           'revealCycleId': FieldValue.increment(1),
         });
         QaLoggerService.instance.log('REVEAL',
-            'AUTO_REVEAL_PENDING pieceIndex=$pieceIndex countdownMs=10000');
+            'AUTO_REVEAL_PENDING pieceIndex=$pieceIndex countdownMs=$ringMs revealed=${room.placedPieces.length}');
         committed = true;
       });
     } catch (e) {
@@ -1017,25 +1022,29 @@ class RoomService {
 
         QaLoggerService.instance.log('TURN', 'TX_BEGIN name=enterGuessMode');
 
-        if (room.turnPhase != TurnPhase.guessOpportunity) {
+        final allowedPhase = room.turnPhase == TurnPhase.guessOpportunity ||
+            room.turnPhase == TurnPhase.revealTurn;
+        if (!allowedPhase) {
           QaLoggerService.instance.log('TURN',
               'TX_ABORT name=enterGuessMode reason=wrong_phase phase=${room.turnPhase.name}');
           return;
         }
-        // Race mechanic: slot must be unclaimed (null = open to all)
-        if (room.guessOpportunityPlayerId != null) {
-          QaLoggerService.instance.log('TURN',
-              'TX_ABORT name=enterGuessMode reason=already_claimed player=${room.guessOpportunityPlayerId}');
-          return;
+        // In guessOpportunity: check slot is unclaimed and deadline not expired
+        if (room.turnPhase == TurnPhase.guessOpportunity) {
+          if (room.guessOpportunityPlayerId != null) {
+            QaLoggerService.instance.log('TURN',
+                'TX_ABORT name=enterGuessMode reason=already_claimed player=${room.guessOpportunityPlayerId}');
+            return;
+          }
+          final deadline = room.guessOpportunityDeadlineMs;
+          if (deadline != null && now >= deadline) {
+            QaLoggerService.instance.log('TURN', 'TX_ABORT name=enterGuessMode reason=deadline_expired');
+            return;
+          }
         }
         if (room.isBlockedFromGuessing(userId)) {
           QaLoggerService.instance.log('TURN',
               'TX_ABORT name=enterGuessMode reason=player_blocked uid=${userId.substring(0, userId.length.clamp(0, 6))} blockedUntil=${room.blockedGuessers[userId]}');
-          return;
-        }
-        final deadline = room.guessOpportunityDeadlineMs;
-        if (deadline != null && now >= deadline) {
-          QaLoggerService.instance.log('TURN', 'TX_ABORT name=enterGuessMode reason=deadline_expired');
           return;
         }
 
@@ -1076,6 +1085,7 @@ class RoomService {
         }
 
         // Atomically claim the guess slot, enter guessMode, track claim count, add to pot
+        // When entering from revealTurn: also pause the pending tile countdown
         tx.update(_rooms.doc(roomId), {
           'turnPhase': TurnPhase.guessMode.name,
           'guessOpportunityPlayerId': userId,
@@ -1083,6 +1093,10 @@ class RoomService {
           'guessModeDeadlineMs': now + 20000,
           'guessClaimCounts.$userId': claimCount + 1,
           if (actualCost > 0) 'potTotal': FieldValue.increment(actualCost),
+          if (room.turnPhase == TurnPhase.revealTurn) ...{
+            'pendingRevealTileIndex': FieldValue.delete(),
+            'revealDeadlineMs': FieldValue.delete(),
+          },
         });
         success = true;
         QaLoggerService.instance.log('TURN',

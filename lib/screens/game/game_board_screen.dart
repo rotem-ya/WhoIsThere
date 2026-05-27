@@ -114,6 +114,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   // Reveal sound — owned here, not by ApertureTile
   static final AudioPlayer _revealSoundPlayer = AudioPlayer(playerId: 'reveal-aperture');
   static final AudioPlayer _tapRevealedPlayer = AudioPlayer(playerId: 'tap-revealed');
+  static final AudioPlayer _revealTickPlayer = AudioPlayer(playerId: 'reveal-tick');
   static final AssetSource _revealSound = AssetSource('sounds/aperture_open.wav');
 
   static Future<void> _primeRevealSound() async {
@@ -298,6 +299,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   // Sync tick to displayed countdown second — one tick per whole-second transition
   int _lastGuessModeTickSecond = -1;
   int? _lastGuessModeDeadlineForTick;
+  int _lastRevealTickSecond = -1;
+  int? _lastRevealDeadlineForTick;
 
   // Endgame pressure tracking
   bool _endgamePressureLogged = false;
@@ -319,6 +322,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     try {
       await _guessModeTickPlayer.setPlayerMode(PlayerMode.lowLatency);
       await _guessModeTickPlayer.setSource(_guessTickSound);
+    } catch (_) {}
+    try {
+      await _revealTickPlayer.setPlayerMode(PlayerMode.lowLatency);
+      await _revealTickPlayer.setSource(_guessTickSound);
+    } catch (_) {}
+  }
+
+  static Future<void> _playRevealTick() async {
+    try {
+      await _revealTickPlayer.stop();
+      await _revealTickPlayer.setVolume(0.10 * _sfxScale);
+      await _revealTickPlayer.play(_guessTickSound);
     } catch (_) {}
   }
 
@@ -398,6 +413,24 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
           if (tickSec > 0 && tickSec != _lastGuessModeTickSecond) {
             _lastGuessModeTickSecond = tickSec;
             unawaited(_playGuessModeTick(volume: isEndgame ? 0.23 : 0.17));
+          }
+        }
+      }
+
+      // Reveal countdown tick — one per displayed second while ring is depleting
+      if (room.turnPhase == TurnPhase.revealTurn &&
+          room.revealDeadlineMs != null &&
+          room.pendingRevealTileIndex != null) {
+        final tickRemaining = room.revealDeadlineMs! - now;
+        final tickSec = (tickRemaining / 1000).ceil().clamp(0, 15);
+        if (tickRemaining > 0) {
+          if (room.revealDeadlineMs != _lastRevealDeadlineForTick) {
+            _lastRevealDeadlineForTick = room.revealDeadlineMs;
+            _lastRevealTickSecond = -1;
+          }
+          if (tickSec > 0 && tickSec != _lastRevealTickSecond) {
+            _lastRevealTickSecond = tickSec;
+            unawaited(_playRevealTick());
           }
         }
       }
@@ -1283,12 +1316,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (canGuessNow) {
       _enterGuessMode(room, userId);
     } else {
-      QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED_EARLY phase=${room.turnPhase.name}');
+      QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED_BLOCKED phase=${room.turnPhase.name}');
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
           const SnackBar(
-            content: Text('ממתין לחשיפה הבאה...', textDirection: TextDirection.rtl),
+            content: Text('לא ניתן לנחש כרגע', textDirection: TextDirection.rtl),
             duration: Duration(milliseconds: 1200),
             behavior: SnackBarBehavior.floating,
           ),
@@ -1299,13 +1332,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   Future<void> _enterGuessMode(RoomModel room, String userId) async {
     QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED phase=${room.turnPhase.name}');
 
-    // Client-side guard: if the guessOpportunity deadline is already past, the
-    // server transaction will reject with deadline_expired anyway. Skip the round
-    // trip and log so QA can confirm the client caught it first.
-    final deadline = room.guessOpportunityDeadlineMs;
-    if (deadline != null && DateTime.now().millisecondsSinceEpoch >= deadline) {
-      QaLoggerService.instance.log('GUESS', 'GUESS_ENTER_SKIPPED reason=deadline_expired_client');
-      return;
+    // Client-side guard for guessOpportunity deadline only
+    if (room.turnPhase == TurnPhase.guessOpportunity) {
+      final deadline = room.guessOpportunityDeadlineMs;
+      if (deadline != null && DateTime.now().millisecondsSinceEpoch >= deadline) {
+        QaLoggerService.instance.log('GUESS', 'GUESS_ENTER_SKIPPED reason=deadline_expired_client');
+        return;
+      }
     }
 
     final alreadyInGuessMode = room.turnPhase == TurnPhase.guessMode &&
@@ -1805,7 +1838,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 final _isFinished = room.phase == GamePhase.finished;
                 // In auto-reveal mode, nobody has a manual reveal turn.
                 const isMyTurn = false;
-                // canGuessNow: I have the guess opportunity window and deadline has not passed
+                // canGuessNow: guessing is open at any time during gameplay
                 final _nowMs = DateTime.now().millisecondsSinceEpoch;
                 final _guessBlockedUntil = currentUserId != null
                     ? (room.guessBlockedUntilMs[currentUserId] ?? 0)
@@ -1813,12 +1846,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 final _isTimeBlocked = _guessBlockedUntil > _nowMs;
                 final canGuessNow = !_isFinished &&
                     currentUserId != null &&
-                    room.turnPhase == TurnPhase.guessOpportunity &&
-                    room.guessOpportunityPlayerId == null &&
+                    room.phase == GamePhase.playing &&
+                    room.turnPhase != TurnPhase.guessMode &&
+                    room.turnPhase != TurnPhase.roundOver &&
                     !room.isBlockedFromGuessing(currentUserId) &&
-                    !_isTimeBlocked &&
-                    (room.guessOpportunityDeadlineMs == null ||
-                        room.guessOpportunityDeadlineMs! > _nowMs);
+                    !_isTimeBlocked;
                 final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
                 final _totalTiles = room.gridSize * room.gridSize;
                 final revealRatio = _totalTiles > 0 ? room.placedPieces.length / _totalTiles : 0.0;

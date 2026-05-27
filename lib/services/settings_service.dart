@@ -21,7 +21,7 @@ class SettingsService {
   final SharedPreferences _prefs;
   SettingsService._(this._prefs);
 
-  double get musicVolume => (_prefs.getDouble(_kMusic) ?? 1.0).clamp(0.0, 1.0);
+  double get musicVolume => (_prefs.getDouble(_kMusic) ?? 0.4).clamp(0.0, 1.0);
   double get sfxVolume => (_prefs.getDouble(_kSfx) ?? 1.0).clamp(0.0, 1.0);
   bool get vibrationEnabled => _prefs.getBool(_kVibration) ?? true;
 

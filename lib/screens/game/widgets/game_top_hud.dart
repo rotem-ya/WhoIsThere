@@ -411,7 +411,15 @@ class _PlayerActionSheetState extends ConsumerState<_PlayerActionSheet> {
 
   void _goToStore(BuildContext ctx) {
     Navigator.pop(ctx);
-    ctx.push('/store');
+    ScaffoldMessenger.of(ctx)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('החנות זמינה בין משחקים 🛍️', textDirection: TextDirection.rtl),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   @override

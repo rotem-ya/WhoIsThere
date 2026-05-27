@@ -89,7 +89,7 @@ class EconomyConfig {
   };
 
   // ── Auto-reveal race mechanic ─────────────────────────────────
-  static const int autoRevealIntervalMs = 4000;
+  static const int autoRevealIntervalMs = 1500;
 
   // ── Entry fee options (for future host selection UI) ─────────
   static const List<int> entryFeeOptions = [0, 10, 25, 50];
