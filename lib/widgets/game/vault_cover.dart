@@ -6,11 +6,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/card_skin.dart';
 
+Future<ui.Image> _decodeUiImage(Uint8List bytes) {
+  final completer = Completer<ui.Image>();
+  ui.decodeImageFromList(bytes, completer.complete);
+  return completer.future;
+}
+
+/// Resolves a network URL directly to a ui.Image via Flutter's image cache.
+Future<ui.Image?> _fetchNetworkUiImage(String url) async {
+  try {
+    final stream = NetworkImage(url).resolve(ImageConfiguration.empty);
+    final completer = Completer<ui.Image>();
+    late ImageStreamListener listener;
+    listener = ImageStreamListener(
+      (info, _) => completer.complete(info.image),
+      onError: (e, _) => completer.completeError(e),
+    );
+    stream.addListener(listener);
+    final image = await completer.future;
+    stream.removeListener(listener);
+    return image;
+  } catch (_) {
+    return null;
+  }
+}
+
 class VaultCover extends StatefulWidget {
   final bool isRevealed;
   final bool isFocused;
   final Widget child;
   final String cardSkinId;
+  /// Optional full skin object — when provided, network coverImageUrl is used.
+  final CardSkin? skin;
 
   const VaultCover({
     super.key,
@@ -18,6 +45,7 @@ class VaultCover extends StatefulWidget {
     required this.child,
     this.isFocused = false,
     this.cardSkinId = 'default',
+    this.skin,
   });
 
   @override
@@ -52,22 +80,27 @@ class _VaultCoverState extends State<VaultCover>
     } else if (!widget.isRevealed && oldWidget.isRevealed) {
       _ctrl.reverse();
     }
-    if (widget.cardSkinId != oldWidget.cardSkinId) {
+    if (widget.cardSkinId != oldWidget.cardSkinId ||
+        widget.skin?.coverImageUrl != oldWidget.skin?.coverImageUrl) {
       _loadSkinImage(widget.cardSkinId);
     }
   }
 
-  static Future<ui.Image> _decodeUiImage(Uint8List bytes) {
-    final completer = Completer<ui.Image>();
-    ui.decodeImageFromList(bytes, completer.complete);
-    return completer.future;
-  }
-
   Future<void> _loadSkinImage(String skinId) async {
-    final skin = kAvailableCardSkins.firstWhere(
-      (s) => s.id == skinId,
-      orElse: () => kAvailableCardSkins.first,
-    );
+    // Prefer explicit skin object (may have network URL) over hardcoded lookup
+    final skin = widget.skin ??
+        kAvailableCardSkins.firstWhere(
+          (s) => s.id == skinId,
+          orElse: () => kAvailableCardSkins.first,
+        );
+
+    // Network image takes priority
+    if (skin.coverImageUrl != null) {
+      final image = await _fetchNetworkUiImage(skin.coverImageUrl!);
+      if (mounted) setState(() => _skinImage = image);
+      return;
+    }
+
     if (skin.assetPath == null) {
       if (mounted) setState(() => _skinImage = null);
       return;
@@ -471,7 +504,10 @@ class _SkinPalette {
 
 class CardSkinPreview extends StatefulWidget {
   final String cardSkinId;
-  const CardSkinPreview({super.key, required this.cardSkinId});
+  /// Optional full skin — when provided, network coverImageUrl is used.
+  final CardSkin? skin;
+
+  const CardSkinPreview({super.key, required this.cardSkinId, this.skin});
 
   @override
   State<CardSkinPreview> createState() => _CardSkinPreviewState();
@@ -489,23 +525,33 @@ class _CardSkinPreviewState extends State<CardSkinPreview> {
   @override
   void didUpdateWidget(covariant CardSkinPreview old) {
     super.didUpdateWidget(old);
-    if (widget.cardSkinId != old.cardSkinId) _loadImage(widget.cardSkinId);
+    if (widget.cardSkinId != old.cardSkinId ||
+        widget.skin?.coverImageUrl != old.skin?.coverImageUrl) {
+      _loadImage(widget.cardSkinId);
+    }
   }
 
   Future<void> _loadImage(String skinId) async {
-    final skin = kAvailableCardSkins.firstWhere(
-      (s) => s.id == skinId,
-      orElse: () => kAvailableCardSkins.first,
-    );
+    final skin = widget.skin ??
+        kAvailableCardSkins.firstWhere(
+          (s) => s.id == skinId,
+          orElse: () => kAvailableCardSkins.first,
+        );
+
+    // Network image takes priority
+    if (skin.coverImageUrl != null) {
+      final image = await _fetchNetworkUiImage(skin.coverImageUrl!);
+      if (mounted) setState(() => _skinImage = image);
+      return;
+    }
+
     if (skin.assetPath == null) {
       if (mounted) setState(() => _skinImage = null);
       return;
     }
     try {
       final data = await rootBundle.load(skin.assetPath!);
-      final completer = Completer<ui.Image>();
-      ui.decodeImageFromList(data.buffer.asUint8List(), completer.complete);
-      final image = await completer.future;
+      final image = await _decodeUiImage(data.buffer.asUint8List());
       if (mounted) setState(() => _skinImage = image);
     } catch (_) {
       if (mounted) setState(() => _skinImage = null);

@@ -1,6 +1,6 @@
 /// Manually updated on each push. Check this label in Profile screen
 /// to verify which APK build is installed on a test device.
-const String kBuildLabel = 'build-20260527-polish-r1';
+const String kBuildLabel = 'build-20260527-skin-infra-r2';
 
 const String kGitBranch = 'claude/stability-compensation-logging-dkoQh';
 

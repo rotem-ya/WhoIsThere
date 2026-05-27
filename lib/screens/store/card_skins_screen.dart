@@ -8,6 +8,7 @@ import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../models/card_skin.dart';
 import '../../providers/providers.dart';
+import '../../providers/skin_providers.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/game/vault_cover.dart'; // CardSkinPreview
@@ -49,11 +50,6 @@ final ownedSkinsProvider = StreamProvider.autoDispose<List<String>>((ref) {
 class CardSkinsScreen extends ConsumerWidget {
   const CardSkinsScreen({super.key});
 
-  static final _freeSkins =
-      kAvailableCardSkins.where((s) => s.isFree).toList();
-  static final _premiumSkins =
-      kAvailableCardSkins.where((s) => !s.isFree).toList();
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final coins = ref.watch(walletProvider).valueOrNull?.coins ?? 0;
@@ -61,6 +57,10 @@ class CardSkinsScreen extends ConsumerWidget {
         ref.watch(selectedSkinProvider).valueOrNull ?? 'default';
     final ownedSkins =
         ref.watch(ownedSkinsProvider).valueOrNull ?? ['default'];
+    final allSkins = ref.watch(allSkinsProvider);
+
+    final freeSkins = allSkins.where((s) => s.isFree).toList();
+    final premiumSkins = allSkins.where((s) => !s.isFree).toList();
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
@@ -97,7 +97,7 @@ class CardSkinsScreen extends ConsumerWidget {
                 _SectionHeader(label: 'חינמי', icon: Icons.star_outline_rounded),
                 const SizedBox(height: AppSpacing.sm),
                 _SkinGrid(
-                  skins: _freeSkins,
+                  skins: freeSkins,
                   coins: coins,
                   selectedSkin: selectedSkin,
                   ownedSkins: ownedSkins,
@@ -109,7 +109,7 @@ class CardSkinsScreen extends ConsumerWidget {
                     label: 'פרימיום', icon: Icons.auto_awesome_rounded),
                 const SizedBox(height: AppSpacing.sm),
                 _SkinGrid(
-                  skins: _premiumSkins,
+                  skins: premiumSkins,
                   coins: coins,
                   selectedSkin: selectedSkin,
                   ownedSkins: ownedSkins,
@@ -466,6 +466,6 @@ class _SkinPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CardSkinPreview(cardSkinId: skin.id);
+    return CardSkinPreview(cardSkinId: skin.id, skin: skin);
   }
 }

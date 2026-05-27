@@ -3,15 +3,40 @@ class CardSkin {
   final String name;
   final int price;
   final String? assetPath;
+  final String? coverImageUrl;
+  final String? previewImageUrl;
 
   const CardSkin({
     required this.id,
     required this.name,
     required this.price,
     this.assetPath,
+    this.coverImageUrl,
+    this.previewImageUrl,
   });
 
   bool get isFree => price == 0;
+
+  /// Whether this skin has a custom background image (asset or network).
+  bool get hasImage => assetPath != null || coverImageUrl != null;
+
+  factory CardSkin.fromFirestore(String id, Map<String, dynamic> data) {
+    return CardSkin(
+      id: id,
+      name: (data['nameHe'] as String?) ?? id,
+      price: (data['price'] as num?)?.toInt() ?? 0,
+      coverImageUrl: data['coverImageUrl'] as String?,
+      previewImageUrl: data['previewImageUrl'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toFirestore() => {
+        'nameHe': name,
+        'price': price,
+        if (coverImageUrl != null) 'coverImageUrl': coverImageUrl,
+        if (previewImageUrl != null) 'previewImageUrl': previewImageUrl,
+        'active': true,
+      };
 }
 
 const kAvailableCardSkins = <CardSkin>[
