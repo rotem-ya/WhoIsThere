@@ -1265,6 +1265,23 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     return correct;
   }
 
+  void _handleGuessTap(RoomModel room, String userId, bool canGuessNow) {
+    if (canGuessNow) {
+      _enterGuessMode(room, userId);
+    } else {
+      QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED_EARLY phase=${room.turnPhase.name}');
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('ממתין לחשיפה הבאה...', textDirection: TextDirection.rtl),
+            duration: Duration(milliseconds: 1200),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    }
+  }
+
   Future<void> _enterGuessMode(RoomModel room, String userId) async {
     QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED phase=${room.turnPhase.name}');
 
@@ -1844,7 +1861,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   onBuySecondHint: (isSolo && currentUserId != null && _purchasedFacts.length == 1 && (_image?.facts.length ?? 0) > 1)
                       ? () => _buySecondHint(room, currentUserId!)
                       : null,
-                  onGuess: canGuessNow ? () => _enterGuessMode(room, currentUserId!) : null,
+                  onGuess: (!_isFinished && currentUserId != null)
+                      ? () => _handleGuessTap(room, currentUserId!, canGuessNow)
+                      : null,
                   onGuessSubmit: (currentUserId != null &&
                           room.turnPhase == TurnPhase.guessMode &&
                           room.guessModePlayerId == currentUserId)
