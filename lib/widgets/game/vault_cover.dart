@@ -355,6 +355,302 @@ class _AperturePainter extends CustomPainter {
     }
   }
 
+  // ── Per-skin unique background pattern ────────────────────────────────────
+  void _drawSkinPattern(Canvas canvas, Size size, Rect rect,
+      Offset center, _SkinPalette pal) {
+    _drawPattern(canvas, size, rect, center, pal, cardSkinId);
+  }
+
+  static void _drawPattern(
+      Canvas canvas, Size size, Rect rect, Offset center,
+      _SkinPalette pal, String skinId) {
+    final rngA = math.Random(1337);
+    final linePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final fillPaint = Paint()..style = PaintingStyle.fill;
+
+    switch (skinId) {
+      // ── classic — ornamental diamond grid ──────────────────────────────
+      case 'classic':
+        linePaint
+          ..color = pal.bladeMid.withOpacity(0.20)
+          ..strokeWidth = 0.8;
+        const s = 20.0;
+        for (var x = -s; x < size.width + s; x += s) {
+          for (var y = -s; y < size.height + s; y += s) {
+            final p = Path()
+              ..moveTo(x, y - s * 0.5)
+              ..lineTo(x + s * 0.5, y)
+              ..lineTo(x, y + s * 0.5)
+              ..lineTo(x - s * 0.5, y)
+              ..close();
+            canvas.drawPath(p, linePaint);
+          }
+        }
+
+      // ── ocean — horizontal sine waves ──────────────────────────────────
+      case 'ocean':
+        linePaint
+          ..color = pal.bladeMid.withOpacity(0.22)
+          ..strokeWidth = 1.1;
+        const waveCount = 13;
+        const amp = 5.0;
+        for (var w = 0; w <= waveCount; w++) {
+          final baseY = (size.height / waveCount) * w;
+          final path = Path();
+          var first = true;
+          for (var x = 0.0; x <= size.width; x += 3) {
+            final y = baseY + math.sin(x * 0.045 + w * 0.9) * amp;
+            if (first) {
+              path.moveTo(x, y);
+              first = false;
+            } else {
+              path.lineTo(x, y);
+            }
+          }
+          canvas.drawPath(path, linePaint);
+        }
+
+      // ── forest — diagonal branch lines + leaf ovals ────────────────────
+      case 'forest':
+        linePaint
+          ..color = pal.bladeMid.withOpacity(0.18)
+          ..strokeWidth = 0.9;
+        const spacing = 26.0;
+        for (var i = -size.height.toInt();
+            i < size.width.toInt() + size.height.toInt();
+            i += spacing.toInt()) {
+          canvas.drawLine(Offset(i.toDouble(), 0),
+              Offset(i.toDouble() + size.height * 0.7, size.height), linePaint);
+        }
+        fillPaint.color = pal.bladeLight.withOpacity(0.12);
+        for (var i = 0; i < 18; i++) {
+          final angle = i * 2.41;
+          final r = size.width * (0.08 + (i % 5) * 0.09);
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: Offset(center.dx + math.cos(angle) * r,
+                  center.dy + math.sin(angle) * r),
+              width: 14,
+              height: 7,
+            ),
+            fillPaint,
+          );
+        }
+
+      // ── sand — concentric ellipse rings ────────────────────────────────
+      case 'sand':
+        linePaint
+          ..color = pal.bladeMid.withOpacity(0.22)
+          ..strokeWidth = 1.0;
+        for (var i = 1; i <= 12; i++) {
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: center,
+              width: i * size.width * 0.17,
+              height: i * size.height * 0.13,
+            ),
+            linePaint,
+          );
+        }
+
+      // ── blue — constellation (dots + connecting lines) ─────────────────
+      case 'blue':
+        final positions = List.generate(
+          55,
+          (i) => Offset(
+            rngA.nextDouble() * size.width,
+            rngA.nextDouble() * size.height,
+          ),
+        );
+        fillPaint.color = pal.bladeLight.withOpacity(0.55);
+        for (final p in positions) {
+          canvas.drawCircle(p, rngA.nextDouble() * 1.5 + 0.5, fillPaint);
+        }
+        linePaint
+          ..color = pal.bladeMid.withOpacity(0.14)
+          ..strokeWidth = 0.6;
+        for (var i = 0; i < 14; i++) {
+          canvas.drawLine(positions[i], positions[i + 1], linePaint);
+        }
+
+      // ── red — bold diagonal stripes ────────────────────────────────────
+      case 'red':
+        linePaint
+          ..color = pal.bladeMid.withOpacity(0.20)
+          ..strokeWidth = 10;
+        const sp = 32.0;
+        for (var i = -size.height.toInt();
+            i < size.width.toInt() + size.height.toInt();
+            i += sp.toInt()) {
+          canvas.drawLine(Offset(i.toDouble(), 0),
+              Offset(i.toDouble() + size.height, size.height), linePaint);
+        }
+
+      // ── copper — cross-hatch grid ──────────────────────────────────────
+      case 'copper':
+        linePaint
+          ..color = pal.bladeMid.withOpacity(0.20)
+          ..strokeWidth = 0.8;
+        const g = 18.0;
+        for (var x = 0.0; x < size.width; x += g) {
+          canvas.drawLine(Offset(x, 0), Offset(x, size.height), linePaint);
+        }
+        for (var y = 0.0; y < size.height; y += g) {
+          canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);
+        }
+
+      // ── dark — night star field + purple glow ─────────────────────────
+      case 'dark':
+        fillPaint.color = pal.bladeLight.withOpacity(0.55);
+        for (var i = 0; i < 90; i++) {
+          final x = rngA.nextDouble() * size.width;
+          final y = rngA.nextDouble() * size.height;
+          final r = i < 6 ? 1.8 : 0.7;
+          canvas.drawCircle(Offset(x, y), r, fillPaint);
+        }
+        // Soft central glow
+        canvas.drawCircle(
+          center,
+          size.width * 0.28,
+          Paint()
+            ..color = pal.bladeDark.withOpacity(0.22)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 24),
+        );
+
+      // ── emerald — hexagonal grid ───────────────────────────────────────
+      case 'emerald':
+        linePaint
+          ..color = pal.bladeMid.withOpacity(0.22)
+          ..strokeWidth = 1.0;
+        const hr = 16.0;
+        const dx = hr * 1.7321; // sqrt(3)
+        const dy = hr * 1.5;
+        for (var row = -1; row < size.height / dy + 2; row++) {
+          for (var col = -1; col < size.width / dx + 2; col++) {
+            final ox = (row % 2) * (dx / 2);
+            final cx = col * dx + ox;
+            final cy = row * dy;
+            final path = Path();
+            for (var side = 0; side < 6; side++) {
+              final a = side * math.pi / 3 - math.pi / 6;
+              final px = cx + hr * math.cos(a);
+              final py = cy + hr * math.sin(a);
+              if (side == 0) path.moveTo(px, py);
+              else path.lineTo(px, py);
+            }
+            path.close();
+            canvas.drawPath(path, linePaint);
+          }
+        }
+
+      // ── ruby — scattered 4-pointed sparkles ───────────────────────────
+      case 'ruby':
+        fillPaint.color = pal.bladeLight.withOpacity(0.40);
+        for (var i = 0; i < 40; i++) {
+          final x = rngA.nextDouble() * size.width;
+          final y = rngA.nextDouble() * size.height;
+          final s = rngA.nextDouble() * 5 + 2;
+          final path = Path()
+            ..moveTo(x, y - s)
+            ..lineTo(x + s * 0.28, y - s * 0.28)
+            ..lineTo(x + s, y)
+            ..lineTo(x + s * 0.28, y + s * 0.28)
+            ..lineTo(x, y + s)
+            ..lineTo(x - s * 0.28, y + s * 0.28)
+            ..lineTo(x - s, y)
+            ..lineTo(x - s * 0.28, y - s * 0.28)
+            ..close();
+          canvas.drawPath(path, fillPaint);
+        }
+
+      // ── rose_gold — overlapping circle petals ─────────────────────────
+      case 'rose_gold':
+        linePaint
+          ..color = pal.bladeMid.withOpacity(0.18)
+          ..strokeWidth = 1.1;
+        const petalCount = 8;
+        const petalR = 30.0;
+        for (var i = 0; i < petalCount; i++) {
+          final a = (i / petalCount) * 2 * math.pi;
+          final px = center.dx + math.cos(a) * petalR;
+          final py = center.dy + math.sin(a) * petalR;
+          for (var j = 0; j < 4; j++) {
+            canvas.drawCircle(
+              Offset(px, py),
+              petalR * (1 - j * 0.2),
+              linePaint
+                ..color = pal.bladeMid.withOpacity(0.10 - j * 0.02),
+            );
+          }
+        }
+        for (var r = 15.0; r < size.width; r += 28) {
+          canvas.drawCircle(
+              center, r, linePaint..color = pal.bladeLight.withOpacity(0.07));
+        }
+
+      // ── galaxy — star field + two spiral arms ─────────────────────────
+      case 'galaxy':
+        fillPaint.color = pal.bladeLight.withOpacity(0.60);
+        for (var i = 0; i < 130; i++) {
+          canvas.drawCircle(
+            Offset(rngA.nextDouble() * size.width,
+                rngA.nextDouble() * size.height),
+            rngA.nextDouble() * 1.4 + 0.3,
+            fillPaint,
+          );
+        }
+        linePaint
+          ..color = pal.bladeMid.withOpacity(0.16)
+          ..strokeWidth = 1.6;
+        for (var arm = 0; arm < 2; arm++) {
+          final offset = arm * math.pi;
+          final path = Path();
+          var first = true;
+          for (var t = 0.0; t < 4 * math.pi; t += 0.07) {
+            final r = t * size.width * 0.06;
+            final x = center.dx + math.cos(t + offset) * r;
+            final y = center.dy + math.sin(t + offset) * r;
+            if (first) {
+              path.moveTo(x, y);
+              first = false;
+            } else {
+              path.lineTo(x, y);
+            }
+          }
+          canvas.drawPath(path, linePaint);
+        }
+
+      // ── obsidian — jagged cracks from centre ──────────────────────────
+      case 'obsidian':
+        linePaint
+          ..color = pal.rimInner.withOpacity(0.30)
+          ..strokeWidth = 0.9;
+        for (var crack = 0; crack < 9; crack++) {
+          var angle = crack * math.pi * 2 / 9;
+          var x = center.dx;
+          var y = center.dy;
+          final path = Path()..moveTo(x, y);
+          for (var step = 0; step < 10; step++) {
+            angle += (rngA.nextDouble() - 0.5) * 0.9;
+            x += math.cos(angle) * size.width * 0.095;
+            y += math.sin(angle) * size.height * 0.095;
+            path.lineTo(x, y);
+            if (rngA.nextDouble() < 0.3 && step > 3) {
+              final ba = angle + (rngA.nextDouble() - 0.5) * 1.2;
+              path
+                ..lineTo(
+                    x + math.cos(ba) * size.width * 0.055,
+                    y + math.sin(ba) * size.height * 0.055)
+                ..moveTo(x, y);
+            }
+          }
+          canvas.drawPath(path, linePaint);
+        }
+    }
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
@@ -373,6 +669,8 @@ class _AperturePainter extends CustomPainter {
       canvas.drawImageRect(skinImage!, src, rect, Paint());
     } else {
       canvas.drawRect(rect, Paint()..color = pal.base);
+      // Draw per-skin unique pattern (only when no custom image)
+      _drawSkinPattern(canvas, size, rect, center, pal);
     }
 
     // ── Metallic rotating blades (skin colours) ───────────────────────────
