@@ -8,7 +8,8 @@ build/
 # Android
 android/local.properties
 android/app/src/main/java/io/flutter/plugins/
-*.jks
+# keystore.jks is committed intentionally — do NOT re-run generate-keystore.yml
+# Password: WhoIsThere2024! / alias: whoisthere / SHA-1 registered in Firebase
 *.keystore
 key.properties
 
