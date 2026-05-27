@@ -10,7 +10,6 @@ import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
-import '../../services/hint_economy_guard.dart';
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/economy/coin_display.dart';
@@ -29,7 +28,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 4, vsync: this);
+    _tab = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -91,7 +90,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
                 fontWeight: FontWeight.w800, fontSize: 13),
             tabs: const [
               Tab(text: '💎 רכישה'),
-              Tab(text: '💡 רמזים'),
               Tab(text: '🎴 כרטיסים'),
               Tab(text: '🎨 עיצובים'),
             ],
@@ -103,7 +101,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
               controller: _tab,
               children: [
                 _PurchaseTab(coins: coins, ref: ref),
-                _HintsTab(coins: coins, ref: ref),
                 _CardsTab(coins: coins, ref: ref),
                 const _SkinsTab(),
               ],
@@ -152,102 +149,7 @@ class _PurchaseTab extends StatelessWidget {
   }
 }
 
-// ── Tab 2: רמזים ──────────────────────────────────────────────────────────────
-
-class _HintsTab extends StatelessWidget {
-  final int coins;
-  final WidgetRef ref;
-  const _HintsTab({required this.coins, required this.ref});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'רמזים שנרכשו יוחלו במשחק הבא',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white54, fontSize: 13),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: _HintCard(
-                    icon: Icons.lightbulb_outline_rounded,
-                    title: 'חשוף משבצת',
-                    description: 'חשוף אזור נסתר בתמונה',
-                    price: EconomyConfig.hintRevealTilePrice,
-                    coins: coins,
-                    onBuy: () => _buyHint(
-                        context, ref, HintType.revealTile, coins),
-                  )
-                      .animate(delay: 80.ms)
-                      .fadeIn(duration: 340.ms, curve: Curves.easeOut)
-                      .slideY(begin: 0.06, end: 0, duration: 340.ms),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: _HintCard(
-                    icon: Icons.casino_outlined,
-                    title: 'ניחוש נוסף',
-                    description: 'הזדמנות ניחוש נוספת',
-                    price: EconomyConfig.hintExtraGuessPrice,
-                    coins: coins,
-                    onBuy: () => _buyHint(
-                        context, ref, HintType.extraGuess, coins),
-                  )
-                      .animate(delay: 160.ms)
-                      .fadeIn(duration: 340.ms, curve: Curves.easeOut)
-                      .slideY(begin: 0.06, end: 0, duration: 340.ms),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _buyHint(
-    BuildContext context,
-    WidgetRef ref,
-    HintType hint,
-    int currentCoins,
-  ) async {
-    HapticFeedback.lightImpact();
-    AppFeedback.selection();
-    final guard = ref.read(hintEconomyGuardProvider);
-    final wallet = ref.read(walletProvider).valueOrNull;
-    if (wallet == null) return;
-
-    if (!guard.canAfford(wallet, hint)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('אין מספיק מטבעות!')),
-      );
-      return;
-    }
-
-    final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
-    if (uid == null) return;
-
-    final granted =
-        await guard.useHint(uid: uid, hint: hint, wallet: wallet);
-    if (!context.mounted) return;
-
-    if (granted) {
-      AppFeedback.success();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ הרמז נקנה ויוחל במשחק הבא')),
-      );
-    }
-  }
-}
-
-// ── Tab 3: כרטיסים ────────────────────────────────────────────────────────────
+// ── Tab 2: כרטיסים ────────────────────────────────────────────────────────────
 
 class _CardsTab extends StatelessWidget {
   final int coins;
@@ -1000,96 +902,5 @@ class _RewardedAdTile extends ConsumerWidget {
         const SnackBar(content: Text('המכסה היומית הושלמה')),
       );
     }
-  }
-}
-
-// ── Hint card ─────────────────────────────────────────────────────────────────
-
-class _HintCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String description;
-  final int price;
-  final int coins;
-  final VoidCallback onBuy;
-
-  const _HintCard({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.price,
-    required this.coins,
-    required this.onBuy,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final canAfford = coins >= price;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: const Color(0xFF07101F).withOpacity(0.72),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: const Color(0xFFD4AF37).withOpacity(0.25),
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(icon, color: AppColors.primary, size: 36),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.body
-                .copyWith(fontWeight: FontWeight.w900),
-          ),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.subtitleLight
-                .copyWith(fontSize: 12),
-          ),
-          PressableScale(
-            onTap: canAfford ? onBuy : null,
-            child: AnimatedOpacity(
-              opacity: canAfford ? 1.0 : 0.45,
-              duration: const Duration(milliseconds: 180),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  gradient: canAfford
-                      ? const LinearGradient(
-                          colors: [Color(0xFFFFE082), Color(0xFFD4AF37)],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        )
-                      : null,
-                  color: canAfford ? null : Colors.white12,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '🪙 $price',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: canAfford
-                        ? const Color(0xFF07101F)
-                        : Colors.white38,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
