@@ -69,7 +69,7 @@ class _AnimatedCoinChipState extends State<_AnimatedCoinChip>
     return AnimatedBuilder(
       animation: _anim,
       builder: (_, __) {
-        final displayed = _anim.value.round();
+        final displayed = _anim.value.round().clamp(0, 999999);
         return Container(
           height: h,
           padding: EdgeInsets.symmetric(horizontal: px),
@@ -107,12 +107,10 @@ class _AnimatedCoinChipState extends State<_AnimatedCoinChip>
                   ),
                 ),
                 child: Text(
-                  displayed < 0 ? '−${displayed.abs()}' : '$displayed',
+                  '$displayed',
                   key: ValueKey(displayed),
                   style: TextStyle(
-                    color: displayed < 0
-                        ? const Color(0xFFFF6B6B)
-                        : const Color(0xFF07101F),
+                    color: const Color(0xFF07101F),
                     fontSize: fontSize,
                     fontWeight: FontWeight.w900,
                     height: 1,
