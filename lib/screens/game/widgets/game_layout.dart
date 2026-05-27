@@ -114,16 +114,15 @@ class GameLayout extends StatelessWidget {
     final blockedUntil = userId != null ? (room.blockedGuessers[userId] ?? 0) : 0;
     final blockedRemaining = isBlocked ? (blockedUntil - room.revealCount).clamp(0, 99) : 0;
 
-    // Stun card: eligible targets = other human non-eliminated players
+    // Stun card: eligible targets = all non-self, non-eliminated players (bots included)
     final stunnedPlayerIds = room.blockedGuessers.entries
         .where((e) => room.revealCount < e.value)
         .map((e) => e.key)
         .toSet();
     final stunTargets = room.players.values
-        .where((p) => !p.isBot && !p.isEliminated && p.id != currentUserId)
+        .where((p) => !p.isEliminated && p.id != currentUserId)
         .toList();
-    final canUseStunCard = !isSolo &&
-        stunCardCount > 0 &&
+    final canUseStunCard = stunCardCount > 0 &&
         stunTargets.isNotEmpty &&
         room.turnPhase != TurnPhase.guessMode &&
         room.phase != GamePhase.finished;

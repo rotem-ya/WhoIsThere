@@ -165,68 +165,69 @@ class _CardsTab extends StatelessWidget {
     final blackoutCount = user?.blackoutCardCount ?? 0;
 
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: ListView(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'כרטיסים שנרכשו נשמרים ומשמשים במהלך משחק',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white54, fontSize: 13),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              'לחץ על שחקן במשחק כדי להפעיל כרטיס',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          _StunCardTile(
-            stunCount: stunCount,
-            canAfford: coins >= EconomyConfig.stunCardPrice,
-            onBuy: () => _buyCard(context, 'stun'),
-          )
-              .animate(delay: 80.ms)
-              .fadeIn(duration: 340.ms, curve: Curves.easeOut)
-              .slideY(begin: 0.06, end: 0, duration: 340.ms),
-          const SizedBox(height: AppSpacing.md),
-          _ActionCardTile(
-            icon: Icons.timer_outlined,
-            emoji: '⏱',
-            title: 'חסימת ניחוש — 5 שניות',
-            description: 'מונע מיריב לנחש למשך 5 שניות',
-            price: EconomyConfig.guessBlock5Price,
-            owned: block5Count,
-            canAfford: coins >= EconomyConfig.guessBlock5Price,
-            accentColor: const Color(0xFF1890D0),
-            onBuy: () => _buyCard(context, 'block5'),
-          )
-              .animate(delay: 140.ms)
-              .fadeIn(duration: 340.ms, curve: Curves.easeOut)
-              .slideY(begin: 0.06, end: 0, duration: 340.ms),
-          const SizedBox(height: AppSpacing.md),
-          _ActionCardTile(
-            icon: Icons.timer,
-            emoji: '⏱',
-            title: 'חסימת ניחוש — 10 שניות',
-            description: 'מונע מיריב לנחש למשך 10 שניות',
-            price: EconomyConfig.guessBlock10Price,
-            owned: block10Count,
-            canAfford: coins >= EconomyConfig.guessBlock10Price,
-            accentColor: const Color(0xFF1060A0),
-            onBuy: () => _buyCard(context, 'block10'),
-          )
-              .animate(delay: 200.ms)
-              .fadeIn(duration: 340.ms, curve: Curves.easeOut)
-              .slideY(begin: 0.06, end: 0, duration: 340.ms),
-          const SizedBox(height: AppSpacing.md),
-          _ActionCardTile(
-            icon: Icons.visibility_off_outlined,
-            emoji: '🕶',
-            title: 'כרטיס החשכה',
-            description: 'מסתיר את הלוח מיריב למשך 5 שניות',
-            price: EconomyConfig.blackoutCardPrice,
-            owned: blackoutCount,
-            canAfford: coins >= EconomyConfig.blackoutCardPrice,
-            accentColor: const Color(0xFF8B4FBF),
-            onBuy: () => _buyCard(context, 'blackout'),
-          )
-              .animate(delay: 260.ms)
-              .fadeIn(duration: 340.ms, curve: Curves.easeOut)
-              .slideY(begin: 0.06, end: 0, duration: 340.ms),
+          Expanded(
+            child: GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.62,
+              children: [
+                _PlayingCard(
+                  title: 'כרטיס עצור',
+                  description: 'חוסם שחקן אחד מניחוש לתור שלם',
+                  emoji: '🔒',
+                  accentColor: const Color(0xFF8B4FBF),
+                  owned: stunCount,
+                  price: EconomyConfig.stunCardPrice,
+                  canAfford: coins >= EconomyConfig.stunCardPrice,
+                  onBuy: () => _buyCard(context, 'stun'),
+                ).animate(delay: 60.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
+                _PlayingCard(
+                  title: 'חסימה 5 שניות',
+                  description: 'מונע ניחוש מיריב למשך 5 שניות',
+                  emoji: '⏱️',
+                  accentColor: const Color(0xFF1890D0),
+                  owned: block5Count,
+                  price: EconomyConfig.guessBlock5Price,
+                  canAfford: coins >= EconomyConfig.guessBlock5Price,
+                  onBuy: () => _buyCard(context, 'block5'),
+                ).animate(delay: 120.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
+                _PlayingCard(
+                  title: 'חסימה 10 שניות',
+                  description: 'מונע ניחוש מיריב למשך 10 שניות',
+                  emoji: '⏰',
+                  accentColor: const Color(0xFF0060A0),
+                  owned: block10Count,
+                  price: EconomyConfig.guessBlock10Price,
+                  canAfford: coins >= EconomyConfig.guessBlock10Price,
+                  onBuy: () => _buyCard(context, 'block10'),
+                ).animate(delay: 180.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
+                _PlayingCard(
+                  title: 'החשכה',
+                  description: 'מחשיך את הלוח של יריב ל-5 שניות',
+                  emoji: '🕶️',
+                  accentColor: const Color(0xFF5A1A8A),
+                  owned: blackoutCount,
+                  price: EconomyConfig.blackoutCardPrice,
+                  canAfford: coins >= EconomyConfig.blackoutCardPrice,
+                  onBuy: () => _buyCard(context, 'blackout'),
+                ).animate(delay: 240.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -290,294 +291,151 @@ class _CardsTab extends StatelessWidget {
   }
 }
 
-class _StunCardTile extends StatelessWidget {
-  final int stunCount;
-  final bool canAfford;
-  final VoidCallback onBuy;
-  const _StunCardTile({
-    required this.stunCount,
-    required this.canAfford,
-    required this.onBuy,
-  });
+// ── Playing card widget ───────────────────────────────────────────────────────
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0A1A30), Color(0xFF1A0A20)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFF8B4FBF).withOpacity(0.55),
-          width: 1.4,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              _CardArtIcon(
-                icon: Icons.lock_outline_rounded,
-                emoji: '🔒',
-                gradientColors: const [Color(0xFF8B4FBF), Color(0xFF5A1A8A)],
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'כרטיס עצור',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'חסום שחקן אחר מניחוש לתור אחד',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.65),
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF8B4FBF).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF8B4FBF).withOpacity(0.35)),
-                ),
-                child: Text(
-                  'ברשותך: $stunCount',
-                  style: const TextStyle(
-                    color: Color(0xFFCF9FFF),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              PressableScale(
-                onTap: canAfford ? onBuy : null,
-                scale: 0.93,
-                child: AnimatedOpacity(
-                  opacity: canAfford ? 1.0 : 0.45,
-                  duration: const Duration(milliseconds: 160),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                    decoration: BoxDecoration(
-                      gradient: canAfford
-                          ? const LinearGradient(
-                              colors: [Color(0xFF8B4FBF), Color(0xFF5A1A8A)],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            )
-                          : null,
-                      color: canAfford ? null : Colors.white12,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      '${EconomyConfig.stunCardPrice} 🪙',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Generic action card tile ──────────────────────────────────────────────────
-
-class _ActionCardTile extends StatelessWidget {
-  final IconData icon;
-  final String emoji;
+class _PlayingCard extends StatelessWidget {
   final String title;
   final String description;
-  final int price;
-  final int owned;
-  final bool canAfford;
+  final String emoji;
   final Color accentColor;
+  final int owned;
+  final int price;
+  final bool canAfford;
   final VoidCallback onBuy;
 
-  const _ActionCardTile({
-    required this.icon,
-    required this.emoji,
+  const _PlayingCard({
     required this.title,
     required this.description,
-    required this.price,
-    required this.owned,
-    required this.canAfford,
+    required this.emoji,
     required this.accentColor,
+    required this.owned,
+    required this.price,
+    required this.canAfford,
     required this.onBuy,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [const Color(0xFF0A1A30), Color.lerp(const Color(0xFF0A1A30), accentColor, 0.12)!],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: accentColor.withOpacity(0.50), width: 1.4),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              _CardArtIcon(
-                icon: icon,
-                emoji: emoji,
-                gradientColors: [
-                  accentColor.withOpacity(0.85),
-                  Color.lerp(accentColor, Colors.black, 0.45)!,
-                ],
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      style: TextStyle(color: Colors.white.withOpacity(0.60), fontSize: 12),
-                    ),
-                  ],
-                ),
+    return PressableScale(
+      onTap: canAfford ? onBuy : null,
+      scale: 0.95,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 160),
+        opacity: canAfford ? 1.0 : 0.55,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                accentColor.withOpacity(0.30),
+                const Color(0xFF04091A),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: accentColor.withOpacity(0.70), width: 1.8),
+            boxShadow: [
+              BoxShadow(
+                color: accentColor.withOpacity(0.22),
+                blurRadius: 14,
+                spreadRadius: 1,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // ── Coloured top bar ─────────────────────────────────────────
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                height: 7,
                 decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: accentColor.withOpacity(0.30)),
+                  color: accentColor,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // Title
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          height: 1.2,
+                        ),
+                      ),
+                      // Big emoji
+                      Text(
+                        emoji,
+                        style: const TextStyle(fontSize: 44, height: 1),
+                      ),
+                      // Description
+                      Text(
+                        description,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.60),
+                          fontSize: 11,
+                          height: 1.3,
+                        ),
+                      ),
+                      // Owned badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: accentColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: accentColor.withOpacity(0.45), width: 1),
+                        ),
+                        child: Text(
+                          'ברשותך: $owned',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: accentColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // ── Buy button ───────────────────────────────────────────────
+              Container(
+                margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                padding: const EdgeInsets.symmetric(vertical: 9),
+                decoration: BoxDecoration(
+                  color: canAfford ? accentColor : Colors.white12,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  'ברשותך: $owned',
+                  '$price 🪙',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: accentColor.withOpacity(0.90),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              PressableScale(
-                onTap: canAfford ? onBuy : null,
-                scale: 0.93,
-                child: AnimatedOpacity(
-                  opacity: canAfford ? 1.0 : 0.45,
-                  duration: const Duration(milliseconds: 160),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: canAfford ? accentColor : Colors.white12,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      '$price 🪙',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
+                    color: canAfford ? Colors.white : Colors.white38,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Card art icon ─────────────────────────────────────────────────────────────
-
-class _CardArtIcon extends StatelessWidget {
-  final IconData icon;
-  final String emoji;
-  final List<Color> gradientColors;
-
-  const _CardArtIcon({
-    required this.icon,
-    required this.emoji,
-    required this.gradientColors,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradientColors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: gradientColors.first.withOpacity(0.35),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Icon(icon, color: Colors.white.withOpacity(0.30), size: 32),
-          Positioned(
-            bottom: 5,
-            right: 5,
-            child: Text(emoji, style: const TextStyle(fontSize: 18, height: 1)),
-          ),
-        ],
       ),
     );
   }

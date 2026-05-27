@@ -265,7 +265,7 @@ class _PlayerCell extends ConsumerWidget {
   });
 
   bool get _canTarget =>
-      !isMe && !player.isBot && !isSolo && roomId.isNotEmpty && myUid != null;
+      !isMe && roomId.isNotEmpty && myUid != null;
 
   void _showActionSheet(BuildContext context) {
     if (!_canTarget) return;
