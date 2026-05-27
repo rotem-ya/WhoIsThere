@@ -148,6 +148,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       await _wrongBuzzPlayer.stop();
       await _wrongBuzzPlayer.setVolume(_sfxScale);
       await _wrongBuzzPlayer.play(_wrongBuzzSound);
+      QaLoggerService.instance.log('SOUND', 'PLAY wrong_buzz');
     } catch (_) {}
   }
 
@@ -156,6 +157,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       await _correctDingPlayer.stop();
       await _correctDingPlayer.setVolume(_sfxScale);
       await _correctDingPlayer.play(_correctDingSound);
+      QaLoggerService.instance.log('SOUND', 'PLAY correct_ding');
     } catch (_) {}
   }
 
@@ -1719,6 +1721,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   final _pRatio = _pTotal > 0 ? room.placedPieces.length / _pTotal : 0.0;
                   if (room.placedPieces.length != _lastRevealedCountForLog) {
                     _lastRevealedCountForLog = room.placedPieces.length;
+                    unawaited(_playRevealSound());
+                    QaLoggerService.instance.log('SOUND', 'PLAY reveal pieces=${room.placedPieces.length}');
                     final _isSoloLog = room.players.values.where((p) => !p.isBot).length == 1;
                     final _coinsLog = RewardCalculator.calculateCurrentPrizePotential(
                       isSolo: _isSoloLog,
