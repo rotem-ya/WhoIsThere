@@ -514,8 +514,7 @@ class RoomService {
                   uid, walletDoc.data() as Map<String, dynamic>)
               : null;
           final before = wallet?.coins ?? 0;
-          // Always charge — balance can go negative (debt)
-          final after = before - entryFee;
+          final after = (before - entryFee).clamp(0, 999999);
           tx.set(_walletRef(uid), {'coins': after}, SetOptions(merge: true));
           final txId = _uuid.v4();
           tx.set(_txRef(uid, txId), EconomyTransactionModel(
@@ -566,7 +565,7 @@ class RoomService {
             ? UserEconomyModel.fromFirestore(userId, walletDoc.data() as Map<String, dynamic>)
             : null;
         final before = wallet?.coins ?? 0;
-        final after = before - room.entryFee; // Allow debt
+        final after = (before - room.entryFee).clamp(0, 999999);
 
         tx.set(_walletRef(userId), {'coins': after}, SetOptions(merge: true));
 
@@ -1460,8 +1459,7 @@ class RoomService {
 
       final wrongPenalty = EconomyConfig.baseWrongGuessPenalty +
           (currentWrongCount * EconomyConfig.wrongGuessPenaltyIncrement);
-      // Always apply full penalty — balance can go negative (debt)
-      final actualPenalty = wrongPenalty;
+      final actualPenalty = wrongPenalty.clamp(0, before);
       final after = before - actualPenalty;
 
       if (actualPenalty > 0) {
