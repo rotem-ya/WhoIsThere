@@ -113,6 +113,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   // Reveal sound — owned here, not by ApertureTile
   static final AudioPlayer _revealSoundPlayer = AudioPlayer(playerId: 'reveal-aperture');
+  static final AudioPlayer _tapRevealedPlayer = AudioPlayer(playerId: 'tap-revealed');
   static final AssetSource _revealSound = AssetSource('sounds/aperture_open.wav');
 
   static Future<void> _primeRevealSound() async {
@@ -129,6 +130,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       await _revealSoundPlayer.stop();
       await _revealSoundPlayer.setVolume(_sfxScale);
       await _revealSoundPlayer.play(_revealSound);
+    } catch (_) {}
+  }
+
+  static Future<void> _playTapRevealedSound() async {
+    try {
+      await _tapRevealedPlayer.stop();
+      await _tapRevealedPlayer.setVolume(_sfxScale * 0.35);
+      await _tapRevealedPlayer.play(_revealSound);
     } catch (_) {}
   }
 
@@ -533,7 +542,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       // ── Guess mode timeout ────────────────────────────────────────────────────
       // Any client may call; transaction guards prevent double-execution.
       // Dedup stamp set ONLY after confirmed commit; 2s cooldown allows retry.
-      if (room.turnPhase == TurnPhase.guessMode &&
+      // Skip expiry when the current human player is the active guesser — no time pressure for typing.
+      final _humanIsGuessing = uid != null && room.guessModePlayerId == uid;
+      if (!_humanIsGuessing &&
+          room.turnPhase == TurnPhase.guessMode &&
           room.guessModeDeadlineMs != null &&
           now >= room.guessModeDeadlineMs!) {
         if (_lastExpiredGuessModeDeadline == room.guessModeDeadlineMs) {
@@ -1858,6 +1870,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     }
                   },
                   onReveal: null,
+                  onTapRevealed: () => unawaited(_playTapRevealedSound()),
                   onRevealHint: currentUserId == null
                       ? null
                       : () => _useRevealHint(room, currentUserId),

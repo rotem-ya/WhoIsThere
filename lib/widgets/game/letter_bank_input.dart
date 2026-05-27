@@ -85,11 +85,16 @@ class _LetterBankInputState extends State<LetterBankInput> {
     });
   }
 
-  void _clearAll() {
+  void _deleteOne() {
     if (!_canClear) return;
-    HapticFeedback.mediumImpact();
+    HapticFeedback.lightImpact();
     setState(() {
-      _filled = List<String?>.filled(_filled.length, null);
+      for (var i = _filled.length - 1; i >= 0; i--) {
+        if (_filled[i] != null) {
+          _filled[i] = null;
+          break;
+        }
+      }
       _showError = false;
     });
   }
@@ -143,7 +148,7 @@ class _LetterBankInputState extends State<LetterBankInput> {
         const SizedBox(height: 8),
         _HebrewKeyboard(enabled: enabled, onLetter: _tapLetter),
         const SizedBox(height: 8),
-        _ClearAction(enabled: _canClear, onTap: _clearAll),
+        _ClearAction(enabled: _canClear, onTap: _deleteOne),
         const SizedBox(height: 8),
         _SubmitAction(enabled: enabled && _isComplete, isSubmitting: _isSubmitting, onTap: _submit),
       ],
@@ -308,7 +313,7 @@ class _ClearAction extends StatelessWidget {
         child: OutlinedButton.icon(
           onPressed: enabled ? onTap : null,
           icon: const Icon(Icons.backspace_rounded, size: 20),
-          label: const Text('מחק הכל', maxLines: 1, overflow: TextOverflow.visible),
+          label: const Text('מחק', maxLines: 1, overflow: TextOverflow.visible),
           style: OutlinedButton.styleFrom(
             foregroundColor: enabled ? const Color(0xFFFFE082) : Colors.white38,
             disabledForegroundColor: Colors.white38,

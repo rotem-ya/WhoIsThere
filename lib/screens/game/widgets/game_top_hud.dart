@@ -286,7 +286,8 @@ class _PlayerCell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final name = player.name.length > 10 ? player.name.substring(0, 10) : player.name;
+    final rawName = player.name.length > 9 ? player.name.substring(0, 9) : player.name;
+    final name = player.isHost ? '$rawName 👑' : rawName;
     return GestureDetector(
       onTap: _canTarget ? () => _showActionSheet(context) : null,
       child: Stack(

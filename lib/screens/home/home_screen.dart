@@ -558,11 +558,15 @@ class _QuickGameButton extends StatelessWidget {
                             style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, height: 1.1),
                           ),
                           const SizedBox(height: 3),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              '${EconomyConfig.gameEntryFee} 🪙  •  קופה ${EconomyConfig.gameEntryFee * players} 🪙',
-                              style: TextStyle(color: const Color(0xFFD4AF37).withOpacity(0.80), fontSize: 11, fontWeight: FontWeight.w700),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                '${EconomyConfig.gameEntryFee} 🪙  •  קופה ${EconomyConfig.gameEntryFee * players} 🪙',
+                                maxLines: 1,
+                                style: TextStyle(color: const Color(0xFFD4AF37).withOpacity(0.80), fontSize: 11, fontWeight: FontWeight.w700),
+                              ),
                             ),
                           ),
                         ],
@@ -688,13 +692,15 @@ class _DailyRewardButton extends ConsumerWidget {
         if (isAvailable) {
           showDailyRewardSheet(context, ref);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('הפרס היומי כבר נאסף'),
-              duration: Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text('הפרס היומי כבר נאסף'),
+                duration: Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
         }
       },
       child: AnimatedOpacity(

@@ -23,6 +23,8 @@ class GameBoardView extends StatefulWidget {
   final int? pendingRevealTileIndex;
   final int? revealDeadlineMs;
 
+  final VoidCallback? onTapRevealed;
+
   const GameBoardView({
     super.key,
     required this.gridSize,
@@ -32,6 +34,7 @@ class GameBoardView extends StatefulWidget {
     required this.enabled,
     required this.glowEnabled,
     required this.onReveal,
+    this.onTapRevealed,
     this.cardSkinId = 'default',
     this.pendingRevealTileIndex,
     this.revealDeadlineMs,
@@ -96,6 +99,7 @@ class _GameBoardViewState extends State<GameBoardView> {
                         isAvailable: widget.availableCells.contains(index),
                         enabled: widget.enabled,
                         onReveal: widget.onReveal != null ? _handleReveal : null,
+                        onTapRevealed: widget.onTapRevealed,
                         cardSkinId: widget.cardSkinId,
                         isPendingReveal: index == widget.pendingRevealTileIndex,
                         revealDeadlineMs: widget.revealDeadlineMs,
@@ -120,6 +124,7 @@ class _Tile extends StatefulWidget {
   final bool isAvailable;
   final bool enabled;
   final void Function(int)? onReveal;
+  final VoidCallback? onTapRevealed;
   final String cardSkinId;
   final bool isPendingReveal;
   final int? revealDeadlineMs;
@@ -133,6 +138,7 @@ class _Tile extends StatefulWidget {
     required this.isAvailable,
     required this.enabled,
     required this.onReveal,
+    this.onTapRevealed,
     this.cardSkinId = 'default',
     this.isPendingReveal = false,
     this.revealDeadlineMs,
@@ -242,7 +248,12 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
                   HapticFeedback.lightImpact();
                   _setPressed(true);
                 }
-              : (_) => HapticFeedback.selectionClick(),
+              : widget.isRevealed
+                  ? (_) {
+                      HapticFeedback.selectionClick();
+                      widget.onTapRevealed?.call();
+                    }
+                  : (_) => HapticFeedback.selectionClick(),
           onTapCancel: () => _setPressed(false),
           onTapUp: _canTap
               ? (_) {

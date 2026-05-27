@@ -282,6 +282,7 @@ class _CardsTab extends StatelessWidget {
               .slideY(begin: 0.06, end: 0, duration: 340.ms),
           const SizedBox(height: AppSpacing.md),
           _ActionCardTile(
+            icon: Icons.timer_outlined,
             emoji: '⏱',
             title: 'חסימת ניחוש — 5 שניות',
             description: 'מונע מיריב לנחש למשך 5 שניות',
@@ -296,6 +297,7 @@ class _CardsTab extends StatelessWidget {
               .slideY(begin: 0.06, end: 0, duration: 340.ms),
           const SizedBox(height: AppSpacing.md),
           _ActionCardTile(
+            icon: Icons.timer,
             emoji: '⏱',
             title: 'חסימת ניחוש — 10 שניות',
             description: 'מונע מיריב לנחש למשך 10 שניות',
@@ -310,6 +312,7 @@ class _CardsTab extends StatelessWidget {
               .slideY(begin: 0.06, end: 0, duration: 340.ms),
           const SizedBox(height: AppSpacing.md),
           _ActionCardTile(
+            icon: Icons.visibility_off_outlined,
             emoji: '🕶',
             title: 'כרטיס החשכה',
             description: 'מסתיר את הלוח מיריב למשך 5 שניות',
@@ -416,14 +419,10 @@ class _StunCardTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF8B4FBF).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Center(child: Text('🔒', style: TextStyle(fontSize: 28))),
+              _CardArtIcon(
+                icon: Icons.lock_outline_rounded,
+                emoji: '🔒',
+                gradientColors: const [Color(0xFF8B4FBF), Color(0xFF5A1A8A)],
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -512,6 +511,7 @@ class _StunCardTile extends StatelessWidget {
 // ── Generic action card tile ──────────────────────────────────────────────────
 
 class _ActionCardTile extends StatelessWidget {
+  final IconData icon;
   final String emoji;
   final String title;
   final String description;
@@ -522,6 +522,7 @@ class _ActionCardTile extends StatelessWidget {
   final VoidCallback onBuy;
 
   const _ActionCardTile({
+    required this.icon,
     required this.emoji,
     required this.title,
     required this.description,
@@ -550,14 +551,13 @@ class _ActionCardTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Center(child: Text(emoji, style: const TextStyle(fontSize: 28))),
+              _CardArtIcon(
+                icon: icon,
+                emoji: emoji,
+                gradientColors: [
+                  accentColor.withOpacity(0.85),
+                  Color.lerp(accentColor, Colors.black, 0.45)!,
+                ],
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -626,6 +626,54 @@ class _ActionCardTile extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Card art icon ─────────────────────────────────────────────────────────────
+
+class _CardArtIcon extends StatelessWidget {
+  final IconData icon;
+  final String emoji;
+  final List<Color> gradientColors;
+
+  const _CardArtIcon({
+    required this.icon,
+    required this.emoji,
+    required this.gradientColors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.first.withOpacity(0.35),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(icon, color: Colors.white.withOpacity(0.30), size: 32),
+          Positioned(
+            bottom: 5,
+            right: 5,
+            child: Text(emoji, style: const TextStyle(fontSize: 18, height: 1)),
           ),
         ],
       ),

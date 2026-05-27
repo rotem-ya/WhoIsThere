@@ -62,7 +62,6 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
       if (!mounted) return;
 
       if (result != null) {
-        ref.invalidate(localEconomyCacheProvider);
         setState(() {
           _claimed = true;
           _earnedCoins = result.coins;

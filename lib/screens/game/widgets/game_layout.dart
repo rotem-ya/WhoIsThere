@@ -27,6 +27,7 @@ class GameLayout extends StatelessWidget {
   final String botTypingText;
   final VoidCallback onBack;
   final void Function(int)? onReveal;
+  final VoidCallback? onTapRevealed;
   final VoidCallback? onRevealHint;
   final int purchasedHintCount;
   final VoidCallback? onBuySecondHint;
@@ -57,6 +58,7 @@ class GameLayout extends StatelessWidget {
     required this.botTypingText,
     required this.onBack,
     required this.onReveal,
+    this.onTapRevealed,
     required this.onRevealHint,
     required this.onGuess,
     required this.onGuessSubmit,
@@ -184,6 +186,7 @@ class GameLayout extends StatelessWidget {
                       enabled: false,
                       glowEnabled: false,
                       onReveal: onReveal,
+                      onTapRevealed: onTapRevealed,
                       cardSkinId: room.cardSkinId,
                       pendingRevealTileIndex: room.pendingRevealTileIndex,
                       revealDeadlineMs: room.revealDeadlineMs,

@@ -231,8 +231,8 @@ class ProfileScreen extends ConsumerWidget {
                     children: const [
                       _PointRow('🧩 הנח חתיכה', '+1 עד +4 נק׳'),
                       _PointRow('🏆 ניחוש נכון', '+10 עד +40 נק׳'),
-                      _PointRow('❌ ניחוש שגוי', '-1 עד -4 נק׳'),
-                      _PointRow('👑 הצבעת מארח', '×2'),
+                      _PointRow('❌ ניחוש שגוי', '−1 נק׳, −2 מטבעות'),
+                      _PointRow('👑 כרטיס מארח', '×2 בונוס'),
                     ],
                   ),
                 ),
