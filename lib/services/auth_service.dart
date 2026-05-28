@@ -54,28 +54,29 @@ class AuthService {
   }
 
   Future<UserModel?> signInWithGoogle() async {
-    GoogleSignInAccount? googleUser;
+    // The entire flow is wrapped in a TypeError catch because google_sign_in_android
+    // 6.x may throw a Pigeon cast error at any point — signIn(), .authentication,
+    // or signInWithCredential. In all cases the native side has already written
+    // the Firebase session, so _auth.currentUser is a reliable fallback.
     try {
-      googleUser = await _googleSignIn.signIn();
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null; // User dismissed the picker.
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+        accessToken: googleAuth.accessToken,
+      );
+      final userCredential = await _auth.signInWithCredential(credential);
+      return _syncUser(userCredential.user!);
     } on TypeError {
-      // google_sign_in_android 6.x Pigeon cast workaround — same pattern as
-      // signInAnonymously(). The native side completes sign-in successfully but
-      // the Dart codec throws a cast; currentUser is already set at this point.
-      debugPrint('[AuthService] Google sign-in Pigeon cast — falling back to currentUser');
-      googleUser = _googleSignIn.currentUser;
+      debugPrint('[AuthService] Google sign-in Pigeon cast — using _auth.currentUser');
+      final firebaseUser = _auth.currentUser;
+      if (firebaseUser != null) return _syncUser(firebaseUser);
+      return null;
     }
-    if (googleUser == null) return null; // User dismissed the picker.
-
-    final googleAuth = await googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
-      idToken: googleAuth.idToken,
-      accessToken: googleAuth.accessToken,
-    );
-
-    final userCredential = await _auth.signInWithCredential(credential);
-    return _syncUser(userCredential.user!);
-    // Exceptions propagate to the caller (auth screen) which shows a visible error.
-    // Do NOT silently fall back to anonymous — that creates unintended ghost accounts.
+    // Other exceptions (network, FirebaseAuthException) propagate to _runAuth
+    // which shows a visible snackbar. Do NOT swallow non-Pigeon errors.
   }
 
   Future<UserModel?> signInWithApple() async {
