@@ -23,7 +23,7 @@ dependencies:
   firebase_storage: ^11.6.0
 
   # Auth
-  google_sign_in: ^6.2.1
+  google_sign_in: ^7.0.0
   sign_in_with_apple: ^6.1.0
 
   # State Management
