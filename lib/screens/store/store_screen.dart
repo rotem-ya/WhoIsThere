@@ -163,7 +163,7 @@ class _CardsTab extends StatelessWidget {
     final block5Count = user?.guessBlock5Count ?? 0;
     final block10Count = user?.guessBlock10Count ?? 0;
     final blackoutCount = user?.blackoutCardCount ?? 0;
-    final discovered = user?.discoveredCount ?? 0;
+    final discovered = user?.discoveredImageIds.length ?? 0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
