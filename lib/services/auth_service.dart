@@ -56,8 +56,13 @@ class AuthService {
     final GoogleSignInAccount googleUser;
     try {
       googleUser = await GoogleSignIn.instance.authenticate();
-    } catch (_) {
-      return null; // User dismissed the picker — stay on auth screen.
+    } catch (e) {
+      final msg = e.toString().toLowerCase();
+      // Only swallow cancellation — let real errors propagate to the auth screen.
+      if (msg.contains('cancel') || msg.contains('dismiss') || msg.contains('aborted')) {
+        return null;
+      }
+      rethrow;
     }
 
     final googleAuth = googleUser.authentication;
