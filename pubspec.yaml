@@ -13,17 +13,13 @@ dependencies:
     sdk: flutter
 
   # Firebase
-  # VERSION DRIFT WARNING: firebase_core resolves to 2.32.0 but firebase_auth
-  # is locked at 4.16.0 (different BoM release). This causes a Pigeon type-cast
-  # error on Android signInAnonymously — worked around in auth_service.dart.
-  # Fix properly by running: flutter pub upgrade firebase_core firebase_auth
   firebase_core: ^2.24.2
   firebase_auth: ^4.16.0
   cloud_firestore: ^4.14.0
   firebase_storage: ^11.6.0
 
   # Auth
-  google_sign_in: ^6.2.2
+  google_sign_in: ^7.0.0
   sign_in_with_apple: ^6.1.0
 
   # State Management
