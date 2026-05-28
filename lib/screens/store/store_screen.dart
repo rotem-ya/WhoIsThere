@@ -163,6 +163,7 @@ class _CardsTab extends StatelessWidget {
     final block5Count = user?.guessBlock5Count ?? 0;
     final block10Count = user?.guessBlock10Count ?? 0;
     final blackoutCount = user?.blackoutCardCount ?? 0;
+    final discovered = user?.discoveredCount ?? 0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -186,16 +187,6 @@ class _CardsTab extends StatelessWidget {
               childAspectRatio: 0.62,
               children: [
                 _PlayingCard(
-                  title: 'כרטיס עצור',
-                  description: 'חוסם שחקן אחד מניחוש לתור שלם',
-                  emoji: '🔒',
-                  accentColor: const Color(0xFF8B4FBF),
-                  owned: stunCount,
-                  price: EconomyConfig.stunCardPrice,
-                  canAfford: coins >= EconomyConfig.stunCardPrice,
-                  onBuy: () => _buyCard(context, 'stun'),
-                ).animate(delay: 60.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
-                _PlayingCard(
                   title: 'חסימה 5 שניות',
                   description: 'מונע ניחוש מיריב למשך 5 שניות',
                   emoji: '⏱️',
@@ -203,7 +194,21 @@ class _CardsTab extends StatelessWidget {
                   owned: block5Count,
                   price: EconomyConfig.guessBlock5Price,
                   canAfford: coins >= EconomyConfig.guessBlock5Price,
+                  locked: discovered < 10,
+                  requiredDiscoveries: 10,
                   onBuy: () => _buyCard(context, 'block5'),
+                ).animate(delay: 60.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
+                _PlayingCard(
+                  title: 'החשכה',
+                  description: 'מחשיך את הלוח של יריב ל-5 שניות',
+                  emoji: '🕶️',
+                  accentColor: const Color(0xFF5A1A8A),
+                  owned: blackoutCount,
+                  price: EconomyConfig.blackoutCardPrice,
+                  canAfford: coins >= EconomyConfig.blackoutCardPrice,
+                  locked: discovered < 20,
+                  requiredDiscoveries: 20,
+                  onBuy: () => _buyCard(context, 'blackout'),
                 ).animate(delay: 120.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
                 _PlayingCard(
                   title: 'חסימה 10 שניות',
@@ -213,17 +218,21 @@ class _CardsTab extends StatelessWidget {
                   owned: block10Count,
                   price: EconomyConfig.guessBlock10Price,
                   canAfford: coins >= EconomyConfig.guessBlock10Price,
+                  locked: discovered < 30,
+                  requiredDiscoveries: 30,
                   onBuy: () => _buyCard(context, 'block10'),
                 ).animate(delay: 180.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
                 _PlayingCard(
-                  title: 'החשכה',
-                  description: 'מחשיך את הלוח של יריב ל-5 שניות',
-                  emoji: '🕶️',
-                  accentColor: const Color(0xFF5A1A8A),
-                  owned: blackoutCount,
-                  price: EconomyConfig.blackoutCardPrice,
-                  canAfford: coins >= EconomyConfig.blackoutCardPrice,
-                  onBuy: () => _buyCard(context, 'blackout'),
+                  title: 'כרטיס עצור',
+                  description: 'חוסם שחקן אחד מניחוש לתור שלם',
+                  emoji: '🔒',
+                  accentColor: const Color(0xFF8B4FBF),
+                  owned: stunCount,
+                  price: EconomyConfig.stunCardPrice,
+                  canAfford: coins >= EconomyConfig.stunCardPrice,
+                  locked: discovered < 40,
+                  requiredDiscoveries: 40,
+                  onBuy: () => _buyCard(context, 'stun'),
                 ).animate(delay: 240.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
               ],
             ),
@@ -301,6 +310,8 @@ class _PlayingCard extends StatelessWidget {
   final int owned;
   final int price;
   final bool canAfford;
+  final bool locked;
+  final int requiredDiscoveries;
   final VoidCallback onBuy;
 
   const _PlayingCard({
@@ -312,10 +323,20 @@ class _PlayingCard extends StatelessWidget {
     required this.price,
     required this.canAfford,
     required this.onBuy,
+    this.locked = false,
+    this.requiredDiscoveries = 0,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (locked) {
+      return _LockedCard(
+        title: title,
+        emoji: emoji,
+        requiredDiscoveries: requiredDiscoveries,
+      );
+    }
+
     return PressableScale(
       onTap: canAfford ? onBuy : null,
       scale: 0.95,
@@ -436,6 +457,110 @@ class _PlayingCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LockedCard extends StatelessWidget {
+  final String title;
+  final String emoji;
+  final int requiredDiscoveries;
+
+  const _LockedCard({
+    required this.title,
+    required this.emoji,
+    required this.requiredDiscoveries,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF1A1A2A), Color(0xFF0A0A14)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white12, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            height: 7,
+            decoration: const BoxDecoration(
+              color: Colors.white12,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white38,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      height: 1.2,
+                    ),
+                  ),
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Text(
+                        emoji,
+                        style: const TextStyle(
+                            fontSize: 44, height: 1, color: Color(0x33FFFFFF)),
+                      ),
+                      const Icon(Icons.lock_rounded,
+                          color: Colors.white54, size: 30),
+                    ],
+                  ),
+                  Text(
+                    'גלה $requiredDiscoveries מקומות\nלפתיחה',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white38,
+                      fontSize: 11,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            padding: const EdgeInsets.symmetric(vertical: 9),
+            decoration: BoxDecoration(
+              color: Colors.white10,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.lock_rounded, color: Colors.white24, size: 14),
+                SizedBox(width: 4),
+                Text(
+                  'נעול',
+                  style: TextStyle(
+                      color: Colors.white24,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
