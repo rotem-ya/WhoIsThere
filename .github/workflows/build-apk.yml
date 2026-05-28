@@ -35,16 +35,7 @@ jobs:
       - name: Verify google-services.json SHA entries
         run: |
           echo "=== google-services.json certificate_hash values ==="
-          python3 -c "
-import json
-with open('android/app/google-services.json') as f:
-    d = json.load(f)
-for c in d.get('client', []):
-    for o in c.get('oauth_client', []):
-        ai = o.get('android_info', {})
-        if ai:
-            print(f'client_type=1  hash={ai.get(\"certificate_hash\")}  pkg={ai.get(\"package_name\")}')
-"
+          grep -o '"certificate_hash": *"[^"]*"' android/app/google-services.json || echo "No certificate_hash found"
 
       - name: Write GoogleService-Info.plist
         env:
