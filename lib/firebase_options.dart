@@ -24,7 +24,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDoChtGi-uEV3ZWV31-yikolOfPF8p0iX4',
+    apiKey: 'AIzaSyDoChtGi-uEV3ZWV31-yikolOfPF8pOiX4',
     appId: '1:815269999993:android:539ce470735526187b2ba8',
     messagingSenderId: '815269999993',
     projectId: 'whoisthere-380fa',
@@ -32,7 +32,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDoChtGi-uEV3ZWV31-yikolOfPF8p0iX4',
+    apiKey: 'AIzaSyDoChtGi-uEV3ZWV31-yikolOfPF8pOiX4',
     appId: '1:815269999993:ios:whoisthere',
     messagingSenderId: '815269999993',
     projectId: 'whoisthere-380fa',
