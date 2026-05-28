@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/build_info.dart';
@@ -49,14 +50,7 @@ class ProfileScreen extends ConsumerWidget {
                     icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
                     onPressed: () { HapticFeedback.lightImpact(); Navigator.maybePop(context); },
                   ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.logout_rounded, color: Colors.white),
-                    onPressed: () async {
-                      HapticFeedback.lightImpact();
-                      await ref.read(authServiceProvider).signOut();
-                      if (context.mounted) context.go('/auth');
-                    },
-                  ),
+                  trailing: const SizedBox.shrink(),
                 ),
               ),
 
@@ -108,6 +102,8 @@ class ProfileScreen extends ConsumerWidget {
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 3),
+                            _ProviderBadge(provider: user.provider, isGuest: user.isGuest),
                             const SizedBox(height: 4),
                             // Wallet coins display inline
                             _WalletCoinsInline(userId: user.id),
@@ -238,6 +234,26 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
 
+              const SizedBox(height: AppSpacing.sm),
+
+              // ── Account section ──────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: _AccountSection(
+                  provider: user.provider,
+                  isGuest: user.isGuest,
+                  onSignOut: () async {
+                    HapticFeedback.lightImpact();
+                    await ref.read(authServiceProvider).signOut();
+                    if (context.mounted) context.go('/auth');
+                  },
+                  onUpgrade: () {
+                    HapticFeedback.lightImpact();
+                    context.go('/auth');
+                  },
+                ),
+              ),
+
               const Spacer(),
 
               // ── QA row ───────────────────────────────────────────────
@@ -279,6 +295,169 @@ class ProfileScreen extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accent)),
         error: (e, _) => Center(child: Text('שגיאה: $e', style: AppTextStyles.subtitleLight)),
+      ),
+    );
+  }
+}
+
+class _ProviderBadge extends StatelessWidget {
+  final String provider;
+  final bool isGuest;
+  const _ProviderBadge({required this.provider, required this.isGuest});
+
+  @override
+  Widget build(BuildContext context) {
+    if (isGuest) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.person_outline_rounded, size: 12, color: Colors.white38),
+          SizedBox(width: 4),
+          Text('אורח', style: TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.w600)),
+        ],
+      );
+    }
+    final email = FirebaseAuth.instance.currentUser?.email;
+    final isGoogle = provider == 'google.com';
+    final isApple = provider == 'apple.com';
+    if (!isGoogle && !isApple) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (isGoogle)
+          const Text('G', style: TextStyle(color: Color(0xFF4285F4), fontSize: 13, fontWeight: FontWeight.w900))
+        else
+          const Icon(Icons.apple_rounded, size: 13, color: Colors.white70),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            email ?? (isGoogle ? 'Google' : 'Apple'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: isGoogle ? const Color(0xFF4285F4) : Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AccountSection extends StatelessWidget {
+  final String provider;
+  final bool isGuest;
+  final VoidCallback onSignOut;
+  final VoidCallback onUpgrade;
+  const _AccountSection({
+    required this.provider,
+    required this.isGuest,
+    required this.onSignOut,
+    required this.onUpgrade,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isGuest) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0A1828),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF4285F4).withOpacity(0.3), width: 0.8),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38, height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFF4285F4).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Center(
+                child: Text('G', style: TextStyle(color: Color(0xFF4285F4), fontSize: 18, fontWeight: FontWeight.w900)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('התחבר עם Google', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
+                  Text('שמור את ההתקדמות שלך', style: TextStyle(color: Color(0xFF4A8BAA), fontSize: 11)),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: onUpgrade,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4285F4).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text('התחבר', style: TextStyle(color: Color(0xFF4285F4), fontSize: 12, fontWeight: FontWeight.w800)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final email = FirebaseAuth.instance.currentUser?.email;
+    final isGoogle = provider == 'google.com';
+    final isApple = provider == 'apple.com';
+    final providerName = isGoogle ? 'Google' : isApple ? 'Apple' : provider;
+    final providerColor = isGoogle ? const Color(0xFF4285F4) : Colors.white70;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A1828),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF1E3A5A).withOpacity(0.6), width: 0.8),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38, height: 38,
+            decoration: BoxDecoration(
+              color: providerColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: isGoogle
+                  ? Text('G', style: TextStyle(color: providerColor, fontSize: 18, fontWeight: FontWeight.w900))
+                  : Icon(Icons.apple_rounded, color: providerColor, size: 22),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('מחובר עם $providerName', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
+                if (email != null)
+                  Text(email, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: providerColor.withOpacity(0.7), fontSize: 11)),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: onSignOut,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text('החלף', style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ],
       ),
     );
   }
