@@ -9,6 +9,7 @@ import '../core/utils/display_name_sanitizer.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -53,21 +54,22 @@ class AuthService {
   }
 
   Future<UserModel?> signInWithGoogle() async {
-    final GoogleSignInAccount googleUser;
+    GoogleSignInAccount? googleUser;
     try {
-      googleUser = await GoogleSignIn.instance.authenticate();
-    } catch (e) {
-      final msg = e.toString().toLowerCase();
-      // Only swallow cancellation — let real errors propagate to the auth screen.
-      if (msg.contains('cancel') || msg.contains('dismiss') || msg.contains('aborted')) {
-        return null;
-      }
-      rethrow;
+      googleUser = await _googleSignIn.signIn();
+    } on TypeError {
+      // google_sign_in_android 6.x Pigeon cast workaround — same pattern as
+      // signInAnonymously(). The native side completes sign-in successfully but
+      // the Dart codec throws a cast; currentUser is already set at this point.
+      debugPrint('[AuthService] Google sign-in Pigeon cast — falling back to currentUser');
+      googleUser = _googleSignIn.currentUser;
     }
+    if (googleUser == null) return null; // User dismissed the picker.
 
-    final googleAuth = googleUser.authentication;
+    final googleAuth = await googleUser.authentication;
     final credential = GoogleAuthProvider.credential(
       idToken: googleAuth.idToken,
+      accessToken: googleAuth.accessToken,
     );
 
     final userCredential = await _auth.signInWithCredential(credential);
@@ -225,7 +227,7 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await GoogleSignIn.instance.signOut();
+    await _googleSignIn.signOut();
     await _auth.signOut();
   }
 }
