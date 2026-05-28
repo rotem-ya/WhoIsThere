@@ -60,9 +60,8 @@ class AuthService {
       return null; // User dismissed the picker — stay on auth screen.
     }
 
-    final googleAuth = await googleUser.authentication;
+    final googleAuth = googleUser.authentication;
     final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
       idToken: googleAuth.idToken,
     );
 
