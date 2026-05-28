@@ -9,7 +9,6 @@ import '../core/utils/display_name_sanitizer.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -54,8 +53,12 @@ class AuthService {
   }
 
   Future<UserModel?> signInWithGoogle() async {
-    final googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) return null; // User dismissed the picker — stay on auth screen.
+    final GoogleSignInAccount googleUser;
+    try {
+      googleUser = await GoogleSignIn.instance.authenticate();
+    } catch (_) {
+      return null; // User dismissed the picker — stay on auth screen.
+    }
 
     final googleAuth = await googleUser.authentication;
     final credential = GoogleAuthProvider.credential(
@@ -218,7 +221,7 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
+    await GoogleSignIn.instance.signOut();
     await _auth.signOut();
   }
 }
