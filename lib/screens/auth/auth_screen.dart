@@ -89,6 +89,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       final user = await action();
       if (user != null && mounted) {
         QaLoggerService.instance.log('AUTH', '${logTag}_SUCCESS');
+        if (logTag == 'AUTH_GOOGLE') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'מחובר עם Google ✓',
+                textDirection: TextDirection.rtl,
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              backgroundColor: const Color(0xFF1B5E20),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
         context.go('/home');
       }
     } catch (e) {

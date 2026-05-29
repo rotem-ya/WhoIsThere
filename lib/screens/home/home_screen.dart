@@ -160,11 +160,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _showInsufficientCoinsDialog() {
+    final navBarPadding = MediaQuery.paddingOf(context).bottom;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+        padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + navBarPadding),
         decoration: const BoxDecoration(
           color: Color(0xFF0D1E30),
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),

@@ -74,7 +74,13 @@ class AuthService {
     } on TypeError {
       debugPrint('[AuthService] Google sign-in Pigeon cast — using _auth.currentUser');
       final firebaseUser = _auth.currentUser;
-      if (firebaseUser != null) return _syncUser(firebaseUser);
+      if (firebaseUser != null) {
+        // Force token refresh so Firestore SDK picks up the new Google credentials.
+        // The Pigeon cast only breaks Dart-side deserialization — the native auth
+        // token is valid and getIdToken() works through firebase_auth's own channel.
+        try { await firebaseUser.getIdToken(true); } catch (_) {}
+        return _syncUser(firebaseUser);
+      }
       return null;
     }
     // Other exceptions (network, FirebaseAuthException) propagate to _runAuth

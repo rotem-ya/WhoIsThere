@@ -97,13 +97,16 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
 
           // ── Tab views ─────────────────────────────────────────────────────
           Expanded(
-            child: TabBarView(
-              controller: _tab,
-              children: [
-                _PurchaseTab(coins: coins, ref: ref),
-                _CardsTab(coins: coins, ref: ref),
-                const _SkinsTab(),
-              ],
+            child: SafeArea(
+              top: false,
+              child: TabBarView(
+                controller: _tab,
+                children: [
+                  _PurchaseTab(coins: coins, ref: ref),
+                  _CardsTab(coins: coins, ref: ref),
+                  const _SkinsTab(),
+                ],
+              ),
             ),
           ),
         ],
