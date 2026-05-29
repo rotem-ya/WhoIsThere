@@ -552,9 +552,10 @@ class _QuickGameButton extends StatelessWidget {
               BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.12), blurRadius: 10, spreadRadius: 0),
             ],
           ),
-          child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: isLoading
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4))
+                ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4)))
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -565,16 +566,13 @@ class _QuickGameButton extends StatelessWidget {
                         style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, height: 1.1),
                       ),
                       const SizedBox(height: 3),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            '${EconomyConfig.gameEntryFee} 🪙  •  קופה ${EconomyConfig.gameEntryFee * players} 🪙',
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            style: TextStyle(color: const Color(0xFFD4AF37).withOpacity(0.85), fontSize: 11, fontWeight: FontWeight.w700),
-                          ),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '${EconomyConfig.gameEntryFee} 🪙  •  קופה ${EconomyConfig.gameEntryFee * players} 🪙',
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          style: TextStyle(color: const Color(0xFFD4AF37).withOpacity(0.85), fontSize: 11, fontWeight: FontWeight.w700),
                         ),
                       ),
                     ],
