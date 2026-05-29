@@ -50,7 +50,15 @@ class ProfileScreen extends ConsumerWidget {
                     icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
                     onPressed: () { HapticFeedback.lightImpact(); Navigator.maybePop(context); },
                   ),
-                  trailing: const SizedBox.shrink(),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.logout_rounded, color: Colors.white70),
+                    tooltip: 'יציאה',
+                    onPressed: () async {
+                      HapticFeedback.lightImpact();
+                      await ref.read(authServiceProvider).signOut();
+                      if (context.mounted) context.go('/auth');
+                    },
+                  ),
                 ),
               ),
 
