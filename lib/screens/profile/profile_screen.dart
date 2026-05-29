@@ -16,18 +16,52 @@ import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
 import 'discovered_images_screen.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
-  Future<void> _showEditNameDialog(BuildContext context, WidgetRef ref, String userId, String currentName) async {
+  @override
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  bool _upgrading = false;
+
+  Future<void> _showEditNameDialog(BuildContext context, String userId, String currentName) async {
     await showDialog<void>(
       context: context,
       builder: (_) => _EditNameDialog(userId: userId, currentName: currentName, ref: ref),
     );
   }
 
+  Future<void> _upgradeWithGoogle() async {
+    if (_upgrading) return;
+    HapticFeedback.lightImpact();
+    setState(() => _upgrading = true);
+    try {
+      final user = await ref.read(authServiceProvider).signInWithGoogle();
+      if (!mounted) return;
+      if (user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('מחובר עם Google ✓', textDirection: TextDirection.rtl,
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            backgroundColor: Color(0xFF1B5E20),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('שגיאה: $e'), duration: const Duration(seconds: 3)),
+      );
+    } finally {
+      if (mounted) setState(() => _upgrading = false);
+    }
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
 
     return AppScaffold(
@@ -109,7 +143,7 @@ class ProfileScreen extends ConsumerWidget {
                                 GestureDetector(
                                   onTap: () {
                                     HapticFeedback.lightImpact();
-                                    _showEditNameDialog(context, ref, user.id, user.name);
+                                    _showEditNameDialog(context, user.id, user.name);
                                   },
                                   child: Icon(Icons.edit_rounded, size: 15, color: AppColors.primary.withOpacity(0.7)),
                                 ),
@@ -260,10 +294,7 @@ class ProfileScreen extends ConsumerWidget {
                     await ref.read(authServiceProvider).signOut();
                     if (context.mounted) context.go('/auth');
                   },
-                  onUpgrade: () {
-                    HapticFeedback.lightImpact();
-                    context.go('/auth');
-                  },
+                  onUpgrade: _upgrading ? null : _upgradeWithGoogle,
                 ),
               ),
 
@@ -368,7 +399,7 @@ class _AccountSection extends StatelessWidget {
   final String provider;
   final bool isGuest;
   final VoidCallback onSignOut;
-  final VoidCallback onUpgrade;
+  final VoidCallback? onUpgrade;
   const _AccountSection({
     required this.provider,
     required this.isGuest,
@@ -413,10 +444,12 @@ class _AccountSection extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4285F4).withOpacity(0.2),
+                  color: const Color(0xFF4285F4).withOpacity(onUpgrade != null ? 0.2 : 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text('התחבר', style: TextStyle(color: Color(0xFF4285F4), fontSize: 12, fontWeight: FontWeight.w800)),
+                child: onUpgrade == null
+                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF4285F4)))
+                    : const Text('התחבר', style: TextStyle(color: Color(0xFF4285F4), fontSize: 12, fontWeight: FontWeight.w800)),
               ),
             ),
           ],
