@@ -54,7 +54,12 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
 
-              // ── Hero card ────────────────────────────────────────────
+              // ── Scrollable body ──────────────────────────────────────
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                  child: Column(
+                    children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
                 child: Container(
@@ -254,7 +259,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
 
-              const Spacer(),
+              const SizedBox(height: AppSpacing.sm),
 
               // ── QA row ───────────────────────────────────────────────
               Row(
@@ -283,13 +288,17 @@ class ProfileScreen extends ConsumerWidget {
 
               // ── Store button ─────────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, 0),
                 child: AppButton(
                   label: 'עבור לחנות',
                   icon: Icons.store_rounded,
                   onPressed: () => context.push('/store'),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
             ],
           );
         },
