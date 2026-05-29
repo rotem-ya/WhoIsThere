@@ -108,6 +108,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  void _showFriendsSheet() {
+    QaLoggerService.instance.log('HOME', 'TAP_FRIENDS_SHEET');
+    final navBarPadding = MediaQuery.paddingOf(context).bottom;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Container(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + navBarPadding),
+          decoration: const BoxDecoration(
+            color: Color(0xFF0D1E30),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'שחק עם חברים',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 16),
+              _FriendsSheetOption(
+                icon: Icons.add_circle_outline_rounded,
+                iconColor: const Color(0xFF87CEEB),
+                title: 'פתח חדר',
+                subtitle: 'צור חדר וזמן חברים בקוד',
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _createPrivateRoom();
+                },
+              ),
+              const SizedBox(height: 10),
+              _FriendsSheetOption(
+                icon: Icons.key_rounded,
+                iconColor: const Color(0xFF81C784),
+                title: 'יש לי קוד',
+                subtitle: 'הצטרף לחדר של חבר',
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _showJoinDialog();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _createPrivateRoom() async {
     if (_isCreating) return;
     QaLoggerService.instance.log('HOME', 'TAP_CREATE_ROOM');
@@ -376,20 +435,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           SizedBox(height: verySmall ? 10 : compact ? 14 : 20),
                           _step(
-                            const Text(
-                              'בחר מצב',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white30,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1.8,
-                              ),
-                            ),
-                            delayMs: 380, durationMs: 260,
-                          ),
-                          const SizedBox(height: 8),
-                          _step(
                             Column(
                               children: [
                                 _QuickGameButton(
@@ -415,18 +460,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           SizedBox(height: verySmall ? 8 : 12),
                           _step(
-                            _PrivateRoomButton(
+                            _FriendsButton(
                               isLoading: _isCreating && _loadingPlayers == null,
-                              onTap: _isCreating ? null : _createPrivateRoom,
+                              onTap: _isCreating ? null : _showFriendsSheet,
                             ),
                             delayMs: 600, durationMs: 240,
-                          ),
-                          const SizedBox(height: 8),
-                          _step(
-                            _JoinRoomButton(
-                              onTap: _isCreating ? null : _showJoinDialog,
-                            ),
-                            delayMs: 670, durationMs: 240,
                           ),
                           SizedBox(height: verySmall ? 10 : compact ? 14 : 20),
                         ],
@@ -570,8 +608,6 @@ class _QuickGameButton extends StatelessWidget {
               : Row(
                   children: [
                     const SizedBox(width: 18),
-                    Text(cfg.icon, style: const TextStyle(fontSize: 26, height: 1)),
-                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -583,16 +619,34 @@ class _QuickGameButton extends StatelessWidget {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            'כניסה ${EconomyConfig.gameEntryFee} 🪙  •  קופה ${EconomyConfig.gameEntryFee * players} 🪙',
-                            style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 11.5, fontWeight: FontWeight.w600, height: 1),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            'כניסה ${EconomyConfig.gameEntryFee} 🪙',
+                            style: TextStyle(color: Colors.white.withOpacity(0.60), fontSize: 11.5, fontWeight: FontWeight.w600, height: 1),
                           ),
                         ],
                       ),
                     ),
-                    Icon(Icons.arrow_forward_ios_rounded, color: cfg.borderColor.withOpacity(0.7), size: 16),
-                    const SizedBox(width: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: cfg.borderColor.withOpacity(0.14),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: cfg.borderColor.withOpacity(0.38), width: 1),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'קופה',
+                            style: TextStyle(color: cfg.borderColor.withOpacity(0.70), fontSize: 9, fontWeight: FontWeight.w700, height: 1.1),
+                          ),
+                          Text(
+                            '${EconomyConfig.gameEntryFee * players} 🪙',
+                            style: TextStyle(color: cfg.borderColor, fontSize: 13, fontWeight: FontWeight.w900, height: 1.1),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
                   ],
                 ),
         ),
@@ -601,11 +655,11 @@ class _QuickGameButton extends StatelessWidget {
   }
 }
 
-class _PrivateRoomButton extends StatelessWidget {
+class _FriendsButton extends StatelessWidget {
   final bool isLoading;
   final VoidCallback? onTap;
 
-  const _PrivateRoomButton({required this.isLoading, required this.onTap});
+  const _FriendsButton({required this.isLoading, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -619,7 +673,7 @@ class _PrivateRoomButton extends StatelessWidget {
           duration: const Duration(milliseconds: 160),
           opacity: onTap == null ? 0.58 : 1,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 13),
             decoration: BoxDecoration(
               color: const Color(0xFF050A14).withOpacity(0.50),
               borderRadius: BorderRadius.circular(999),
@@ -633,14 +687,7 @@ class _PrivateRoomButton extends StatelessWidget {
                 else
                   const Icon(Icons.people_rounded, color: Color(0xFF87CEEB), size: 19),
                 const SizedBox(width: 10),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('שחק עם חברים', style: TextStyle(color: Color(0xFF87CEEB), fontSize: 16, fontWeight: FontWeight.w800, height: 1.1)),
-                    Text('צור חדר ושתף קוד', style: TextStyle(color: const Color(0xFF87CEEB).withOpacity(0.60), fontSize: 11, fontWeight: FontWeight.w600, height: 1.2)),
-                  ],
-                ),
+                const Text('שחק עם חברים', style: TextStyle(color: Color(0xFF87CEEB), fontSize: 16, fontWeight: FontWeight.w800)),
               ],
             ),
           ),
@@ -650,39 +697,48 @@ class _PrivateRoomButton extends StatelessWidget {
   }
 }
 
-// ── Join by code button ────────────────────────────────────────────────────
+class _FriendsSheetOption extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
 
-class _JoinRoomButton extends StatelessWidget {
-  final VoidCallback? onTap;
-  const _JoinRoomButton({required this.onTap});
+  const _FriendsSheetOption({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: PressableScale(
-        onTap: onTap == null ? null : () {
-          HapticFeedback.lightImpact();
-          onTap!();
-        },
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 160),
-          opacity: onTap == null ? 0.58 : 1,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
-            decoration: BoxDecoration(
-              color: const Color(0xFF050A14).withOpacity(0.50),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFF81C784).withOpacity(0.40)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
+    return PressableScale(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        decoration: BoxDecoration(
+          color: iconColor.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: iconColor.withOpacity(0.25)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: iconColor, size: 26),
+            const SizedBox(width: 14),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.key_rounded, color: Color(0xFF81C784), size: 19),
-                SizedBox(width: 8),
-                Text('יש לי קוד', style: TextStyle(color: Color(0xFF81C784), fontSize: 16, fontWeight: FontWeight.w800)),
+                Text(title, style: TextStyle(color: iconColor, fontSize: 16, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 2),
+                Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w500)),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
