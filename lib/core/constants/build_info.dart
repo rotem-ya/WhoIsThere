@@ -1,6 +1,6 @@
 /// Manually updated on each push. Check this label in Profile screen
 /// to verify which APK build is installed on a test device.
-const String kBuildLabel = 'build-20260529-home-ux-r41';
+const String kBuildLabel = 'build-20260529-ad-removal-card-r42';
 
 const String kGitBranch = 'claude/stability-compensation-logging-dkoQh';
 

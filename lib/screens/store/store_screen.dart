@@ -875,44 +875,45 @@ class _AdRemovalCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Icon
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: const Color(0xFFD4AF37).withOpacity(0.14),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.35)),
-            ),
-            child: const Center(
-              child: Text('🚫', style: TextStyle(fontSize: 28, height: 1)),
-            ),
-          ),
-          const SizedBox(width: 16),
-          // Text block
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
+          // Title row
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37).withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.35)),
+                ),
+                child: const Center(
+                  child: Text('🚫', style: TextStyle(fontSize: 22, height: 1)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
                   'הסרת פרסומות',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.w900,
                     height: 1.1,
                   ),
+                  maxLines: 1,
                 ),
-                const SizedBox(height: 6),
-                _PackFeature(text: '500 🪙 מטבעות'),
-                _PackFeature(text: 'ללא פרסומות לצמיתות'),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          // Buy button
+          const SizedBox(height: 10),
+          _PackFeature(text: '500 🪙 מטבעות'),
+          const SizedBox(height: 2),
+          _PackFeature(text: 'ללא פרסומות לצמיתות'),
+          const SizedBox(height: 14),
+          // Full-width buy button
           PressableScale(
             onTap: () => HapticFeedback.lightImpact(),
             child: DecoratedBox(
@@ -930,13 +931,11 @@ class _AdRemovalCard extends StatelessWidget {
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   foregroundColor: const Color(0xFF07101F),
-                  textStyle: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w900),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  minimumSize: const Size.fromHeight(46),
                 ),
-                child: const Text('9.99₪'),
+                child: const Text('רכישה • ₪9.99'),
               ),
             ),
           ),
