@@ -6,6 +6,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../core/utils/display_name_sanitizer.dart';
+import 'qa_logger_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -68,16 +69,25 @@ class AuthService {
   }
 
   /// Internal: runs the full Google sign-in dance for the given [instance].
-  /// Handles the Pigeon cast bug in google_sign_in_android 6.x (throws either
-  /// TypeError or PlatformException after native sign-in succeeds).
+  ///
+  /// Strategy: when the current user is anonymous, prefer [linkWithCredential]
+  /// over [signInWithCredential]. Linking upgrades the account IN-PLACE:
+  /// the UID, wallet, and all Firestore data are preserved — no token/rules
+  /// transition, no permission-denied window.
+  ///
+  /// Falls back to [signInWithCredential] when:
+  ///   • No current user (fresh sign-in from auth screen).
+  ///   • [credential-already-in-use] — Google account already has its own
+  ///     Firebase UID; sign into that account instead.
+  ///
+  /// Also handles the google_sign_in_android 6.x Pigeon cast bug (TypeError
+  /// or PlatformException thrown after the native credential exchange succeeds).
   Future<UserModel?> _runGoogleSignIn(GoogleSignIn instance) async {
     try {
       final googleUser = await instance.signIn();
       if (googleUser == null) return null; // User dismissed picker.
 
       final googleAuth = await googleUser.authentication;
-      // idToken requires serverClientId; accessToken is always present.
-      // Firebase accepts either — prefer idToken when available.
       if (googleAuth.idToken == null && googleAuth.accessToken == null) {
         throw Exception('Google Sign-In returned no auth tokens');
       }
@@ -85,20 +95,45 @@ class AuthService {
         idToken: googleAuth.idToken,
         accessToken: googleAuth.accessToken,
       );
-      final userCredential = await _auth.signInWithCredential(credential);
-      // Force token refresh so the Firestore SDK picks up the new credentials
-      // immediately — avoids a brief window of permission-denied on first write.
+
+      // Choose link vs sign-in based on current auth state.
+      final anonUser = _auth.currentUser;
+      UserCredential userCredential;
+
+      if (anonUser != null && anonUser.isAnonymous) {
+        // Upgrade the anonymous account — UID and wallet are preserved.
+        try {
+          userCredential = await anonUser.linkWithCredential(credential);
+          QaLoggerService.instance.log(
+            'AUTH', 'AUTH_GOOGLE_LINKED uid=${userCredential.user?.uid}');
+        } on FirebaseAuthException catch (e) {
+          if (e.code == 'credential-already-in-use' ||
+              e.code == 'provider-already-linked') {
+            // This Google account already has its own Firebase UID.
+            // Sign into the existing account (UID will change).
+            QaLoggerService.instance.log(
+              'AUTH', 'AUTH_GOOGLE_LINK_CONFLICT code=${e.code} → signIn');
+            userCredential = await _auth.signInWithCredential(
+                e.credential ?? credential);
+          } else {
+            rethrow;
+          }
+        }
+      } else {
+        // Not anonymous (or no current user) — plain sign-in.
+        userCredential = await _auth.signInWithCredential(credential);
+        QaLoggerService.instance.log(
+          'AUTH', 'AUTH_GOOGLE_SIGNIN uid=${userCredential.user?.uid}');
+      }
+
+      // Force token refresh so the Firestore SDK has the latest credentials.
       try { await userCredential.user!.getIdToken(true); } catch (_) {}
       return _syncUser(userCredential.user!);
     } on TypeError {
-      // google_sign_in_android 6.x Pigeon cast (TypeError variant): the credential
-      // exchange completed on the native side but Dart-side deserialization throws.
       debugPrint('[AuthService] Pigeon cast TypeError — attempting authStateChanges recovery');
       return _recoverFromSignInError('TypeError');
     } on PlatformException catch (e) {
-      // google_sign_in_android 6.x Pigeon cast (PlatformException variant): same
-      // root cause, different exception type depending on Android/plugin version.
-      debugPrint('[AuthService] PlatformException during signInWithCredential: ${e.code} — attempting authStateChanges recovery');
+      debugPrint('[AuthService] PlatformException: ${e.code} — attempting authStateChanges recovery');
       return _recoverFromSignInError('PlatformException:${e.code}');
     }
   }
