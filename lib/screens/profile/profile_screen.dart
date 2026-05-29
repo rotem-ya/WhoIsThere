@@ -303,19 +303,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ],
               ),
 
-              // ── Store button ─────────────────────────────────────────
+            ],
+          ),
+        ),
+      ),
+
+              // ── Store button — outside Expanded so it's always visible ──
               Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, 0),
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 8, AppSpacing.lg, AppSpacing.lg),
                 child: AppButton(
                   label: 'עבור לחנות',
                   icon: Icons.store_rounded,
                   onPressed: () => context.push('/store'),
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
             ],
           );
         },
