@@ -62,13 +62,17 @@ class AuthService {
     try {
       return await _runGoogleSignIn(_googleSignIn);
     } on PlatformException catch (e) {
-      // Credential Manager (Android 14+) can throw DEVELOPER_ERROR (10) when the
-      // device's identity service can't match the app's signing cert against the
-      // web-client serverClientId. Retry with the legacy sign-in API which only
-      // needs the Android OAuth client + SHA-1 registered in google-services.json.
+      // Credential Manager (Android 14+) DEVELOPER_ERROR (ApiException: 10):
+      // The device couldn't validate our app against the serverClientId.
+      // Sign out any stale state and retry — on retry the dialog may prompt
+      // the user to pick an account, which goes through a different code path
+      // that often succeeds where the cached-credential path failed.
       if (e.code == 'sign_in_failed' && (e.message ?? '').contains('ApiException: 10')) {
-        debugPrint('[AuthService] Credential Manager ApiException:10 — retrying legacy flow');
-        return await _runGoogleSignIn(GoogleSignIn());
+        debugPrint('[AuthService] Credential Manager ApiException:10 — clearing cache, retrying');
+        try { await _googleSignIn.signOut(); } catch (_) {}
+        try { await _googleSignIn.disconnect(); } catch (_) {}
+        // Second attempt: same instance (serverClientId kept so idToken is available)
+        return await _runGoogleSignIn(_googleSignIn);
       }
       rethrow;
     }
@@ -84,6 +88,11 @@ class AuthService {
       if (googleUser == null) return null; // User dismissed picker.
 
       final googleAuth = await googleUser.authentication;
+      // idToken requires serverClientId; accessToken is always present.
+      // Firebase accepts either — prefer idToken when available.
+      if (googleAuth.idToken == null && googleAuth.accessToken == null) {
+        throw Exception('Google Sign-In returned no auth tokens');
+      }
       final credential = GoogleAuthProvider.credential(
         idToken: googleAuth.idToken,
         accessToken: googleAuth.accessToken,
