@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -9,6 +10,8 @@ import '../core/utils/display_name_sanitizer.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Credential Manager path (Android 14+): requires serverClientId.
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     serverClientId: '815269999993-10ejsitd6jnqn83ats57b6j4uq3ulnrs.apps.googleusercontent.com',
   );
@@ -56,13 +59,29 @@ class AuthService {
   }
 
   Future<UserModel?> signInWithGoogle() async {
-    // The entire flow is wrapped in a TypeError catch because google_sign_in_android
-    // 6.x may throw a Pigeon cast error at any point — signIn(), .authentication,
-    // or signInWithCredential. In all cases the native side has already written
-    // the Firebase session, so _auth.currentUser is a reliable fallback.
     try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null; // User dismissed the picker.
+      return await _runGoogleSignIn(_googleSignIn);
+    } on PlatformException catch (e) {
+      // Credential Manager (Android 14+) can throw DEVELOPER_ERROR (10) when the
+      // device's identity service can't match the app's signing cert against the
+      // web-client serverClientId. Retry with the legacy sign-in API which only
+      // needs the Android OAuth client + SHA-1 registered in google-services.json.
+      if (e.code == 'sign_in_failed' && (e.message ?? '').contains('ApiException: 10')) {
+        debugPrint('[AuthService] Credential Manager ApiException:10 — retrying legacy flow');
+        return await _runGoogleSignIn(GoogleSignIn());
+      }
+      rethrow;
+    }
+    // Non-PlatformException errors (network, FirebaseAuthException) propagate to
+    // _runAuth which shows a visible snackbar. Do NOT swallow them here.
+  }
+
+  /// Internal: runs the full Google sign-in dance for the given [instance].
+  /// Handles the Pigeon cast bug in google_sign_in_android 6.x.
+  Future<UserModel?> _runGoogleSignIn(GoogleSignIn instance) async {
+    try {
+      final googleUser = await instance.signIn();
+      if (googleUser == null) return null; // User dismissed picker.
 
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
@@ -70,21 +89,21 @@ class AuthService {
         accessToken: googleAuth.accessToken,
       );
       final userCredential = await _auth.signInWithCredential(credential);
+      // Force token refresh so the Firestore SDK picks up the new credentials
+      // immediately — avoids a brief window of permission-denied on first write.
+      try { await userCredential.user!.getIdToken(true); } catch (_) {}
       return _syncUser(userCredential.user!);
     } on TypeError {
+      // google_sign_in_android 6.x Pigeon cast: native side has completed auth
+      // but Dart-side deserialization fails. _auth.currentUser is already set.
       debugPrint('[AuthService] Google sign-in Pigeon cast — using _auth.currentUser');
       final firebaseUser = _auth.currentUser;
       if (firebaseUser != null) {
-        // Force token refresh so Firestore SDK picks up the new Google credentials.
-        // The Pigeon cast only breaks Dart-side deserialization — the native auth
-        // token is valid and getIdToken() works through firebase_auth's own channel.
         try { await firebaseUser.getIdToken(true); } catch (_) {}
         return _syncUser(firebaseUser);
       }
       return null;
     }
-    // Other exceptions (network, FirebaseAuthException) propagate to _runAuth
-    // which shows a visible snackbar. Do NOT swallow non-Pigeon errors.
   }
 
   Future<UserModel?> signInWithApple() async {
