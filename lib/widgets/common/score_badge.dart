@@ -44,7 +44,7 @@ class ScoreBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isHost) const Text('👑 ', style: TextStyle(fontSize: 12)),
+          if (isHost) const Text('⭐ ', style: TextStyle(fontSize: 11)),
           Icon(
             Icons.star_rounded,
             size: 16,

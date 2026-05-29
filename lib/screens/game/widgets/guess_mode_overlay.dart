@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -29,9 +28,6 @@ class _GuessModeOverlayState extends State<GuessModeOverlay>
     with SingleTickerProviderStateMixin {
   late AnimationController _glowCtrl;
   late Animation<double> _glowAnim;
-  Timer? _clockTimer;
-  int _nowMs = DateTime.now().millisecondsSinceEpoch;
-
   @override
   void initState() {
     super.initState();
@@ -40,31 +36,16 @@ class _GuessModeOverlayState extends State<GuessModeOverlay>
       duration: const Duration(milliseconds: 1100),
     )..repeat(reverse: true);
     _glowAnim = CurvedAnimation(parent: _glowCtrl, curve: Curves.easeInOut);
-    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _nowMs = DateTime.now().millisecondsSinceEpoch);
-    });
   }
 
   @override
   void dispose() {
     _glowCtrl.dispose();
-    _clockTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final remainingSec = widget.deadlineMs != null
-        ? ((widget.deadlineMs! - _nowMs) / 1000).ceil().clamp(0, 20)
-        : 20;
-    final isRed = remainingSec <= 5;
-    final isOrange = remainingSec <= 10 && !isRed;
-    final timerColor = isRed
-        ? const Color(0xFFFF3B30)
-        : isOrange
-            ? const Color(0xFFFF9F43)
-            : const Color(0xFF00F2FF);
-
     final nameColor = widget.isMyGuess
         ? const Color(0xFF00F2FF)
         : const Color(0xFFFF9F43);
@@ -139,26 +120,6 @@ class _GuessModeOverlayState extends State<GuessModeOverlay>
                       ),
                     ],
                   ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // ── Countdown ─────────────────────────────────────────────
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.timer_rounded, color: timerColor, size: 16),
-                    const SizedBox(width: 5),
-                    Text(
-                      '$remainingSec שניות',
-                      textDirection: TextDirection.rtl,
-                      style: TextStyle(
-                        color: timerColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
                 ),
 
                 const SizedBox(height: 14),

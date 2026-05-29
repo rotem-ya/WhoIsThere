@@ -439,7 +439,7 @@ class _PlayerAvatarTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final base = isMe ? 'אני' : (player.name.isNotEmpty ? player.name : 'שחקן');
-    final label = player.isHost ? '$base 👑' : base;
+    final label = player.isHost ? '$base ⭐' : base;
 
     return Stack(
       clipBehavior: Clip.none,
