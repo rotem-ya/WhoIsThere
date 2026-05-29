@@ -89,18 +89,23 @@ class AuthService {
       try { await userCredential.user!.getIdToken(true); } catch (_) {}
       return _syncUser(userCredential.user!);
     } on TypeError {
-      // google_sign_in_android 6.x Pigeon cast: native side has completed auth
-      // but Dart-side deserialization fails. _auth.currentUser is already set.
-      // Guard: only treat as success if currentUser is now a non-anonymous Google
-      // user — if it's still anonymous the credential exchange didn't complete.
-      debugPrint('[AuthService] Google sign-in Pigeon cast — checking _auth.currentUser');
-      final firebaseUser = _auth.currentUser;
-      if (firebaseUser != null && !firebaseUser.isAnonymous) {
-        debugPrint('[AuthService] Pigeon cast workaround — non-anonymous user confirmed');
-        try { await firebaseUser.getIdToken(true); } catch (_) {}
-        return _syncUser(firebaseUser);
+      // google_sign_in_android 6.x Pigeon cast: native side completes the credential
+      // exchange but Dart-side deserialization throws before we can read currentUser.
+      // Firebase updates currentUser asynchronously after the native call — give it
+      // up to 600 ms to settle, then check two more times before giving up.
+      debugPrint('[AuthService] Pigeon cast — waiting for currentUser to settle');
+      for (final wait in [200, 400]) {
+        await Future.delayed(Duration(milliseconds: wait));
+        final u = _auth.currentUser;
+        if (u != null && !u.isAnonymous) {
+          debugPrint('[AuthService] Pigeon cast resolved — non-anonymous user after ${wait}ms');
+          try { await u.getIdToken(true); } catch (_) {}
+          // Extra 200ms for Firestore SDK to pick up the refreshed token
+          await Future.delayed(const Duration(milliseconds: 200));
+          return _syncUser(u);
+        }
       }
-      debugPrint('[AuthService] Pigeon cast — currentUser still anonymous, returning null');
+      debugPrint('[AuthService] Pigeon cast — still anonymous after retries, returning null');
       return null;
     }
   }
