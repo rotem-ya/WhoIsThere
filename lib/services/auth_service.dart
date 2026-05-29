@@ -89,23 +89,29 @@ class AuthService {
       try { await userCredential.user!.getIdToken(true); } catch (_) {}
       return _syncUser(userCredential.user!);
     } on TypeError {
-      // google_sign_in_android 6.x Pigeon cast: native side completes the credential
-      // exchange but Dart-side deserialization throws before we can read currentUser.
-      // Firebase updates currentUser asynchronously after the native call — give it
-      // up to 600 ms to settle, then check two more times before giving up.
-      debugPrint('[AuthService] Pigeon cast — waiting for currentUser to settle');
-      for (final wait in [200, 400]) {
-        await Future.delayed(Duration(milliseconds: wait));
-        final u = _auth.currentUser;
-        if (u != null && !u.isAnonymous) {
-          debugPrint('[AuthService] Pigeon cast resolved — non-anonymous user after ${wait}ms');
-          try { await u.getIdToken(true); } catch (_) {}
-          // Extra 200ms for Firestore SDK to pick up the refreshed token
+      // google_sign_in_android 6.x Pigeon cast: the credential exchange completed
+      // on the native side but Dart-side deserialization throws before we can read
+      // the result. Firebase Auth emits the new (non-anonymous) user via
+      // authStateChanges() shortly after. We listen with a 3-second timeout instead
+      // of polling so we catch it reliably regardless of device speed.
+      debugPrint('[AuthService] Pigeon cast — awaiting authStateChanges for non-anonymous user');
+      try {
+        final User? recoveredUser = await _auth
+            .authStateChanges()
+            .where((u) => u != null && !u.isAnonymous)
+            .first
+            .timeout(const Duration(seconds: 3));
+
+        if (recoveredUser != null) {
+          debugPrint('[AuthService] AUTH_GOOGLE_SUCCESS_RECOVERED via authStateChanges');
+          try { await recoveredUser.getIdToken(true); } catch (_) {}
           await Future.delayed(const Duration(milliseconds: 200));
-          return _syncUser(u);
+          return _syncUser(recoveredUser);
         }
+      } catch (_) {
+        // timeout or stream error — sign-in genuinely did not complete
       }
-      debugPrint('[AuthService] Pigeon cast — still anonymous after retries, returning null');
+      debugPrint('[AuthService] AUTH_GOOGLE_FAILED_AFTER_TYPEERROR_RECOVERY');
       return null;
     }
   }
