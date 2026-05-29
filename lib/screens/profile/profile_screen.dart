@@ -97,9 +97,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
 
-              // ── Scrollable body ──────────────────────────────────────
+              // ── Body ─────────────────────────────────────────────────
               Expanded(
-                child: SingleChildScrollView(
+                child: Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.lg),
                   child: Column(
                     children: [
@@ -255,29 +255,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         const Icon(Icons.chevron_right_rounded, color: Color(0xFF4A8BAA), size: 22),
                       ],
                     ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.sm),
-
-              // ── Economy info ─────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0A1828),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF1E3A5A).withOpacity(0.6), width: 0.8),
-                  ),
-                  child: Column(
-                    children: const [
-                      _PointRow('🧩 הנח חתיכה', '+1 עד +4 נק׳'),
-                      _PointRow('🏆 ניחוש נכון', '+10 עד +40 נק׳'),
-                      _PointRow('❌ ניחוש שגוי', '−1 נק׳'),
-                      _PointRow('👑 כרטיס מארח', '×2 בונוס'),
-                    ],
                   ),
                 ),
               ),
@@ -557,25 +534,6 @@ class _MiniStat extends StatelessWidget {
           const SizedBox(height: 4),
           Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900), textDirection: TextDirection.ltr),
           Text(label, style: const TextStyle(color: Color(0xFF4A8BAA), fontSize: 10, fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-}
-
-class _PointRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _PointRow(this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Expanded(child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600))),
-          Text(value, style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w800), textDirection: TextDirection.ltr),
         ],
       ),
     );

@@ -292,6 +292,25 @@ class _SkinGrid extends StatelessWidget {
 
 // ── Compact skin tile ─────────────────────────────────────────────────────────
 
+Color _skinAccentColor(String id) {
+  switch (id) {
+    case 'classic':   return const Color(0xFFB0B0C8);
+    case 'ocean':     return const Color(0xFF00BCD4);
+    case 'forest':    return const Color(0xFF4CAF50);
+    case 'sand':      return const Color(0xFFD4A54A);
+    case 'blue':      return const Color(0xFF87CEEB);
+    case 'red':       return const Color(0xFFFF6B6B);
+    case 'copper':    return const Color(0xFFB87333);
+    case 'dark':      return const Color(0xFF8B6FFF);
+    case 'emerald':   return const Color(0xFF00C853);
+    case 'ruby':      return const Color(0xFFE91E63);
+    case 'rose_gold': return const Color(0xFFFFAABB);
+    case 'galaxy':    return const Color(0xFF9C27B0);
+    case 'obsidian':  return const Color(0xFF909090);
+    default:          return const Color(0xFFD4AF37);
+  }
+}
+
 class _SkinTile extends StatelessWidget {
   final CardSkin skin;
   final bool isOwned;
@@ -310,13 +329,13 @@ class _SkinTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const gold = Color(0xFFD4AF37);
-    const purple = Color(0xFF8B6FFF);
+    final accent = _skinAccentColor(skin.id);
 
     final borderColor = isSelected
         ? gold
         : isOwned
-            ? purple.withOpacity(0.6)
-            : const Color(0xFF2A2A4A);
+            ? accent.withOpacity(0.55)
+            : accent.withOpacity(0.22);
 
     return GestureDetector(
       onTap: isSelected ? null : onTap,
@@ -325,16 +344,14 @@ class _SkinTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFF0A1228),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderColor, width: isSelected ? 2.0 : 1.0),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: gold.withOpacity(0.28),
-                    blurRadius: 10,
-                    spreadRadius: 1,
-                  )
-                ]
-              : null,
+          border: Border.all(color: borderColor, width: isSelected ? 2.2 : 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: accent.withOpacity(isSelected ? 0.45 : isOwned ? 0.18 : 0.08),
+              blurRadius: isSelected ? 14 : 8,
+              spreadRadius: isSelected ? 1 : 0,
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -398,15 +415,14 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const gold = Color(0xFFD4AF37);
-    const purple = Color(0xFF8B6FFF);
+    final accent = _skinAccentColor(skin.id);
 
     if (isSelected) {
-      return _Chip(label: 'מוצמד', color: gold, icon: Icons.check_rounded);
+      return _Chip(label: 'מוצמד ✓', color: gold, icon: null);
     }
     if (isOwned || skin.isFree) {
-      return _Chip(label: 'הצמד', color: purple, icon: Icons.touch_app_rounded);
+      return _Chip(label: 'הצמד', color: accent, icon: Icons.touch_app_rounded);
     }
-    // Not owned, premium
     return _Chip(
       label: '${skin.price} 🪙',
       color: canAfford ? gold : Colors.grey,

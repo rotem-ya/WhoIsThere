@@ -394,31 +394,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               children: [
                                 _QuickGameButton(
                                   players: 2,
-                                  height: verySmall ? 52 : compact ? 56 : 62,
                                   isLoading: _isCreating && _loadingPlayers == 2,
                                   onTap: _isCreating ? null : () => _startQuickGame(2),
                                 ),
                                 const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _QuickGameButton(
-                                        players: 3,
-                                        height: verySmall ? 48 : compact ? 52 : 56,
-                                        isLoading: _isCreating && _loadingPlayers == 3,
-                                        onTap: _isCreating ? null : () => _startQuickGame(3),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: _QuickGameButton(
-                                        players: 4,
-                                        height: verySmall ? 48 : compact ? 52 : 56,
-                                        isLoading: _isCreating && _loadingPlayers == 4,
-                                        onTap: _isCreating ? null : () => _startQuickGame(4),
-                                      ),
-                                    ),
-                                  ],
+                                _QuickGameButton(
+                                  players: 3,
+                                  isLoading: _isCreating && _loadingPlayers == 3,
+                                  onTap: _isCreating ? null : () => _startQuickGame(3),
+                                ),
+                                const SizedBox(height: 8),
+                                _QuickGameButton(
+                                  players: 4,
+                                  isLoading: _isCreating && _loadingPlayers == 4,
+                                  onTap: _isCreating ? null : () => _startQuickGame(4),
                                 ),
                               ],
                             ),
@@ -516,19 +505,43 @@ class _Dot extends StatelessWidget {
 
 class _QuickGameButton extends StatelessWidget {
   final int players;
-  final double height;
   final bool isLoading;
   final VoidCallback? onTap;
 
   const _QuickGameButton({
     required this.players,
-    required this.height,
     required this.isLoading,
     required this.onTap,
   });
 
+  static const _configs = {
+    2: (
+      icon: '⚔️',
+      label: '1 על 1',
+      gradientColors: [Color(0xFF1A4A8A), Color(0xFF0A2356)],
+      borderColor: Color(0xFF4A9EFF),
+      glowColor: Color(0xFF2266CC),
+    ),
+    3: (
+      icon: '🎯',
+      label: '3 שחקנים',
+      gradientColors: [Color(0xFF1A5A4A), Color(0xFF0A2E26)],
+      borderColor: Color(0xFF3DCCAA),
+      glowColor: Color(0xFF1A8866),
+    ),
+    4: (
+      icon: '🏆',
+      label: '4 שחקנים',
+      gradientColors: [Color(0xFF3A1A6A), Color(0xFF1E0A3C)],
+      borderColor: Color(0xFF9966FF),
+      glowColor: Color(0xFF6633BB),
+    ),
+  };
+
   @override
   Widget build(BuildContext context) {
+    final cfg = _configs[players]!;
+
     return PressableScale(
       onTap: onTap == null ? null : () {
         HapticFeedback.mediumImpact();
@@ -536,48 +549,52 @@ class _QuickGameButton extends StatelessWidget {
       },
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 160),
-        opacity: onTap == null ? 0.62 : 1,
+        opacity: onTap == null ? 0.55 : 1,
         child: Container(
-          height: height,
+          height: 68,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF1C3A5E), Color(0xFF0D1F3C)],
+              colors: cfg.gradientColors,
             ),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.55), width: 1.5),
+            border: Border.all(color: cfg.borderColor.withOpacity(0.7), width: 1.5),
             boxShadow: [
-              BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.12), blurRadius: 10, spreadRadius: 0),
+              BoxShadow(color: cfg.glowColor.withOpacity(0.35), blurRadius: 14, spreadRadius: 0, offset: const Offset(0, 4)),
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: isLoading
-                ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4)))
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        '$players שחקנים',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, height: 1.1),
+          child: isLoading
+              ? const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4)))
+              : Row(
+                  children: [
+                    const SizedBox(width: 18),
+                    Text(cfg.icon, style: const TextStyle(fontSize: 26, height: 1)),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            cfg.label,
+                            style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900, height: 1.1),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'כניסה ${EconomyConfig.gameEntryFee} 🪙  •  קופה ${EconomyConfig.gameEntryFee * players} 🪙',
+                            style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 11.5, fontWeight: FontWeight.w600, height: 1),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 3),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          '${EconomyConfig.gameEntryFee} 🪙  •  קופה ${EconomyConfig.gameEntryFee * players} 🪙',
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          style: TextStyle(color: const Color(0xFFD4AF37).withOpacity(0.85), fontSize: 11, fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
+                    ),
+                    Icon(Icons.arrow_forward_ios_rounded, color: cfg.borderColor.withOpacity(0.7), size: 16),
+                    const SizedBox(width: 16),
+                  ],
+                ),
         ),
       ),
     );

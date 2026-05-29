@@ -797,8 +797,7 @@ class _SkinPalette {
 }
 
 // ── Store preview widget ──────────────────────────────────────────────────────
-// Shows the iris at a fixed 45 % open so blade colours AND the centre
-// image (mandala etc.) are simultaneously visible.
+// Shows the iris nearly closed (8 % open) so the full iris design is visible.
 
 class CardSkinPreview extends StatefulWidget {
   final String cardSkinId;
@@ -861,7 +860,7 @@ class _CardSkinPreviewState extends State<CardSkinPreview> {
     return RepaintBoundary(
       child: CustomPaint(
         painter: _AperturePainter(
-          progress: 0.45,
+          progress: 0.08,
           cardSkinId: widget.cardSkinId,
           skinImage: _skinImage,
         ),
