@@ -118,7 +118,9 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
         ),
       ),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom +
+            MediaQuery.of(context).padding.bottom +
+            24,
         top: 8,
         left: 20,
         right: 20,
