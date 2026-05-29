@@ -144,6 +144,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   Future<void> _signInWithApple() async {
+    if (Platform.isAndroid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'התחברות עם Apple זמינה ב-iPhone בלבד',
+            textDirection: TextDirection.rtl,
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          duration: Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     QaLoggerService.instance.log('AUTH', 'AUTH_APPLE_ATTEMPT');
     await _runAuth(
       () => ref.read(authServiceProvider).signInWithApple(),
@@ -293,7 +307,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   ),
                                 ),
                                 GradientButton(
-                                  text: 'כנס לזירה',
+                                  text: 'היכנס כאורח',
                                   onPressed: _signInAnonymously,
                                   height: 56,
                                 ),
@@ -310,16 +324,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             ),
                             delayMs: 600, durationMs: 280,
                           ),
-                          if (Platform.isIOS || Platform.isMacOS) ...[
-                            const SizedBox(height: 10),
-                            _step(
-                              _SecondaryButton(
-                                label: 'כניסה עם Apple',
-                                onTap: _signInWithApple,
-                              ),
-                              delayMs: 700, durationMs: 280,
+                          const SizedBox(height: 10),
+                          _step(
+                            _SecondaryButton(
+                              label: 'כניסה עם Apple',
+                              onTap: _signInWithApple,
                             ),
-                          ],
+                            delayMs: 700, durationMs: 280,
+                          ),
                         ],
 
                         const SizedBox(height: 32),
