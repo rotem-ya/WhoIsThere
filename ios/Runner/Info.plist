@@ -45,6 +45,17 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>whoisthere</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>com.rotem.whoisthere</string>
+		</dict>
+	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app does not use the microphone.</string>
 	<key>NSCameraUsageDescription</key>
