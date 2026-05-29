@@ -176,7 +176,33 @@ class AuthService {
       accessToken: appleCredential.authorizationCode,
     );
 
-    final userCredential = await _auth.signInWithCredential(oauthCredential);
+    // Mirrors the Google link-and-upgrade strategy: anonymous accounts are
+    // upgraded in-place so the UID, wallet, and Firestore data are preserved.
+    final anonUser = _auth.currentUser;
+    UserCredential userCredential;
+
+    if (anonUser != null && anonUser.isAnonymous) {
+      try {
+        userCredential = await anonUser.linkWithCredential(oauthCredential);
+        QaLoggerService.instance.log(
+            'AUTH', 'AUTH_APPLE_LINKED uid=${userCredential.user?.uid}');
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'credential-already-in-use' ||
+            e.code == 'provider-already-linked') {
+          QaLoggerService.instance.log(
+              'AUTH', 'AUTH_APPLE_LINK_CONFLICT code=${e.code} → signIn');
+          userCredential =
+              await _auth.signInWithCredential(e.credential ?? oauthCredential);
+        } else {
+          rethrow;
+        }
+      }
+    } else {
+      userCredential = await _auth.signInWithCredential(oauthCredential);
+      QaLoggerService.instance.log(
+          'AUTH', 'AUTH_APPLE_SIGNIN uid=${userCredential.user?.uid}');
+    }
+
     final user = userCredential.user!;
 
     if (userCredential.additionalUserInfo?.isNewUser == true) {
@@ -189,6 +215,7 @@ class AuthService {
       await user.updateDisplayName(displayName);
     }
 
+    try { await user.getIdToken(true); } catch (_) {}
     return _syncUser(user);
   }
 

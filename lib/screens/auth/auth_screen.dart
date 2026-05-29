@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -89,13 +87,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       final user = await action();
       if (user != null && mounted) {
         QaLoggerService.instance.log('AUTH', '${logTag}_SUCCESS');
-        if (logTag == 'AUTH_GOOGLE') {
+        if (logTag == 'AUTH_GOOGLE' || logTag == 'AUTH_APPLE') {
+          final label = logTag == 'AUTH_GOOGLE' ? 'Google' : 'Apple';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text(
-                'מחובר עם Google ✓',
+              content: Text(
+                'מחובר עם $label ✓',
                 textDirection: TextDirection.rtl,
-                style: TextStyle(fontWeight: FontWeight.w700),
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               backgroundColor: const Color(0xFF1B5E20),
               duration: const Duration(seconds: 3),
@@ -309,16 +308,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             ),
                             delayMs: 600, durationMs: 280,
                           ),
-                          if (Platform.isIOS) ...[
-                            const SizedBox(height: 10),
-                            _step(
-                              _SecondaryButton(
-                                label: 'כניסה עם Apple',
-                                onTap: _signInWithApple,
-                              ),
-                              delayMs: 700, durationMs: 280,
+                          const SizedBox(height: 10),
+                          _step(
+                            _SecondaryButton(
+                              label: 'כניסה עם Apple',
+                              onTap: _signInWithApple,
                             ),
-                          ],
+                            delayMs: 700, durationMs: 280,
+                          ),
                         ],
 
                         const SizedBox(height: 32),

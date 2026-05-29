@@ -1,6 +1,6 @@
 /// Manually updated on each push. Check this label in Profile screen
 /// to verify which APK build is installed on a test device.
-const String kBuildLabel = 'build-20260529-async-fix-r39';
+const String kBuildLabel = 'build-20260529-apple-signin-r40';
 
 const String kGitBranch = 'claude/stability-compensation-logging-dkoQh';
 
