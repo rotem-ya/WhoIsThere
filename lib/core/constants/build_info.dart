@@ -1,6 +1,6 @@
 /// Manually updated on each push. Check this label in Profile screen
 /// to verify which APK build is installed on a test device.
-const String kBuildLabel = 'build-20260529-icon-google-r25';
+const String kBuildLabel = 'build-20260529-classic-signin-r26';
 
 const String kGitBranch = 'claude/stability-compensation-logging-dkoQh';
 

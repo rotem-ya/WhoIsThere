@@ -55,7 +55,7 @@ jobs:
         run: flutter pub get
 
       - name: Generate launcher icons
-        run: dart run flutter_launcher_icons:generate
+        run: dart run flutter_launcher_icons
 
       - name: Analyze (non-blocking for QA builds)
         run: flutter analyze || true

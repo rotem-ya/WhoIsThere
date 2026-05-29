@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:flutter/services.dart' show PlatformException;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -11,10 +10,13 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Credential Manager path (Android 14+): requires serverClientId.
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    serverClientId: '815269999993-10ejsitd6jnqn83ats57b6j4uq3ulnrs.apps.googleusercontent.com',
-  );
+  // Classic Google Sign-In (no Credential Manager): works on all Android versions.
+  // serverClientId is intentionally omitted — Credential Manager (Android 14+)
+  // throws DEVELOPER_ERROR (ApiException:10) when web-client domain restrictions
+  // are not perfectly aligned. The classic API validates only against the Android
+  // OAuth client SHA-1 in google-services.json, which is always correct.
+  // Firebase accepts accessToken alone when idToken is absent.
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -59,25 +61,9 @@ class AuthService {
   }
 
   Future<UserModel?> signInWithGoogle() async {
-    try {
-      return await _runGoogleSignIn(_googleSignIn);
-    } on PlatformException catch (e) {
-      // Credential Manager (Android 14+) DEVELOPER_ERROR (ApiException: 10):
-      // The device couldn't validate our app against the serverClientId.
-      // Sign out any stale state and retry — on retry the dialog may prompt
-      // the user to pick an account, which goes through a different code path
-      // that often succeeds where the cached-credential path failed.
-      if (e.code == 'sign_in_failed' && (e.message ?? '').contains('ApiException: 10')) {
-        debugPrint('[AuthService] Credential Manager ApiException:10 — clearing cache, retrying');
-        try { await _googleSignIn.signOut(); } catch (_) {}
-        try { await _googleSignIn.disconnect(); } catch (_) {}
-        // Second attempt: same instance (serverClientId kept so idToken is available)
-        return await _runGoogleSignIn(_googleSignIn);
-      }
-      rethrow;
-    }
-    // Non-PlatformException errors (network, FirebaseAuthException) propagate to
-    // _runAuth which shows a visible snackbar. Do NOT swallow them here.
+    return await _runGoogleSignIn(_googleSignIn);
+    // Exceptions (network, FirebaseAuthException, PlatformException) propagate to
+    // _runAuth which shows a visible snackbar.
   }
 
   /// Internal: runs the full Google sign-in dance for the given [instance].
