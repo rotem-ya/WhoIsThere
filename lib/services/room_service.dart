@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:uuid/uuid.dart';
 
@@ -151,8 +152,21 @@ class RoomService {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
 
+    // Ensure the Firestore SDK has the current user's token before any write.
+    // After an anonymous→Google auth transition the SDK can briefly hold a
+    // stale token; forcing a refresh here prevents permission-denied on the
+    // first room creation attempt.
+    final currentUser = FirebaseAuth.instance.currentUser;
+    QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_TOKEN_CHECK '
+        'hostId=$hostId sdkUid=${currentUser?.uid} anonymous=${currentUser?.isAnonymous}');
+    if (currentUser != null) {
+      try { await currentUser.getIdToken(true); } catch (_) {}
+    }
+
     // Read the host's selected card skin, total points and discovered count
+    QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_USER_READ hostId=$hostId');
     final userSnap = await _firestore.doc('users/$hostId').get();
+    QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_USER_READ_OK exists=${userSnap.exists}');
     final cardSkinId = (userSnap.data()?['selectedCardSkin'] as String?) ?? 'default';
     final hostTotalPoints = (userSnap.data()?['totalPoints'] as int?) ?? 0;
     final hostDiscoveredCount =
@@ -190,7 +204,9 @@ class RoomService {
       cardSkinId: cardSkinId,
     );
 
+    QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_WRITE id=${docRef.id}');
     await docRef.set(room.toMap());
+    QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_WRITE_OK');
     return room;
   }
 
