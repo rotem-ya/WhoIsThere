@@ -193,6 +193,8 @@ class _CardsTab extends StatelessWidget {
                   title: 'חסימה 5 שניות',
                   description: 'מונע ניחוש מיריב למשך 5 שניות',
                   emoji: '⏱️',
+                  iconData: Icons.timer_outlined,
+                  illustrationGradient: const [Color(0xFF1890D0), Color(0xFF0060A0)],
                   accentColor: const Color(0xFF1890D0),
                   owned: block5Count,
                   price: EconomyConfig.guessBlock5Price,
@@ -205,6 +207,8 @@ class _CardsTab extends StatelessWidget {
                   title: 'החשכה',
                   description: 'מחשיך את הלוח של יריב ל-5 שניות',
                   emoji: '🕶️',
+                  iconData: Icons.visibility_off_outlined,
+                  illustrationGradient: const [Color(0xFF3A3A4A), Color(0xFF1A1A2E)],
                   accentColor: const Color(0xFF5A1A8A),
                   owned: blackoutCount,
                   price: EconomyConfig.blackoutCardPrice,
@@ -217,6 +221,8 @@ class _CardsTab extends StatelessWidget {
                   title: 'חסימה 10 שניות',
                   description: 'מונע ניחוש מיריב למשך 10 שניות',
                   emoji: '⏰',
+                  iconData: Icons.timer,
+                  illustrationGradient: const [Color(0xFF1060A0), Color(0xFF003080)],
                   accentColor: const Color(0xFF0060A0),
                   owned: block10Count,
                   price: EconomyConfig.guessBlock10Price,
@@ -229,6 +235,8 @@ class _CardsTab extends StatelessWidget {
                   title: 'כרטיס עצור',
                   description: 'חוסם שחקן אחד מניחוש לתור שלם',
                   emoji: '🔒',
+                  iconData: Icons.lock_outline,
+                  illustrationGradient: const [Color(0xFF8B4FBF), Color(0xFF5A1A8A)],
                   accentColor: const Color(0xFF8B4FBF),
                   owned: stunCount,
                   price: EconomyConfig.stunCardPrice,
@@ -309,6 +317,8 @@ class _PlayingCard extends StatelessWidget {
   final String title;
   final String description;
   final String emoji;
+  final IconData iconData;
+  final List<Color> illustrationGradient;
   final Color accentColor;
   final int owned;
   final int price;
@@ -321,6 +331,8 @@ class _PlayingCard extends StatelessWidget {
     required this.title,
     required this.description,
     required this.emoji,
+    required this.iconData,
+    required this.illustrationGradient,
     required this.accentColor,
     required this.owned,
     required this.price,
@@ -398,10 +410,32 @@ class _PlayingCard extends StatelessWidget {
                           height: 1.2,
                         ),
                       ),
-                      // Big emoji
-                      Text(
-                        emoji,
-                        style: const TextStyle(fontSize: 44, height: 1),
+                      // Card illustration
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: illustrationGradient,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: illustrationGradient.first.withOpacity(0.45),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Icon(iconData, color: Colors.white.withOpacity(0.25), size: 38),
+                            Text(emoji, style: const TextStyle(fontSize: 22, height: 1)),
+                          ],
+                        ),
                       ),
                       // Description
                       Text(

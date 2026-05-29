@@ -72,9 +72,16 @@ jobs:
           echo "=== APK signing certificate SHA ==="
           keytool -printcert -jarfile build/app/outputs/flutter-apk/app-release.apk 2>&1 | grep -E "SHA|Owner|Issuer"
 
+      - name: Set artifact name
+        id: artifact_name
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          SAFE="${BRANCH//\//-}"
+          echo "name=GuessThePlace-${SAFE}-apk" >> $GITHUB_OUTPUT
+
       - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: GuessThePlace-release-apk
+          name: ${{ steps.artifact_name.outputs.name }}
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
