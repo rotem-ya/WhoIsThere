@@ -72,7 +72,18 @@ final firebaseUserProvider = StreamProvider<User?>((ref) {
 });
 
 final currentUserProvider = StreamProvider<UserModel?>((ref) {
-  return ref.watch(authServiceProvider).userModelStream();
+  // Drive off the canonical auth stream (firebaseUserProvider) so this can
+  // never diverge from the live SDK uid after an auth transition. The previous
+  // design opened its OWN authStateChanges subscription inside
+  // userModelStream(); if a Pigeon TypeError was swallowed mid-transition, it
+  // could stay stuck on the stale (pre-link) UserModel. That stale id was
+  // then written as a room's hostId and failed the Firestore create rule
+  // (hostId == request.auth.uid) → permission-denied. Watching
+  // firebaseUserProvider ties currentUserProvider to the exact same source as
+  // walletProvider so they always agree on who the user is.
+  final authUser = ref.watch(firebaseUserProvider).valueOrNull;
+  if (authUser == null) return Stream.value(null);
+  return ref.watch(authServiceProvider).userModelStreamForUid(authUser.uid);
 });
 
 // Deep-link join code — set by AppLinks handler, consumed by JoinRoomScreen

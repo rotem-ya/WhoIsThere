@@ -163,9 +163,20 @@ class RoomService {
       try { await currentUser.getIdToken(true); } catch (_) {}
     }
 
+    // CRITICAL: the room's hostId field must equal request.auth.uid or the
+    // Firestore create rule rejects the write. Callers pass hostId from a
+    // cached UserModel that can lag the live SDK uid after an anonymous→Google
+    // auth transition (the cached id stays on the old anonymous uid). Reconcile
+    // against the live SDK uid here — makes room creation self-correcting.
+    final effectiveHostId = currentUser?.uid ?? hostId;
+    if (effectiveHostId != hostId) {
+      QaLoggerService.instance.log('ROOM',
+          'CREATE_ROOM_HOSTID_RECONCILED stale=$hostId live=$effectiveHostId');
+    }
+
     // Read the host's selected card skin, total points and discovered count
-    QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_USER_READ hostId=$hostId');
-    final userSnap = await _firestore.doc('users/$hostId').get();
+    QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_USER_READ hostId=$effectiveHostId');
+    final userSnap = await _firestore.doc('users/$effectiveHostId').get();
     QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_USER_READ_OK exists=${userSnap.exists}');
     final cardSkinId = (userSnap.data()?['selectedCardSkin'] as String?) ?? 'default';
     final hostTotalPoints = (userSnap.data()?['totalPoints'] as int?) ?? 0;
@@ -173,7 +184,7 @@ class RoomService {
         (userSnap.data()?['discoveredImageIds'] as List?)?.length ?? 0;
 
     final host = PlayerModel(
-      id: hostId,
+      id: effectiveHostId,
       name: hostName,
       photoUrl: hostPhotoUrl,
       score: 0,
@@ -182,7 +193,7 @@ class RoomService {
       isHost: true,
     );
 
-    final players = <String, PlayerModel>{hostId: host};
+    final players = <String, PlayerModel>{effectiveHostId: host};
 
     for (int i = 2; i <= playerCount; i++) {
       final virtualId = 'virtual_${i}_${docRef.id}';
@@ -197,7 +208,7 @@ class RoomService {
     final room = RoomModel(
       id: docRef.id,
       code: code,
-      hostId: hostId,
+      hostId: effectiveHostId,
       players: players,
       createdAt: DateTime.now(),
       entryFee: entryFee,

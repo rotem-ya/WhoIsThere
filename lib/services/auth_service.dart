@@ -262,34 +262,50 @@ class AuthService {
   Stream<UserModel?> userModelStream() {
     return _auth.authStateChanges().asyncExpand((user) {
       if (user == null) return Stream.value(null);
-      return _firestore
-          .collection('users')
-          .doc(user.uid)
-          .snapshots()
-          .asyncMap((doc) async {
-            if (doc.exists) return UserModel.fromFirestore(doc);
-            // Doc not found. Two scenarios:
-            //   (a) signInAnonymously() is still writing it — retry until it appears.
-            //   (b) Firestore doc is genuinely gone (reinstall, cleared data).
-            // Retry up to 5× at 350 ms intervals (max 1.75 s total). On a good
-            // network, case (a) resolves on the first or second retry (~350–700 ms).
-            // Only fall through to _syncUser if doc is still absent after all retries.
-            for (int attempt = 0; attempt < 5; attempt++) {
-              await Future.delayed(const Duration(milliseconds: 350));
-              final recheck = await _firestore.collection('users').doc(user.uid).get();
-              if (recheck.exists) return UserModel.fromFirestore(recheck);
-            }
-            // Genuine recovery (case b) or very slow network — create the doc now.
-            return _syncUser(user);
-          })
-          .handleError((e) {
-            debugPrint('userModelStream inner error: $e');
-          });
+      return userModelStreamForUid(user.uid);
     }).handleError((e) {
       // Catches PigeonUserDetails type errors from google_sign_in
       // and other auth stream errors — prevents app crash on any platform.
       debugPrint('userModelStream error: $e');
     });
+  }
+
+  /// Streams the [UserModel] for a specific [uid]'s Firestore doc, with the
+  /// same retry-until-written behaviour as [userModelStream] but WITHOUT
+  /// opening its own authStateChanges subscription.
+  ///
+  /// This lets [currentUserProvider] drive off the single canonical auth
+  /// stream (firebaseUserProvider). The previous design opened a SECOND
+  /// authStateChanges subscription inside userModelStream(); if a Pigeon
+  /// TypeError was swallowed mid-transition, that subscription could get
+  /// stuck on the stale pre-link UserModel. The stale user.id was then
+  /// written as a room's hostId and failed the Firestore rule
+  /// (hostId == request.auth.uid) → permission-denied. Keying off the live
+  /// uid removes the divergence entirely.
+  Stream<UserModel?> userModelStreamForUid(String uid) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .asyncMap((doc) async {
+          if (doc.exists) return UserModel.fromFirestore(doc);
+          // Doc not found — two scenarios:
+          //   (a) sign-in is still writing it → retry until it appears.
+          //   (b) doc genuinely gone (reinstall, cleared data).
+          // Retry up to 5× at 350 ms intervals (max 1.75 s total).
+          for (int attempt = 0; attempt < 5; attempt++) {
+            await Future.delayed(const Duration(milliseconds: 350));
+            final recheck = await _firestore.collection('users').doc(uid).get();
+            if (recheck.exists) return UserModel.fromFirestore(recheck);
+          }
+          // Genuine recovery (case b) — only if uid still matches the live user.
+          final user = _auth.currentUser;
+          if (user != null && user.uid == uid) return _syncUser(user);
+          return null;
+        })
+        .handleError((e) {
+          debugPrint('userModelStreamForUid error uid=$uid: $e');
+        });
   }
 
   Future<void> updateDisplayName(String userId, String rawName) async {
