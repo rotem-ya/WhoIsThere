@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -67,7 +68,8 @@ class AuthService {
   }
 
   /// Internal: runs the full Google sign-in dance for the given [instance].
-  /// Handles the Pigeon cast bug in google_sign_in_android 6.x.
+  /// Handles the Pigeon cast bug in google_sign_in_android 6.x (throws either
+  /// TypeError or PlatformException after native sign-in succeeds).
   Future<UserModel?> _runGoogleSignIn(GoogleSignIn instance) async {
     try {
       final googleUser = await instance.signIn();
@@ -89,31 +91,41 @@ class AuthService {
       try { await userCredential.user!.getIdToken(true); } catch (_) {}
       return _syncUser(userCredential.user!);
     } on TypeError {
-      // google_sign_in_android 6.x Pigeon cast: the credential exchange completed
-      // on the native side but Dart-side deserialization throws before we can read
-      // the result. Firebase Auth emits the new (non-anonymous) user via
-      // authStateChanges() shortly after. We listen with a 3-second timeout instead
-      // of polling so we catch it reliably regardless of device speed.
-      debugPrint('[AuthService] Pigeon cast — awaiting authStateChanges for non-anonymous user');
-      try {
-        final User? recoveredUser = await _auth
-            .authStateChanges()
-            .where((u) => u != null && !u.isAnonymous)
-            .first
-            .timeout(const Duration(seconds: 3));
-
-        if (recoveredUser != null) {
-          debugPrint('[AuthService] AUTH_GOOGLE_SUCCESS_RECOVERED via authStateChanges');
-          try { await recoveredUser.getIdToken(true); } catch (_) {}
-          await Future.delayed(const Duration(milliseconds: 200));
-          return _syncUser(recoveredUser);
-        }
-      } catch (_) {
-        // timeout or stream error — sign-in genuinely did not complete
-      }
-      debugPrint('[AuthService] AUTH_GOOGLE_FAILED_AFTER_TYPEERROR_RECOVERY');
-      return null;
+      // google_sign_in_android 6.x Pigeon cast (TypeError variant): the credential
+      // exchange completed on the native side but Dart-side deserialization throws.
+      debugPrint('[AuthService] Pigeon cast TypeError — attempting authStateChanges recovery');
+      return _recoverFromSignInError('TypeError');
+    } on PlatformException catch (e) {
+      // google_sign_in_android 6.x Pigeon cast (PlatformException variant): same
+      // root cause, different exception type depending on Android/plugin version.
+      debugPrint('[AuthService] PlatformException during signInWithCredential: ${e.code} — attempting authStateChanges recovery');
+      return _recoverFromSignInError('PlatformException:${e.code}');
     }
+  }
+
+  /// Waits for Firebase Auth to emit a non-anonymous user after a Pigeon cast
+  /// error from signInWithCredential. The native sign-in already completed, so
+  /// the auth state change arrives within ~1-3 seconds.
+  Future<UserModel?> _recoverFromSignInError(String reason) async {
+    try {
+      final User? recoveredUser = await _auth
+          .authStateChanges()
+          .where((u) => u != null && !u.isAnonymous)
+          .first
+          .timeout(const Duration(seconds: 3));
+
+      if (recoveredUser != null) {
+        debugPrint('[AuthService] AUTH_GOOGLE_SUCCESS_RECOVERED reason=$reason uid=${recoveredUser.uid}');
+        // Force token refresh — Firestore SDK had a stale anonymous token.
+        try { await recoveredUser.getIdToken(true); } catch (_) {}
+        await Future.delayed(const Duration(milliseconds: 200));
+        return _syncUser(recoveredUser);
+      }
+    } catch (_) {
+      // timeout or stream error — sign-in genuinely did not complete
+    }
+    debugPrint('[AuthService] AUTH_GOOGLE_FAILED_AFTER_TYPEERROR_RECOVERY reason=$reason');
+    return null;
   }
 
   Future<UserModel?> signInWithApple() async {

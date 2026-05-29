@@ -135,6 +135,26 @@ class _RouterNotifier extends ChangeNotifier {
         if (next.isLoading) return;
         final wasLoggedIn = previous?.valueOrNull != null;
         final isLoggedIn = next.valueOrNull != null;
+
+        final prevUser = previous?.valueOrNull;
+        final nextUser = next.valueOrNull;
+        QaLoggerService.instance.log(
+          'ROUTER',
+          'ROUTER_AUTH_STATE '
+          'uid=${nextUser?.uid ?? "null"} '
+          'anonymous=${nextUser?.isAnonymous} '
+          'providers=${nextUser?.providerData.map((p) => p.providerId).join(",") ?? "none"}',
+        );
+
+        // When the user upgrades from anonymous → non-anonymous, the Firestore
+        // SDK may still hold the old anonymous token. Force-refresh here so the
+        // first post-login write succeeds without permission-denied.
+        final wasAnonymous = prevUser?.isAnonymous ?? true;
+        final isNonAnonymous = nextUser != null && !nextUser.isAnonymous;
+        if (wasAnonymous && isNonAnonymous) {
+          nextUser.getIdToken(true).catchError((_) {});
+        }
+
         if (wasLoggedIn != isLoggedIn) notifyListeners();
       },
     );
