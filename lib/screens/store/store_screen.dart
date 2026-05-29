@@ -124,29 +124,192 @@ class _PurchaseTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return ListView(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg),
-      child: Column(
-        children: [
-          // Starter Pack
-          Expanded(
-            flex: 3,
-            child: _StarterPackCard(coins: coins)
-                .animate(delay: 80.ms)
-                .fadeIn(duration: 340.ms, curve: Curves.easeOut)
-                .slideY(begin: 0.06, end: 0, duration: 340.ms, curve: Curves.easeOut),
+          AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
+      children: [
+        // ── Coin packages ─────────────────────────────────────────────────
+        _SectionLabel(label: 'קנה מטבעות', icon: '🪙'),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _CoinPackageTile(
+                coins: 40,
+                priceIls: '₪0.99',
+                color: const Color(0xFF4A9EFF),
+              ).animate(delay: 60.ms).fadeIn(duration: 280.ms).slideY(begin: 0.07, end: 0, duration: 280.ms),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _CoinPackageTile(
+                coins: 90,
+                priceIls: '₪1.99',
+                color: const Color(0xFF3DCCAA),
+                badge: 'פופולרי',
+              ).animate(delay: 100.ms).fadeIn(duration: 280.ms).slideY(begin: 0.07, end: 0, duration: 280.ms),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _CoinPackageTile(
+                coins: 200,
+                priceIls: '₪3.99',
+                color: const Color(0xFFD4AF37),
+                badge: 'מומלץ',
+              ).animate(delay: 140.ms).fadeIn(duration: 280.ms).slideY(begin: 0.07, end: 0, duration: 280.ms),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+
+        // ── Ad removal pack ───────────────────────────────────────────────
+        _SectionLabel(label: 'חבילות', icon: '🎁'),
+        const SizedBox(height: 10),
+        _AdRemovalCard()
+            .animate(delay: 180.ms)
+            .fadeIn(duration: 340.ms, curve: Curves.easeOut)
+            .slideY(begin: 0.06, end: 0, duration: 340.ms, curve: Curves.easeOut),
+        const SizedBox(height: AppSpacing.md),
+
+        // ── Rewarded Ad ───────────────────────────────────────────────────
+        _RewardedAdTile(ref: ref)
+            .animate(delay: 260.ms)
+            .fadeIn(duration: 300.ms, curve: Curves.easeOut)
+            .slideY(begin: 0.06, end: 0, duration: 300.ms, curve: Curves.easeOut),
+      ],
+    );
+  }
+}
+
+// ── Section label ─────────────────────────────────────────────────────────────
+
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  final String icon;
+  const _SectionLabel({required this.label, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(icon, style: const TextStyle(fontSize: 15, height: 1)),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.4,
           ),
-          const SizedBox(height: AppSpacing.md),
-          // Rewarded Ad
-          Expanded(
-            flex: 2,
-            child: _RewardedAdTile(ref: ref)
-                .animate(delay: 180.ms)
-                .fadeIn(duration: 340.ms, curve: Curves.easeOut)
-                .slideY(begin: 0.06, end: 0, duration: 340.ms, curve: Curves.easeOut),
+        ),
+        const SizedBox(width: 8),
+        Expanded(child: Container(height: 1, color: Colors.white12)),
+      ],
+    );
+  }
+}
+
+// ── Coin package tile ─────────────────────────────────────────────────────────
+
+class _CoinPackageTile extends StatelessWidget {
+  final int coins;
+  final String priceIls;
+  final Color color;
+  final String? badge;
+
+  const _CoinPackageTile({
+    required this.coins,
+    required this.priceIls,
+    required this.color,
+    this.badge,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PressableScale(
+      onTap: () => HapticFeedback.lightImpact(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [color.withOpacity(0.22), const Color(0xFF04091A)],
           ),
-        ],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.60), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.20),
+              blurRadius: 10,
+              spreadRadius: 0,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (badge != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.22),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: color.withOpacity(0.5), width: 0.8),
+                ),
+                child: Text(
+                  badge!,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+            ],
+            const Text('🪙', style: TextStyle(fontSize: 26, height: 1)),
+            const SizedBox(height: 6),
+            Text(
+              '$coins',
+              style: TextStyle(
+                color: color,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                height: 1,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'מטבעות',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.50),
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                priceIls,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFF07101F),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -686,11 +849,10 @@ class _SkinsTab extends StatelessWidget {
   }
 }
 
-// ── Starter Pack ──────────────────────────────────────────────────────────────
+// ── Ad Removal Pack ───────────────────────────────────────────────────────────
 
-class _StarterPackCard extends StatelessWidget {
-  final int coins;
-  const _StarterPackCard({required this.coins});
+class _AdRemovalCard extends StatelessWidget {
+  const _AdRemovalCard();
 
   @override
   Widget build(BuildContext context) {
@@ -713,73 +875,68 @@ class _StarterPackCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      child: Row(
         children: [
+          // Icon
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
-              color: const Color(0xFFD4AF37).withOpacity(0.18),
-              borderRadius: BorderRadius.circular(8),
+              color: const Color(0xFFD4AF37).withOpacity(0.14),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.35)),
             ),
-            child: const Text(
-              '🔥 הצעה מיוחדת',
-              style: TextStyle(
-                color: Color(0xFFD4AF37),
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
+            child: const Center(
+              child: Text('🚫', style: TextStyle(fontSize: 28, height: 1)),
             ),
           ),
-          const Text(
-            'Starter Pack',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              height: 1,
+          const SizedBox(width: 16),
+          // Text block
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'הסרת פרסומות',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _PackFeature(text: '500 🪙 מטבעות'),
+                _PackFeature(text: 'ללא פרסומות לצמיתות'),
+              ],
             ),
           ),
-          Column(
-            children: [
-              _PackFeature(text: '500 🪙 מטבעות'),
-              _PackFeature(text: 'כל תמונות הפרמיום לחודש'),
-              _PackFeature(text: 'הסרת פרסומות'),
-            ],
-          ),
+          const SizedBox(width: 12),
+          // Buy button
           PressableScale(
             onTap: () => HapticFeedback.lightImpact(),
-            child: SizedBox(
-              width: double.infinity,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFFFE082),
-                      Color(0xFFD4AF37),
-                      Color(0xFFA1811A)
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
-                child: FilledButton(
-                  onPressed: () => HapticFeedback.lightImpact(),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    foregroundColor: const Color(0xFF07101F),
-                    textStyle: const TextStyle(
-                        fontSize: 17, fontWeight: FontWeight.w900),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                    minimumSize: const Size.fromHeight(48),
-                  ),
-                  child: const Text('רכישה — 9.99₪'),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: FilledButton(
+                onPressed: () => HapticFeedback.lightImpact(),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  foregroundColor: const Color(0xFF07101F),
+                  textStyle: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w900),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
+                child: const Text('9.99₪'),
               ),
             ),
           ),
@@ -796,18 +953,18 @@ class _PackFeature extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 1),
       child: Row(
         children: [
           const Icon(Icons.check_circle_rounded,
-              color: Color(0xFFD4AF37), size: 16),
-          const SizedBox(width: 8),
+              color: Color(0xFFD4AF37), size: 14),
+          const SizedBox(width: 6),
           Text(
             text,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.82),
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
+              color: Colors.white.withOpacity(0.78),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
