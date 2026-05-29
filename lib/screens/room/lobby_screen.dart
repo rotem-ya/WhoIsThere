@@ -102,7 +102,10 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         }
 
         final isHost = currentUser?.id == room.hostId;
-        final rawHostName = room.players[room.hostId]?.name ?? '';
+        // Prefer the live currentUser name so the greeting is always up to date.
+        final rawHostName = isHost
+            ? (currentUser?.name ?? room.players[room.hostId]?.name ?? '')
+            : (room.players[room.hostId]?.name ?? '');
         final hostName = rawHostName.isEmpty ? 'המארח' : rawHostName;
         final canStart = room.players.length >= GameConstants.minPlayers;
 

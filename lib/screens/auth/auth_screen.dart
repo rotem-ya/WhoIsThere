@@ -217,7 +217,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         // Step 3 — subtitle
                         _step(
                           const Text(
-                            'חשוף חלקים · נחש את המקום',
+                            'גלה חלקים · נחש את המקום',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white54,
@@ -373,7 +373,7 @@ class _NameField extends StatelessWidget {
         letterSpacing: 0.5,
       ),
       decoration: InputDecoration(
-        hintText: 'השם שלי (אופציונלי)',
+        hintText: 'כינוי (אופציונלי)',
         hintStyle: const TextStyle(
           color: Colors.white30,
           fontSize: 18,
