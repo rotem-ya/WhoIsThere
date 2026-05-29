@@ -1018,15 +1018,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     // Probability that bot attempts to guess based on how much is revealed
     final double guessChance;
     if (ratio <= 0.20) {
-      guessChance = 0.05;
+      guessChance = 0.14;
     } else if (ratio <= 0.40) {
-      guessChance = 0.12;
+      guessChance = 0.25;
     } else if (ratio <= 0.60) {
-      guessChance = 0.22;
+      guessChance = 0.40;
     } else if (ratio <= 0.80) {
-      guessChance = 0.35;
+      guessChance = 0.55;
     } else {
-      guessChance = 0.50;
+      guessChance = 0.70;
     }
 
     // B7: endgame escalation at ratio≥0.75; B8: super-endgame aggression at ratio≥0.85

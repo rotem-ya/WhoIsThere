@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -308,14 +310,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             ),
                             delayMs: 600, durationMs: 280,
                           ),
-                          const SizedBox(height: 10),
-                          _step(
-                            _SecondaryButton(
-                              label: 'כניסה עם Apple',
-                              onTap: _signInWithApple,
+                          if (Platform.isIOS || Platform.isMacOS) ...[
+                            const SizedBox(height: 10),
+                            _step(
+                              _SecondaryButton(
+                                label: 'כניסה עם Apple',
+                                onTap: _signInWithApple,
+                              ),
+                              delayMs: 700, durationMs: 280,
                             ),
-                            delayMs: 700, durationMs: 280,
-                          ),
+                          ],
                         ],
 
                         const SizedBox(height: 32),

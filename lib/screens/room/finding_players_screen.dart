@@ -31,8 +31,10 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
     with TickerProviderStateMixin {
   static const int _firstBotDelayMs = 10000;
   static const int _botIntervalMs = 5000;
+  static const int _maxWaitMs = 60000;
 
   late final AnimationController _dotAnim;
+  Timer? _timeoutTimer;
   final List<Timer> _timers = [];
   int _botsAdded = 0;
   final List<String> _joinedNames = [];
@@ -47,6 +49,12 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
     )..repeat(reverse: true);
 
     _scheduleNextBot(delay: _firstBotDelayMs);
+
+    _timeoutTimer = Timer(const Duration(milliseconds: _maxWaitMs), () {
+      if (!mounted || _starting) return;
+      for (final t in _timers) t.cancel();
+      context.go('/home');
+    });
   }
 
   void _scheduleNextBot({required int delay}) {
@@ -98,6 +106,7 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
   Future<void> _startGame() async {
     if (_starting || !mounted) return;
     _starting = true;
+    _timeoutTimer?.cancel();
     for (final t in _timers) {
       t.cancel();
     }
@@ -124,6 +133,7 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
   @override
   void dispose() {
     _dotAnim.dispose();
+    _timeoutTimer?.cancel();
     for (final t in _timers) {
       t.cancel();
     }
