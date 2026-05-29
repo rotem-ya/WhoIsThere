@@ -91,12 +91,16 @@ class AuthService {
     } on TypeError {
       // google_sign_in_android 6.x Pigeon cast: native side has completed auth
       // but Dart-side deserialization fails. _auth.currentUser is already set.
-      debugPrint('[AuthService] Google sign-in Pigeon cast — using _auth.currentUser');
+      // Guard: only treat as success if currentUser is now a non-anonymous Google
+      // user — if it's still anonymous the credential exchange didn't complete.
+      debugPrint('[AuthService] Google sign-in Pigeon cast — checking _auth.currentUser');
       final firebaseUser = _auth.currentUser;
-      if (firebaseUser != null) {
+      if (firebaseUser != null && !firebaseUser.isAnonymous) {
+        debugPrint('[AuthService] Pigeon cast workaround — non-anonymous user confirmed');
         try { await firebaseUser.getIdToken(true); } catch (_) {}
         return _syncUser(firebaseUser);
       }
+      debugPrint('[AuthService] Pigeon cast — currentUser still anonymous, returning null');
       return null;
     }
   }

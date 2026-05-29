@@ -40,16 +40,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     try {
       final user = await ref.read(authServiceProvider).signInWithGoogle();
       if (!mounted) return;
-      if (user != null) {
+      if (user != null && !user.isGuest) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('מחובר עם Google ✓', textDirection: TextDirection.rtl,
-                style: TextStyle(fontWeight: FontWeight.w700)),
-            backgroundColor: Color(0xFF1B5E20),
-            duration: Duration(seconds: 3),
+          SnackBar(
+            content: Text('מחובר כ-${user.name} ✓', textDirection: TextDirection.rtl,
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+            backgroundColor: const Color(0xFF1B5E20),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
+      // null = user cancelled or sign-in failed silently — no snackbar needed
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
