@@ -187,7 +187,7 @@ class _BotTypingBannerState extends State<BotTypingBanner>
               Flexible(
                 child: Text(
                   isTyping
-                      ? '${widget.botName}: "${widget.typedSoFar}"'
+                      ? '${widget.botName} מקליד...'
                       : '${widget.botName} חושב...',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
