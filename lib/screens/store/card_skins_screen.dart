@@ -59,8 +59,10 @@ class CardSkinsScreen extends ConsumerWidget {
         ref.watch(ownedSkinsProvider).valueOrNull ?? ['default'];
     final allSkins = ref.watch(allSkinsProvider);
 
-    final freeSkins = allSkins.where((s) => s.isFree).toList();
-    final premiumSkins = allSkins.where((s) => !s.isFree).toList();
+    final freeSkins   = allSkins.where((s) => s.tier == SkinTier.free).toList();
+    final basicSkins  = allSkins.where((s) => s.tier == SkinTier.basic).toList();
+    final rareSkins   = allSkins.where((s) => s.tier == SkinTier.rare).toList();
+    final premSkins   = allSkins.where((s) => s.tier == SkinTier.premium).toList();
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
@@ -94,7 +96,10 @@ class CardSkinsScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(
                   AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.lg),
               children: [
-                _SectionHeader(label: 'חינמי', icon: Icons.star_outline_rounded),
+                _SectionHeader(
+                    label: 'חינמי',
+                    icon: Icons.star_outline_rounded,
+                    color: const Color(0xFF8090B0)),
                 const SizedBox(height: AppSpacing.sm),
                 _SkinGrid(
                   skins: freeSkins,
@@ -106,10 +111,40 @@ class CardSkinsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 _SectionHeader(
-                    label: 'פרימיום', icon: Icons.auto_awesome_rounded),
+                    label: 'בסיסי  50–150 🪙',
+                    icon: Icons.palette_outlined,
+                    color: const Color(0xFF4CA1AF)),
                 const SizedBox(height: AppSpacing.sm),
                 _SkinGrid(
-                  skins: premiumSkins,
+                  skins: basicSkins,
+                  coins: coins,
+                  selectedSkin: selectedSkin,
+                  ownedSkins: ownedSkins,
+                  onBuy: (skin) => _buySkin(context, ref, skin, coins),
+                  onEquip: (skin) => _equipSkin(context, ref, skin),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _SectionHeader(
+                    label: 'נדיר  300–500 🪙',
+                    icon: Icons.auto_awesome_outlined,
+                    color: const Color(0xFF00FFFF)),
+                const SizedBox(height: AppSpacing.sm),
+                _SkinGrid(
+                  skins: rareSkins,
+                  coins: coins,
+                  selectedSkin: selectedSkin,
+                  ownedSkins: ownedSkins,
+                  onBuy: (skin) => _buySkin(context, ref, skin, coins),
+                  onEquip: (skin) => _equipSkin(context, ref, skin),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _SectionHeader(
+                    label: 'פרימיום  1000 🪙',
+                    icon: Icons.diamond_outlined,
+                    color: const Color(0xFFFFD700)),
+                const SizedBox(height: AppSpacing.sm),
+                _SkinGrid(
+                  skins: premSkins,
                   coins: coins,
                   selectedSkin: selectedSkin,
                   ownedSkins: ownedSkins,
@@ -205,30 +240,32 @@ class CardSkinsScreen extends ConsumerWidget {
 class _SectionHeader extends StatelessWidget {
   final String label;
   final IconData icon;
+  final Color color;
 
-  const _SectionHeader({required this.label, required this.icon});
+  const _SectionHeader({
+    required this.label,
+    required this.icon,
+    this.color = const Color(0xFFD4AF37),
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: const Color(0xFFD4AF37), size: 18),
+        Icon(icon, color: color, size: 18),
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFFD4AF37),
+          style: TextStyle(
+            color: color,
             fontWeight: FontWeight.w800,
-            fontSize: 15,
-            letterSpacing: 0.5,
+            fontSize: 14,
+            letterSpacing: 0.3,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: Container(
-            height: 1,
-            color: const Color(0xFFD4AF37).withOpacity(0.25),
-          ),
+          child: Container(height: 1, color: color.withOpacity(0.22)),
         ),
       ],
     );
@@ -294,6 +331,7 @@ class _SkinGrid extends StatelessWidget {
 
 Color _skinAccentColor(String id) {
   switch (id) {
+    // legacy
     case 'classic':   return const Color(0xFFB0B0C8);
     case 'ocean':     return const Color(0xFF00BCD4);
     case 'forest':    return const Color(0xFF4CAF50);
@@ -307,7 +345,40 @@ Color _skinAccentColor(String id) {
     case 'rose_gold': return const Color(0xFFFFAABB);
     case 'galaxy':    return const Color(0xFF9C27B0);
     case 'obsidian':  return const Color(0xFF909090);
-    default:          return const Color(0xFFD4AF37);
+    // basic
+    case 'mediterranean_blue': return const Color(0xFF4CA1AF);
+    case 'valley_green':       return const Color(0xFF00C9FF);
+    case 'negev_sands':        return const Color(0xFFFFAA80);
+    case 'quiet_night':        return const Color(0xFF8090C8);
+    case 'dawn_light':         return const Color(0xFFFF9A9E);
+    case 'urban_concrete':     return const Color(0xFF90A0B0);
+    case 'classic_zionist':    return const Color(0xFF4472C8);
+    case 'summer_pastel':      return const Color(0xFFF0A0C0);
+    case 'simple_gold_basic':  return const Color(0xFFFFD700);
+    case 'terracotta_earth':   return const Color(0xFFE07A5F);
+    // rare
+    case 'jerusalem_neon':     return const Color(0xFFFF00FF);
+    case 'steel_armor':        return const Color(0xFFC0C0C0);
+    case 'space_cluster':      return const Color(0xFF00FFFF);
+    case 'blue_fire':          return const Color(0xFF00FFFF);
+    case 'hermon_glacier':     return const Color(0xFF81D4FA);
+    case 'oriental_arabesque': return const Color(0xFFD4AF37);
+    case 'ancient_gold_rare':  return const Color(0xFFFF8C00);
+    case 'brushed_titanium':   return const Color(0xFF39FF14);
+    case 'eilat_coral':        return const Color(0xFF00FFFF);
+    case 'meteor_shower':      return const Color(0xFFE0E0FF);
+    // premium
+    case 'royal_throne':         return const Color(0xFFFFD700);
+    case 'ancient_scroll':       return const Color(0xFFC4A47C);
+    case 'jerusalem_of_gold':    return const Color(0xFFFFD700);
+    case 'kotel_stones':         return const Color(0xFFFFD700);
+    case 'anemone_red':          return const Color(0xFFFF6060);
+    case 'salt_sunset':          return const Color(0xFFFF00FF);
+    case 'royal_sapphire':       return const Color(0xFF88AAFF);
+    case 'lava_core':            return const Color(0xFFFF4500);
+    case 'diamond_shield':       return const Color(0xFF00E5FF);
+    case 'cyber_future_israel':  return const Color(0xFF00FFFF);
+    default:                     return const Color(0xFFD4AF37);
   }
 }
 
