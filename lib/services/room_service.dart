@@ -100,6 +100,10 @@ class RoomService {
     'dead_sea',
     'ein_gedi',
     'gan_hashlosha',
+    'haifa_port',
+    'eilat',
+    'timna_park',
+    'yarkon_river',
   };
 
   Future<List<GameImageModel>>? _localImagesFuture;
