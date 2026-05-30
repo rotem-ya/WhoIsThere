@@ -496,11 +496,16 @@ class RoomService {
       }
 
       final maxFresh = freshCounts.values.reduce(max);
-      final candidates = images
-          .where((img) => freshCounts[img.id] == maxFresh)
-          .toList()
-        ..sort((a, b) => (totalExp[a.id] ?? 0).compareTo(totalExp[b.id] ?? 0));
-      return candidates.first;
+      final candidates = images.where((img) => freshCounts[img.id] == maxFresh).toList();
+
+      // Among equally-fresh candidates, prefer lowest total exposure;
+      // within that group shuffle so the same image isn't always picked first.
+      final minExp = candidates
+          .map((img) => totalExp[img.id] ?? 0)
+          .reduce(min);
+      final top = candidates.where((img) => (totalExp[img.id] ?? 0) == minExp).toList()
+        ..shuffle(Random());
+      return top.first;
     } catch (_) {
       return images[Random().nextInt(images.length)];
     }

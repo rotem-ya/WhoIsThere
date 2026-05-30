@@ -15,6 +15,7 @@ import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
 import 'discovered_images_screen.dart';
+import '../store/card_skins_screen.dart' show ownedSkinsProvider;
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -190,15 +191,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               // ── Stats row ────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: Row(
-                  children: [
-                    Expanded(child: _MiniStat(icon: Icons.star_rounded, value: '${user.totalPoints}', label: 'נקודות')),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(child: _MiniStat(icon: Icons.palette_rounded, value: '${user.purchasedThemeIds.length}', label: 'ערכות')),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(child: _MiniStat(icon: Icons.image_rounded, value: '${user.purchasedImageIds.length}', label: 'תמונות')),
-                  ],
-                ),
+                child: Builder(builder: (context) {
+                  final wallet = ref.watch(walletProvider).valueOrNull;
+                  final ownedSkins = ref.watch(ownedSkinsProvider).valueOrNull ?? ['default'];
+                  final purchasedSkins = ownedSkins.where((s) => s != 'default').length;
+                  final gamesPlayed = wallet?.totalMatchesPlayed ?? 0;
+                  final gamesWon = wallet?.totalMatchesWon ?? 0;
+                  return Row(
+                    children: [
+                      Expanded(child: _MiniStat(icon: Icons.sports_esports_rounded, value: '$gamesPlayed', label: 'משחקים')),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(child: _MiniStat(icon: Icons.emoji_events_rounded, value: '$gamesWon', label: 'ניצחונות')),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(child: _MiniStat(icon: Icons.palette_rounded, value: '$purchasedSkins', label: 'ערכות')),
+                    ],
+                  );
+                }),
               ),
 
               const SizedBox(height: AppSpacing.sm),

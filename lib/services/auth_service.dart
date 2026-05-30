@@ -422,14 +422,23 @@ class AuthService {
 
       // ── Merge wallet ────────────────────────────────────────────────────
       if (srcWallet.exists) {
-        final srcCoins  = (srcW['coins'] as num?)?.toInt() ?? 0;
-        final srcEarned = (srcW['totalEarned'] as num?)?.toInt() ?? 0;
-        final tgtCoins  = (tgtW['coins'] as num?)?.toInt() ?? 0;
-        final tgtEarned = (tgtW['totalEarned'] as num?)?.toInt() ?? 0;
+        final srcCoins   = (srcW['coins'] as num?)?.toInt() ?? 0;
+        final srcEarned  = (srcW['totalEarned'] as num?)?.toInt() ?? 0;
+        final srcPlayed  = (srcW['totalMatchesPlayed'] as num?)?.toInt() ?? 0;
+        final srcWon     = (srcW['totalMatchesWon'] as num?)?.toInt() ?? 0;
+        final srcHints   = (srcW['totalHintsUsed'] as num?)?.toInt() ?? 0;
+        final tgtCoins   = (tgtW['coins'] as num?)?.toInt() ?? 0;
+        final tgtEarned  = (tgtW['totalEarned'] as num?)?.toInt() ?? 0;
+        final tgtPlayed  = (tgtW['totalMatchesPlayed'] as num?)?.toInt() ?? 0;
+        final tgtWon     = (tgtW['totalMatchesWon'] as num?)?.toInt() ?? 0;
+        final tgtHints   = (tgtW['totalHintsUsed'] as num?)?.toInt() ?? 0;
 
         await _firestore.doc('users/$toUid/economy/wallet').set({
-          'coins':       math.max(srcCoins, tgtCoins),
-          'totalEarned': math.max(srcEarned, tgtEarned),
+          'coins':               math.max(srcCoins, tgtCoins),
+          'totalEarned':         math.max(srcEarned, tgtEarned),
+          'totalMatchesPlayed':  srcPlayed + tgtPlayed,
+          'totalMatchesWon':     srcWon + tgtWon,
+          'totalHintsUsed':      srcHints + tgtHints,
         }, SetOptions(merge: true));
       }
 
