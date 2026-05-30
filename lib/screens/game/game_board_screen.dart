@@ -1015,6 +1015,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final revealedCount = room.placedPieces.length;
     final ratio = totalTiles > 0 ? revealedCount / totalTiles : 0.0;
 
+    // Give the human player a guaranteed first-guess window on the first 2 tiles
+    if (revealedCount <= 2) return;
+
     // Probability that bot attempts to guess based on how much is revealed
     final double guessChance;
     if (ratio <= 0.20) {
