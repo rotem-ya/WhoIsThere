@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:firebase_auth/firebase_auth.dart';
@@ -115,6 +117,12 @@ class AuthService {
               'AUTH', 'AUTH_GOOGLE_LINK_CONFLICT code=${e.code} → signIn');
             userCredential = await _auth.signInWithCredential(
                 e.credential ?? credential);
+            // Preserve the anonymous user's progress by merging it into the
+            // newly signed-in Google account.
+            final newUid = userCredential.user?.uid;
+            if (anonUser.uid != newUid && newUid != null) {
+              await _mergeAnonymousData(anonUser.uid, newUid);
+            }
           } else {
             rethrow;
           }
@@ -193,6 +201,10 @@ class AuthService {
               'AUTH', 'AUTH_APPLE_LINK_CONFLICT code=${e.code} → signIn');
           userCredential =
               await _auth.signInWithCredential(e.credential ?? oauthCredential);
+          final newUid = userCredential.user?.uid;
+          if (anonUser.uid != newUid && newUid != null) {
+            await _mergeAnonymousData(anonUser.uid, newUid);
+          }
         } else {
           rethrow;
         }
@@ -352,6 +364,99 @@ class AuthService {
     await _firestore.collection('users').doc(userId).update({
       field: FieldValue.arrayUnion([itemId]),
     });
+  }
+
+  /// Copies progress from an anonymous account into a social-login account.
+  /// Called only when linkWithCredential fails (credential-already-in-use),
+  /// meaning the user has a pre-existing Google/Apple UID. Both accounts may
+  /// have real data; we take the best of each field to avoid losing progress.
+  Future<void> _mergeAnonymousData(String fromUid, String toUid) async {
+    QaLoggerService.instance.log('AUTH', 'MERGE_ANON_START from=$fromUid to=$toUid');
+    try {
+      // ── Read source docs in parallel ───────────────────────────────────
+      final results = await Future.wait([
+        _firestore.doc('users/$fromUid').get(),
+        _firestore.doc('users/$fromUid/economy/wallet').get(),
+        _firestore.doc('users/$fromUid/exposure_history').get(),
+        _firestore.doc('users/$toUid').get(),
+        _firestore.doc('users/$toUid/economy/wallet').get(),
+        _firestore.doc('users/$toUid/exposure_history').get(),
+      ]);
+
+      final srcUser   = results[0];
+      final srcWallet = results[1];
+      final srcExp    = results[2];
+      final tgtUser   = results[3];
+      final tgtWallet = results[4];
+      final tgtExp    = results[5];
+
+      if (!srcUser.exists) return; // nothing to merge
+
+      final src  = srcUser.data()!;
+      final tgt  = tgtUser.data() ?? {};
+      final srcW = srcWallet.data() ?? {};
+      final tgtW = tgtWallet.data() ?? {};
+
+      // ── Merge user document fields ──────────────────────────────────────
+      final mergedDiscovered = {
+        ...List<String>.from(src['discoveredImageIds'] ?? []),
+        ...List<String>.from(tgt['discoveredImageIds'] ?? []),
+      }.toList();
+
+      final mergedSkins = {
+        'default',
+        ...List<String>.from(src['ownedSkins'] ?? []),
+        ...List<String>.from(tgt['ownedSkins'] ?? []),
+      }.toList();
+
+      final mergedPoints = math.max(
+        (src['totalPoints'] as num?)?.toInt() ?? 0,
+        (tgt['totalPoints'] as num?)?.toInt() ?? 0,
+      );
+
+      await _firestore.doc('users/$toUid').set({
+        'totalPoints': mergedPoints,
+        'discoveredImageIds': mergedDiscovered,
+        'ownedSkins': mergedSkins,
+      }, SetOptions(merge: true));
+
+      // ── Merge wallet ────────────────────────────────────────────────────
+      if (srcWallet.exists) {
+        final srcCoins  = (srcW['coins'] as num?)?.toInt() ?? 0;
+        final srcEarned = (srcW['totalEarned'] as num?)?.toInt() ?? 0;
+        final tgtCoins  = (tgtW['coins'] as num?)?.toInt() ?? 0;
+        final tgtEarned = (tgtW['totalEarned'] as num?)?.toInt() ?? 0;
+
+        await _firestore.doc('users/$toUid/economy/wallet').set({
+          'coins':       math.max(srcCoins, tgtCoins),
+          'totalEarned': math.max(srcEarned, tgtEarned),
+        }, SetOptions(merge: true));
+      }
+
+      // ── Merge exposure history (max per image) ──────────────────────────
+      if (srcExp.exists) {
+        final srcMap = srcExp.data() ?? {};
+        final tgtMap = tgtExp.data() ?? {};
+        final merged = <String, int>{};
+        for (final key in {...srcMap.keys, ...tgtMap.keys}) {
+          merged[key] = math.max(
+            (srcMap[key] as num?)?.toInt() ?? 0,
+            (tgtMap[key] as num?)?.toInt() ?? 0,
+          );
+        }
+        if (merged.isNotEmpty) {
+          await _firestore
+              .doc('users/$toUid/exposure_history')
+              .set(merged, SetOptions(merge: true));
+        }
+      }
+
+      QaLoggerService.instance.log('AUTH', 'MERGE_ANON_OK from=$fromUid to=$toUid '
+          'discovered=${mergedDiscovered.length} skins=${mergedSkins.length}');
+    } catch (e) {
+      // Non-fatal: user continues with the Google account even if merge fails.
+      QaLoggerService.instance.log('AUTH', 'MERGE_ANON_ERROR $e');
+    }
   }
 
   Future<void> signOut() async {
