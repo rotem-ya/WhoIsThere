@@ -534,5 +534,19 @@
     "image_asset": "assets/game_places/images/stalactite_cave.jpg",
     "difficulty": "medium",
     "is_active": true
+  },
+  {
+    "id": "gan_hashlosha",
+    "name_he": "גן השלושה",
+    "answer_he": "גן השלושה",
+    "category": "nature",
+    "city_he": "עמק המעיינות",
+    "image_asset": "assets/game_places/images/gan_hashlosha.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "מים נובעים בטמפרטורה קבועה כל ימות השנה",
+      "פנינת טבע בלב עמק המעיינות, ידועה גם בשמה הערבי"
+    ]
   }
 ]

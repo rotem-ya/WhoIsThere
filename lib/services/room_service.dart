@@ -99,6 +99,7 @@ class RoomService {
     'masada',
     'dead_sea',
     'ein_gedi',
+    'gan_hashlosha',
   };
 
   Future<List<GameImageModel>>? _localImagesFuture;
