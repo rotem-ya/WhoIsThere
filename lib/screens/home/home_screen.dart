@@ -17,6 +17,7 @@ import '../../widgets/common/ambient_background.dart';
 import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
+import '../../models/room_model.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -66,20 +67,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (user == null) return;
 
       QaLoggerService.instance.log('HOME', 'QUICK_GAME_ATTEMPT players=$targetPlayers');
-      // Create room with only the human player; bots join on the waiting screen.
-      final room = await ref.read(roomServiceProvider).createRoom(
-            hostId: user.id,
-            hostName: user.name,
-            hostPhotoUrl: user.photoUrl,
-            playerCount: 1,
-          );
 
-      ref.read(currentRoomIdProvider.notifier).state = room.id;
+      final roomSvc = ref.read(roomServiceProvider);
 
-      final shortId = room.id.substring(0, room.id.length.clamp(0, 6));
-      QaLoggerService.instance.log('HOME', 'QUICK_GAME_SUCCESS code=${room.code} id=$shortId');
+      // Compute player's round, then attempt to find an existing public room twice
+      final myRound = await roomSvc.computePlayerRound(user.id);
+      QaLoggerService.instance.log('HOME', 'QUICK_GAME_ROUND round=$myRound');
+
+      RoomModel? existingRoom = await roomSvc.findPublicRoom(myRound);
+      if (existingRoom == null) {
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+        existingRoom = await roomSvc.findPublicRoom(myRound);
+      }
+
+      String roomId;
+      if (existingRoom != null) {
+        // Join the found room
+        QaLoggerService.instance.log('HOME', 'QUICK_GAME_JOIN_EXISTING id=${existingRoom.id}');
+        await roomSvc.joinRoom(
+          code: existingRoom.code,
+          userId: user.id,
+          userName: user.name,
+          userPhotoUrl: user.photoUrl,
+        );
+        roomId = existingRoom.id;
+      } else {
+        // Create a new public room; bots join on the waiting screen
+        final room = await roomSvc.createRoom(
+          hostId: user.id,
+          hostName: user.name,
+          hostPhotoUrl: user.photoUrl,
+          playerCount: 1,
+          isPublicRoom: true,
+        );
+        roomId = room.id;
+        QaLoggerService.instance.log('HOME', 'QUICK_GAME_SUCCESS code=${room.code}');
+      }
+
+      ref.read(currentRoomIdProvider.notifier).state = roomId;
+
+      final shortId = roomId.substring(0, roomId.length.clamp(0, 6));
       QaLoggerService.instance.log('HOME', 'QUICK_GAME_NAVIGATED dest=/finding-players/$shortId target=$targetPlayers');
-      if (mounted) context.go('/finding-players/${room.id}?target=$targetPlayers');
+      if (mounted) context.go('/finding-players/$roomId?target=$targetPlayers');
     } catch (e) {
       final msg = e.toString();
       QaLoggerService.instance.log('HOME', 'QUICK_GAME_ERROR ${msg.length > 60 ? msg.substring(0, 60) : msg}');

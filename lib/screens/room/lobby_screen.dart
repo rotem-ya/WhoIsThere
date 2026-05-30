@@ -473,7 +473,7 @@ class _PlayerAvatarTile extends StatelessWidget {
               ),
               const SizedBox(width: 8),
 
-              // Name only
+              // Name + round badge
               Expanded(
                 child: Text(
                   label,
@@ -485,6 +485,24 @@ class _PlayerAvatarTile extends StatelessWidget {
                   ),
                 ),
               ),
+              if (player.playerRound > 0)
+                Container(
+                  margin: const EdgeInsets.only(right: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.withOpacity(0.5), width: 0.8),
+                  ),
+                  child: Text(
+                    'סבב ${player.playerRound + 1}',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Colors.amber,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

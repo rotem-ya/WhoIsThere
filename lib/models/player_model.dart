@@ -11,6 +11,8 @@ class PlayerModel extends Equatable {
   final bool isHost;
   final bool isBot;
   final int discoveredCount;
+  final int playerRound;
+  final int priorExposureCount;
 
   const PlayerModel({
     required this.id,
@@ -23,6 +25,8 @@ class PlayerModel extends Equatable {
     this.isHost = false,
     this.isBot = false,
     this.discoveredCount = 0,
+    this.playerRound = 0,
+    this.priorExposureCount = 0,
   });
 
   factory PlayerModel.fromMap(String id, Map<String, dynamic> data) {
@@ -37,6 +41,8 @@ class PlayerModel extends Equatable {
       isHost: data['isHost'] ?? false,
       isBot: data['isBot'] ?? false,
       discoveredCount: data['discoveredCount'] ?? 0,
+      playerRound: data['playerRound'] ?? 0,
+      priorExposureCount: data['priorExposureCount'] ?? 0,
     );
   }
 
@@ -50,6 +56,7 @@ class PlayerModel extends Equatable {
         'isHost': isHost,
         'isBot': isBot,
         'discoveredCount': discoveredCount,
+        'playerRound': playerRound,
       };
 
   PlayerModel copyWith({
@@ -62,6 +69,8 @@ class PlayerModel extends Equatable {
     bool? isHost,
     bool? isBot,
     int? discoveredCount,
+    int? playerRound,
+    int? priorExposureCount,
   }) =>
       PlayerModel(
         id: id,
@@ -74,6 +83,8 @@ class PlayerModel extends Equatable {
         isHost: isHost ?? this.isHost,
         isBot: isBot ?? this.isBot,
         discoveredCount: discoveredCount ?? this.discoveredCount,
+        playerRound: playerRound ?? this.playerRound,
+        priorExposureCount: priorExposureCount ?? this.priorExposureCount,
       );
 
   @override
@@ -87,5 +98,7 @@ class PlayerModel extends Equatable {
         isHost,
         isBot,
         discoveredCount,
+        playerRound,
+        priorExposureCount,
       ];
 }

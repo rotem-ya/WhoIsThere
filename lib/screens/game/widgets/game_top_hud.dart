@@ -335,6 +335,14 @@ class _PlayerCell extends ConsumerWidget {
                     padding: EdgeInsets.only(left: 4),
                     child: Text('✍', style: TextStyle(fontSize: 10)),
                   ),
+                if (player.priorExposureCount > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 3),
+                    child: Text(
+                      '👁${player.priorExposureCount}',
+                      style: const TextStyle(fontSize: 9, color: Colors.amber),
+                    ),
+                  ),
                 const SizedBox(width: 4),
                 Text(
                   '${player.score}',

@@ -149,6 +149,7 @@ class RoomService {
     String? hostPhotoUrl,
     int playerCount = 1,
     int entryFee = EconomyConfig.gameEntryFee,
+    bool isPublicRoom = false,
   }) async {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
@@ -183,6 +184,7 @@ class RoomService {
     final hostTotalPoints = (userSnap.data()?['totalPoints'] as int?) ?? 0;
     final hostDiscoveredCount =
         (userSnap.data()?['discoveredImageIds'] as List?)?.length ?? 0;
+    final hostRound = await computePlayerRound(effectiveHostId);
 
     final host = PlayerModel(
       id: effectiveHostId,
@@ -191,6 +193,7 @@ class RoomService {
       score: 0,
       totalPoints: hostTotalPoints,
       discoveredCount: hostDiscoveredCount,
+      playerRound: hostRound,
       isHost: true,
     );
 
@@ -214,6 +217,8 @@ class RoomService {
       createdAt: DateTime.now(),
       entryFee: entryFee,
       cardSkinId: cardSkinId,
+      isPublicRoom: isPublicRoom,
+      playerRound: hostRound,
     );
 
     QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_WRITE id=${docRef.id}');
@@ -252,6 +257,7 @@ class RoomService {
     final joiningTotalPoints = (joiningUserSnap.data()?['totalPoints'] as int?) ?? 0;
     final joiningDiscoveredCount =
         (joiningUserSnap.data()?['discoveredImageIds'] as List?)?.length ?? 0;
+    final joiningRound = await computePlayerRound(userId);
 
     final newPlayer = PlayerModel(
       id: userId,
@@ -260,6 +266,7 @@ class RoomService {
       score: 0,
       totalPoints: joiningTotalPoints,
       discoveredCount: joiningDiscoveredCount,
+      playerRound: joiningRound,
     );
 
     await doc.reference.update({
@@ -288,6 +295,26 @@ class RoomService {
     await _rooms.doc(roomId).update({
       'players.$virtualId': botPlayer.toMap(),
     });
+  }
+
+  /// Finds a waiting public room for quick match where playerRound matches.
+  /// Requires Firestore composite index: phase + isPublicRoom + playerRound + createdAt
+  Future<RoomModel?> findPublicRoom(int playerRound) async {
+    try {
+      final snap = await _rooms
+          .where('phase', isEqualTo: GamePhase.waiting.name)
+          .where('isPublicRoom', isEqualTo: true)
+          .where('playerRound', isEqualTo: playerRound)
+          .orderBy('createdAt')
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return null;
+      final room = RoomModel.fromFirestore(snap.docs.first);
+      if (room.players.length >= GameConstants.maxPlayers) return null;
+      return room;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<RoomModel?> findRoomByCode(String code) async {
@@ -340,6 +367,7 @@ class RoomService {
     if (images.isEmpty) return;
     final image = await _pickSmartImage(images, room.players);
     await _rooms.doc(roomId).update({'selectedImageId': image.id});
+    await _recordPriorExposure(roomId, room.players, image.id);
     await _startGame(roomId, room, Difficulty.easy);
     _recordExposureForAll(room.players, image.id);
   }
@@ -406,8 +434,11 @@ class RoomService {
       orElse: () => Difficulty.easy,
     );
 
-    await _startGame(roomId, room, difficulty);
     final imageId = room.selectedImageId;
+    if (imageId != null && imageId.isNotEmpty) {
+      await _recordPriorExposure(roomId, room.players, imageId);
+    }
+    await _startGame(roomId, room, difficulty);
     if (imageId != null && imageId.isNotEmpty) {
       _recordExposureForAll(room.players, imageId);
     }
@@ -415,6 +446,19 @@ class RoomService {
 
   // ── Exposure history helpers ──────────────────────────────────
 
+  /// Returns the player's current round: min exposure count across all active images.
+  /// Round 0 = hasn't seen all images even once. Round N = completed N full cycles.
+  Future<int> computePlayerRound(String uid) async {
+    final exp = await _getExposureCounts(uid);
+    if (exp.isEmpty) return 0;
+    final images = await _loadLocalImages();
+    if (images.isEmpty) return 0;
+    return images.map((img) => exp[img.id] ?? 0).reduce(min);
+  }
+
+  /// Round-robin image selection: prefer images each player hasn't seen this round.
+  /// Scores each image by how many real players have it fresh (exposure == their round).
+  /// Tiebreak: lowest total exposure across all players.
   Future<GameImageModel> _pickSmartImage(
     List<GameImageModel> images,
     Map<String, PlayerModel> players,
@@ -429,19 +473,30 @@ class RoomService {
     try {
       final exposureMaps = await Future.wait(realIds.map(_getExposureCounts));
 
-      final totals = <String, int>{};
-      for (final map in exposureMaps) {
-        for (final entry in map.entries) {
-          totals[entry.key] = (totals[entry.key] ?? 0) + entry.value;
+      // Per-player current round = min exposure across all active images
+      final playerRounds = exposureMaps
+          .map((exp) => images.map((img) => exp[img.id] ?? 0).reduce(min))
+          .toList();
+
+      // Score each image: how many players have it fresh this round
+      final freshCounts = <String, int>{};
+      final totalExp = <String, int>{};
+      for (final img in images) {
+        int fresh = 0;
+        for (int i = 0; i < realIds.length; i++) {
+          final count = exposureMaps[i][img.id] ?? 0;
+          if (count == playerRounds[i]) fresh++;
+          totalExp[img.id] = (totalExp[img.id] ?? 0) + count;
         }
+        freshCounts[img.id] = fresh;
       }
 
-      final unseen = images.where((img) => (totals[img.id] ?? 0) == 0).toList();
-      if (unseen.isNotEmpty) return unseen[Random().nextInt(unseen.length)];
-
-      final sorted = [...images]
-        ..sort((a, b) => (totals[a.id] ?? 0).compareTo(totals[b.id] ?? 0));
-      return sorted.first;
+      final maxFresh = freshCounts.values.reduce(max);
+      final candidates = images
+          .where((img) => freshCounts[img.id] == maxFresh)
+          .toList()
+        ..sort((a, b) => (totalExp[a.id] ?? 0).compareTo(totalExp[b.id] ?? 0));
+      return candidates.first;
     } catch (_) {
       return images[Random().nextInt(images.length)];
     }
@@ -456,6 +511,29 @@ class RoomService {
     } catch (_) {
       return {};
     }
+  }
+
+  /// Stores each real player's current exposure count for imageId in the room
+  /// BEFORE incrementing it, so the UI can show "seen N times before".
+  Future<void> _recordPriorExposure(
+    String roomId,
+    Map<String, PlayerModel> players,
+    String imageId,
+  ) async {
+    final realIds = players.entries
+        .where((e) => !e.value.isBot)
+        .map((e) => e.key)
+        .toList();
+    if (realIds.isEmpty) return;
+    try {
+      final exposureMaps = await Future.wait(realIds.map(_getExposureCounts));
+      final updates = <String, dynamic>{};
+      for (int i = 0; i < realIds.length; i++) {
+        final count = exposureMaps[i][imageId] ?? 0;
+        updates['players.${realIds[i]}.priorExposureCount'] = count;
+      }
+      await _rooms.doc(roomId).update(updates);
+    } catch (_) {}
   }
 
   void _recordExposureForAll(Map<String, PlayerModel> players, String imageId) {
