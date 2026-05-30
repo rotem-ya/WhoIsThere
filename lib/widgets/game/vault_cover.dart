@@ -129,15 +129,25 @@ class _VaultCoverState extends State<VaultCover>
           // ── Revealed image underneath ──────────────────────────────────
           widget.child,
 
-          // ── Iris blades ────────────────────────────────────────────────
+          // ── Cover / Iris ───────────────────────────────────────────
           AnimatedBuilder(
             animation: _anim,
             builder: (context, _) {
-              if (_anim.value >= 0.995) return const SizedBox.shrink();
+              final v = _anim.value;
+              if (v >= 0.995) return const SizedBox.shrink();
+              // Fully closed: show flat skin design instead of the star-shaped iris
+              if (v <= 0.005) {
+                return RepaintBoundary(
+                  child: _skinImage != null
+                      ? CustomPaint(painter: _ImageFillPainter(_skinImage!))
+                      : CustomPaint(painter: _SkinPreviewPainter(widget.cardSkinId)),
+                );
+              }
+              // Animating: show iris opening
               return RepaintBoundary(
                 child: CustomPaint(
                   painter: _AperturePainter(
-                    progress: _anim.value,
+                    progress: v,
                     cardSkinId: widget.cardSkinId,
                     skinImage: _skinImage,
                   ),
@@ -178,6 +188,22 @@ class _VaultCoverState extends State<VaultCover>
       ),
     );
   }
+}
+
+// ── Simple full-fill painter for image-based skins (closed state) ─────────────
+
+class _ImageFillPainter extends CustomPainter {
+  final ui.Image image;
+  _ImageFillPainter(this.image);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final src = Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
+    canvas.drawImageRect(image, src, Offset.zero & size, Paint());
+  }
+
+  @override
+  bool shouldRepaint(covariant _ImageFillPainter o) => o.image != image;
 }
 
 // ── Improved iris painter ──────────────────────────────────────────────────────
