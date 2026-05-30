@@ -264,7 +264,6 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
               border: _canTap
                   ? Border.all(color: kCyan.withOpacity(0.80), width: 1.5)
                   : null,
@@ -293,12 +292,9 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
                 ),
                 if (widget.isPendingReveal && !widget.isRevealed)
                   Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: _CountdownOverlay(
-                        secondsLeft: _secondsLeft,
-                        tileSize: widget.tileSize,
-                      ),
+                    child: _CountdownOverlay(
+                      secondsLeft: _secondsLeft,
+                      tileSize: widget.tileSize,
                     ),
                   ),
               ],

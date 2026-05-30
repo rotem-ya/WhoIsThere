@@ -1958,8 +1958,8 @@ class _SkinPreviewPainter extends CustomPainter {
   }
 
   void _tierBorder(Canvas c, Rect r, Color color, {double width = 1.5}) {
-    c.drawRRect(
-      RRect.fromRectAndRadius(r.deflate(width * 0.5), const Radius.circular(10)),
+    c.drawRect(
+      r.deflate(width * 0.5),
       Paint()
         ..color = color
         ..style = PaintingStyle.stroke
@@ -1971,10 +1971,7 @@ class _SkinPreviewPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
     final center = Offset(size.width / 2, size.height / 2);
-    canvas.save();
-    canvas.clipRRect(RRect.fromRectAndRadius(rect, const Radius.circular(10)));
     _paintSkin(canvas, size, rect, center);
-    canvas.restore();
   }
 
   void _paintSkin(Canvas canvas, Size size, Rect rect, Offset center) {
