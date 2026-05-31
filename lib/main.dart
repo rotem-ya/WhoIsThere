@@ -14,6 +14,7 @@ import 'core/utils/app_router.dart';
 import 'firebase_options.dart';
 import 'providers/providers.dart';
 import 'services/qa_logger_service.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'services/settings_service.dart';
 
 void main() async {
@@ -31,6 +32,8 @@ void main() async {
   } catch (e) {
     firebaseError = e;
   }
+
+  MobileAds.instance.initialize();
 
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
