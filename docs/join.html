@@ -3,362 +3,407 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>מה בתמונה? - הצטרפות לחדר</title>
+  <title>מה בתמונה? – הצטרף לחדר</title>
   <style>
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:       #D4AF37;
+      --gold-dark:  #B8860B;
+      --gold-glow:  rgba(212, 175, 55, 0.28);
+      --navy:       #050A14;
+      --navy-mid:   #0A1828;
+      --navy-card:  rgba(10, 24, 40, 0.97);
+      --cyan:       #87CEEB;
+      --cyan-dim:   rgba(135, 206, 235, 0.35);
+      --cyan-glow:  rgba(135, 206, 235, 0.10);
     }
 
-    html {
-      background: #06101d;
-    }
+    html { background: var(--navy); }
 
     body {
       min-height: 100vh;
       min-height: 100svh;
-      font-family: "Segoe UI", Arial, sans-serif;
-      color: #ffffff;
+      font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+      color: #fff;
       background:
-        radial-gradient(circle at 50% 8%, rgba(0, 242, 255, 0.16), transparent 30%),
-        linear-gradient(180deg, #06101d 0%, #07172d 46%, #073968 78%, #00aeca 100%);
+        radial-gradient(ellipse 70% 45% at 25% 10%, rgba(212,175,55,0.09) 0%, transparent 55%),
+        radial-gradient(ellipse 55% 40% at 75% 90%, rgba(135,206,235,0.07) 0%, transparent 55%),
+        linear-gradient(180deg, #050A14 0%, #07101F 50%, #0D2040 100%);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: max(18px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
+      padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
     }
 
-    .shell {
-      width: 100%;
-      max-width: 430px;
-    }
+    .shell { width: 100%; max-width: 420px; }
 
+    /* ── Card ───────────────────────────────────────────────────────────── */
     .card {
       width: 100%;
-      min-height: min(760px, calc(100svh - 36px));
-      padding: 34px 22px 22px;
+      padding: 36px 24px 28px;
       text-align: center;
-      border-radius: 32px;
-      background: linear-gradient(180deg, rgba(19, 30, 48, 0.96), rgba(11, 20, 34, 0.97));
-      border: 1.5px solid rgba(139, 162, 190, 0.30);
+      border-radius: 28px;
+      background: linear-gradient(180deg,
+        rgba(10, 24, 40, 0.97) 0%,
+        rgba(5, 10, 20, 0.98) 100%);
+      border: 1.5px solid rgba(212, 175, 55, 0.18);
       box-shadow:
-        0 24px 70px rgba(0, 0, 0, 0.48),
-        inset 0 1px 0 rgba(255, 255, 255, 0.07);
+        0 0 0 1px rgba(135, 206, 235, 0.05),
+        0 30px 80px rgba(0, 0, 0, 0.60),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      align-items: stretch;
     }
 
-    .camera {
-      font-size: 62px;
+    /* ── Logo ───────────────────────────────────────────────────────────── */
+    .logo-wrap {
+      margin-bottom: 22px;
+    }
+
+    .logo-icon {
+      width: 76px;
+      height: 76px;
+      margin: 0 auto 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%,
+        rgba(212,175,55,0.22) 0%,
+        rgba(212,175,55,0.05) 65%,
+        transparent 100%);
+      border: 1.5px solid rgba(212,175,55,0.38);
+      box-shadow:
+        0 0 28px rgba(212,175,55,0.18),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
       line-height: 1;
-      margin-bottom: 18px;
-      filter: drop-shadow(0 0 18px rgba(0, 242, 255, 0.12));
     }
 
     h1 {
-      color: #d7b739;
-      font-size: clamp(34px, 9vw, 44px);
+      color: var(--gold);
+      font-size: clamp(30px, 8.5vw, 40px);
       font-weight: 900;
+      letter-spacing: -0.5px;
       line-height: 1.1;
-      margin-bottom: 12px;
-      letter-spacing: -0.7px;
+      text-shadow:
+        0 0 40px rgba(212,175,55,0.30),
+        0 2px 8px rgba(0,0,0,0.60);
     }
 
-    .subtitle {
-      color: rgba(255, 255, 255, 0.70);
-      font-size: clamp(19px, 5vw, 25px);
+    .app-tagline {
+      margin-top: 5px;
+      color: rgba(255,255,255,0.38);
+      font-size: 12.5px;
+      font-weight: 500;
+      letter-spacing: 0.6px;
+    }
+
+    /* ── Invite ─────────────────────────────────────────────────────────── */
+    .invite {
+      color: rgba(255,255,255,0.72);
+      font-size: clamp(17px, 4.6vw, 21px);
       font-weight: 700;
-      line-height: 1.25;
-      margin-bottom: 34px;
+      margin-bottom: 22px;
+      line-height: 1.3;
     }
 
+    /* ── Code box ───────────────────────────────────────────────────────── */
     .code-label {
-      color: rgba(255, 255, 255, 0.45);
-      font-size: 18px;
+      color: rgba(255,255,255,0.35);
+      font-size: 11.5px;
       font-weight: 800;
-      margin-bottom: 12px;
-      letter-spacing: 0.4px;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      margin-bottom: 9px;
     }
 
     .code-box {
-      width: 100%;
-      min-height: 100px;
-      margin-bottom: 28px;
-      padding: 18px 16px;
-      border-radius: 24px;
-      background: linear-gradient(180deg, rgba(44, 64, 84, 0.74), rgba(21, 33, 49, 0.94));
-      border: 2px solid rgba(141, 213, 235, 0.45);
+      margin-bottom: 24px;
+      padding: 18px 14px;
+      border-radius: 18px;
+      background: rgba(135,206,235,0.06);
+      border: 1.5px solid var(--cyan-dim);
       box-shadow:
-        0 0 26px rgba(0, 242, 255, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.06);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
+        0 0 28px var(--cyan-glow),
+        inset 0 1px 0 rgba(255,255,255,0.04);
     }
 
     .code-value {
       direction: ltr;
       unicode-bidi: isolate;
-      width: 100%;
-      color: #91dcf6;
-      font-size: clamp(34px, 10vw, 54px);
+      color: var(--cyan);
+      font-size: clamp(44px, 16vw, 66px);
       font-weight: 900;
       line-height: 1;
-      letter-spacing: clamp(4px, 1.2vw, 10px);
-      text-align: center;
-      white-space: nowrap;
-      text-shadow: 0 0 20px rgba(145, 220, 246, 0.42);
+      letter-spacing: clamp(4px, 1.6vw, 8px);
+      text-shadow: 0 0 26px rgba(135,206,235,0.38);
     }
 
-    .button {
+    /* ── Buttons ────────────────────────────────────────────────────────── */
+    .btn {
       width: 100%;
-      min-height: 64px;
+      min-height: 56px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 12px;
-      margin-bottom: 14px;
-      padding: 16px 20px;
-      border-radius: 22px;
+      gap: 10px;
+      padding: 14px 22px;
+      border-radius: 999px;
       font-family: inherit;
-      font-size: clamp(18px, 5vw, 24px);
+      font-size: clamp(18px, 5vw, 22px);
       font-weight: 900;
       line-height: 1;
       cursor: pointer;
       text-decoration: none;
-      border: 0;
-      transition: transform 0.10s ease, opacity 0.15s ease;
+      border: none;
+      transition: transform 0.10s ease, box-shadow 0.10s ease, opacity 0.12s ease;
       -webkit-tap-highlight-color: transparent;
+      user-select: none;
     }
 
-    .button:active {
-      transform: scale(0.98);
-      opacity: 0.80;
+    .btn:active { transform: scale(0.97); opacity: 0.88; }
+
+    .btn-primary {
+      color: #07101F;
+      background: linear-gradient(160deg, #D4AF37 0%, #B8860B 100%);
+      box-shadow: 0 8px 26px rgba(212,175,55,0.35);
+      margin-bottom: 12px;
     }
 
-    .button-open {
-      color: #07101f;
-      background: linear-gradient(180deg, #fff176 0%, #ffe15a 50%, #cfa817 100%);
-      box-shadow: 0 12px 26px rgba(255, 218, 67, 0.30);
+    .btn-primary:active { box-shadow: 0 2px 12px rgba(212,175,55,0.22); }
+
+    .btn-secondary {
+      color: rgba(255,255,255,0.88);
+      background: rgba(7, 16, 31, 0.72);
+      border: 1.5px solid rgba(135,206,235,0.42);
     }
 
-    .button-copy {
-      color: rgba(255, 255, 255, 0.92);
-      background: rgba(10, 31, 52, 0.74);
-      border: 1.5px solid rgba(151, 210, 239, 0.55);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    }
-
-    .button-copy.copied {
+    .btn-secondary.copied {
       color: #9bf6b4;
-      border-color: rgba(155, 246, 180, 0.75);
+      border-color: rgba(155,246,180,0.60);
     }
 
+    /* ── Divider ────────────────────────────────────────────────────────── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 20px 0 16px;
+      color: rgba(255,255,255,0.28);
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+    }
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.10);
+    }
+
+    /* ── Fallback ───────────────────────────────────────────────────────── */
     .fallback {
-      margin-top: 20px;
-      padding: 20px 18px;
-      text-align: right;
-      border-radius: 22px;
-      background: rgba(7, 18, 31, 0.72);
-      border: 1.5px solid rgba(141, 213, 235, 0.24);
-      color: rgba(255, 255, 255, 0.74);
-      font-size: clamp(15px, 4.1vw, 18px);
-      line-height: 1.65;
+      padding: 16px 18px;
+      border-radius: 16px;
+      background: rgba(5,10,20,0.68);
+      border: 1px solid rgba(135,206,235,0.14);
     }
 
     .fallback-title {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      color: rgba(255, 255, 255, 0.92);
-      font-weight: 900;
-      font-size: clamp(18px, 4.8vw, 22px);
+      color: rgba(255,255,255,0.80);
+      font-weight: 800;
+      font-size: clamp(14px, 4vw, 16px);
       margin-bottom: 12px;
       text-align: center;
     }
 
-    .store-row {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-
-    .store-btn {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      padding: 11px 10px;
-      border-radius: 14px;
-      font-family: inherit;
-      font-size: clamp(13px, 3.6vw, 16px);
-      font-weight: 800;
-      text-decoration: none;
-      color: #fff;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1.5px solid rgba(255, 255, 255, 0.18);
-      transition: opacity 0.15s;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .store-btn:active { opacity: 0.75; }
-
     .steps {
       list-style: none;
-      display: grid;
-      gap: 12px;
-      margin-top: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
     .steps li {
-      display: grid;
-      grid-template-columns: auto 1fr;
+      display: flex;
       gap: 10px;
-      align-items: center;
+      align-items: flex-start;
+      color: rgba(255,255,255,0.58);
+      font-size: clamp(13px, 3.6vw, 15px);
+      line-height: 1.55;
+      text-align: right;
     }
 
     .num {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: #06101d;
-      background: #91dcf6;
-      font-weight: 900;
-      box-shadow: 0 0 16px rgba(145, 220, 246, 0.35);
       flex-shrink: 0;
-    }
-
-    .invalid-box {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
-      gap: 14px;
-      margin-top: 22px;
+      justify-content: center;
+      color: #050A14;
+      background: var(--cyan);
+      font-weight: 900;
+      font-size: 11px;
+      margin-top: 2px;
+      box-shadow: 0 0 10px rgba(135,206,235,0.30);
+    }
+
+    /* ── Invalid state ──────────────────────────────────────────────────── */
+    .invalid-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
       padding: 18px;
+      border-radius: 16px;
+      background: rgba(8,22,37,0.78);
+      border: 1.5px solid rgba(255,80,120,0.32);
+      color: rgba(255,255,255,0.78);
+      font-size: clamp(15px, 4vw, 17px);
+      line-height: 1.5;
       text-align: right;
-      border-radius: 20px;
-      background: rgba(8, 22, 37, 0.78);
-      border: 1.5px solid rgba(255, 80, 120, 0.38);
-      color: rgba(255, 255, 255, 0.82);
-      font-size: clamp(17px, 4.5vw, 20px);
-      line-height: 1.45;
+      margin-top: 16px;
     }
 
     .warn {
       color: #ff5c82;
-      font-size: 34px;
-      line-height: 1;
+      font-size: 26px;
+      flex-shrink: 0;
+      margin-top: 2px;
     }
 
+    /* ── Footer ─────────────────────────────────────────────────────────── */
     .footer {
       margin-top: 22px;
       text-align: center;
-      color: rgba(255, 255, 255, 0.72);
-      font-size: clamp(14px, 3.7vw, 17px);
+      color: rgba(255,255,255,0.20);
+      font-size: 11.5px;
+      letter-spacing: 0.4px;
     }
 
-    .hidden {
-      display: none !important;
+    /* ── Auto-open indicator ──────────────────────────────────────────────── */
+    .auto-open-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      border-radius: 14px;
+      background: rgba(212,175,55,0.08);
+      border: 1px solid rgba(212,175,55,0.25);
+      color: rgba(255,255,255,0.65);
+      font-size: 13.5px;
+      font-weight: 600;
     }
 
-    @media (max-height: 690px) {
-      body {
-        align-items: flex-start;
-        padding-top: 14px;
-      }
+    .spinner {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      border: 2px solid rgba(212,175,55,0.25);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
 
-      .card {
-        min-height: auto;
-        padding-top: 24px;
-      }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
 
-      .camera {
-        font-size: 48px;
-        margin-bottom: 10px;
-      }
+    .hidden { display: none !important; }
 
-      .subtitle {
-        margin-bottom: 22px;
-      }
-
-      .code-box {
-        min-height: 88px;
-        margin-bottom: 20px;
-      }
-
-      .fallback {
-        margin-top: 14px;
-      }
+    /* ── Compact screens ────────────────────────────────────────────────── */
+    @media (max-height: 700px) {
+      .card { padding: 24px 20px 20px; }
+      .logo-icon { width: 58px; height: 58px; font-size: 27px; margin-bottom: 10px; }
+      h1 { font-size: 26px; }
+      .invite { font-size: 16px; margin-bottom: 16px; }
+      .code-box { padding: 13px 12px; margin-bottom: 16px; }
+      .divider { margin: 14px 0 12px; }
     }
   </style>
 </head>
 <body>
   <main class="shell">
     <section class="card" aria-label="הצטרפות לחדר משחק">
-      <div class="camera" aria-hidden="true">📸</div>
-      <h1>מה בתמונה?</h1>
-      <p class="subtitle">הוזמנת להצטרף לחדר</p>
 
+      <!-- Logo + title -->
+      <div class="logo-wrap">
+        <div class="logo-icon" aria-hidden="true">👁</div>
+        <h1>מה בתמונה?</h1>
+        <p class="app-tagline">גלה חלקים · נחש את המקום</p>
+      </div>
+
+      <p class="invite">הוזמנת להצטרף לחדר</p>
+
+      <!-- Valid code state -->
       <div id="validState" class="hidden">
-        <div class="code-label">קוד החדר</div>
+        <p class="code-label">קוד החדר</p>
         <div class="code-box">
-          <div id="codeDisplay" class="code-value">------</div>
+          <div id="codeDisplay" class="code-value" role="text" aria-label="קוד החדר">------</div>
         </div>
 
-        <button id="openBtn" class="button button-open" type="button" onclick="openApp()">
-          <span>פתח באפליקציה</span>
+        <!-- Auto-open status (mobile only) -->
+        <div id="autoOpenBar" class="auto-open-bar hidden" aria-live="polite">
+          <div class="spinner" aria-hidden="true"></div>
+          <span id="autoOpenText">פותח את האפליקציה…</span>
+        </div>
+
+        <button id="openBtn" class="btn btn-primary" type="button">
+          <span>כניסה לחדר</span>
           <span aria-hidden="true">↗</span>
         </button>
 
-        <button id="copyBtn" class="button button-copy" type="button" onclick="copyCode()">
+        <button id="copyBtn" class="btn btn-secondary" type="button">
           <span id="copyText">העתק קוד</span>
           <span id="copyIcon" aria-hidden="true">▣</span>
         </button>
 
-        <div class="fallback">
-          <div class="fallback-title">
-            <span>האפליקציה לא נפתחה?</span>
-            <span aria-hidden="true">ⓘ</span>
-          </div>
-          <div class="store-row">
-            <a class="store-btn" href="https://apps.apple.com/app/id0000000000" target="_blank" rel="noopener">
-              <span aria-hidden="true">🍎</span> App Store
-            </a>
-            <a class="store-btn" href="https://play.google.com/store/apps/details?id=com.rotem.whoisthere" target="_blank" rel="noopener">
-              <span aria-hidden="true">▶</span> Google Play
-            </a>
-          </div>
+        <div class="divider">האפליקציה לא נפתחה?</div>
+
+        <div class="fallback" role="complementary">
+          <p class="fallback-title">הורד את WhoIsThere</p>
           <ol class="steps">
-            <li><span class="num">1</span><span>הורד את <strong>מה בתמונה?</strong> מהחנות.</span></li>
-            <li><span class="num">2</span><span>פתח את האפליקציה.</span></li>
-            <li><span class="num">3</span><span>לחץ "שחק עם חברים" ← "יש לי קוד" והזן את הקוד למעלה.</span></li>
+            <li>
+              <span class="num" aria-hidden="true">1</span>
+              <span>הורד את WhoIsThere מ-<strong>Google Play</strong> או <strong>App&nbsp;Store</strong>.</span>
+            </li>
+            <li>
+              <span class="num" aria-hidden="true">2</span>
+              <span>פתח את האפליקציה.</span>
+            </li>
+            <li>
+              <span class="num" aria-hidden="true">3</span>
+              <span>לחץ "הצטרף לחדר" והזן את הקוד המוצג למעלה.</span>
+            </li>
           </ol>
         </div>
       </div>
 
-      <div id="invalidState" class="invalid-box hidden">
+      <!-- Invalid / missing code -->
+      <div id="invalidState" class="invalid-box hidden" role="alert">
         <span class="warn" aria-hidden="true">⚠</span>
         <span>לא נמצא קוד חדר בקישור.<br>בקש קישור חדש מהמארח.</span>
       </div>
 
-      <div class="footer">מה בתמונה? © 2026</div>
+      <p class="footer">WhoIsThere © 2026</p>
     </section>
   </main>
 
   <script>
-    var roomCode = '';
+    'use strict';
 
-    (function initJoinPage() {
-      var params = new URLSearchParams(window.location.search);
-      var rawCode = params.get('code') || '';
-      var code = rawCode.trim().toUpperCase();
+    let roomCode = '';
+
+    (function init() {
+      const params = new URLSearchParams(window.location.search);
+      const code = (params.get('code') ?? '').trim().toUpperCase();
 
       if (!/^[A-Z0-9]{6}$/.test(code)) {
         document.getElementById('invalidState').classList.remove('hidden');
@@ -366,58 +411,72 @@
       }
 
       roomCode = code;
-      document.getElementById('codeDisplay').textContent = code;
+
+      const display = document.getElementById('codeDisplay');
+      display.textContent = code;
+      display.setAttribute('aria-label', 'קוד החדר: ' + code.split('').join(' '));
+
       document.getElementById('validState').classList.remove('hidden');
+
+      // On mobile: auto-redirect to app after a brief delay so the page renders first.
+      // Desktop browsers silently ignore unknown URL schemes, so this is safe everywhere.
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isMobile) {
+        const bar = document.getElementById('autoOpenBar');
+        bar.classList.remove('hidden');
+
+        setTimeout(() => {
+          window.location.href = 'whoisthere://join?code=' + encodeURIComponent(code);
+
+          // After 2.5 s: if we're still here, the app probably isn't installed — update hint.
+          setTimeout(() => {
+            document.getElementById('autoOpenText').textContent = 'האפליקציה לא נמצאה — הורד אותה למטה.';
+            document.querySelector('.spinner').style.display = 'none';
+          }, 2500);
+        }, 600);
+      }
     })();
 
-    function openApp() {
+    document.getElementById('openBtn')?.addEventListener('click', () => {
       if (!roomCode) return;
-      // Custom URL scheme — works on iOS (after CFBundleURLSchemes registration) and Android
       window.location.href = 'whoisthere://join?code=' + encodeURIComponent(roomCode);
-    }
+    });
 
-    function copyCode() {
+    document.getElementById('copyBtn')?.addEventListener('click', () => {
       if (!roomCode) return;
 
-      var button = document.getElementById('copyBtn');
-      var icon = document.getElementById('copyIcon');
-      var text = document.getElementById('copyText');
+      const btn  = document.getElementById('copyBtn');
+      const icon = document.getElementById('copyIcon');
+      const text = document.getElementById('copyText');
 
-      function markCopied() {
-        button.classList.add('copied');
+      const markCopied = () => {
+        btn.classList.add('copied');
         icon.textContent = '✓';
-        text.textContent = 'הועתק';
-
-        window.setTimeout(function resetCopyButton() {
-          button.classList.remove('copied');
+        text.textContent = 'הועתק!';
+        setTimeout(() => {
+          btn.classList.remove('copied');
           icon.textContent = '▣';
           text.textContent = 'העתק קוד';
         }, 1800);
-      }
+      };
 
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(roomCode).then(markCopied).catch(function () {
-          legacyCopy(roomCode, markCopied);
-        });
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(roomCode).then(markCopied).catch(() => legacyCopy(markCopied));
       } else {
-        legacyCopy(roomCode, markCopied);
+        legacyCopy(markCopied);
       }
-    }
+    });
 
-    function legacyCopy(value, callback) {
-      var textarea = document.createElement('textarea');
-      textarea.value = value;
-      textarea.setAttribute('readonly', '');
-      textarea.style.position = 'fixed';
-      textarea.style.top = '0';
-      textarea.style.left = '0';
-      textarea.style.opacity = '0';
-      textarea.style.pointerEvents = 'none';
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      try { document.execCommand('copy'); } catch (e) {}
-      document.body.removeChild(textarea);
+    function legacyCopy(callback) {
+      const el = document.createElement('textarea');
+      el.value = roomCode;
+      el.readOnly = true;
+      Object.assign(el.style, { position: 'fixed', top: 0, left: 0, opacity: 0, pointerEvents: 'none' });
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      try { document.execCommand('copy'); } catch (_) { /* visible code remains as fallback */ }
+      document.body.removeChild(el);
       callback();
     }
   </script>
