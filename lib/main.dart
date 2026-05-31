@@ -173,7 +173,15 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
       return;
     }
 
-    // Warm start — only navigate if not in an active game session
+    // Warm start: if not logged in, store code and let router handle auth→join
+    final loggedIn = ref.read(firebaseUserProvider).valueOrNull != null;
+    if (!loggedIn) {
+      ref.read(pendingJoinCodeProvider.notifier).state = code;
+      ref.read(routerProvider).go('/auth');
+      return;
+    }
+
+    // Warm start + logged in — only navigate if not in an active game session
     final router = ref.read(routerProvider);
     final currentPath =
         router.routeInformationProvider.value.uri.path;

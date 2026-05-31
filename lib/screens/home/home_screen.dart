@@ -352,6 +352,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isAnonymous =
+        ref.watch(currentUserProvider).valueOrNull?.provider == 'anonymous';
+
     ref.listen<bool>(firstTimeBonusProvider, (_, next) {
       if (!next || !mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -405,7 +408,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             Row(
                               textDirection: TextDirection.ltr,
                               children: [
-                                const _ProfileIconButton(),
+                                _ProfileIconButton(isAnonymous: isAnonymous),
                                 const SizedBox(width: 8),
                                 const _StoreIconButton(),
                                 const SizedBox(width: 8),
@@ -464,7 +467,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             delayMs: 300, durationMs: 320,
                           ),
-                          SizedBox(height: verySmall ? 10 : compact ? 14 : 20),
+                          if (isAnonymous) ...[
+                            const SizedBox(height: 8),
+                            _GuestWarningBanner(
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                context.push('/profile');
+                              },
+                            ),
+                          ],
+                          SizedBox(
+                            height: isAnonymous
+                                ? (verySmall ? 6 : 8)
+                                : (verySmall ? 10 : compact ? 14 : 20),
+                          ),
                           _step(
                             Column(
                               children: [
@@ -875,7 +891,8 @@ class _DailyRewardButton extends ConsumerWidget {
 // ── Profile icon button (top-left, QA access) ─────────────────────────────
 
 class _ProfileIconButton extends StatelessWidget {
-  const _ProfileIconButton();
+  final bool isAnonymous;
+  const _ProfileIconButton({required this.isAnonymous});
 
   @override
   Widget build(BuildContext context) {
@@ -893,24 +910,104 @@ class _ProfileIconButton extends StatelessWidget {
           width: 44,
           height: 44,
           child: Center(
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: const Color(0xFF050A14).withOpacity(0.60),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.15),
-                  width: 1.0,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF050A14).withOpacity(0.60),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isAnonymous
+                          ? const Color(0xFFFF8C00).withOpacity(0.60)
+                          : Colors.white.withOpacity(0.15),
+                      width: isAnonymous ? 1.5 : 1.0,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.person_rounded,
+                    color: Colors.white70,
+                    size: 20,
+                  ),
                 ),
-              ),
-              child: const Icon(
-                Icons.person_rounded,
-                color: Colors.white70,
-                size: 20,
-              ),
+                if (isAnonymous)
+                  Positioned(
+                    top: -3,
+                    right: -3,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF8C00),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppStyles.navyTop, width: 1.5),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Guest warning banner ──────────────────────────────────────────────────
+
+class _GuestWarningBanner extends StatelessWidget {
+  final VoidCallback onTap;
+  const _GuestWarningBanner({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFF8C00).withOpacity(0.10),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFFFF8C00).withOpacity(0.55),
+            width: 1.2,
+          ),
+        ),
+        child: Row(
+          children: [
+            const Text('⚠️', style: TextStyle(fontSize: 14)),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'אורח — מחיקת האפליקציה תמחק הכל',
+                style: TextStyle(
+                  color: Color(0xFFFF8C00),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF8C00).withOpacity(0.20),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'התחבר עם Google',
+                style: TextStyle(
+                  color: Color(0xFFFF8C00),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
