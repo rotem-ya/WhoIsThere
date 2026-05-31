@@ -151,9 +151,13 @@
     "answer_he": "תמנע",
     "category": "nature",
     "city_he": "אילת",
-    "image_asset": "assets/game_places/images/timna_park.jpg",
+    "image_asset": "assets/game_places/images/timna_park.png",
     "difficulty": "medium",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "עמודי סלע אדומים גדולים בנוף זקוף",
+      "פרק טבע בודד בנגב"
+    ]
   },
   {
     "id": "eilat",
@@ -161,9 +165,13 @@
     "answer_he": "אילת",
     "category": "city",
     "city_he": "אילת",
-    "image_asset": "assets/game_places/images/eilat.jpg",
+    "image_asset": "assets/game_places/images/eilat.png",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "חוף ים בתרמילים צבעוניים וטרופיים",
+      "מים בלו-טורקיז ברורים מאד"
+    ]
   },
   {
     "id": "dolphin_reef",
@@ -261,9 +269,13 @@
     "answer_he": "נמל חיפה",
     "category": "landmark",
     "city_he": "חיפה",
-    "image_asset": "assets/game_places/images/haifa_port.jpg",
+    "image_asset": "assets/game_places/images/haifa_port.png",
     "difficulty": "medium",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "נמל סחורה בעל מנופים אדומים גדולים",
+      "מקום חשוב לסחר בישראל"
+    ]
   },
   {
     "id": "caesarea",
@@ -534,5 +546,33 @@
     "image_asset": "assets/game_places/images/stalactite_cave.jpg",
     "difficulty": "medium",
     "is_active": true
+  },
+  {
+    "id": "gan_hashlosha",
+    "name_he": "גן השלושה",
+    "answer_he": "גן השלושה",
+    "category": "nature",
+    "city_he": "עמק המעיינות",
+    "image_asset": "assets/game_places/images/gan_hashlosha.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "מים נובעים בטמפרטורה קבועה כל ימות השנה",
+      "פנינת טבע בלב עמק המעיינות, ידועה גם בשמה הערבי"
+    ]
+  },
+  {
+    "id": "yarkon_river",
+    "name_he": "נהר הירקון",
+    "answer_he": "נהר הירקון",
+    "category": "nature",
+    "city_he": "תל אביב",
+    "image_asset": "assets/game_places/images/yarkon_river.png",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "נהר זורם דרך תל אביב ירוקה",
+      "שביל הליכה יפה עם נוף עירוני"
+    ]
   }
 ]

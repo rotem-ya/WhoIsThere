@@ -2,42 +2,65 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users: only the user can write their own doc
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
-
-      // Economy wallet sub-document (users/{userId}/economy/wallet)
-      match /economy/{document} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-
-      // Economy transaction log (users/{userId}/economy_transactions/{txId})
-      match /economy_transactions/{txId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
+    function signedIn() {
+      return request.auth != null;
     }
 
-    // Rooms: authenticated users can read; write is restricted
+    // ── Rooms ────────────────────────────────────────────────────────────────
+    // Any authenticated user may read and create rooms.
+    // Any authenticated user may update a room — covers:
+    //   • host advancing phase / writing game state
+    //   • joining player adding themselves to players map (not yet in players)
+    //   • guardian clients writing auto-reveal / guess transactions
+    // Only the host may delete their room.
     match /rooms/{roomId} {
-      allow read: if request.auth != null;
-      // Create: must be auth'd, hostId must match uid, phase must be waiting
-      allow create: if request.auth != null
-        && request.resource.data.hostId == request.auth.uid
-        && request.resource.data.phase == 'waiting';
-      // Update: any authenticated player in the room can update
-      allow update: if request.auth != null
-        && (request.auth.uid in resource.data.players.keys()
-            || request.auth.uid == resource.data.hostId);
-      // Delete: only the host can delete
-      allow delete: if request.auth != null
-        && request.auth.uid == resource.data.hostId;
+      allow read, create: if signedIn();
+      allow update: if signedIn();
+      allow delete: if signedIn() && request.auth.uid == resource.data.hostId;
+
+      // All nested room sub-collections (future-safe)
+      match /{document=**} {
+        allow read, create, update, delete: if signedIn();
+      }
     }
 
-    // Images: anyone authenticated can read; only admin can write
+    // ── Users ────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      // Any signed-in user may read any user doc
+      // (needed to read host's selectedCardSkin, player names, etc.)
+      allow read: if signedIn();
+
+      // Only the owning user may write their own profile doc
+      allow create, update: if signedIn() && request.auth.uid == userId;
+      allow delete: if false;
+
+      // Economy wallet — own user only
+      match /economy/{document} {
+        allow read, write: if signedIn() && request.auth.uid == userId;
+      }
+
+      // Economy transaction log — own user only
+      match /economy_transactions/{txId} {
+        allow read, write: if signedIn() && request.auth.uid == userId;
+      }
+
+      // Exposure history — any authenticated user may write.
+      // _recordExposureForAll() writes to other players' docs cross-user.
+      match /exposure_history {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow write: if signedIn();
+      }
+    }
+
+    // ── Place / image catalogue ───────────────────────────────────────────────
     match /images/{imageId} {
-      allow read: if request.auth != null;
-      allow write: if false; // managed via Firebase Console / Admin SDK
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // ── Deny everything else ─────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

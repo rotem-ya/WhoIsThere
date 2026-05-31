@@ -14,19 +14,19 @@
       },
       "oauth_client": [
         {
-          "client_id": "815269999993-i8sgjg222f01a1ha3n65t65a99bn75k0.apps.googleusercontent.com",
+          "client_id": "815269999993-msst4o32l2c2g39qm5qhk47sqbrk4ac9.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.whoisthere.app",
-            "certificate_hash": "32ff84ca4786bbcc3d701396984d9b806e72c323"
+            "certificate_hash": "702e0899378a283fbed360c634987b2e090c5afa"
           }
         },
         {
-          "client_id": "815269999993-oe5u6spidpqhdvb4i2trqd2i4g022f0d.apps.googleusercontent.com",
+          "client_id": "815269999993-q8bqm5mofcvbodric4fphh500q51tjvk.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.whoisthere.app",
-            "certificate_hash": "7fe52e9e460aa2a670d1fef54e7ee42b311a4042"
+            "certificate_hash": "25c377668805f4e459b58ef6ded2ac48758f462c"
           }
         },
         {

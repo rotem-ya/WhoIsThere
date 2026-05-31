@@ -1,0 +1,126 @@
+# WhoIsThere — Claude Notes
+
+## ⚠️ חובה לקרוא קובץ זה בתחילת כל סשן לפני כל פעולה
+
+---
+
+## כללי פיתוח
+- ענף פיתוח: `claude/stability-compensation-logging-dkoQh`
+- מאגר: `rotem-ya/whoisthere`
+
+## דף הצטרפות לחדר (Join Page)
+
+### מיקום הקוד
+- **קובץ מקור**: `docs/join.html` בריפו WhoIsThere (הריפו הזה)
+- **כתובת פרודקשן**: `https://rotem-ya.github.io/apps-share-pages/whoisthere/join/?code=XXXXXX`
+- **קובץ יעד**: `whoisthere/join/index.html` בריפו `rotem-ya/apps-share-pages`
+
+### סנכרון אוטומטי
+קיים workflow בשם `sync-join-page.yml` שמסנכרן את הקובץ אוטומטית:
+- **טריגר**: push ל-`main` שמשנה את `docs/join.html`
+- **פעולה**: מעתיק את הקובץ ל-`apps-share-pages/whoisthere/join/index.html` ומבצע push
+
+### דרישה חד-פעמית: הגדרת Secret
+כדי שה-workflow יעבוד, נדרש GitHub Personal Access Token עם הרשאות `repo`:
+1. צור PAT ב-GitHub → Settings → Developer Settings → Personal Access Tokens → Fine-grained
+2. הרשאות: **Contents: Read & Write** על הריפו `apps-share-pages`
+3. הוסף כ-Secret בריפו WhoIsThere: **Settings → Secrets → Actions → New** → שם: `PAGES_SYNC_TOKEN`
+
+### עריכה ידנית (ללא Secret)
+אם ה-Secret לא מוגדר או ה-workflow נכשל:
+```bash
+# קלון apps-share-pages ידנית, עדכן, ודחף
+git clone https://github.com/rotem-ya/apps-share-pages.git /tmp/pages
+cp docs/join.html /tmp/pages/whoisthere/join/index.html
+cd /tmp/pages && git add . && git commit -m "sync join page" && git push
+```
+
+### גישת Claude למאגרים
+- Claude **יכול** לגשת רק ל-`rotem-ya/whoisthere` דרך MCP
+- Claude **אינו יכול** לדחוף ישירות ל-`apps-share-pages` — זה מטופל ע"י ה-workflow
+- עריכת הדף: ערוך `docs/join.html`, בצע push ל-main — ה-workflow ידאג לשאר
+
+## חוקי עבודה — חובה לפעול לפיהם
+1. **משימה אחת בכל פעם** — לא מתחילים משימה הבאה לפני שהנוכחית הושלמה
+2. **אחרי כל משימה: verify + double-check** — בדיקה שהקוד תקין, לא שובר דברים אחרים
+3. **אחרי אימות: ממשיכים ללא אישור** — אין צורך לחכות לאישור בין משימה למשימה
+4. **push רק אחרי 5 משימות, או בסיום כל המטלות** — לא commit/push אחרי כל משימה בנפרד
+5. **לאחר כל שינוי — חפש תופעות לוואי**: האם יש תנאי guard שנשאר ולא עודכן? האם הפיצ'ר עובד בסולו (בוט) ולא רק מולטיפלייר?
+
+## כלכלה — חוקים חשובים
+- **100 מטבעות כניסה ראשונה**: חד-פעמי לפי UID (Firestore). מחיקת אפליקציה + אותו חשבון = לא מקבל שוב. אורח עם UID חדש = מקבל. הבדיקה: `totalEarned > 0` ב-wallet document.
+- **פרס יומי**: 20 מטבעות בסיס + בונוס לפי streak, מתאפס כל יום UTC.
+
+## מטלות נוכחיות — שלב יציבות
+- [x] הסרת פסי טיימר ממסך המשחק
+- [x] תיקון כפתור פרס יומי (היה מושבת בטעות)
+- [x] בקרת סאונד חיה בהגדרות (slider → צליל מיידי)
+- [x] משוב רטט בהגדרות
+- [x] deploy Firestore rules + תיקון 100 מטבעות
+- [x] חיווי קולי לעוצמת מוזיקה בהגדרות לא עובד (bg player לא מנגן כשלא במשחק)
+
+## מטלות ממתינות — שלב פולישׁ משחק
+- [x] מוזיקה נעצרת בהודעת וואטסאפ ולא חוזרת — _musicShouldBePlaying + onPlayerStateChanged listener
+- [x] החלפת סאונד הטיק של הספירה לאחור + סנכרון מדויק עם השניות — aperture_open.wav + per-second dedup
+- [x] עיצוב מחדש של ספירת לאחור על המשבצת — dark overlay + gold depleting ring + glow
+- [x] אלגוריתם חשיפת משבצות — לא סמוכות זו לזו (דמקה), רק אם אין ברירה אחרת
+
+## מטלות שהושלמו — שלב UX משחק
+- [x] רמז ראשון 40 מטבעות, רמז שני 80 מטבעות + צפייה חוזרת ברמזים שנקנו
+- [x] טיימר גילוי ל-10 שניות (קבוע, לא דינמי)
+- [x] כפתור "נחש עכשיו!" תמיד מוצג לכולם
+- [x] הסתרת overlay ניחוש מצופים — רק גסחן רואה overlay; שאר רואים ✍ ליד שם
+- [x] עיצוב מחדש מסך ניצחון — ללא גלילה, compact image, Flexible scores
+- [x] הסרת גלילה מ-LetterBankInput + מסך win
+- [x] כפתור חזרה אנדרואיד — Lobby/Vote/Win → חוזר ל/home במקום יציאה מאפליקציה
+
+---
+
+## שלב הבא: מערכת דירוג שחקנים
+- [x] מערכת דירוג: 7 דרגות תמטיות לפי totalPoints (עיוור → מתחיל → סקרן → בלש → חוקר → מומחה → אגדה)
+- [x] דרגה מוצגת בלובי (ליד שם השחקן), ב-HUD משחק (אימוג'י), ובפרופיל (badge + "לדרגה הבאה: X נק׳")
+- [x] totalPoints נשמר ב-PlayerModel ומועתק מ-Firestore בכניסה/יצירת חדר
+
+---
+
+## מטלות ממתינות — שלב אינטראקציה ומשחקיות
+- [x] badge גילויים כסופרסקריפט בפינה ימנית עליונה של שם שחקן
+- [x] תיקון: תמונות שגויות ב-discoveredImageIds
+- [x] כרטיס עצור (stun card) — רכישה בחנות, חסימת שחקן לתור
+- [x] מסך "המקומות שגיליתי" — מפת ישראל נאון עם 50 מקומות
+- [x] טיפול בסאונד לטיימר — ביטול reveal tick, guess tick מעץ בלבד, daily_coins + player_join + wrong_buzz
+- [x] מחיר כניסה לחדר — 20 מטבעות; תצוגה נכונה במסך הבית
+- [x] בוטים עם שמות ישראליים אמיתיים (30 שמות)
+- [x] לחיצה על שם שחקן במשחק → תפריט כרטיסים (חסימת ניחוש 5s/10s, החשכה)
+- [x] כרטיסים חדשים בחנות: חסימת ניחוש 5s (20🪙), 10s (35🪙), החשכה (25🪙)
+- [x] overlay החשכה — מסתיר לוח מיריב (blackoutActiveUntilMs); time-block countdown על כפתור ניחוש
+
+---
+
+## מטלות ממתינות — שלב התקדמות ופתיחת תכונות
+
+### מטלות שהושלמו בסשן זה
+- [x] סאונד טיק של ספירת לאחור בחשיפת משבצת (reveal-tick player, per-second dedup)
+- [x] תזמון חשיפה פרוגרסיבי: 3s לראשונות, 6s ל-10 הבאות, 9s להמשך
+- [x] ניחוש מותר בכל שלב (לא רק ב-guessOpportunity)
+- [x] אין גישה לחנות תוך כדי משחק — הודעת snackbar
+- [x] ברירת מחדל מוזיקה 40% (היה 100%)
+- [x] כפתורי בית: עיצוב מחדש solid gradient + תיקון overflow טקסט
+
+### מערכת נעילת כרטיסים לפי התקדמות
+כרטיסי פעולה נפתחים לרכישה בהתאם למספר המקומות שגולו (`discoveredImageIds.length`).
+כל 10 מקומות שגולו → כרטיס חדש נפתח, מהפשוט למורכב:
+
+| גילויים | כרטיס שנפתח | מחיר |
+|---------|-------------|-------|
+| 0+  | אין כרטיסים | — |
+| 10+ | חסימת ניחוש 5s | 20🪙 |
+| 20+ | החשכה | 25🪙 |
+| 30+ | חסימת ניחוש 10s | 35🪙 |
+| 40+ | כרטיס עצור (stun) | 50🪙 |
+
+**איפה לממש:**
+- `lib/screens/store/store_screen.dart` → `_CardsTab` → `_PlayingCard`: הוסף `locked: bool` + `requiredDiscoveries: int`
+- כרטיס נעול מוצג אפור עם מנעול + "גלה X מקומות לפתיחה"
+- קרא `discoveredCount` מ-`ref.watch(currentUserProvider).valueOrNull?.discoveredImageIds.length ?? 0`
+- **אל תסתיר** כרטיסים נעולים — הצג אותם כדי לתמרץ את השחקן להתקדם

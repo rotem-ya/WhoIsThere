@@ -1,14 +1,25 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../core/utils/display_name_sanitizer.dart';
+import 'qa_logger_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Classic Google Sign-In (no Credential Manager): works on all Android versions.
+  // serverClientId is intentionally omitted — Credential Manager (Android 14+)
+  // throws DEVELOPER_ERROR (ApiException:10) when web-client domain restrictions
+  // are not perfectly aligned. The classic API validates only against the Android
+  // OAuth client SHA-1 in google-services.json, which is always correct.
+  // Firebase accepts accessToken alone when idToken is absent.
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   User? get currentUser => _auth.currentUser;
@@ -54,19 +65,110 @@ class AuthService {
   }
 
   Future<UserModel?> signInWithGoogle() async {
-    final googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) return null; // User dismissed the picker — stay on auth screen.
+    return await _runGoogleSignIn(_googleSignIn);
+    // Exceptions (network, FirebaseAuthException, PlatformException) propagate to
+    // _runAuth which shows a visible snackbar.
+  }
 
-    final googleAuth = await googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
+  /// Internal: runs the full Google sign-in dance for the given [instance].
+  ///
+  /// Strategy: when the current user is anonymous, prefer [linkWithCredential]
+  /// over [signInWithCredential]. Linking upgrades the account IN-PLACE:
+  /// the UID, wallet, and all Firestore data are preserved — no token/rules
+  /// transition, no permission-denied window.
+  ///
+  /// Falls back to [signInWithCredential] when:
+  ///   • No current user (fresh sign-in from auth screen).
+  ///   • [credential-already-in-use] — Google account already has its own
+  ///     Firebase UID; sign into that account instead.
+  ///
+  /// Also handles the google_sign_in_android 6.x Pigeon cast bug (TypeError
+  /// or PlatformException thrown after the native credential exchange succeeds).
+  Future<UserModel?> _runGoogleSignIn(GoogleSignIn instance) async {
+    try {
+      final googleUser = await instance.signIn();
+      if (googleUser == null) return null; // User dismissed picker.
 
-    final userCredential = await _auth.signInWithCredential(credential);
-    return _syncUser(userCredential.user!);
-    // Exceptions propagate to the caller (auth screen) which shows a visible error.
-    // Do NOT silently fall back to anonymous — that creates unintended ghost accounts.
+      final googleAuth = await googleUser.authentication;
+      if (googleAuth.idToken == null && googleAuth.accessToken == null) {
+        throw Exception('Google Sign-In returned no auth tokens');
+      }
+      final credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+        accessToken: googleAuth.accessToken,
+      );
+
+      // Choose link vs sign-in based on current auth state.
+      final anonUser = _auth.currentUser;
+      UserCredential userCredential;
+
+      if (anonUser != null && anonUser.isAnonymous) {
+        // Upgrade the anonymous account — UID and wallet are preserved.
+        try {
+          userCredential = await anonUser.linkWithCredential(credential);
+          QaLoggerService.instance.log(
+            'AUTH', 'AUTH_GOOGLE_LINKED uid=${userCredential.user?.uid}');
+        } on FirebaseAuthException catch (e) {
+          if (e.code == 'credential-already-in-use' ||
+              e.code == 'provider-already-linked') {
+            // This Google account already has its own Firebase UID.
+            // Sign into the existing account (UID will change).
+            QaLoggerService.instance.log(
+              'AUTH', 'AUTH_GOOGLE_LINK_CONFLICT code=${e.code} → signIn');
+            userCredential = await _auth.signInWithCredential(
+                e.credential ?? credential);
+            // Preserve the anonymous user's progress by merging it into the
+            // newly signed-in Google account.
+            final newUid = userCredential.user?.uid;
+            if (anonUser.uid != newUid && newUid != null) {
+              await _mergeAnonymousData(anonUser.uid, newUid);
+            }
+          } else {
+            rethrow;
+          }
+        }
+      } else {
+        // Not anonymous (or no current user) — plain sign-in.
+        userCredential = await _auth.signInWithCredential(credential);
+        QaLoggerService.instance.log(
+          'AUTH', 'AUTH_GOOGLE_SIGNIN uid=${userCredential.user?.uid}');
+      }
+
+      // Force token refresh so the Firestore SDK has the latest credentials.
+      try { await userCredential.user!.getIdToken(true); } catch (_) {}
+      return _syncUser(userCredential.user!);
+    } on TypeError {
+      debugPrint('[AuthService] Pigeon cast TypeError — attempting authStateChanges recovery');
+      return _recoverFromSignInError('TypeError');
+    } on PlatformException catch (e) {
+      debugPrint('[AuthService] PlatformException: ${e.code} — attempting authStateChanges recovery');
+      return _recoverFromSignInError('PlatformException:${e.code}');
+    }
+  }
+
+  /// Waits for Firebase Auth to emit a non-anonymous user after a Pigeon cast
+  /// error from signInWithCredential. The native sign-in already completed, so
+  /// the auth state change arrives within ~1-3 seconds.
+  Future<UserModel?> _recoverFromSignInError(String reason) async {
+    try {
+      final User? recoveredUser = await _auth
+          .authStateChanges()
+          .where((u) => u != null && !u.isAnonymous)
+          .first
+          .timeout(const Duration(seconds: 3));
+
+      if (recoveredUser != null) {
+        debugPrint('[AuthService] AUTH_GOOGLE_SUCCESS_RECOVERED reason=$reason uid=${recoveredUser.uid}');
+        // Force token refresh — Firestore SDK had a stale anonymous token.
+        try { await recoveredUser.getIdToken(true); } catch (_) {}
+        await Future.delayed(const Duration(milliseconds: 200));
+        return _syncUser(recoveredUser);
+      }
+    } catch (_) {
+      // timeout or stream error — sign-in genuinely did not complete
+    }
+    debugPrint('[AuthService] AUTH_GOOGLE_FAILED_AFTER_TYPEERROR_RECOVERY reason=$reason');
+    return null;
   }
 
   Future<UserModel?> signInWithApple() async {
@@ -82,7 +184,37 @@ class AuthService {
       accessToken: appleCredential.authorizationCode,
     );
 
-    final userCredential = await _auth.signInWithCredential(oauthCredential);
+    // Mirrors the Google link-and-upgrade strategy: anonymous accounts are
+    // upgraded in-place so the UID, wallet, and Firestore data are preserved.
+    final anonUser = _auth.currentUser;
+    UserCredential userCredential;
+
+    if (anonUser != null && anonUser.isAnonymous) {
+      try {
+        userCredential = await anonUser.linkWithCredential(oauthCredential);
+        QaLoggerService.instance.log(
+            'AUTH', 'AUTH_APPLE_LINKED uid=${userCredential.user?.uid}');
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'credential-already-in-use' ||
+            e.code == 'provider-already-linked') {
+          QaLoggerService.instance.log(
+              'AUTH', 'AUTH_APPLE_LINK_CONFLICT code=${e.code} → signIn');
+          userCredential =
+              await _auth.signInWithCredential(e.credential ?? oauthCredential);
+          final newUid = userCredential.user?.uid;
+          if (anonUser.uid != newUid && newUid != null) {
+            await _mergeAnonymousData(anonUser.uid, newUid);
+          }
+        } else {
+          rethrow;
+        }
+      }
+    } else {
+      userCredential = await _auth.signInWithCredential(oauthCredential);
+      QaLoggerService.instance.log(
+          'AUTH', 'AUTH_APPLE_SIGNIN uid=${userCredential.user?.uid}');
+    }
+
     final user = userCredential.user!;
 
     if (userCredential.additionalUserInfo?.isNewUser == true) {
@@ -95,6 +227,7 @@ class AuthService {
       await user.updateDisplayName(displayName);
     }
 
+    try { await user.getIdToken(true); } catch (_) {}
     return _syncUser(user);
   }
 
@@ -168,34 +301,50 @@ class AuthService {
   Stream<UserModel?> userModelStream() {
     return _auth.authStateChanges().asyncExpand((user) {
       if (user == null) return Stream.value(null);
-      return _firestore
-          .collection('users')
-          .doc(user.uid)
-          .snapshots()
-          .asyncMap((doc) async {
-            if (doc.exists) return UserModel.fromFirestore(doc);
-            // Doc not found. Two scenarios:
-            //   (a) signInAnonymously() is still writing it — retry until it appears.
-            //   (b) Firestore doc is genuinely gone (reinstall, cleared data).
-            // Retry up to 5× at 350 ms intervals (max 1.75 s total). On a good
-            // network, case (a) resolves on the first or second retry (~350–700 ms).
-            // Only fall through to _syncUser if doc is still absent after all retries.
-            for (int attempt = 0; attempt < 5; attempt++) {
-              await Future.delayed(const Duration(milliseconds: 350));
-              final recheck = await _firestore.collection('users').doc(user.uid).get();
-              if (recheck.exists) return UserModel.fromFirestore(recheck);
-            }
-            // Genuine recovery (case b) or very slow network — create the doc now.
-            return _syncUser(user);
-          })
-          .handleError((e) {
-            debugPrint('userModelStream inner error: $e');
-          });
+      return userModelStreamForUid(user.uid);
     }).handleError((e) {
       // Catches PigeonUserDetails type errors from google_sign_in
       // and other auth stream errors — prevents app crash on any platform.
       debugPrint('userModelStream error: $e');
     });
+  }
+
+  /// Streams the [UserModel] for a specific [uid]'s Firestore doc, with the
+  /// same retry-until-written behaviour as [userModelStream] but WITHOUT
+  /// opening its own authStateChanges subscription.
+  ///
+  /// This lets [currentUserProvider] drive off the single canonical auth
+  /// stream (firebaseUserProvider). The previous design opened a SECOND
+  /// authStateChanges subscription inside userModelStream(); if a Pigeon
+  /// TypeError was swallowed mid-transition, that subscription could get
+  /// stuck on the stale pre-link UserModel. The stale user.id was then
+  /// written as a room's hostId and failed the Firestore rule
+  /// (hostId == request.auth.uid) → permission-denied. Keying off the live
+  /// uid removes the divergence entirely.
+  Stream<UserModel?> userModelStreamForUid(String uid) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .asyncMap((doc) async {
+          if (doc.exists) return UserModel.fromFirestore(doc);
+          // Doc not found — two scenarios:
+          //   (a) sign-in is still writing it → retry until it appears.
+          //   (b) doc genuinely gone (reinstall, cleared data).
+          // Retry up to 5× at 350 ms intervals (max 1.75 s total).
+          for (int attempt = 0; attempt < 5; attempt++) {
+            await Future.delayed(const Duration(milliseconds: 350));
+            final recheck = await _firestore.collection('users').doc(uid).get();
+            if (recheck.exists) return UserModel.fromFirestore(recheck);
+          }
+          // Genuine recovery (case b) — only if uid still matches the live user.
+          final user = _auth.currentUser;
+          if (user != null && user.uid == uid) return _syncUser(user);
+          return null;
+        })
+        .handleError((e) {
+          debugPrint('userModelStreamForUid error uid=$uid: $e');
+        });
   }
 
   Future<void> updateDisplayName(String userId, String rawName) async {
@@ -215,6 +364,108 @@ class AuthService {
     await _firestore.collection('users').doc(userId).update({
       field: FieldValue.arrayUnion([itemId]),
     });
+  }
+
+  /// Copies progress from an anonymous account into a social-login account.
+  /// Called only when linkWithCredential fails (credential-already-in-use),
+  /// meaning the user has a pre-existing Google/Apple UID. Both accounts may
+  /// have real data; we take the best of each field to avoid losing progress.
+  Future<void> _mergeAnonymousData(String fromUid, String toUid) async {
+    QaLoggerService.instance.log('AUTH', 'MERGE_ANON_START from=$fromUid to=$toUid');
+    try {
+      // ── Read source docs in parallel ───────────────────────────────────
+      final results = await Future.wait([
+        _firestore.doc('users/$fromUid').get(),
+        _firestore.doc('users/$fromUid/economy/wallet').get(),
+        _firestore.doc('users/$fromUid/exposure_history').get(),
+        _firestore.doc('users/$toUid').get(),
+        _firestore.doc('users/$toUid/economy/wallet').get(),
+        _firestore.doc('users/$toUid/exposure_history').get(),
+      ]);
+
+      final srcUser   = results[0];
+      final srcWallet = results[1];
+      final srcExp    = results[2];
+      final tgtUser   = results[3];
+      final tgtWallet = results[4];
+      final tgtExp    = results[5];
+
+      if (!srcUser.exists) return; // nothing to merge
+
+      final src  = srcUser.data()!;
+      final tgt  = tgtUser.data() ?? {};
+      final srcW = srcWallet.data() ?? {};
+      final tgtW = tgtWallet.data() ?? {};
+
+      // ── Merge user document fields ──────────────────────────────────────
+      final mergedDiscovered = {
+        ...List<String>.from(src['discoveredImageIds'] ?? []),
+        ...List<String>.from(tgt['discoveredImageIds'] ?? []),
+      }.toList();
+
+      final mergedSkins = {
+        'default',
+        ...List<String>.from(src['ownedSkins'] ?? []),
+        ...List<String>.from(tgt['ownedSkins'] ?? []),
+      }.toList();
+
+      final mergedPoints = math.max(
+        (src['totalPoints'] as num?)?.toInt() ?? 0,
+        (tgt['totalPoints'] as num?)?.toInt() ?? 0,
+      );
+
+      await _firestore.doc('users/$toUid').set({
+        'totalPoints': mergedPoints,
+        'discoveredImageIds': mergedDiscovered,
+        'ownedSkins': mergedSkins,
+      }, SetOptions(merge: true));
+
+      // ── Merge wallet ────────────────────────────────────────────────────
+      if (srcWallet.exists) {
+        final srcCoins   = (srcW['coins'] as num?)?.toInt() ?? 0;
+        final srcEarned  = (srcW['totalEarned'] as num?)?.toInt() ?? 0;
+        final srcPlayed  = (srcW['totalMatchesPlayed'] as num?)?.toInt() ?? 0;
+        final srcWon     = (srcW['totalMatchesWon'] as num?)?.toInt() ?? 0;
+        final srcHints   = (srcW['totalHintsUsed'] as num?)?.toInt() ?? 0;
+        final tgtCoins   = (tgtW['coins'] as num?)?.toInt() ?? 0;
+        final tgtEarned  = (tgtW['totalEarned'] as num?)?.toInt() ?? 0;
+        final tgtPlayed  = (tgtW['totalMatchesPlayed'] as num?)?.toInt() ?? 0;
+        final tgtWon     = (tgtW['totalMatchesWon'] as num?)?.toInt() ?? 0;
+        final tgtHints   = (tgtW['totalHintsUsed'] as num?)?.toInt() ?? 0;
+
+        await _firestore.doc('users/$toUid/economy/wallet').set({
+          'coins':               math.max(srcCoins, tgtCoins),
+          'totalEarned':         math.max(srcEarned, tgtEarned),
+          'totalMatchesPlayed':  srcPlayed + tgtPlayed,
+          'totalMatchesWon':     srcWon + tgtWon,
+          'totalHintsUsed':      srcHints + tgtHints,
+        }, SetOptions(merge: true));
+      }
+
+      // ── Merge exposure history (max per image) ──────────────────────────
+      if (srcExp.exists) {
+        final srcMap = srcExp.data() ?? {};
+        final tgtMap = tgtExp.data() ?? {};
+        final merged = <String, int>{};
+        for (final key in {...srcMap.keys, ...tgtMap.keys}) {
+          merged[key] = math.max(
+            (srcMap[key] as num?)?.toInt() ?? 0,
+            (tgtMap[key] as num?)?.toInt() ?? 0,
+          );
+        }
+        if (merged.isNotEmpty) {
+          await _firestore
+              .doc('users/$toUid/exposure_history')
+              .set(merged, SetOptions(merge: true));
+        }
+      }
+
+      QaLoggerService.instance.log('AUTH', 'MERGE_ANON_OK from=$fromUid to=$toUid '
+          'discovered=${mergedDiscovered.length} skins=${mergedSkins.length}');
+    } catch (e) {
+      // Non-fatal: user continues with the Google account even if merge fails.
+      QaLoggerService.instance.log('AUTH', 'MERGE_ANON_ERROR $e');
+    }
   }
 
   Future<void> signOut() async {

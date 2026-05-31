@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,10 +6,12 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants/game_constants.dart';
+// player_rank removed — using discoveredCount badge instead;
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/player_model.dart';
 import '../../services/qa_logger_service.dart';
+import '../../services/settings_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../widgets/common/app_feedback.dart';
@@ -27,6 +30,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   bool _isStarting = false;
   bool _codeCopied = false;
   bool _lobbyLogged = false;
+  int _lastPlayerCount = 0;
+  static final AudioPlayer _joinPlayer = AudioPlayer(playerId: 'player-join');
+  static final AssetSource _joinSound = AssetSource('sounds/player_join.wav');
 
   @override
   void initState() {
@@ -45,6 +51,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 
   void _shareToWhatsApp(String code) {
+    HapticFeedback.lightImpact();
     QaLoggerService.instance.log('LOBBY', 'SHARE_ROOM_TAPPED code=$code');
     final msg = StringBuffer();
     msg.writeln('בואו לגלות מה בתמונה 📸');
@@ -60,6 +67,19 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   Widget build(BuildContext context) {
     final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
     final currentUser = ref.watch(currentUserProvider).value;
+
+    ref.listen(roomStreamProvider(widget.roomId), (prev, next) {
+      final prevCount = prev?.valueOrNull?.players.length ?? 0;
+      final nextCount = next.valueOrNull?.players.length ?? 0;
+      if (nextCount > prevCount && nextCount > _lastPlayerCount) {
+        _lastPlayerCount = nextCount;
+        final sfxScale = SettingsService.instance.sfxVolume;
+        _joinPlayer.stop().then((_) async {
+          await _joinPlayer.setVolume(sfxScale);
+          await _joinPlayer.play(_joinSound);
+        }).ignore();
+      }
+    });
 
     return roomAsync.when(
       data: (room) {
@@ -82,127 +102,126 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         }
 
         final isHost = currentUser?.id == room.hostId;
-        final rawHostName = room.players[room.hostId]?.name ?? '';
+        // Prefer the live currentUser name so the greeting is always up to date.
+        final rawHostName = isHost
+            ? (currentUser?.name ?? room.players[room.hostId]?.name ?? '')
+            : (room.players[room.hostId]?.name ?? '');
         final hostName = rawHostName.isEmpty ? 'המארח' : rawHostName;
         final canStart = room.players.length >= GameConstants.minPlayers;
 
-        return Scaffold(
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) {
+            if (!didPop) context.go('/home');
+          },
+          child: Scaffold(
           body: Container(
             decoration: const BoxDecoration(
               gradient: AppStyles.backgroundGradient,
             ),
             child: SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // ── Header ──────────────────────────────────────
-                            _buildHeader(context, currentUser, hostName),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Column(
+                  children: [
+                    // ── Header ──────────────────────────────────────
+                    _buildHeader(context, currentUser, hostName),
 
-                            const SizedBox(height: 12),
+                    const SizedBox(height: 12),
 
-                            // ── Room Code Card ───────────────────────────────
-                            _GlossyRoomCode(
-                              code: room.code,
-                              isCopied: _codeCopied,
-                              onCopy: () => _copyCode(room.code),
-                              onShare: () => _shareToWhatsApp(room.code),
-                            ),
+                    // ── Room Code Card ───────────────────────────────
+                    _GlossyRoomCode(
+                      code: room.code,
+                      isCopied: _codeCopied,
+                      onCopy: () => _copyCode(room.code),
+                      onShare: () => _shareToWhatsApp(room.code),
+                    ),
 
-                            const SizedBox(height: 12),
+                    const SizedBox(height: 12),
 
-                            // ── Section label ─────────────────────────────────
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: Text(
-                                'שחקנים בסטודיו',
-                                style: AppStyles.heading3.copyWith(
-                                  shadows: [
-                                    Shadow(
-                                      color: AppStyles.cyanGlow.withOpacity(0.8),
-                                      blurRadius: 10,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 6),
-
-                            // ── Players grid (2 × 4 = 8 fixed slots) ──────────
-                            _PlayerGrid(
-                              players: room.players.values.toList(),
-                              currentUserId: currentUser?.id,
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            // ── Min-players hint (host only, when not enough players) ──
-                            if (isHost && !canStart) ...[
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Text(
-                                  'צריך לפחות 2 שחקנים כדי להתחיל',
-                                  textAlign: TextAlign.center,
-                                  style: AppStyles.bodySmall.copyWith(
-                                    color: const Color(0xFFFFE082).withOpacity(0.85),
-                                  ),
-                                ),
-                              ),
-                            ],
-
-                            // ── Action button / waiting footer ─────────────────
-                            SizedBox(
-                              height: 52,
-                              width: double.infinity,
-                              child: isHost
-                                  ? GestureDetector(
-                                      onTap: !canStart
-                                          ? () => QaLoggerService.instance.log(
-                                              'LOBBY', 'START_GAME_BLOCKED_MIN_PLAYERS players=${room.players.length}')
-                                          : null,
-                                      child: _GlossyActionButton(
-                                      label: _isStarting ? 'מכין צמצמים...' : 'התחל משחק',
-                                      enabled: canStart && !_isStarting,
-                                      onTap: () async {
-                                        debugPrint('Lobby start tapped: roomId=${widget.roomId}');
-                                        setState(() => _isStarting = true);
-                                        try {
-                                          await ref
-                                              .read(roomServiceProvider)
-                                              .startGameDirectly(widget.roomId);
-                                          debugPrint('Lobby start success');
-                                        } catch (e) {
-                                          debugPrint('Lobby startGameDirectly error: $e');
-                                          if (mounted) {
-                                            setState(() => _isStarting = false);
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text('לא ניתן להתחיל משחק: $e')),
-                                            );
-                                          }
-                                        }
-                                      },
-                                    ),
-                                    )
-                                  : const _WaitingFooter(),
+                    // ── Section label ─────────────────────────────────
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        'שחקנים בסטודיו',
+                        style: AppStyles.heading3.copyWith(
+                          shadows: [
+                            Shadow(
+                              color: AppStyles.cyanGlow.withOpacity(0.8),
+                              blurRadius: 10,
                             ),
                           ],
                         ),
                       ),
                     ),
-                  );
-                },
+
+                    const SizedBox(height: 6),
+
+                    // ── Players grid (2 × 4 = 8 fixed slots) ──────────
+                    _PlayerGrid(
+                      players: room.players.values.toList(),
+                      currentUserId: currentUser?.id,
+                    ),
+
+                    const Spacer(),
+
+                    // ── Min-players hint (host only, when not enough players) ──
+                    if (isHost && !canStart)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          'צריך לפחות 2 שחקנים כדי להתחיל',
+                          textAlign: TextAlign.center,
+                          style: AppStyles.bodySmall.copyWith(
+                            color: const Color(0xFFFFE082).withOpacity(0.85),
+                          ),
+                        ),
+                      ),
+
+                    // ── Action button / waiting footer ─────────────────
+                    SizedBox(
+                      height: 52,
+                      width: double.infinity,
+                      child: isHost
+                          ? GestureDetector(
+                              onTap: !canStart
+                                  ? () => QaLoggerService.instance.log(
+                                      'LOBBY', 'START_GAME_BLOCKED_MIN_PLAYERS players=${room.players.length}')
+                                  : null,
+                              child: _GlossyActionButton(
+                              label: _isStarting ? 'מכין צמצמים...' : 'התחל משחק',
+                              enabled: canStart && !_isStarting,
+                              onTap: () async {
+                                HapticFeedback.mediumImpact();
+                                debugPrint('Lobby start tapped: roomId=${widget.roomId}');
+                                setState(() => _isStarting = true);
+                                try {
+                                  await ref
+                                      .read(roomServiceProvider)
+                                      .startGameDirectly(widget.roomId);
+                                  debugPrint('Lobby start success');
+                                } catch (e) {
+                                  debugPrint('Lobby startGameDirectly error: $e');
+                                  if (mounted) {
+                                    setState(() => _isStarting = false);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('לא ניתן להתחיל משחק: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                            )
+                          : const _WaitingFooter(),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
               ),
             ),
           ),
-        );
+        ), // Scaffold
+        ); // PopScope
       },
       loading: () => const Scaffold(
         backgroundColor: AppStyles.navyTop,
@@ -226,6 +245,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         // Back / leave button
         GestureDetector(
           onTap: () async {
+            HapticFeedback.lightImpact();
             if (currentUser != null) {
               await ref
                   .read(roomServiceProvider)
@@ -419,51 +439,80 @@ class _PlayerAvatarTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final base = isMe ? 'אני' : (player.name.isNotEmpty ? player.name : 'שחקן');
-    final label = player.isHost ? '$base 👑' : base;
+    final label = player.isHost ? '$base ⭐' : base;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: AppStyles.glassCard(radius: 16, opacity: 0.18).copyWith(
-        boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.7) : null,
-        border: Border.all(
-          color: isMe
-              ? AppStyles.cyanGlow.withOpacity(0.7)
-              : Colors.white.withOpacity(0.20),
-          width: isMe ? 1.5 : 1.0,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: AppStyles.glassCard(radius: 16, opacity: 0.18).copyWith(
+            boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.7) : null,
+            border: Border.all(
+              color: isMe
+                  ? AppStyles.cyanGlow.withOpacity(0.7)
+                  : Colors.white.withOpacity(0.20),
+              width: isMe ? 1.5 : 1.0,
+            ),
+          ),
+          child: Row(
+            textDirection: TextDirection.rtl,
+            children: [
+              // Avatar with cyan ring for current user
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isMe ? AppStyles.cyanGlow : Colors.white38,
+                    width: 2,
+                  ),
+                  boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.5) : null,
+                ),
+                child: PlayerAvatar(name: player.name, radius: 14),
+              ),
+              const SizedBox(width: 8),
+
+              // Name + round badge
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppStyles.bodyMedium.copyWith(
+                    color: isMe ? AppStyles.cyanGlow : Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (player.playerRound > 0)
+                Container(
+                  margin: const EdgeInsets.only(right: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.withOpacity(0.5), width: 0.8),
+                  ),
+                  child: Text(
+                    'סבב ${player.playerRound + 1}',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Colors.amber,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
-      ),
-      child: Row(
-        textDirection: TextDirection.rtl,
-        children: [
-          // Avatar with cyan ring for current user
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isMe ? AppStyles.cyanGlow : Colors.white38,
-                width: 2,
-              ),
-              boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.5) : null,
-            ),
-            child: PlayerAvatar(name: player.name, radius: 14),
-          ),
-          const SizedBox(width: 8),
-
-          // Single-line name (crown inline for host)
-          Expanded(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppStyles.bodyMedium.copyWith(
-                color: isMe ? AppStyles.cyanGlow : Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
+        // Discovered count badge — top-left corner (RTL = top-start)
+        Positioned(
+          top: -6,
+          left: -6,
+          child: _DiscoveredBadge(count: player.discoveredCount),
+        ),
+      ],
     )
         .animate()
         .fadeIn(delay: delay, duration: 280.ms, curve: Curves.easeOut)
@@ -571,6 +620,41 @@ class _GlossyActionButtonState extends State<_GlossyActionButton> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Discovered badge ───────────────────────────────────────────────────────
+
+class _DiscoveredBadge extends StatelessWidget {
+  final int count;
+  const _DiscoveredBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFF061422),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF4A8BAA).withOpacity(0.55), width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🌍', style: TextStyle(fontSize: 9)),
+          const SizedBox(width: 2),
+          Text(
+            '$count',
+            style: const TextStyle(
+              color: Color(0xFF87CEEB),
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              height: 1,
+            ),
+          ),
+        ],
       ),
     );
   }

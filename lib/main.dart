@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +14,7 @@ import 'core/utils/app_router.dart';
 import 'firebase_options.dart';
 import 'providers/providers.dart';
 import 'services/qa_logger_service.dart';
+import 'services/settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,7 +47,16 @@ void main() async {
   );
 
   await QaLoggerService.instance.init();
-  QaLoggerService.instance.log('APP', 'APP_START build=$kBuildLabel');
+  await SettingsService.init();
+  final platform = Platform.operatingSystem; // android / ios / linux / ...
+  final utcNow = DateTime.now().toUtc();
+  final utcTs =
+      '${utcNow.year}-${_p2(utcNow.month)}-${_p2(utcNow.day)}'
+      'T${_p2(utcNow.hour)}:${_p2(utcNow.minute)}:${_p2(utcNow.second)}Z';
+  QaLoggerService.instance.log(
+    'APP',
+    'APP_START build=$kBuildLabel branch=$kGitBranch version=$kAppVersion platform=$platform utc=$utcTs',
+  );
 
   if (firebaseError != null) {
     runApp(_ErrorApp(error: firebaseError.toString()));
@@ -54,6 +65,8 @@ void main() async {
 
   runApp(const ProviderScope(child: GuessThePlaceApp()));
 }
+
+String _p2(int n) => n.toString().padLeft(2, '0');
 
 class _ErrorApp extends StatelessWidget {
   final String error;

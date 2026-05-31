@@ -19,7 +19,7 @@ extension DifficultyExtension on Difficulty {
       case Difficulty.veryEasy:
         return 9;
       case Difficulty.easy:
-        return 25;
+        return 36;
       case Difficulty.medium:
         return 50;
       case Difficulty.hard:
@@ -32,7 +32,7 @@ extension DifficultyExtension on Difficulty {
       case Difficulty.veryEasy:
         return 3;
       case Difficulty.easy:
-        return 5;
+        return 6;
       case Difficulty.medium:
         return 7; // 7x7 = 49, rounded to 50 logically
       case Difficulty.hard:

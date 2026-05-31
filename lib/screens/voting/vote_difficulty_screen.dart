@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
@@ -89,7 +90,12 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
         final myVote = room.difficultyVotes[currentUser.id];
         const choices = [Difficulty.easy, Difficulty.medium, Difficulty.hard];
 
-        return AppScaffold(
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) {
+            if (!didPop) context.go('/home');
+          },
+          child: AppScaffold(
           backgroundGradient: AppStyles.backgroundGradient,
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
@@ -100,6 +106,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
                   icon: const Icon(Icons.exit_to_app_rounded,
                       color: Colors.white),
                   onPressed: () async {
+                    HapticFeedback.lightImpact();
                     await ref
                         .read(roomServiceProvider)
                         .leaveRoom(widget.roomId, currentUser.id);
@@ -128,7 +135,10 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
                           selected: selected,
                           votes: votes,
                           onTap: myVote == null
-                              ? () => setState(() => _selected = difficulty)
+                              ? () {
+                                  HapticFeedback.lightImpact();
+                                  setState(() => _selected = difficulty);
+                                }
                               : null,
                         ),
                       ),
@@ -162,7 +172,8 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
                 ),
             ],
           ),
-        );
+        ), // AppScaffold
+        ); // PopScope
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),

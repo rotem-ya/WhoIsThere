@@ -6,6 +6,7 @@ import '../models/economy/economy_transaction_model.dart';
 import '../models/economy/match_reward_breakdown.dart';
 import '../models/economy/user_economy_model.dart';
 import 'local_economy_cache.dart';
+import 'qa_logger_service.dart';
 import 'reward_calculator.dart';
 
 class EconomyService {
@@ -45,18 +46,39 @@ class EconomyService {
 
   // ── Initialise new user ───────────────────────────────────────
 
-  Future<void> initWallet(String uid) async {
+  /// Returns true the ONE time coins are first granted (first install).
+  Future<bool> initWallet(String uid) async {
     final ref = _walletRef(uid);
-    await _db.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      if (snap.exists) return;
-      final wallet = UserEconomyModel.empty(uid).copyWith(
-        coins: EconomyConfig.initialCoins,
-        totalEarned: EconomyConfig.initialCoins,
-      );
-      tx.set(ref, wallet.toFirestore());
-    });
-    await _cache?.setCoins(EconomyConfig.initialCoins);
+    bool granted = false;
+    try {
+      await _db.runTransaction((tx) async {
+        final snap = await tx.get(ref);
+        if (snap.exists) {
+          final existing = UserEconomyModel.fromFirestore(
+              uid, snap.data() as Map<String, dynamic>);
+          if (existing.totalEarned > 0) return;
+          tx.update(ref, {
+            'coins': FieldValue.increment(EconomyConfig.initialCoins),
+            'totalEarned': EconomyConfig.initialCoins,
+          });
+        } else {
+          final wallet = UserEconomyModel.empty(uid).copyWith(
+            coins: EconomyConfig.initialCoins,
+            totalEarned: EconomyConfig.initialCoins,
+          );
+          tx.set(ref, wallet.toFirestore());
+        }
+        granted = true;
+      });
+    } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log('ECONOMY', 'INIT_WALLET_ERROR ${msg.length > 80 ? msg.substring(0, 80) : msg}');
+    }
+    if (granted) {
+      QaLoggerService.instance.log('ECONOMY', 'INIT_WALLET_GRANTED uid=${uid.substring(0, uid.length.clamp(0, 8))}');
+      await _cache?.setCoins(EconomyConfig.initialCoins);
+    }
+    return granted;
   }
 
   // ── Match reward — only writes to the calling user's wallet ───
@@ -133,48 +155,57 @@ class EconomyService {
 
     ({int coins, int streak})? result;
 
-    await _db.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      final wallet = snap.exists
-          ? UserEconomyModel.fromFirestore(uid, snap.data()!)
-          : UserEconomyModel.empty(uid);
+    try {
+      await _db.runTransaction((tx) async {
+        final snap = await tx.get(ref);
+        final wallet = snap.exists
+            ? UserEconomyModel.fromFirestore(uid, snap.data()!)
+            : UserEconomyModel.empty(uid);
 
-      // Guard: already claimed today (UTC)
-      final last = wallet.lastDailyRewardAt;
-      if (last != null) {
-        final sameDay = last.year == now.year &&
-            last.month == now.month &&
-            last.day == now.day;
-        if (sameDay) return; // already claimed
-      }
+        // Guard: already claimed today (UTC)
+        final last = wallet.lastDailyRewardAt;
+        if (last != null) {
+          final sameDay = last.year == now.year &&
+              last.month == now.month &&
+              last.day == now.day;
+          if (sameDay) {
+            QaLoggerService.instance.log('ECONOMY', 'DAILY_REWARD_ALREADY_CLAIMED');
+            return;
+          }
+        }
 
-      final newStreak = RewardCalculator.computeNewStreak(
-        wallet.dailyStreak,
-        wallet.lastDailyRewardAt,
-        now,
-      );
-      final coins = RewardCalculator.calculateDailyReward(newStreak);
+        final newStreak = RewardCalculator.computeNewStreak(
+          wallet.dailyStreak,
+          wallet.lastDailyRewardAt,
+          now,
+        );
+        final coins = RewardCalculator.calculateDailyReward(newStreak);
 
-      final updated = wallet.copyWith(
-        coins: wallet.coins + coins,
-        totalEarned: wallet.totalEarned + coins,
-        dailyStreak: newStreak,
-        lastDailyRewardAt: now,
-      );
-      tx.set(ref, updated.toFirestore());
+        final updated = wallet.copyWith(
+          coins: wallet.coins + coins,
+          totalEarned: wallet.totalEarned + coins,
+          dailyStreak: newStreak,
+          lastDailyRewardAt: now,
+        );
+        tx.set(ref, updated.toFirestore());
 
-      final txId = _uuid.v4();
-      tx.set(_txCol(uid).doc(txId), EconomyTransactionModel(
-        id: txId,
-        type: TransactionType.dailyReward,
-        delta: coins,
-        balanceAfter: updated.coins,
-        createdAt: now,
-        meta: {'streak': newStreak},
-      ).toFirestore());
+        final txId = _uuid.v4();
+        tx.set(_txCol(uid).doc(txId), EconomyTransactionModel(
+          id: txId,
+          type: TransactionType.dailyReward,
+          delta: coins,
+          balanceAfter: updated.coins,
+          createdAt: now,
+          meta: {'streak': newStreak},
+        ).toFirestore());
 
-      result = (coins: coins, streak: newStreak);
-    });
+        result = (coins: coins, streak: newStreak);
+      });
+    } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log('ECONOMY', 'DAILY_REWARD_ERROR ${msg.length > 80 ? msg.substring(0, 80) : msg}');
+      rethrow;
+    }
 
     if (result != null) {
       await _syncCache(uid);
@@ -284,6 +315,54 @@ class EconomyService {
     return success;
   }
 
+  // ── Stun card purchase ────────────────────────────────────────
+
+  Future<bool> buyStunCard(String uid) async {
+    const price = EconomyConfig.stunCardPrice;
+    final success = await spendCoins(
+      uid: uid,
+      amount: price,
+      type: TransactionType.stunCardPurchase,
+    );
+    if (success) {
+      await _db.doc('users/$uid').update({'stunCardCount': FieldValue.increment(1)});
+      QaLoggerService.instance.log('ECONOMY', 'STUN_CARD_PURCHASED uid=${uid.substring(0, uid.length.clamp(0, 6))} price=$price');
+    }
+    return success;
+  }
+
+  // ── Guess-block & blackout card purchases ─────────────────────
+
+  Future<bool> buyGuessBlock5Card(String uid) async {
+    const price = EconomyConfig.guessBlock5Price;
+    final success = await spendCoins(uid: uid, amount: price, type: TransactionType.guessBlock5Purchase);
+    if (success) {
+      await _db.doc('users/$uid').update({'guessBlock5Count': FieldValue.increment(1)});
+      QaLoggerService.instance.log('ECONOMY', 'GUESS_BLOCK5_PURCHASED uid=${uid.substring(0, uid.length.clamp(0, 6))}');
+    }
+    return success;
+  }
+
+  Future<bool> buyGuessBlock10Card(String uid) async {
+    const price = EconomyConfig.guessBlock10Price;
+    final success = await spendCoins(uid: uid, amount: price, type: TransactionType.guessBlock10Purchase);
+    if (success) {
+      await _db.doc('users/$uid').update({'guessBlock10Count': FieldValue.increment(1)});
+      QaLoggerService.instance.log('ECONOMY', 'GUESS_BLOCK10_PURCHASED uid=${uid.substring(0, uid.length.clamp(0, 6))}');
+    }
+    return success;
+  }
+
+  Future<bool> buyBlackoutCard(String uid) async {
+    const price = EconomyConfig.blackoutCardPrice;
+    final success = await spendCoins(uid: uid, amount: price, type: TransactionType.blackoutCardPurchase);
+    if (success) {
+      await _db.doc('users/$uid').update({'blackoutCardCount': FieldValue.increment(1)});
+      QaLoggerService.instance.log('ECONOMY', 'BLACKOUT_CARD_PURCHASED uid=${uid.substring(0, uid.length.clamp(0, 6))}');
+    }
+    return success;
+  }
+
   // ── Private helpers ───────────────────────────────────────────
 
   Future<void> _applyDelta({
@@ -370,6 +449,36 @@ class EconomyService {
 
     if (applied) await _syncCache(actorUid);
     return applied;
+  }
+
+  Future<void> awardPotWin({
+    required String uid,
+    required int amount,
+    required String roomId,
+  }) async {
+    if (amount <= 0) return;
+    await _applyDelta(
+      uid: uid,
+      delta: amount,
+      type: TransactionType.potWin,
+      roomId: roomId,
+      meta: {'potAmount': amount},
+    );
+  }
+
+  Future<void> awardPotRefund({
+    required String uid,
+    required int amount,
+    required String roomId,
+  }) async {
+    if (amount <= 0) return;
+    await _applyDelta(
+      uid: uid,
+      delta: amount,
+      type: TransactionType.potRefund,
+      roomId: roomId,
+      meta: {'refundAmount': amount},
+    );
   }
 
   Future<void> _syncCache(String uid) async {

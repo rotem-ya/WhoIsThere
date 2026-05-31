@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
@@ -16,6 +17,7 @@ import '../../widgets/common/ambient_background.dart';
 import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
+import '../../models/room_model.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -27,9 +29,7 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseController;
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   late final bool _doIntro;
   bool _isCreating = false;
   int? _loadingPlayers;
@@ -40,23 +40,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.initState();
     _doIntro = !HomeScreen._introPlayed;
     HomeScreen._introPlayed = true;
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
     QaLoggerService.instance.log('HOME', 'HOME_SCREEN_OPENED');
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
   }
 
   Future<void> _startQuickGame(int targetPlayers) async {
     if (_isCreating) return;
     QaLoggerService.instance.log('HOME', 'TAP_QUICK_GAME players=$targetPlayers');
     FeedbackService.click();
+
+    // Block entry if insufficient coins
+    final wallet = ref.read(walletProvider).valueOrNull;
+    final coins = wallet?.coins ?? 0;
+    if (coins < EconomyConfig.gameEntryFee) {
+      QaLoggerService.instance.log('HOME', 'QUICK_GAME_BLOCKED_INSUFFICIENT_COINS coins=$coins');
+      if (mounted) _showInsufficientCoinsDialog();
+      return;
+    }
+
     setState(() {
       _isCreating = true;
       _loadingPlayers = targetPlayers;
@@ -67,20 +67,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       if (user == null) return;
 
       QaLoggerService.instance.log('HOME', 'QUICK_GAME_ATTEMPT players=$targetPlayers');
-      final room = await ref.read(roomServiceProvider).createRoom(
-            hostId: user.id,
-            hostName: user.name,
-            hostPhotoUrl: user.photoUrl,
-            playerCount: targetPlayers,
-          );
 
-      await ref.read(roomServiceProvider).startGameDirectly(room.id);
-      ref.read(currentRoomIdProvider.notifier).state = room.id;
+      final roomSvc = ref.read(roomServiceProvider);
 
-      final shortId = room.id.substring(0, room.id.length.clamp(0, 6));
-      QaLoggerService.instance.log('HOME', 'QUICK_GAME_SUCCESS code=${room.code} id=$shortId');
-      QaLoggerService.instance.log('HOME', 'QUICK_GAME_NAVIGATED dest=/game/$shortId');
-      if (mounted) context.go('/game/${room.id}');
+      // Compute player's round, then attempt to find an existing public room twice
+      final myRound = await roomSvc.computePlayerRound(user.id);
+      QaLoggerService.instance.log('HOME', 'QUICK_GAME_ROUND round=$myRound');
+
+      RoomModel? existingRoom = await roomSvc.findPublicRoom(myRound);
+      if (existingRoom == null) {
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+        existingRoom = await roomSvc.findPublicRoom(myRound);
+      }
+
+      String roomId;
+      if (existingRoom != null) {
+        // Join the found room
+        QaLoggerService.instance.log('HOME', 'QUICK_GAME_JOIN_EXISTING id=${existingRoom.id}');
+        await roomSvc.joinRoom(
+          code: existingRoom.code,
+          userId: user.id,
+          userName: user.name,
+          userPhotoUrl: user.photoUrl,
+        );
+        roomId = existingRoom.id;
+      } else {
+        // Create a new public room; bots join on the waiting screen
+        final room = await roomSvc.createRoom(
+          hostId: user.id,
+          hostName: user.name,
+          hostPhotoUrl: user.photoUrl,
+          playerCount: 1,
+          isPublicRoom: true,
+        );
+        roomId = room.id;
+        QaLoggerService.instance.log('HOME', 'QUICK_GAME_SUCCESS code=${room.code}');
+      }
+
+      ref.read(currentRoomIdProvider.notifier).state = roomId;
+
+      final shortId = roomId.substring(0, roomId.length.clamp(0, 6));
+      QaLoggerService.instance.log('HOME', 'QUICK_GAME_NAVIGATED dest=/finding-players/$shortId target=$targetPlayers');
+      if (mounted) context.go('/finding-players/$roomId?target=$targetPlayers');
     } catch (e) {
       final msg = e.toString();
       QaLoggerService.instance.log('HOME', 'QUICK_GAME_ERROR ${msg.length > 60 ? msg.substring(0, 60) : msg}');
@@ -109,10 +138,78 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
+  void _showFriendsSheet() {
+    QaLoggerService.instance.log('HOME', 'TAP_FRIENDS_SHEET');
+    final navBarPadding = MediaQuery.paddingOf(context).bottom;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Container(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + navBarPadding),
+          decoration: const BoxDecoration(
+            color: Color(0xFF0D1E30),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'שחק עם חברים',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 16),
+              _FriendsSheetOption(
+                icon: Icons.add_circle_outline_rounded,
+                iconColor: const Color(0xFF87CEEB),
+                title: 'פתח חדר',
+                subtitle: 'צור חדר וזמן חברים בקוד',
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _createPrivateRoom();
+                },
+              ),
+              const SizedBox(height: 10),
+              _FriendsSheetOption(
+                icon: Icons.key_rounded,
+                iconColor: const Color(0xFF81C784),
+                title: 'יש לי קוד',
+                subtitle: 'הצטרף לחדר של חבר',
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _showJoinDialog();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _createPrivateRoom() async {
     if (_isCreating) return;
     QaLoggerService.instance.log('HOME', 'TAP_CREATE_ROOM');
     FeedbackService.click();
+
+    final wallet = ref.read(walletProvider).valueOrNull;
+    final coins = wallet?.coins ?? 0;
+    if (coins < EconomyConfig.gameEntryFee) {
+      QaLoggerService.instance.log('HOME', 'CREATE_ROOM_BLOCKED_INSUFFICIENT_COINS coins=$coins');
+      if (mounted) _showInsufficientCoinsDialog();
+      return;
+    }
+
     setState(() {
       _isCreating = true;
       _loadingPlayers = null;
@@ -149,6 +246,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         });
       }
     }
+  }
+
+  void _showInsufficientCoinsDialog() {
+    final navBarPadding = MediaQuery.paddingOf(context).bottom;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + navBarPadding),
+        decoration: const BoxDecoration(
+          color: Color(0xFF0D1E30),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🪙', style: TextStyle(fontSize: 40)),
+            const SizedBox(height: 12),
+            const Text(
+              'אין מספיק מטבעות',
+              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+              textDirection: TextDirection.rtl,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'כניסה למשחק עולה ${EconomyConfig.gameEntryFee} 🪙',
+              style: const TextStyle(color: Colors.white60, fontSize: 14),
+              textDirection: TextDirection.rtl,
+            ),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/store');
+              },
+              child: Container(
+                width: double.infinity,
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF20A8E0), Color(0xFF0868A8)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Center(
+                  child: Text(
+                    'צפה בסרטון וקבל 20 🪙',
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+                    textDirection: TextDirection.rtl,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Wraps [w] with a fade+rise entrance only on first visit.
@@ -195,6 +351,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<bool>(firstTimeBonusProvider, (_, next) {
+      if (!next || !mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🎉 קיבלת 100 מטבעות כמתנת כניסה!'),
+          duration: Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Color(0xFF1B5E20),
+        ),
+      );
+    });
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: PopScope(
@@ -224,156 +392,115 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   builder: (context, constraints) {
                     final verySmall = constraints.maxHeight < 640;
                     final compact = constraints.maxHeight < 760;
-                    final iconSize = verySmall ? 156.0 : compact ? 188.0 : 218.0;
-                    return SingleChildScrollView(
-                      physics: const ClampingScrollPhysics(),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: compact ? 20 : 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              SizedBox(height: verySmall ? 8 : compact ? 14 : 24),
-                              _step(
-                                Center(child: RepaintBoundary(child: _HomeHeroPeekGrid(size: iconSize))),
-                                delayMs: 0, durationMs: 500, dy: 14,
+                    final iconSize = verySmall ? 140.0 : compact ? 170.0 : 200.0;
+                    return Padding(
+                      padding: EdgeInsets.symmetric(horizontal: compact ? 20 : 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(height: verySmall ? 4 : 8),
+                          // ── Top bar ──────────────────────────────────
+                          _step(
+                            Row(
+                              textDirection: TextDirection.ltr,
+                              children: [
+                                const _ProfileIconButton(),
+                                const SizedBox(width: 8),
+                                const _StoreIconButton(),
+                                const SizedBox(width: 8),
+                                const _SettingsIconButton(),
+                                const SizedBox(width: 8),
+                                const CoinDisplay(),
+                                const Spacer(),
+                                const _DailyRewardButton(),
+                              ],
+                            ),
+                            delayMs: 0, durationMs: 380, dy: -10,
+                          ),
+                          // ── Hero grid takes all remaining vertical space ──
+                          Expanded(
+                            child: Center(
+                              child: _step(
+                                RepaintBoundary(child: _HomeHeroPeekGrid(size: iconSize)),
+                                delayMs: 80, durationMs: 500, dy: 14,
                               ),
-                              SizedBox(height: verySmall ? 10 : compact ? 16 : 20),
-                              _step(
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    'מה בתמונה?',
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 56,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -1.7,
-                                      height: 1,
-                                      shadows: const [
-                                        Shadow(color: Color(0xFFD4AF37), blurRadius: 16),
-                                        Shadow(color: Colors.black87, offset: Offset(0, 4), blurRadius: 10),
-                                        Shadow(color: Color(0x55D4AF37), blurRadius: 48, offset: Offset(0, 8)),
-                                      ],
-                                    ),
-                                  ),
+                            ),
+                          ),
+                          _step(
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'מה בתמונה?',
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 52,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -1.7,
+                                  height: 1,
+                                  shadows: const [
+                                    Shadow(color: Color(0xFFD4AF37), blurRadius: 16),
+                                    Shadow(color: Colors.black87, offset: Offset(0, 4), blurRadius: 10),
+                                    Shadow(color: Color(0x55D4AF37), blurRadius: 48, offset: Offset(0, 8)),
+                                  ],
                                 ),
-                                delayMs: 120, durationMs: 380, dy: 8,
                               ),
-                              const SizedBox(height: 10),
-                              _step(
-                                Text(
-                                  'מי יזהה את המקום ראשון?',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: const Color(0xFF87CEEB).withOpacity(0.86),
-                                    fontSize: verySmall ? 16 : compact ? 18 : 20,
-                                    fontWeight: FontWeight.w800,
-                                    height: 1.2,
-                                  ),
-                                ),
-                                delayMs: 220, durationMs: 320,
+                            ),
+                            delayMs: 200, durationMs: 380, dy: 8,
+                          ),
+                          const SizedBox(height: 6),
+                          _step(
+                            Text(
+                              'מי יזהה את המקום ראשון?',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: const Color(0xFF87CEEB).withOpacity(0.86),
+                                fontSize: verySmall ? 15 : compact ? 17 : 19,
+                                fontWeight: FontWeight.w800,
+                                height: 1.2,
                               ),
-                              SizedBox(height: verySmall ? 12 : compact ? 18 : 26),
-                              _step(
-                                const Text(
-                                  'בחר מצב',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.white30,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 1.8,
-                                  ),
-                                ),
-                                delayMs: 300, durationMs: 260,
-                              ),
-                              const SizedBox(height: 10),
-                              _step(
-                                _MainVaultButton(
-                                  pulseController: _pulseController,
-                                  label: 'שחק עכשיו',
-                                  subtitle: 'דו־קרב מהיר · 2 שחקנים',
-                                  height: verySmall ? 62 : compact ? 66 : 72,
+                            ),
+                            delayMs: 300, durationMs: 320,
+                          ),
+                          SizedBox(height: verySmall ? 10 : compact ? 14 : 20),
+                          _step(
+                            Column(
+                              children: [
+                                _QuickGameButton(
+                                  players: 2,
                                   isLoading: _isCreating && _loadingPlayers == 2,
                                   onTap: _isCreating ? null : () => _startQuickGame(2),
                                 ),
-                                delayMs: 380, durationMs: 260, dy: 5,
-                              ),
-                              const SizedBox(height: 14),
-                              _step(
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _GlassButton(
-                                        label: '3 שחקנים',
-                                        height: verySmall ? 50 : compact ? 54 : 58,
-                                        isLoading: _isCreating && _loadingPlayers == 3,
-                                        onTap: _isCreating ? null : () => _startQuickGame(3),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: _GlassButton(
-                                        label: '4 שחקנים',
-                                        height: verySmall ? 50 : compact ? 54 : 58,
-                                        isLoading: _isCreating && _loadingPlayers == 4,
-                                        onTap: _isCreating ? null : () => _startQuickGame(4),
-                                      ),
-                                    ),
-                                  ],
+                                const SizedBox(height: 8),
+                                _QuickGameButton(
+                                  players: 3,
+                                  isLoading: _isCreating && _loadingPlayers == 3,
+                                  onTap: _isCreating ? null : () => _startQuickGame(3),
                                 ),
-                                delayMs: 450, durationMs: 240, dy: 5,
-                              ),
-                              SizedBox(height: verySmall ? 10 : 16),
-                              _step(
-                                _PrivateRoomButton(
-                                  isLoading: _isCreating && _loadingPlayers == null,
-                                  onTap: _isCreating ? null : _createPrivateRoom,
+                                const SizedBox(height: 8),
+                                _QuickGameButton(
+                                  players: 4,
+                                  isLoading: _isCreating && _loadingPlayers == 4,
+                                  onTap: _isCreating ? null : () => _startQuickGame(4),
                                 ),
-                                delayMs: 520, durationMs: 240,
-                              ),
-                              const SizedBox(height: 10),
-                              _step(
-                                _JoinRoomButton(
-                                  onTap: _isCreating ? null : _showJoinDialog,
-                                ),
-                                delayMs: 590, durationMs: 240,
-                              ),
-                              SizedBox(height: verySmall ? 14 : compact ? 20 : 30),
-                            ],
+                              ],
+                            ),
+                            delayMs: 460, durationMs: 260, dy: 5,
                           ),
-                        ),
+                          SizedBox(height: verySmall ? 8 : 12),
+                          _step(
+                            _FriendsButton(
+                              isLoading: _isCreating && _loadingPlayers == null,
+                              onTap: _isCreating ? null : _showFriendsSheet,
+                            ),
+                            delayMs: 600, durationMs: 240,
+                          ),
+                          SizedBox(height: verySmall ? 10 : compact ? 14 : 20),
+                        ],
                       ),
                     );
                   },
-                ),
-              ),
-              // Both of these must be after the ScrollView in the Stack so their
-              // taps are not absorbed by SingleChildScrollView's opaque hit testing.
-              const Positioned(
-                top: 12,
-                right: 16,
-                child: SafeArea(child: _DailyRewardButton()),
-              ),
-              Positioned(
-                top: 12,
-                left: 16,
-                child: SafeArea(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    // Force LTR so ProfileIcon is always at physical left (x=16)
-                    // regardless of ambient RTL directionality.
-                    textDirection: TextDirection.ltr,
-                    children: [
-                      const _ProfileIconButton(),
-                      const SizedBox(width: 8),
-                      const CoinDisplay(),
-                    ],
-                  ),
                 ),
               ),
             ],
@@ -442,150 +569,127 @@ class _Dot extends StatelessWidget {
   }
 }
 
-class _MainVaultButton extends StatelessWidget {
-  final AnimationController pulseController;
-  final String label;
-  final String subtitle;
-  final double height;
+// ── Equal quick-game button for 2/3/4 players ─────────────────────────────
+
+class _QuickGameButton extends StatelessWidget {
+  final int players;
   final bool isLoading;
   final VoidCallback? onTap;
 
-  const _MainVaultButton({required this.pulseController, required this.label, required this.subtitle, required this.height, required this.isLoading, required this.onTap});
+  const _QuickGameButton({
+    required this.players,
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  static const _configs = {
+    2: (
+      icon: '⚔️',
+      label: '1 על 1',
+      gradientColors: [Color(0xFF1A4A8A), Color(0xFF0A2356)],
+      borderColor: Color(0xFF4A9EFF),
+      glowColor: Color(0xFF2266CC),
+    ),
+    3: (
+      icon: '🎯',
+      label: '3 שחקנים',
+      gradientColors: [Color(0xFF1A5A4A), Color(0xFF0A2E26)],
+      borderColor: Color(0xFF3DCCAA),
+      glowColor: Color(0xFF1A8866),
+    ),
+    4: (
+      icon: '🏆',
+      label: '4 שחקנים',
+      gradientColors: [Color(0xFF3A1A6A), Color(0xFF1E0A3C)],
+      borderColor: Color(0xFF9966FF),
+      glowColor: Color(0xFF6633BB),
+    ),
+  };
 
   @override
   Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: Tween<double>(begin: 1.0, end: 1.04).animate(CurvedAnimation(parent: pulseController, curve: Curves.easeInOut)),
-      child: GestureDetector(
-        onTap: onTap == null ? null : () {
-          HapticFeedback.mediumImpact();
-          onTap!();
-        },
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 160),
-          opacity: onTap == null ? 0.65 : 1,
-          child: Container(
-            height: height,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.42), blurRadius: 25, offset: const Offset(0, 10))],
-            ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (onTap != null)
-                  const _GoldShine()
-                      .animate(onPlay: (c) => c.repeat())
-                      .slideX(begin: -1.4, end: 1.4, duration: 2200.ms),
-                Center(
-                  child: isLoading
-                      ? const SizedBox(width: 25, height: 25, child: CircularProgressIndicator(color: Color(0xFF07101F), strokeWidth: 2.7))
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.bolt_rounded, color: Color(0xFF07101F), size: 30),
-                            const SizedBox(width: 10),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(label, style: const TextStyle(color: Color(0xFF07101F), fontSize: 28, fontWeight: FontWeight.w900, height: 1)),
-                                const SizedBox(height: 4),
-                                Text(subtitle, style: TextStyle(color: const Color(0xFF07101F).withOpacity(0.68), fontSize: 14, fontWeight: FontWeight.w800, height: 1)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+    final cfg = _configs[players]!;
 
-class _GoldShine extends StatelessWidget {
-  const _GoldShine();
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: FractionallySizedBox(
-        widthFactor: 0.30,
-        heightFactor: 1.0,
-        child: Transform.rotate(
-          angle: -0.30,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white.withOpacity(0),
-                  Colors.white.withOpacity(0.18),
-                  Colors.white.withOpacity(0),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlassButton extends StatelessWidget {
-  final String label;
-  final double height;
-  final bool isLoading;
-  final VoidCallback? onTap;
-
-  const _GlassButton({required this.label, required this.height, required this.isLoading, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
     return PressableScale(
       onTap: onTap == null ? null : () {
-        HapticFeedback.lightImpact();
+        HapticFeedback.mediumImpact();
         onTap!();
       },
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 160),
-        opacity: onTap == null ? 0.62 : 1,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-            child: Container(
-              height: height,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.065),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.34), width: 1.2),
-              ),
-              child: Center(
-                child: isLoading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4))
-                    : Text(label, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
-              ),
+        opacity: onTap == null ? 0.55 : 1,
+        child: Container(
+          height: 68,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: cfg.gradientColors,
             ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: cfg.borderColor.withOpacity(0.7), width: 1.5),
+            boxShadow: [
+              BoxShadow(color: cfg.glowColor.withOpacity(0.35), blurRadius: 14, spreadRadius: 0, offset: const Offset(0, 4)),
+            ],
           ),
+          child: isLoading
+              ? const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4)))
+              : Row(
+                  children: [
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            cfg.label,
+                            style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900, height: 1.1),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'כניסה ${EconomyConfig.gameEntryFee} 🪙',
+                            style: TextStyle(color: Colors.white.withOpacity(0.60), fontSize: 11.5, fontWeight: FontWeight.w600, height: 1),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: cfg.borderColor.withOpacity(0.14),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: cfg.borderColor.withOpacity(0.38), width: 1),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'קופה',
+                            style: TextStyle(color: cfg.borderColor.withOpacity(0.70), fontSize: 9, fontWeight: FontWeight.w700, height: 1.1),
+                          ),
+                          Text(
+                            '${EconomyConfig.gameEntryFee * players} 🪙',
+                            style: TextStyle(color: cfg.borderColor, fontSize: 13, fontWeight: FontWeight.w900, height: 1.1),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                  ],
+                ),
         ),
       ),
     );
   }
 }
 
-class _PrivateRoomButton extends StatelessWidget {
+class _FriendsButton extends StatelessWidget {
   final bool isLoading;
   final VoidCallback? onTap;
 
-  const _PrivateRoomButton({required this.isLoading, required this.onTap});
+  const _FriendsButton({required this.isLoading, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -599,7 +703,7 @@ class _PrivateRoomButton extends StatelessWidget {
           duration: const Duration(milliseconds: 160),
           opacity: onTap == null ? 0.58 : 1,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 13),
             decoration: BoxDecoration(
               color: const Color(0xFF050A14).withOpacity(0.50),
               borderRadius: BorderRadius.circular(999),
@@ -613,14 +717,7 @@ class _PrivateRoomButton extends StatelessWidget {
                 else
                   const Icon(Icons.people_rounded, color: Color(0xFF87CEEB), size: 19),
                 const SizedBox(width: 10),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('שחק עם חברים', style: TextStyle(color: Color(0xFF87CEEB), fontSize: 16, fontWeight: FontWeight.w800, height: 1.1)),
-                    Text('צור חדר ושתף קוד', style: TextStyle(color: const Color(0xFF87CEEB).withOpacity(0.60), fontSize: 11, fontWeight: FontWeight.w600, height: 1.2)),
-                  ],
-                ),
+                const Text('שחק עם חברים', style: TextStyle(color: Color(0xFF87CEEB), fontSize: 16, fontWeight: FontWeight.w800)),
               ],
             ),
           ),
@@ -630,39 +727,48 @@ class _PrivateRoomButton extends StatelessWidget {
   }
 }
 
-// ── Join by code button ────────────────────────────────────────────────────
+class _FriendsSheetOption extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
 
-class _JoinRoomButton extends StatelessWidget {
-  final VoidCallback? onTap;
-  const _JoinRoomButton({required this.onTap});
+  const _FriendsSheetOption({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: PressableScale(
-        onTap: onTap == null ? null : () {
-          HapticFeedback.lightImpact();
-          onTap!();
-        },
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 160),
-          opacity: onTap == null ? 0.58 : 1,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
-            decoration: BoxDecoration(
-              color: const Color(0xFF050A14).withOpacity(0.50),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFF81C784).withOpacity(0.40)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
+    return PressableScale(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        decoration: BoxDecoration(
+          color: iconColor.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: iconColor.withOpacity(0.25)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: iconColor, size: 26),
+            const SizedBox(width: 14),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.key_rounded, color: Color(0xFF81C784), size: 19),
-                SizedBox(width: 8),
-                Text('יש לי קוד', style: TextStyle(color: Color(0xFF81C784), fontSize: 16, fontWeight: FontWeight.w800)),
+                Text(title, style: TextStyle(color: iconColor, fontSize: 16, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 2),
+                Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w500)),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -674,23 +780,34 @@ class _JoinRoomButton extends StatelessWidget {
 class _DailyRewardButton extends ConsumerWidget {
   const _DailyRewardButton();
 
+  static bool _isDailyRewardAvailable(DateTime? lastDailyRewardAt) {
+    if (lastDailyRewardAt == null) return true;
+    final now = DateTime.now().toUtc();
+    final lastDay = DateTime.utc(lastDailyRewardAt.year, lastDailyRewardAt.month, lastDailyRewardAt.day);
+    final today = DateTime.utc(now.year, now.month, now.day);
+    return lastDay.isBefore(today);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isAvailable =
-        ref.watch(localEconomyCacheProvider).valueOrNull?.isDailyRewardAvailable ?? false;
+    final wallet = ref.watch(walletProvider).valueOrNull;
+    final isAvailable = _isDailyRewardAvailable(wallet?.lastDailyRewardAt);
 
     return GestureDetector(
       onTap: () {
+        HapticFeedback.lightImpact();
         if (isAvailable) {
           showDailyRewardSheet(context, ref);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('הפרס היומי כבר נאסף'),
-              duration: Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text('הפרס היומי כבר נאסף'),
+                duration: Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
         }
       },
       child: AnimatedOpacity(
@@ -765,6 +882,7 @@ class _ProfileIconButton extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () {
+          HapticFeedback.lightImpact();
           QaLoggerService.instance.log('HOME', 'TAP_PROFILE');
           context.push('/profile');
         },
@@ -785,6 +903,95 @@ class _ProfileIconButton extends StatelessWidget {
               ),
               child: const Icon(
                 Icons.person_rounded,
+                color: Colors.white70,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Store icon button (top-left, next to profile) ─────────────────────────
+
+class _StoreIconButton extends StatelessWidget {
+  const _StoreIconButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          QaLoggerService.instance.log('HOME', 'TAP_STORE');
+          context.push('/store');
+        },
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF050A14).withOpacity(0.60),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.15),
+                  width: 1.0,
+                ),
+              ),
+              child: const Icon(
+                Icons.store_rounded,
+                color: Colors.white70,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Settings icon button (top-left, next to store) ───────────────────────
+
+class _SettingsIconButton extends StatelessWidget {
+  const _SettingsIconButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          context.push('/settings');
+        },
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF050A14).withOpacity(0.60),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.15),
+                  width: 1.0,
+                ),
+              ),
+              child: const Icon(
+                Icons.settings_rounded,
                 color: Colors.white70,
                 size: 20,
               ),
@@ -1015,8 +1222,10 @@ class _HomeHeroPeekGrid extends StatefulWidget {
 }
 
 class _HomeHeroPeekGridState extends State<_HomeHeroPeekGrid>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _breath;
+  late final AnimationController _float;
+  late final Animation<double> _floatAnim;
 
   // Tile indices where the image shows through
   static const Set<int> _open = {1, 3, 7};
@@ -1032,11 +1241,20 @@ class _HomeHeroPeekGridState extends State<_HomeHeroPeekGrid>
       vsync: this,
       duration: const Duration(milliseconds: 2700),
     )..repeat(reverse: true);
+
+    _float = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3200),
+    )..repeat(reverse: true);
+    _floatAnim = Tween<double>(begin: -5, end: 5).animate(
+      CurvedAnimation(parent: _float, curve: Curves.easeInOut),
+    );
   }
 
   @override
   void dispose() {
     _breath.dispose();
+    _float.dispose();
     super.dispose();
   }
 
@@ -1046,7 +1264,13 @@ class _HomeHeroPeekGridState extends State<_HomeHeroPeekGrid>
     final r = s * 0.115;
     final gap = s * 0.030;
 
-    return Container(
+    return AnimatedBuilder(
+      animation: _floatAnim,
+      builder: (_, child) => Transform.translate(
+        offset: Offset(0, _floatAnim.value),
+        child: child,
+      ),
+      child: Container(
       width: s,
       height: s,
       decoration: BoxDecoration(
@@ -1107,7 +1331,8 @@ class _HomeHeroPeekGridState extends State<_HomeHeroPeekGrid>
           ],
         ),
       ),
-    );
+    ),   // end Container (child of AnimatedBuilder)
+    );   // end AnimatedBuilder
   }
 
   Widget _buildCell(int idx) {

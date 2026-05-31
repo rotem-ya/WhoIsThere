@@ -2,6 +2,7 @@ import 'widgets/answer_slots.dart';
 import 'widgets/game_layout.dart';
 import 'widgets/game_winner_view.dart';
 import 'dart:async';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'dart:math' show Random, min, pi;
 
 import 'package:audioplayers/audioplayers.dart';
@@ -10,17 +11,20 @@ import 'package:confetti/confetti.dart';
 import '../../core/theme/app_styles.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_constants.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
 import '../../models/room_model.dart';
 import '../../models/economy/match_reward_breakdown.dart';
 import '../../providers/providers.dart';
+import '../../services/settings_service.dart';
 import '../../services/hint_economy_guard.dart';
 import '../../services/reward_calculator.dart';
 import '../../services/qa_logger_service.dart';
@@ -36,6 +40,38 @@ class GameBoardScreen extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<GameBoardScreen> createState() => _GameBoardScreenState();
+
+  /// Called from settings screen to update bg music volume immediately.
+  /// If music isn't playing, starts a 2-second preview then pauses.
+  static void applyLiveMusicScale(double scale) {
+    final player = _GameBoardScreenState._bgPlayer;
+    final vol = _GameBoardScreenState._currentMusicBase * scale;
+    player.setVolume(vol).ignore();
+    if (player.state != PlayerState.playing) {
+      () async {
+        try {
+          await player.setReleaseMode(ReleaseMode.loop);
+          await player.setVolume(vol);
+          await player.play(_GameBoardScreenState._bgMusic);
+          await Future.delayed(const Duration(seconds: 2));
+          if (player.state == PlayerState.playing) {
+            await player.pause();
+          }
+        } catch (_) {}
+      }();
+    }
+  }
+
+  /// Called from settings screen to play a preview ding at the given SFX scale.
+  static void playSfxPreview(double scale) {
+    _GameBoardScreenState._correctDingPlayer.stop().then((_) async {
+      try {
+        await _GameBoardScreenState._correctDingPlayer.setVolume(scale);
+        await _GameBoardScreenState._correctDingPlayer
+            .play(_GameBoardScreenState._correctDingSound);
+      } catch (_) {}
+    }).ignore();
+  }
 }
 
 class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
@@ -55,6 +91,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   // Hint fact cycling
   int _nextFactIndex = 0;
+  List<String> _purchasedFacts = [];
 
   // Guess-event banner
   int _lastShownGuessCount = -1;
@@ -63,6 +100,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   // Dynamic music volume — escalates with board fill
   double _lastMusicVolume = 0.44;
+  static double _currentMusicBase = 0.44;
 
   // Bot typing simulation
   bool _showBotTyping = false;
@@ -75,6 +113,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   // Reveal sound — owned here, not by ApertureTile
   static final AudioPlayer _revealSoundPlayer = AudioPlayer(playerId: 'reveal-aperture');
+  static final AudioPlayer _tapRevealedPlayer = AudioPlayer(playerId: 'tap-revealed');
+  static final AudioPlayer _revealTickPlayer = AudioPlayer(playerId: 'reveal-tick');
   static final AssetSource _revealSound = AssetSource('sounds/aperture_open.wav');
 
   static Future<void> _primeRevealSound() async {
@@ -89,7 +129,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static Future<void> _playRevealSound() async {
     try {
       await _revealSoundPlayer.stop();
+      await _revealSoundPlayer.setVolume(_sfxScale);
       await _revealSoundPlayer.play(_revealSound);
+    } catch (_) {}
+  }
+
+  static Future<void> _playTapRevealedSound() async {
+    try {
+      await _tapRevealedPlayer.stop();
+      await _tapRevealedPlayer.setVolume(_sfxScale * 0.35);
+      await _tapRevealedPlayer.play(_revealSound);
     } catch (_) {}
   }
 
@@ -107,21 +156,28 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static Future<void> _playWrongBuzz() async {
     try {
       await _wrongBuzzPlayer.stop();
+      await _wrongBuzzPlayer.setVolume(_sfxScale);
       await _wrongBuzzPlayer.play(_wrongBuzzSound);
+      QaLoggerService.instance.log('SOUND', 'PLAY wrong_buzz');
     } catch (_) {}
   }
 
   static Future<void> _playCorrectDing() async {
     try {
       await _correctDingPlayer.stop();
+      await _correctDingPlayer.setVolume(_sfxScale);
       await _correctDingPlayer.play(_correctDingSound);
+      QaLoggerService.instance.log('SOUND', 'PLAY correct_ding');
     } catch (_) {}
   }
+
+  static double get _musicScale => SettingsService.instance.musicVolume;
+  static double get _sfxScale => SettingsService.instance.sfxVolume;
 
   static Future<void> _startBackgroundMusic() async {
     try {
       await _bgPlayer.setReleaseMode(ReleaseMode.loop);
-      await _bgPlayer.setVolume(0.44);
+      await _bgPlayer.setVolume(0.44 * _musicScale);
       await _bgPlayer.play(_bgMusic);
     } catch (_) {}
   }
@@ -129,7 +185,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   void _syncMusicVolume(RoomModel room) {
     final totalTiles = room.gridSize * room.gridSize;
     final ratio = totalTiles > 0 ? room.placedPieces.length / totalTiles : 0.0;
-    final double target = ratio >= 0.75 ? 0.72 : ratio >= 0.50 ? 0.58 : 0.44;
+    final double base = ratio >= 0.75 ? 0.72 : ratio >= 0.50 ? 0.58 : 0.44;
+    _currentMusicBase = base;
+    final double target = base * _musicScale;
     if (target != _lastMusicVolume) {
       _lastMusicVolume = target;
       _bgPlayer.setVolume(target).ignore();
@@ -176,10 +234,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int? _lastExpiredRevealDeadline;
   int? _lastExpiredGuessOpportunityDeadline;
   int? _lastExpiredGuessModeDeadline;
-  // Per-phase retry cooldowns (2s) — prevents tick-spam on failed attempts
+  // Per-phase retry cooldowns — prevents tick-spam on failed attempts
   int? _revealTimeoutLastAttemptMs;
   int? _guessOppTimeoutLastAttemptMs;
   int? _guessModeTimeoutLastAttemptMs;
+  // Exponential backoff for auto-reveal when Firestore is unavailable
+  int _revealBackoffMs = 2000;
+  static const int _revealBackoffMax = 32000;
   // In-flight guard — suppresses concurrent timer ticks for the same deadline
   int? _inFlightRevealDeadline;
   // Non-owner observation dedup — log once per expired deadline
@@ -198,6 +259,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   final Set<String> _watchdogConfirmedIssues = {};
   // Audio recovery — only attempt when app is in foreground
   bool _appIsInForeground = true;
+  // Music interruption recovery (e.g. WhatsApp notification sound steals focus)
+  bool _musicShouldBePlaying = false;
+  StreamSubscription<PlayerState>? _bgPlayerStateSub;
   // Offline UX — local-only UI state, never written to Firestore
   bool _isOffline = false;
   bool _showRecoveredBanner = false;
@@ -212,6 +276,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   // Economy
   bool _rewardApplied = false;
+  bool _entryFeePaid = false;
   DateTime? _gameStartTime;
   MatchRewardBreakdown? _rewardBreakdown;
 
@@ -228,10 +293,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static final AudioPlayer _victoryPlayer = AudioPlayer(playerId: 'victory-fanfare');
   static final AssetSource _victorySound = AssetSource('sounds/victory_fanfare.mp3');
 
-  // Tick sounds — reuse correct_ding at low volume; swap file when dedicated tick.wav is added
-  static final AudioPlayer _revealTickPlayer = AudioPlayer(playerId: 'reveal-tick');
   static final AudioPlayer _guessModeTickPlayer = AudioPlayer(playerId: 'guess-tick');
-  static final AssetSource _tickSound = AssetSource('sounds/correct_ding.wav');
+  static final AssetSource _guessTickSound = AssetSource('sounds/guess_tick.wav');
+
+  // Sync tick to displayed countdown second — one tick per whole-second transition
+  int _lastGuessModeTickSecond = -1;
+  int? _lastGuessModeDeadlineForTick;
+  int _lastRevealTickSecond = -1;
+  int? _lastRevealDeadlineForTick;
 
   // Endgame pressure tracking
   bool _endgamePressureLogged = false;
@@ -248,14 +317,23 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   String? _lastDreadStateForLog;
   bool? _lastKnownSoloState;
   bool _snapRecoverySkippedLogged = false;
-  int? _lastWatchdogEvalDeadline;
 
   static Future<void> _primeTickSounds() async {
     try {
-      await _revealTickPlayer.setPlayerMode(PlayerMode.lowLatency);
-      await _revealTickPlayer.setSource(_tickSound);
       await _guessModeTickPlayer.setPlayerMode(PlayerMode.lowLatency);
-      await _guessModeTickPlayer.setSource(_tickSound);
+      await _guessModeTickPlayer.setSource(_guessTickSound);
+    } catch (_) {}
+    try {
+      await _revealTickPlayer.setPlayerMode(PlayerMode.lowLatency);
+      await _revealTickPlayer.setSource(_guessTickSound);
+    } catch (_) {}
+  }
+
+  static Future<void> _playRevealTick() async {
+    try {
+      await _revealTickPlayer.stop();
+      await _revealTickPlayer.setVolume(0.10 * _sfxScale);
+      await _revealTickPlayer.play(_guessTickSound);
     } catch (_) {}
   }
 
@@ -266,19 +344,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     return null;
   }
 
-  static Future<void> _playRevealTick({double volume = 0.07}) async {
-    try {
-      await _revealTickPlayer.stop();
-      await _revealTickPlayer.setVolume(volume);
-      await _revealTickPlayer.play(_tickSound);
-    } catch (_) {}
-  }
-
-  static Future<void> _playGuessModeTick({double volume = 0.17}) async {
+  static Future<void> _playGuessModeTick({double volume = 0.22}) async {
     try {
       await _guessModeTickPlayer.stop();
-      await _guessModeTickPlayer.setVolume(volume);
-      await _guessModeTickPlayer.play(_tickSound);
+      await _guessModeTickPlayer.setVolume(volume * _sfxScale);
+      await _guessModeTickPlayer.play(_guessTickSound);
     } catch (_) {}
   }
 
@@ -288,7 +358,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _confettiLeft = ConfettiController(duration: const Duration(seconds: 2));
     _confettiRight = ConfettiController(duration: const Duration(seconds: 2));
     WidgetsBinding.instance.addObserver(this);
+    unawaited(WakelockPlus.enable());
+    _musicShouldBePlaying = true;
     unawaited(_startBackgroundMusic());
+    _bgPlayerStateSub = _bgPlayer.onPlayerStateChanged.listen((ps) {
+      if (!_musicShouldBePlaying || !_appIsInForeground) return;
+      if (ps == PlayerState.stopped || ps == PlayerState.paused) {
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (_musicShouldBePlaying && _appIsInForeground && mounted) {
+            unawaited(_startBackgroundMusic());
+          }
+        });
+      }
+    });
     unawaited(_primeRevealSound());
     unawaited(_primeGuessSounds());
     unawaited(_primeTickSounds());
@@ -316,22 +398,40 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             'ENDGAME_PRESSURE_ACTIVE ratio=${ratio.toStringAsFixed(2)}');
       }
 
-      // Reveal soft tick — last 3s; volume escalates at endgame (+40%)
-      if (room.turnPhase == TurnPhase.revealTurn && room.revealDeadlineMs != null) {
-        final tickRemaining = room.revealDeadlineMs! - now;
-        if (tickRemaining > 0 && tickRemaining <= 3500) {
-          unawaited(_playRevealTick(volume: isEndgame ? 0.10 : 0.07));
-        }
-      }
-
-      // GuessMode stronger tick — last 5s, only for the active guesser; volume +35% at endgame
+      // GuessMode stronger tick — one per displayed second, active guesser only; +35% at endgame
       if (room.turnPhase == TurnPhase.guessMode &&
           room.guessModeDeadlineMs != null &&
           uid != null &&
           room.guessModePlayerId == uid) {
         final tickRemaining = room.guessModeDeadlineMs! - now;
+        final tickSec = (tickRemaining / 1000).ceil().clamp(0, 20);
         if (tickRemaining > 0 && tickRemaining <= 5500) {
-          unawaited(_playGuessModeTick(volume: isEndgame ? 0.23 : 0.17));
+          if (room.guessModeDeadlineMs != _lastGuessModeDeadlineForTick) {
+            _lastGuessModeDeadlineForTick = room.guessModeDeadlineMs;
+            _lastGuessModeTickSecond = -1;
+          }
+          if (tickSec > 0 && tickSec != _lastGuessModeTickSecond) {
+            _lastGuessModeTickSecond = tickSec;
+            unawaited(_playGuessModeTick(volume: isEndgame ? 0.23 : 0.17));
+          }
+        }
+      }
+
+      // Reveal countdown tick — one per displayed second while ring is depleting
+      if (room.turnPhase == TurnPhase.revealTurn &&
+          room.revealDeadlineMs != null &&
+          room.pendingRevealTileIndex != null) {
+        final tickRemaining = room.revealDeadlineMs! - now;
+        final tickSec = (tickRemaining / 1000).ceil().clamp(0, 15);
+        if (tickRemaining > 0) {
+          if (room.revealDeadlineMs != _lastRevealDeadlineForTick) {
+            _lastRevealDeadlineForTick = room.revealDeadlineMs;
+            _lastRevealTickSecond = -1;
+          }
+          if (tickSec > 0 && tickSec != _lastRevealTickSecond) {
+            _lastRevealTickSecond = tickSec;
+            unawaited(_playRevealTick());
+          }
         }
       }
 
@@ -353,126 +453,74 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         final remaining = room.availablePieceIndices.length;
         if (remaining <= 3 && remaining > 0 && remaining != _lastHapticAvailableCount) {
           _lastHapticAvailableCount = remaining;
-          HapticFeedback.lightImpact().ignore();
+          if (SettingsService.instance.vibrationEnabled) HapticFeedback.lightImpact().ignore();
         }
       }
 
-      // ── Reveal turn timeout ──────────────────────────────────────────────────
-      // Owner OR virtual/bot owner OR non-owner after 90s guardian threshold may advance.
+      // ── Auto-reveal timeout ──────────────────────────────────────────────────
+      // Any client can fire; Firestore transaction deduplicates via revealCycleId.
       // Dedup stamp set ONLY after confirmed commit; 2s cooldown allows retry.
       if (room.turnPhase == TurnPhase.revealTurn &&
           room.revealDeadlineMs != null &&
           now >= room.revealDeadlineMs! &&
           uid != null) {
-        final _currentOwner = room.currentTurnUserId;
-        final _ownerIsVirtual = _currentOwner != null && _currentOwner.startsWith('virtual_');
-        final _overdue = now - room.revealDeadlineMs!;
-        // Guardian: after 90s any active client may advance a human-owned stuck turn
-        final _canActAsGuardian = !_ownerIsVirtual &&
-            _currentOwner != null &&
-            _currentOwner != uid &&
-            _overdue >= 90000;
-        if (_lastWatchdogEvalDeadline != room.revealDeadlineMs) {
-          _lastWatchdogEvalDeadline = room.revealDeadlineMs;
-          final shortOwner = _currentOwner != null && _currentOwner!.length > 6
-              ? _currentOwner!.substring(0, 6) : (_currentOwner ?? 'null');
-          final shortActor = uid.length > 6 ? uid.substring(0, 6) : uid;
-          final evalReason = _ownerIsVirtual ? 'bot_owner'
-              : _currentOwner == uid ? 'is_owner'
-              : _canActAsGuardian ? 'guardian' : 'not_overdue';
-          QaLoggerService.instance.log('WATCHDOG',
-              'WATCHDOG_EVALUATED owner=$shortOwner actor=$shortActor overdueMs=$_overdue eligible=${_currentOwner == uid || _ownerIsVirtual || _canActAsGuardian} reason=$evalReason');
-        }
-        if (_currentOwner == uid || _ownerIsVirtual || _canActAsGuardian) {
-          if (_lastExpiredRevealDeadline == room.revealDeadlineMs) {
-            _dedupSkipCount_reveal++;
-            if (_dedupSkipCount_reveal == 1 ||
-                (_lastDedupSkipLogMs_reveal != null &&
-                    now - _lastDedupSkipLogMs_reveal! >= 30000)) {
-              if (_dedupSkipCount_reveal > 1) {
-                QaLoggerService.instance.log('TURN',
-                    'EXPIRY_DEDUP_SKIP_SUPPRESSED phase=revealTurn deadline=${room.revealDeadlineMs} count=$_dedupSkipCount_reveal');
-              } else {
-                QaLoggerService.instance.log('TURN',
-                    'EXPIRY_DEDUP_SKIP phase=revealTurn deadline=${room.revealDeadlineMs}');
-                QaLoggerService.instance.log('TIMER',
-                    'TIMER_IGNORED_STALE type=revealTurn deadline=${room.revealDeadlineMs}');
-              }
-              _lastDedupSkipLogMs_reveal = now;
-              _dedupSkipCount_reveal = 0;
-            }
-          } else if (_inFlightRevealDeadline == room.revealDeadlineMs) {
-            QaLoggerService.instance.log('TURN',
-                'TIMEOUT_ATTEMPT_SUPPRESSED reason=in_flight deadline=${room.revealDeadlineMs}');
-          } else {
-            final lastAttempt = _revealTimeoutLastAttemptMs;
-            if (lastAttempt != null && now - lastAttempt < 2000) {
-              // within cooldown — wait for retry window
+        if (_lastExpiredRevealDeadline == room.revealDeadlineMs) {
+          _dedupSkipCount_reveal++;
+          if (_dedupSkipCount_reveal == 1 ||
+              (_lastDedupSkipLogMs_reveal != null &&
+                  now - _lastDedupSkipLogMs_reveal! >= 30000)) {
+            if (_dedupSkipCount_reveal > 1) {
+              QaLoggerService.instance.log('TURN',
+                  'EXPIRY_DEDUP_SKIP_SUPPRESSED phase=revealTurn deadline=${room.revealDeadlineMs} count=$_dedupSkipCount_reveal');
             } else {
-              _inFlightRevealDeadline = room.revealDeadlineMs;
-              _revealTimeoutLastAttemptMs = now;
-              _sessionTimeoutKeys.add('revealTurn_${room.revealDeadlineMs}');
-              if (_canActAsGuardian) {
-                QaLoggerService.instance.log('TURN',
-                    'EXPIRE_HANDLER_FIRED phase=revealTurn guardian=true owner=$_currentOwner overdueMs=$_overdue');
-              } else if (_ownerIsVirtual) {
-                QaLoggerService.instance.log('TURN',
-                    'EXPIRE_HANDLER_FIRED phase=revealTurn virtualGuardian=true owner=$_currentOwner');
+              QaLoggerService.instance.log('TURN',
+                  'EXPIRY_DEDUP_SKIP phase=revealTurn deadline=${room.revealDeadlineMs}');
+              QaLoggerService.instance.log('TIMER',
+                  'TIMER_IGNORED_STALE type=revealTurn deadline=${room.revealDeadlineMs}');
+            }
+            _lastDedupSkipLogMs_reveal = now;
+            _dedupSkipCount_reveal = 0;
+          }
+        } else if (_inFlightRevealDeadline == room.revealDeadlineMs) {
+          QaLoggerService.instance.log('TURN',
+              'TIMEOUT_ATTEMPT_SUPPRESSED reason=in_flight deadline=${room.revealDeadlineMs}');
+        } else {
+          final lastAttempt = _revealTimeoutLastAttemptMs;
+          if (lastAttempt != null && now - lastAttempt < _revealBackoffMs) {
+            // within backoff window — wait
+          } else {
+            _inFlightRevealDeadline = room.revealDeadlineMs;
+            _revealTimeoutLastAttemptMs = now;
+            _sessionTimeoutKeys.add('revealTurn_${room.revealDeadlineMs}');
+            QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=revealTurn autoReveal=true');
+            QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=revealTurn deadline=${room.revealDeadlineMs}');
+            try {
+              final committed = await ref.read(roomServiceProvider).autoRevealPiece(
+                roomId: room.id,
+                actorUid: uid,
+              );
+              if (!mounted) return;
+              if (committed) {
+                _lastExpiredRevealDeadline = room.revealDeadlineMs;
+                _dedupSkipCount_reveal = 0;
+                _lastDedupSkipLogMs_reveal = null;
+                _revealBackoffMs = 2000; // reset on success
               } else {
-                QaLoggerService.instance.log('TURN', 'EXPIRE_HANDLER_FIRED phase=revealTurn');
+                QaLoggerService.instance.log('TURN',
+                    'EXPIRY_RETRY_ALLOWED phase=revealTurn deadline=${room.revealDeadlineMs}');
               }
-              QaLoggerService.instance.log('TIMER', 'TIMER_FIRED type=revealTurn deadline=${room.revealDeadlineMs}');
-              QaLoggerService.instance.log('TURN', 'ADVANCE_TURN_REASON reason=reveal_timeout');
-              QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_EXPIRED');
-              try {
-                final committed = await ref.read(roomServiceProvider).advanceTurnOnTimeout(
-                  roomId: room.id,
-                  userId: uid,
-                  guardianAllowed: _canActAsGuardian,
-                );
-                if (!mounted) return;
-                if (committed) {
-                  _lastExpiredRevealDeadline = room.revealDeadlineMs;
-                  _dedupSkipCount_reveal = 0;
-                  _lastDedupSkipLogMs_reveal = null;
-                  if (_canActAsGuardian) {
-                    final capturedRoomId = room.id;
-                    final capturedDeadline = room.revealDeadlineMs!;
-                    final capturedActor = uid;
-                    final capturedDifficulty = room.selectedDifficulty;
-                    final compensationAmount =
-                        capturedDifficulty?.stabilityCompensation ?? 10;
-                    QaLoggerService.instance.log('NETWORK',
-                        'STABILITY_COMPENSATION_ELIGIBLE reason=opponent_stuck difficulty=${capturedDifficulty?.name ?? 'unknown'} amount=$compensationAmount owner=$_currentOwner actor=$capturedActor overdueMs=$_overdue');
-                    unawaited(ref.read(economyServiceProvider)
-                        .applyStabilityCompensation(
-                          actorUid: capturedActor,
-                          roomId: capturedRoomId,
-                          deadline: capturedDeadline,
-                          amount: compensationAmount,
-                        )
-                        .then((applied) {
-                      QaLoggerService.instance.log('NETWORK', applied
-                          ? 'STABILITY_COMPENSATION_APPLIED amount=$compensationAmount actor=$capturedActor roomId=$capturedRoomId deadline=$capturedDeadline'
-                          : 'STABILITY_COMPENSATION_SKIPPED reason=already_applied actor=$capturedActor deadline=$capturedDeadline');
-                    }).catchError((_) {
-                      QaLoggerService.instance.log('NETWORK',
-                          'STABILITY_COMPENSATION_SKIPPED reason=error actor=$capturedActor deadline=$capturedDeadline');
-                    }));
-                  }
-                } else {
-                  QaLoggerService.instance.log('TURN',
-                      'EXPIRY_RETRY_ALLOWED phase=revealTurn deadline=${room.revealDeadlineMs}');
-                }
-              } finally {
-                _inFlightRevealDeadline = null;
+            } catch (e) {
+              if (e is FirebaseException && e.code == 'unavailable') {
+                _revealBackoffMs = (_revealBackoffMs * 2).clamp(2000, _revealBackoffMax);
+                QaLoggerService.instance.log('REVEAL',
+                    'TX_ERROR name=autoRevealPiece error=$e');
+                QaLoggerService.instance.log('REVEAL',
+                    'BACKOFF_APPLIED nextRetryMs=$_revealBackoffMs');
               }
+            } finally {
+              _inFlightRevealDeadline = null;
             }
           }
-        } else if (_lastObservedNotOwnerRevealDeadline != room.revealDeadlineMs) {
-          _lastObservedNotOwnerRevealDeadline = room.revealDeadlineMs;
-          QaLoggerService.instance.log('TURN',
-              'REVEAL_TIMEOUT_OBSERVED_NOT_OWNER deadline=${room.revealDeadlineMs} owner=$_currentOwner observer=$uid');
         }
       }
 
@@ -527,7 +575,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       // ── Guess mode timeout ────────────────────────────────────────────────────
       // Any client may call; transaction guards prevent double-execution.
       // Dedup stamp set ONLY after confirmed commit; 2s cooldown allows retry.
-      if (room.turnPhase == TurnPhase.guessMode &&
+      // Skip expiry when the current human player is the active guesser — no time pressure for typing.
+      final _humanIsGuessing = uid != null && room.guessModePlayerId == uid;
+      if (!_humanIsGuessing &&
+          room.turnPhase == TurnPhase.guessMode &&
           room.guessModeDeadlineMs != null &&
           now >= room.guessModeDeadlineMs!) {
         if (_lastExpiredGuessModeDeadline == room.guessModeDeadlineMs) {
@@ -753,15 +804,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       _appIsInForeground = false;
+      _musicShouldBePlaying = false;
       _bgPlayer.stop().ignore();
       _revealSoundPlayer.stop().ignore();
       _wrongBuzzPlayer.stop().ignore();
       _correctDingPlayer.stop().ignore();
       _victoryPlayer.stop().ignore();
-      _revealTickPlayer.stop().ignore();
       _guessModeTickPlayer.stop().ignore();
     } else if (state == AppLifecycleState.resumed) {
       _appIsInForeground = true;
+      _musicShouldBePlaying = true;
+      unawaited(_startBackgroundMusic());
     }
   }
 
@@ -855,11 +908,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         ' unresolvedWatchdogIssues=${_watchdogActiveIssues.length}'
         ' finalPhase=${_lastKnownPhase?.name ?? 'unknown'}'
         ' finalTurnPhase=${_lastKnownTurnPhase?.name ?? 'unknown'}');
+    _musicShouldBePlaying = false;
+    _bgPlayerStateSub?.cancel();
     _expiryTimer?.cancel();
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(WakelockPlus.disable());
     unawaited(_bgPlayer.stop());
     super.dispose();
   }
@@ -867,6 +923,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   static Future<void> _playVictorySound() async {
     try {
       await _victoryPlayer.stop();
+      await _victoryPlayer.setVolume(_sfxScale);
       await _victoryPlayer.play(_victorySound);
     } catch (_) {}
   }
@@ -875,6 +932,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (imageId.isEmpty || imageId == _loadedImageId) return;
     _loadedImageId = imageId;
     _nextFactIndex = 0;
+    _purchasedFacts = [];
     try {
       final image = await ref.read(roomServiceProvider).getImage(imageId);
       if (mounted) setState(() => _image = image);
@@ -902,7 +960,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             pieceIndex: index,
             difficulty: difficulty,
           );
-      unawaited(_playRevealSound());
       if (isLastTile) {
         await ref.read(roomServiceProvider).endGameNoWinner(room.id);
       } else {
@@ -932,109 +989,25 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   }
 
   void _scheduleBotTurn(RoomModel room) {
-    // Phase A: handle bot's guess opportunity.
-    // After a tile reveal, guessOpportunityPlayerId may point to a bot.
-    // Bot may enter guessMode with probability based on reveal ratio, or skip.
-    final guessOppId = room.guessOpportunityPlayerId;
-    if (room.turnPhase == TurnPhase.guessOpportunity && guessOppId != null) {
-      final guessOppPlayer = room.players[guessOppId];
-      if (guessOppPlayer != null && guessOppPlayer.isBot) {
-        final guessKey = '${room.id}-guess-opp-${room.currentTurnIndex}';
-        if (_lastBotTurnKey != guessKey) {
-          _lastBotTurnKey = guessKey;
-          _scheduleBotGuessOpportunityDecision(room, guessOppId);
-        }
-      }
-      // Human owns guessOpportunity — do not interfere, let timer or human decide.
-      return;
-    }
+    // In auto-reveal mode, bots no longer reveal tiles (guardian handles it).
+    // Bots only participate in the open guess-opportunity race.
+    if (room.turnPhase != TurnPhase.guessOpportunity) return;
+    if (room.guessOpportunityPlayerId != null) return; // already claimed
 
-    // Phase B: bot reveal turn.
-    // Guard: only act during revealTurn to avoid scheduling reveals in guessMode.
-    if (room.turnPhase != TurnPhase.revealTurn) return;
+    // Pick any non-blocked bot in this room to participate in the race.
+    final botEntries = room.players.entries
+        .where((e) => e.value.isBot && !room.isBlockedFromGuessing(e.key))
+        .toList();
+    if (botEntries.isEmpty) return;
 
-    final currentId = room.currentTurnUserId;
-    if (currentId == null) return;
+    // Use a stable key per (revealCycleId) so we don't schedule multiple times.
+    final guessKey = '${room.id}-guess-race-${room.revealCycleId}';
+    if (_lastBotTurnKey == guessKey) return;
+    _lastBotTurnKey = guessKey;
 
-    final player = room.players[currentId];
-    if (player == null || !player.isBot) return;
-
-    if (room.availablePieceIndices.isEmpty) return;
-
-    final key = '${room.id}-${room.currentTurnIndex}';
-    if (_lastBotTurnKey == key) return;
-    _lastBotTurnKey = key;
-
-    final botName = player.name.isNotEmpty ? player.name : 'בוט';
-    final totalTiles = room.gridSize * room.gridSize;
-    final ratio = totalTiles > 0 ? room.placedPieces.length / totalTiles : 0.0;
-    final int baseDelayMs;
-    if (ratio >= 0.75) {
-      baseDelayMs = 400 + _random.nextInt(301);  // 400–700ms — endgame: racing
-    } else if (ratio >= 0.50) {
-      baseDelayMs = 650 + _random.nextInt(351);  // 650–1000ms — midgame: pressure
-    } else {
-      baseDelayMs = 1000 + _random.nextInt(601); // 1000–1600ms — early: realistic
-    }
-    // B8/B9: Reveal hesitation — bot simulates prize-potential anxiety; B9 shows tell text
-    int delayMs = baseDelayMs;
-    final double hesitationChance = ratio >= 0.75 ? 0.50 : ratio >= 0.50 ? 0.30 : 0.0;
-    bool isHesitating = false;
-    if (hesitationChance > 0 && _random.nextDouble() < hesitationChance) {
-      final extraMs = ratio >= 0.75
-          ? 2000 + _random.nextInt(2001)
-          : 1500 + _random.nextInt(1001);
-      delayMs += extraMs;
-      isHesitating = true;
-      QaLoggerService.instance.log('BOT',
-          'BOT_HESITATION_ACTIVE ratio=${ratio.toStringAsFixed(2)} delay=$delayMs');
-    }
-    final hesitationText = isHesitating ? (_random.nextBool() ? '...לא בטוח' : '...חושב') : '';
-    // Show "opponent thinking" banner — with hesitation text when hesitating
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() {
-        _showBotTyping = true;
-        _botTypingName = botName;
-        _botTypingText = hesitationText;
-      });
-      if (isHesitating) {
-        QaLoggerService.instance.log('BOT', 'BOT_HESITATION_TELL_VISIBLE text=$hesitationText');
-      }
-    });
-    Future.delayed(Duration(milliseconds: delayMs), () async {
-      if (!mounted) return;
-      final snapshot = await ref.read(roomServiceProvider).watchRoom(room.id).first;
-      if (snapshot == null) return;
-      if (snapshot.phase == GamePhase.finished) return;
-      if (snapshot.currentTurnUserId != currentId) return;
-      if (snapshot.availablePieceIndices.isEmpty) return;
-
-      final idx = snapshot.availablePieceIndices[
-          _random.nextInt(snapshot.availablePieceIndices.length)];
-      final isLastTile = snapshot.availablePieceIndices.length == 1;
-      final difficulty = snapshot.selectedDifficulty ?? Difficulty.easy;
-
-      await ref.read(roomServiceProvider).revealPiece(
-            roomId: snapshot.id,
-            userId: currentId,
-            pieceIndex: idx,
-            difficulty: difficulty,
-          );
-      unawaited(_playRevealSound());
-
-      if (mounted) setState(() => _showBotTyping = false);
-
-      if (isLastTile) {
-        if (mounted) {
-          await ref.read(roomServiceProvider).endGameNoWinner(snapshot.id);
-        }
-        return;
-      }
-
-      // After bot reveals, guessOpportunity goes to the next player.
-      // _scheduleBotTurn handles the next state from the Firestore stream.
-    });
+    // Pick a random bot to represent in this race.
+    final botEntry = botEntries[_random.nextInt(botEntries.length)];
+    _scheduleBotGuessOpportunityDecision(room, botEntry.key);
   }
 
   void _scheduleBotGuessOpportunityDecision(RoomModel room, String botId) {
@@ -1042,18 +1015,21 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final revealedCount = room.placedPieces.length;
     final ratio = totalTiles > 0 ? revealedCount / totalTiles : 0.0;
 
+    // Give the human player a guaranteed first-guess window on the first 2 tiles
+    if (revealedCount <= 2) return;
+
     // Probability that bot attempts to guess based on how much is revealed
     final double guessChance;
     if (ratio <= 0.20) {
-      guessChance = 0.05;
+      guessChance = 0.14;
     } else if (ratio <= 0.40) {
-      guessChance = 0.12;
+      guessChance = 0.25;
     } else if (ratio <= 0.60) {
-      guessChance = 0.22;
+      guessChance = 0.40;
     } else if (ratio <= 0.80) {
-      guessChance = 0.35;
+      guessChance = 0.55;
     } else {
-      guessChance = 0.50;
+      guessChance = 0.70;
     }
 
     // B7: endgame escalation at ratio≥0.75; B8: super-endgame aggression at ratio≥0.85
@@ -1088,17 +1064,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         'BOT_GUESS_DECISION ratio=${ratio.toStringAsFixed(2)} chance=${effectiveGuessChance.toStringAsFixed(2)} decided=$decides endgame=$isEndgameBotMode super=$isSuperEndgame');
 
     if (!decides) {
-      // Bot skips — human-like pause before yielding opportunity
-      final skipDelayMs = ((1800 + _random.nextInt(1801)) * delayMultiplier).round();
-      QaLoggerService.instance.log('BOT',
-          'BOT_DELAY_SCHEDULED action=skip_guess_opportunity ms=$skipDelayMs');
-      Future.delayed(Duration(milliseconds: skipDelayMs), () async {
-        if (!mounted) return;
-        QaLoggerService.instance.log('BOT', 'BOT_SKIP_GUESS_OPPORTUNITY');
-        QaLoggerService.instance.log('TURN',
-            'ADVANCE_TURN_REASON reason=bot_skip phase=guessOpportunity');
-        await ref.read(roomServiceProvider).skipPiecePlacement(roomId: room.id);
-      });
+      // Bot passes on this round — window will expire naturally.
+      QaLoggerService.instance.log('BOT', 'BOT_SKIP_GUESS_OPPORTUNITY');
       return;
     }
 
@@ -1114,7 +1081,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (snap == null) return;
       if (snap.phase == GamePhase.finished) return;
       if (snap.turnPhase != TurnPhase.guessOpportunity) return;
-      if (snap.guessOpportunityPlayerId != botId) return;
+      if (snap.guessOpportunityPlayerId != null) return; // already claimed
+      if (snap.isBlockedFromGuessing(botId)) return;
 
       final entered = await ref.read(roomServiceProvider).enterGuessMode(
             roomId: room.id, userId: botId);
@@ -1246,38 +1214,67 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   Future<void> _useRevealHint(RoomModel room, String userId) async {
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
-    if (!isSolo) return; // multiplayer: blocked
-
-    final wallet = ref.read(walletProvider).valueOrNull;
-    if (wallet == null) return;
-
-    final guard = ref.read(hintEconomyGuardProvider);
-    if (!guard.canAfford(wallet, HintType.revealTile)) return;
-
-    final granted = await guard.useHint(
-      uid: userId,
-      hint: HintType.revealTile,
-      wallet: wallet,
-      roomId: room.id,
-    );
-
-    if (!granted || !mounted) return;
+    if (!isSolo) return;
 
     final facts = _image?.facts ?? const [];
-    if (facts.isEmpty) {
-      showDialog(
-        context: context,
-        builder: (_) => const _FactDialog(fact: null),
-      );
+
+    // Re-view: already have purchased hints — show them for free
+    if (_purchasedFacts.isNotEmpty) {
+      _showPurchasedHints();
       return;
     }
 
-    final fact = facts[_nextFactIndex % facts.length];
-    _nextFactIndex++;
+    // First purchase: costs 40 coins
+    final cost = EconomyConfig.hintFirstPrice;
+    final wallet = ref.read(walletProvider).valueOrNull;
+    if (wallet == null || wallet.coins < cost) return;
 
+    final granted = await ref.read(hintEconomyGuardProvider).useHintWithCost(
+      uid: userId,
+      cost: cost,
+      wallet: wallet,
+      roomId: room.id,
+    );
+    if (!granted || !mounted) return;
+
+    final fact = facts.isEmpty ? null : facts[0];
+    if (mounted) setState(() {
+      _purchasedFacts = [if (fact != null) fact];
+    });
+    _showPurchasedHints();
+  }
+
+  Future<void> _buySecondHint(RoomModel room, String userId) async {
+    final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
+    if (!isSolo || _purchasedFacts.isEmpty) return;
+
+    final facts = _image?.facts ?? const [];
+    if (facts.length <= _purchasedFacts.length) return; // no more facts
+
+    final cost = EconomyConfig.hintSecondPrice;
+    final wallet = ref.read(walletProvider).valueOrNull;
+    if (wallet == null || wallet.coins < cost) return;
+
+    final granted = await ref.read(hintEconomyGuardProvider).useHintWithCost(
+      uid: userId,
+      cost: cost,
+      wallet: wallet,
+      roomId: room.id,
+    );
+    if (!granted || !mounted) return;
+
+    final fact = facts[_purchasedFacts.length % facts.length];
+    if (mounted) setState(() {
+      _purchasedFacts = [..._purchasedFacts, fact];
+    });
+    _showPurchasedHints();
+  }
+
+  void _showPurchasedHints() {
+    if (!mounted || _purchasedFacts.isEmpty) return;
     showDialog(
       context: context,
-      builder: (_) => _FactDialog(fact: fact),
+      builder: (_) => _PurchasedHintsDialog(facts: _purchasedFacts),
     );
   }
 
@@ -1286,7 +1283,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (image == null || value.trim().isEmpty) return false;
 
     // Stop tick sounds immediately on submission
-    _revealTickPlayer.stop().ignore();
     _guessModeTickPlayer.stop().ignore();
 
     setState(() => _hasGuessedThisTurn = true);
@@ -1319,16 +1315,33 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     return correct;
   }
 
+  void _handleGuessTap(RoomModel room, String userId, bool canGuessNow) {
+    if (canGuessNow) {
+      _enterGuessMode(room, userId);
+    } else {
+      QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED_BLOCKED phase=${room.turnPhase.name}');
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('לא ניתן לנחש כרגע', textDirection: TextDirection.rtl),
+            duration: Duration(milliseconds: 1200),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    }
+  }
+
   Future<void> _enterGuessMode(RoomModel room, String userId) async {
     QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED phase=${room.turnPhase.name}');
 
-    // Client-side guard: if the guessOpportunity deadline is already past, the
-    // server transaction will reject with deadline_expired anyway. Skip the round
-    // trip and log so QA can confirm the client caught it first.
-    final deadline = room.guessOpportunityDeadlineMs;
-    if (deadline != null && DateTime.now().millisecondsSinceEpoch >= deadline) {
-      QaLoggerService.instance.log('GUESS', 'GUESS_ENTER_SKIPPED reason=deadline_expired_client');
-      return;
+    // Client-side guard for guessOpportunity deadline only
+    if (room.turnPhase == TurnPhase.guessOpportunity) {
+      final deadline = room.guessOpportunityDeadlineMs;
+      if (deadline != null && DateTime.now().millisecondsSinceEpoch >= deadline) {
+        QaLoggerService.instance.log('GUESS', 'GUESS_ENTER_SKIPPED reason=deadline_expired_client');
+        return;
+      }
     }
 
     final alreadyInGuessMode = room.turnPhase == TurnPhase.guessMode &&
@@ -1535,7 +1548,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     QaLoggerService.instance.log('TURN', 'REVEAL_TIMER_FROZEN phase=guessMode');
                     QaLoggerService.instance.log('TURN', 'BOARD_DIMMED_GUESS_MODE');
                     QaLoggerService.instance.log('TURN', 'REVEAL_BAR_HIDDEN_GUESS_MODE');
-                    HapticFeedback.mediumImpact().ignore();
+                    if (SettingsService.instance.vibrationEnabled) HapticFeedback.mediumImpact().ignore();
                     if (currentUserId != null && room.guessModePlayerId == currentUserId) {
                       QaLoggerService.instance.log('GUESS', 'GUESS_MODE_UI_ENTER');
                     }
@@ -1543,7 +1556,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
                   if (_lastKnownTurnPhase == TurnPhase.guessMode && room.turnPhase != TurnPhase.guessMode) {
                     QaLoggerService.instance.log('GUESS', 'GUESS_MODE_UI_EXIT');
-                    _revealTickPlayer.stop().ignore();
                     _guessModeTickPlayer.stop().ignore();
                   }
 
@@ -1757,6 +1769,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   final _pRatio = _pTotal > 0 ? room.placedPieces.length / _pTotal : 0.0;
                   if (room.placedPieces.length != _lastRevealedCountForLog) {
                     _lastRevealedCountForLog = room.placedPieces.length;
+                    unawaited(_playRevealSound());
+                    QaLoggerService.instance.log('SOUND', 'PLAY reveal pieces=${room.placedPieces.length}');
                     final _isSoloLog = room.players.values.where((p) => !p.isBot).length == 1;
                     final _coinsLog = RewardCalculator.calculateCurrentPrizePotential(
                       isSolo: _isSoloLog,
@@ -1771,6 +1785,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     _lastPressureStateForLog = _pState;
                     QaLoggerService.instance.log('GAME', 'PRESSURE_STATE_CHANGED state=$_pState');
                   }
+                }
+
+                // Pay entry fee exactly once when game transitions to playing
+                if (room.phase == GamePhase.playing &&
+                    !_entryFeePaid &&
+                    room.entryFee > 0 &&
+                    currentUserId != null &&
+                    !room.entryFeePaidPlayerIds.contains(currentUserId)) {
+                  _entryFeePaid = true;
+                  unawaited(ref.read(roomServiceProvider).payMyEntryFee(
+                    roomId: widget.roomId,
+                    userId: currentUserId,
+                  ));
                 }
 
                 _scheduleBotTurn(room);
@@ -1812,19 +1839,21 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 }
 
                 final _isFinished = room.phase == GamePhase.finished;
-                // isMyTurn: it's my reveal turn (revealTurn phase, I'm the current turn player)
-                final isMyTurn = !_isFinished &&
-                    currentUserId != null &&
-                    room.currentTurnUserId == currentUserId &&
-                    room.turnPhase == TurnPhase.revealTurn;
-                // canGuessNow: I have the guess opportunity window and deadline has not passed
+                // In auto-reveal mode, nobody has a manual reveal turn.
+                const isMyTurn = false;
+                // canGuessNow: guessing is open at any time during gameplay
+                final _nowMs = DateTime.now().millisecondsSinceEpoch;
+                final _guessBlockedUntil = currentUserId != null
+                    ? (room.guessBlockedUntilMs[currentUserId] ?? 0)
+                    : 0;
+                final _isTimeBlocked = _guessBlockedUntil > _nowMs;
                 final canGuessNow = !_isFinished &&
                     currentUserId != null &&
-                    room.turnPhase == TurnPhase.guessOpportunity &&
-                    room.guessOpportunityPlayerId == currentUserId &&
-                    (room.guessOpportunityDeadlineMs == null ||
-                        room.guessOpportunityDeadlineMs! >
-                            DateTime.now().millisecondsSinceEpoch);
+                    room.phase == GamePhase.playing &&
+                    room.turnPhase != TurnPhase.guessMode &&
+                    room.turnPhase != TurnPhase.roundOver &&
+                    !room.isBlockedFromGuessing(currentUserId) &&
+                    !_isTimeBlocked;
                 final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
                 final _totalTiles = room.gridSize * room.gridSize;
                 final revealRatio = _totalTiles > 0 ? room.placedPieces.length / _totalTiles : 0.0;
@@ -1860,6 +1889,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   canGuessNow: canGuessNow,
                   isSolo: isSolo,
                   revealRatio: revealRatio,
+                  potTotal: room.potTotal,
                   showBanner: _showBanner,
                   bannerEvent: _currentBanner,
                   showBotTyping: _showBotTyping,
@@ -1874,23 +1904,41 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       context.go('/home');
                     }
                   },
-                  onReveal: currentUserId == null
-                      ? null
-                      : (index) => _humanRevealTile(
-                            room: room,
-                            userId: currentUserId,
-                            index: index,
-                          ),
+                  onReveal: null,
+                  onTapRevealed: () => unawaited(_playTapRevealedSound()),
                   onRevealHint: currentUserId == null
                       ? null
                       : () => _useRevealHint(room, currentUserId),
-                  onGuess: canGuessNow ? () => _enterGuessMode(room, currentUserId!) : null,
+                  purchasedHintCount: _purchasedFacts.length,
+                  onBuySecondHint: (isSolo && currentUserId != null && _purchasedFacts.length == 1 && (_image?.facts.length ?? 0) > 1)
+                      ? () => _buySecondHint(room, currentUserId!)
+                      : null,
+                  onGuess: (!_isFinished && currentUserId != null)
+                      ? () => _handleGuessTap(room, currentUserId!, canGuessNow)
+                      : null,
                   onGuessSubmit: (currentUserId != null &&
                           room.turnPhase == TurnPhase.guessMode &&
                           room.guessModePlayerId == currentUserId)
                       ? (value) => _submitGuess(room, currentUserId!, value)
                       : null,
-                  onSkip: canGuessNow ? () => _skipTurn(room) : null,
+                  stunCardCount: user?.stunCardCount ?? 0,
+                  onStunCard: currentUserId == null ? null : (targetId) async {
+                    final success = await ref.read(roomServiceProvider).applyStunCard(
+                      roomId: room.id,
+                      actorUid: currentUserId,
+                      targetUid: targetId,
+                    );
+                    if (!success && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('הכרטיס לא הופעל — נסה שוב')),
+                      );
+                    }
+                  },
+                  guessBlock5Count: user?.guessBlock5Count ?? 0,
+                  guessBlock10Count: user?.guessBlock10Count ?? 0,
+                  blackoutCardCount: user?.blackoutCardCount ?? 0,
+                  guessBlockedUntilMs: room.guessBlockedUntilMs,
+                  blackoutActiveUntilMs: room.blackoutActiveUntilMs,
                 );
               },
             ),
@@ -2044,17 +2092,14 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
       builder: (context, constraints) {
         final imgSize = min(
           constraints.maxWidth - 32,
-          min(constraints.maxHeight * 0.58, 280.0),
+          min(constraints.maxHeight * 0.52, 240.0),
         );
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
                   children: [
                     if (widget.imageUrl != null) ...[
                       ClipRRect(
@@ -2194,9 +2239,7 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
                   ],
                 ),
               ),
-            ),
-          ),
-        );
+            );
       },
     );
   }
@@ -2247,6 +2290,76 @@ class _FactDialog extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
           child: const Text(
             'הבנתי',
+            style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.w900),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PurchasedHintsDialog extends StatelessWidget {
+  final List<String> facts;
+  const _PurchasedHintsDialog({required this.facts});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF07101F),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.5)),
+      ),
+      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+      contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      title: const Row(
+        children: [
+          Icon(Icons.lightbulb_rounded, color: Color(0xFFD4AF37), size: 20),
+          SizedBox(width: 8),
+          Text(
+            'רמזים',
+            style: TextStyle(
+              color: Color(0xFFD4AF37),
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < facts.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0A1A2E),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.25)),
+              ),
+              child: Text(
+                facts[i],
+                textAlign: TextAlign.right,
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text(
+            'סגור',
             style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.w900),
           ),
         ),

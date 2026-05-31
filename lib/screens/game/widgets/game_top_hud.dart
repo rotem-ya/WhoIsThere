@@ -1,9 +1,12 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/economy_config.dart';
 import '../../../core/constants/game_constants.dart';
 import '../../../models/player_model.dart';
+import '../../../providers/providers.dart';
 import '../../../services/reward_calculator.dart';
 import '../../../widgets/economy/coin_display.dart';
 
@@ -31,6 +34,14 @@ class TopHud extends StatelessWidget {
   final int totalTiles;
   final int? guessOpportunityDeadlineMs;
   final bool isLastTile;
+  final int potTotal;
+  final String? guessModePlayerId;
+  final Set<String> stunnedPlayerIds;
+  final String roomId;
+  final String? localUserId;
+  final int guessBlock5Count;
+  final int guessBlock10Count;
+  final int blackoutCardCount;
 
   const TopHud({
     required this.players,
@@ -49,324 +60,630 @@ class TopHud extends StatelessWidget {
     this.totalTiles = 1,
     this.guessOpportunityDeadlineMs,
     this.isLastTile = false,
+    this.potTotal = 0,
+    this.guessModePlayerId,
+    this.stunnedPlayerIds = const {},
+    this.roomId = '',
+    this.localUserId,
+    this.guessBlock5Count = 0,
+    this.guessBlock10Count = 0,
+    this.blackoutCardCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
     final isEndgame = revealRatio >= 0.75;
+
     return SafeArea(
       bottom: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 400),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF07101F).withOpacity(0.82),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: isEndgame
-                  ? const Color(0xFFFF9F43).withOpacity(0.55)
-                  : const Color(0xFFD4AF37).withOpacity(0.30),
-              width: isEndgame ? 1.5 : 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.35),
-                  blurRadius: 16,
-                  offset: const Offset(0, 7)),
-              if (isEndgame)
-                BoxShadow(
-                  color: const Color(0xFFFF6B35).withOpacity(0.20),
-                  blurRadius: 24,
-                  spreadRadius: 2,
-                ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  _BackButton(onTap: onBack),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _TurnInfo(
-                      name: currentPlayerName,
-                      revealedText: revealedText,
-                      isMyTurn: isMyTurn,
-                      turnPhase: turnPhase,
-                      isMyGuessOpportunity: isMyGuessOpportunity,
-                      isMyGuessModeActive: isMyGuessModeActive,
-                      guessModePlayerName: guessModePlayerName,
-                      guessOpportunityDeadlineMs: guessOpportunityDeadlineMs,
-                      isLastTile: isLastTile,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const CoinDisplay(compact: true),
-                      const SizedBox(height: 3),
-                      _PrizePotentialChip(
-                        isSolo: isSolo,
-                        revealedCount: revealedCount,
-                        totalTiles: totalTiles,
-                      ),
-                    ],
-                  ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                const CoinDisplay(compact: true),
+                const SizedBox(width: 6),
+                if (potTotal > 0) ...[
+                  _PotChip(potTotal: potTotal),
+                  const SizedBox(width: 4),
                 ],
-              ),
-              if (players.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                SizedBox(
-                  height: 28,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: players.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 5),
-                    itemBuilder: (context, index) {
-                      final player = players[index];
-                      return _PlayerChip(player: player, active: player.id == currentPlayerId);
-                    },
-                  ),
+                _BonusPreviewChip(
+                  isSolo: isSolo,
+                  revealedCount: revealedCount,
+                  totalTiles: totalTiles,
                 ),
+                const Spacer(),
+                _SmallBackButton(onTap: onBack),
               ],
-            ],
-          ),
+            ),
+            const SizedBox(height: 6),
+            if (players.isNotEmpty)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF081E3A).withOpacity(0.90),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isEndgame
+                        ? const Color(0xFFFF9F43).withOpacity(0.55)
+                        : const Color(0xFF1890D0).withOpacity(0.50),
+                    width: 1.0,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0040A0).withOpacity(0.30),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: _PlayerGrid(
+                  players: players,
+                  guessModePlayerId: guessModePlayerId,
+                  stunnedPlayerIds: stunnedPlayerIds,
+                  myUid: localUserId,
+                  roomId: roomId,
+                  isSolo: isSolo,
+                  guessBlock5Count: guessBlock5Count,
+                  guessBlock10Count: guessBlock10Count,
+                  blackoutCardCount: blackoutCardCount,
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _BackButton extends StatelessWidget {
+// ── Small back button ──────────────────────────────────────────────────────────
+
+class _SmallBackButton extends StatelessWidget {
   final VoidCallback onTap;
-  const _BackButton({required this.onTap});
+  const _SmallBackButton({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
       child: Container(
-        width: 44,
-        height: 44,
+        width: 30,
+        height: 30,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.12)),
+          color: const Color(0xFF0D1E30).withOpacity(0.75),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: const Color(0xFF2A5070).withOpacity(0.45),
+            width: 0.8,
+          ),
         ),
-        child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 17),
+        child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white60, size: 12),
       ),
     );
   }
 }
 
-class _TurnInfo extends StatefulWidget {
-  final String name;
-  final String revealedText;
-  final bool isMyTurn;
-  final TurnPhase turnPhase;
-  final bool isMyGuessOpportunity;
-  final bool isMyGuessModeActive;
-  final String guessModePlayerName;
-  final int? guessOpportunityDeadlineMs;
-  final bool isLastTile;
+// ── Player grid ────────────────────────────────────────────────────────────────
 
-  const _TurnInfo({
-    required this.name,
-    required this.revealedText,
-    required this.isMyTurn,
-    required this.turnPhase,
-    required this.isMyGuessOpportunity,
-    required this.isMyGuessModeActive,
-    required this.guessModePlayerName,
-    this.guessOpportunityDeadlineMs,
-    this.isLastTile = false,
+class _PlayerGrid extends StatelessWidget {
+  final List<PlayerModel> players;
+  final String? guessModePlayerId;
+  final Set<String> stunnedPlayerIds;
+  final String? myUid;
+  final String roomId;
+  final bool isSolo;
+  final int guessBlock5Count;
+  final int guessBlock10Count;
+  final int blackoutCardCount;
+
+  const _PlayerGrid({
+    required this.players,
+    this.guessModePlayerId,
+    this.stunnedPlayerIds = const {},
+    this.myUid,
+    this.roomId = '',
+    this.isSolo = false,
+    this.guessBlock5Count = 0,
+    this.guessBlock10Count = 0,
+    this.blackoutCardCount = 0,
   });
 
   @override
-  State<_TurnInfo> createState() => _TurnInfoState();
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (var i = 0; i < players.length; i += 2) {
+      if (rows.isNotEmpty) rows.add(const SizedBox(height: 4));
+      rows.add(Row(
+        children: [
+          Expanded(
+            child: _PlayerCell(
+              player: players[i],
+              isGuessing: players[i].id == guessModePlayerId,
+              isStunned: stunnedPlayerIds.contains(players[i].id),
+              isMe: players[i].id == myUid,
+              myUid: myUid,
+              roomId: roomId,
+              isSolo: isSolo,
+              guessBlock5Count: guessBlock5Count,
+              guessBlock10Count: guessBlock10Count,
+              blackoutCardCount: blackoutCardCount,
+            ),
+          ),
+          if (i + 1 < players.length) ...[
+            const SizedBox(width: 6),
+            Expanded(
+              child: _PlayerCell(
+                player: players[i + 1],
+                isGuessing: players[i + 1].id == guessModePlayerId,
+                isStunned: stunnedPlayerIds.contains(players[i + 1].id),
+                isMe: players[i + 1].id == myUid,
+                myUid: myUid,
+                roomId: roomId,
+                isSolo: isSolo,
+                guessBlock5Count: guessBlock5Count,
+                guessBlock10Count: guessBlock10Count,
+                blackoutCardCount: blackoutCardCount,
+              ),
+            ),
+          ] else
+            const Expanded(child: SizedBox()),
+        ],
+      ));
+    }
+    return Column(mainAxisSize: MainAxisSize.min, children: rows);
+  }
 }
 
-class _TurnInfoState extends State<_TurnInfo> {
-  Timer? _t;
-  int _nowMs = DateTime.now().millisecondsSinceEpoch;
+// ── Player cell — tap opens action sheet ──────────────────────────────────────
 
-  @override
-  void initState() {
-    super.initState();
-    _t = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _nowMs = DateTime.now().millisecondsSinceEpoch);
-    });
-  }
+class _PlayerCell extends ConsumerWidget {
+  final PlayerModel player;
+  final bool isGuessing;
+  final bool isStunned;
+  final bool isMe;
+  final String? myUid;
+  final String roomId;
+  final bool isSolo;
+  final int guessBlock5Count;
+  final int guessBlock10Count;
+  final int blackoutCardCount;
 
-  @override
-  void dispose() {
-    _t?.cancel();
-    super.dispose();
-  }
+  const _PlayerCell({
+    required this.player,
+    this.isGuessing = false,
+    this.isStunned = false,
+    this.isMe = false,
+    this.myUid,
+    this.roomId = '',
+    this.isSolo = false,
+    this.guessBlock5Count = 0,
+    this.guessBlock10Count = 0,
+    this.blackoutCardCount = 0,
+  });
 
-  @override
-  Widget build(BuildContext context) {
-    final (label, labelColor) = _phaseLabel();
-    final isGuessMode = widget.turnPhase == TurnPhase.guessMode;
+  bool get _canTarget =>
+      !isMe && roomId.isNotEmpty && myUid != null;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: labelColor,
-            fontSize: isGuessMode ? 14 : 11,
-            fontWeight: FontWeight.w900,
-            height: 1,
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          widget.name.isEmpty ? 'ממתין לשחקן' : widget.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, height: 1),
-        ),
-        if (!isGuessMode) ...[
-          const SizedBox(height: 4),
-          Text(
-            'גלויות ${widget.revealedText}',
-            style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12, fontWeight: FontWeight.w800),
-          ),
-        ],
-      ],
+  void _showActionSheet(BuildContext context) {
+    if (!_canTarget) return;
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PlayerActionSheet(
+        targetPlayer: player,
+        roomId: roomId,
+        myUid: myUid!,
+        guessBlock5Count: guessBlock5Count,
+        guessBlock10Count: guessBlock10Count,
+        blackoutCardCount: blackoutCardCount,
+      ),
     );
   }
 
-  (String, Color) _phaseLabel() {
-    switch (widget.turnPhase) {
-      case TurnPhase.revealTurn:
-        if (widget.isLastTile) {
-          return widget.isMyTurn
-              ? ('גילוי אחרון!', const Color(0xFFFF3B30))
-              : ('ממתין לגילוי האחרון', const Color(0xFFFF6B35));
-        }
-        return widget.isMyTurn
-            ? ('גלה קלף', const Color(0xFFD4AF37))
-            : ('${widget.name.isEmpty ? 'יריב' : widget.name} מגלה', const Color(0xFF87CEEB).withOpacity(0.85));
-      case TurnPhase.guessOpportunity:
-        if (widget.isMyGuessOpportunity) {
-          return ('האם אתה יודע?', const Color(0xFFFFE082));
-        }
-        if (widget.guessOpportunityDeadlineMs != null) {
-          final remaining = widget.guessOpportunityDeadlineMs! - _nowMs;
-          if (remaining <= 2000) {
-            return ('ייתכן שינחש!', const Color(0xFFFF3B30));
-          } else if (remaining <= 3500) {
-            return ('יריב שוקל...', const Color(0xFFFF9F43));
-          }
-        }
-        return ('${widget.name.isEmpty ? 'יריב' : widget.name} מחליט...', const Color(0xFF87CEEB).withOpacity(0.80));
-      case TurnPhase.guessMode:
-        final gName = widget.guessModePlayerName.isEmpty ? 'יריב' : widget.guessModePlayerName;
-        return widget.isMyGuessModeActive
-            ? ('אתה מנחש!', const Color(0xFF00F2FF))
-            : ('$gName מנחש!', const Color(0xFFFF6B35));
-      case TurnPhase.resolvingGuess:
-      case TurnPhase.roundOver:
-        return ('סיום סיבוב', Colors.white54);
-    }
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rawName = player.name.length > 9 ? player.name.substring(0, 9) : player.name;
+    final name = player.isHost ? '$rawName ⭐' : rawName;
+    return GestureDetector(
+      onTap: _canTarget ? () => _showActionSheet(context) : null,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: isStunned
+                  ? const Color(0xFF2A1040).withOpacity(0.75)
+                  : isGuessing
+                      ? const Color(0xFF1A2E10).withOpacity(0.75)
+                      : const Color(0xFF0D1E30).withOpacity(0.55),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isStunned
+                    ? const Color(0xFF8B4FBF).withOpacity(0.55)
+                    : isGuessing
+                        ? const Color(0xFF4CAF50).withOpacity(0.50)
+                        : const Color(0xFF2A5070).withOpacity(0.30),
+                width: isStunned || isGuessing ? 1.0 : 0.8,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isGuessing ? const Color(0xFF80C080) : Colors.white70,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (isStunned)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 3),
+                    child: Text('🔒', style: TextStyle(fontSize: 9)),
+                  )
+                else if (isGuessing)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 4),
+                    child: Text('✍', style: TextStyle(fontSize: 10)),
+                  ),
+                if (player.priorExposureCount > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 3),
+                    child: Text(
+                      '👁${player.priorExposureCount}',
+                      style: const TextStyle(fontSize: 9, color: Colors.amber),
+                    ),
+                  ),
+                const SizedBox(width: 4),
+                Text(
+                  '${player.score}',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.45),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            top: -7,
+            right: -5,
+            child: _DiscoveredMicroBadge(count: player.discoveredCount),
+          ),
+        ],
+      ),
+    );
   }
 }
 
-class _PlayerChip extends StatelessWidget {
-  final PlayerModel player;
-  final bool active;
-  const _PlayerChip({required this.player, required this.active});
+// ── Player action sheet ────────────────────────────────────────────────────────
+
+class _PlayerActionSheet extends ConsumerStatefulWidget {
+  final PlayerModel targetPlayer;
+  final String roomId;
+  final String myUid;
+  final int guessBlock5Count;
+  final int guessBlock10Count;
+  final int blackoutCardCount;
+
+  const _PlayerActionSheet({
+    required this.targetPlayer,
+    required this.roomId,
+    required this.myUid,
+    required this.guessBlock5Count,
+    required this.guessBlock10Count,
+    required this.blackoutCardCount,
+  });
+
+  @override
+  ConsumerState<_PlayerActionSheet> createState() => _PlayerActionSheetState();
+}
+
+class _PlayerActionSheetState extends ConsumerState<_PlayerActionSheet> {
+  bool _busy = false;
+
+  Future<void> _useGuessBlock(bool is10s) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    HapticFeedback.mediumImpact();
+    await ref.read(roomServiceProvider).applyGuessBlockCard(
+      roomId: widget.roomId,
+      actorUid: widget.myUid,
+      targetUid: widget.targetPlayer.id,
+      is10s: is10s,
+    );
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _useBlackout() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    HapticFeedback.mediumImpact();
+    await ref.read(roomServiceProvider).applyBlackoutCard(
+      roomId: widget.roomId,
+      actorUid: widget.myUid,
+      targetUid: widget.targetPlayer.id,
+    );
+    if (mounted) Navigator.pop(context);
+  }
+
+  void _goToStore(BuildContext ctx) {
+    Navigator.pop(ctx);
+    ScaffoldMessenger.of(ctx)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('החנות זמינה בין משחקים 🛍️', textDirection: TextDirection.rtl),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (active) {
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)]),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withOpacity(0.18)),
-          boxShadow: [BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.28), blurRadius: 10)],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 72),
-              child: Text(player.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Color(0xFF07101F), fontSize: 12, fontWeight: FontWeight.w900)),
-            ),
-            const SizedBox(width: 4),
-            Text('${player.score}',
-                style: TextStyle(color: const Color(0xFF07101F).withOpacity(0.82), fontSize: 11, fontWeight: FontWeight.w900)),
-          ],
-        ),
-      );
-    }
+    final hasAny = widget.guessBlock5Count > 0 ||
+        widget.guessBlock10Count > 0 ||
+        widget.blackoutCardCount > 0;
 
-    // Inactive: compact initial circle + score only
-    final initial = player.name.isNotEmpty ? player.name[0].toUpperCase() : '?';
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+    return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.055),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.10)),
+        color: const Color(0xFF07101F),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border.all(color: const Color(0xFF8B4FBF).withOpacity(0.35), width: 1),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        top: 8,
+        left: 20,
+        right: 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 36,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Text(
+            'פעולות על ${widget.targetPlayer.name}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (!hasAny) ...[
+            const Text('🃏', style: TextStyle(fontSize: 36)),
+            const SizedBox(height: 8),
+            Text(
+              'אין לך כרטיסים כרגע',
+              style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 15),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'ניתן לרכוש בחנות',
+              style: TextStyle(color: Colors.white.withOpacity(0.45), fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => _goToStore(context),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF8B4FBF),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: const Text('פתח חנות', style: TextStyle(fontWeight: FontWeight.w800)),
+              ),
+            ),
+          ] else ...[
+            if (widget.guessBlock5Count > 0)
+              _CardActionButton(
+                icon: '⏱️',
+                label: 'חסום ניחוש 5 שניות',
+                count: widget.guessBlock5Count,
+                color: const Color(0xFF1A6CB0),
+                busy: _busy,
+                onTap: () => _useGuessBlock(false),
+              ),
+            if (widget.guessBlock10Count > 0) ...[
+              const SizedBox(height: 10),
+              _CardActionButton(
+                icon: '⏱️',
+                label: 'חסום ניחוש 10 שניות',
+                count: widget.guessBlock10Count,
+                color: const Color(0xFF0A4A8A),
+                busy: _busy,
+                onTap: () => _useGuessBlock(true),
+              ),
+            ],
+            if (widget.blackoutCardCount > 0) ...[
+              const SizedBox(height: 10),
+              _CardActionButton(
+                icon: '🌑',
+                label: 'השחר מסך 5 שניות',
+                count: widget.blackoutCardCount,
+                color: const Color(0xFF1A0A2E),
+                busy: _busy,
+                onTap: _useBlackout,
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CardActionButton extends StatelessWidget {
+  final String icon;
+  final String label;
+  final int count;
+  final Color color;
+  final bool busy;
+  final VoidCallback onTap;
+
+  const _CardActionButton({
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.color,
+    required this.busy,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: busy ? null : onTap,
+      child: AnimatedOpacity(
+        opacity: busy ? 0.5 : 1.0,
+        duration: const Duration(milliseconds: 180),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.75),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withOpacity(0.15), width: 0.8),
+          ),
+          child: Row(
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'x$count',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Discovered micro badge ────────────────────────────────────────────────────
+
+class _DiscoveredMicroBadge extends StatelessWidget {
+  final int count;
+  const _DiscoveredMicroBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: const Color(0xFF04101E),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFF4A8BAA).withOpacity(0.5), width: 0.7),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.14),
-            ),
-            child: Center(
-              child: Text(initial,
-                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900, height: 1)),
+          const Text('🌍', style: TextStyle(fontSize: 7)),
+          const SizedBox(width: 1),
+          Text(
+            '$count',
+            style: const TextStyle(
+              color: Color(0xFF87CEEB),
+              fontSize: 8,
+              fontWeight: FontWeight.w900,
+              height: 1,
             ),
           ),
-          const SizedBox(width: 4),
-          Text('${player.score}',
-              style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 11, fontWeight: FontWeight.w900)),
         ],
       ),
     );
   }
 }
 
-// Prize Potential chip — shows actual achievable coins from RewardCalculator.
-// Animates on every reveal: scale pulse + orange flash + lateral shake.
-class _PrizePotentialChip extends StatefulWidget {
+// ── Pot chip ──────────────────────────────────────────────────────────────────
+
+class _PotChip extends StatelessWidget {
+  final int potTotal;
+  const _PotChip({required this.potTotal});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1000).withOpacity(0.85),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFFB300).withOpacity(0.75), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🏆', style: TextStyle(fontSize: 11)),
+          const SizedBox(width: 3),
+          Text(
+            '$potTotal',
+            style: const TextStyle(
+              color: Color(0xFFFFE14D),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Prize potential chip ──────────────────────────────────────────────────────
+
+class _BonusPreviewChip extends StatefulWidget {
   final bool isSolo;
   final int revealedCount;
   final int totalTiles;
 
-  const _PrizePotentialChip({
+  const _BonusPreviewChip({
     required this.isSolo,
     required this.revealedCount,
     required this.totalTiles,
   });
 
   @override
-  State<_PrizePotentialChip> createState() => _PrizePotentialChipState();
+  State<_BonusPreviewChip> createState() => _BonusPreviewChipState();
 }
 
-class _PrizePotentialChipState extends State<_PrizePotentialChip>
+class _BonusPreviewChipState extends State<_BonusPreviewChip>
     with SingleTickerProviderStateMixin {
   late AnimationController _anim;
   late Animation<double> _scale;
@@ -376,10 +693,7 @@ class _PrizePotentialChipState extends State<_PrizePotentialChip>
   @override
   void initState() {
     super.initState();
-    _anim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 480),
-    );
+    _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 480));
     _scale = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.84), weight: 28),
       TweenSequenceItem(tween: Tween(begin: 0.84, end: 1.0), weight: 72),
@@ -396,11 +710,9 @@ class _PrizePotentialChipState extends State<_PrizePotentialChip>
   }
 
   @override
-  void didUpdateWidget(_PrizePotentialChip old) {
+  void didUpdateWidget(_BonusPreviewChip old) {
     super.didUpdateWidget(old);
-    if (widget.revealedCount > old.revealedCount) {
-      _anim.forward(from: 0.0);
-    }
+    if (widget.revealedCount > old.revealedCount) _anim.forward(from: 0.0);
   }
 
   @override
@@ -438,47 +750,35 @@ class _PrizePotentialChipState extends State<_PrizePotentialChip>
 
     return AnimatedBuilder(
       animation: _anim,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(_shake.value, 0),
-          child: Transform.scale(
-            scale: _scale.value,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              decoration: BoxDecoration(
-                color: _flashOpacity.value > 0.01
-                    ? const Color(0xFFFF6B35).withOpacity(_flashOpacity.value)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(5),
-              ),
-              child: child,
+      builder: (context, child) => Transform.translate(
+        offset: Offset(_shake.value, 0),
+        child: Transform.scale(
+          scale: _scale.value,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(
+              color: _flashOpacity.value > 0.01
+                  ? const Color(0xFFFF6B35).withOpacity(_flashOpacity.value)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(5),
             ),
+            child: child,
           ),
-        );
-      },
+        ),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           if (pressureLabel != null)
-            Text(
-              pressureLabel,
-              style: const TextStyle(
-                color: Color(0xFFFF3B30),
-                fontSize: 8,
-                fontWeight: FontWeight.w900,
-                height: 1.1,
-              ),
-            ),
-          Text(
-            'פרס $coins 🪙',
-            style: TextStyle(
-              color: valueColor,
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-              height: 1,
-            ),
-          ),
+            Text(pressureLabel,
+                style: const TextStyle(
+                    color: Color(0xFFFF3B30),
+                    fontSize: 8,
+                    fontWeight: FontWeight.w900,
+                    height: 1.1)),
+          Text('+$coins 🔥',
+              style: TextStyle(color: valueColor, fontSize: 10, fontWeight: FontWeight.w900, height: 1)),
         ],
       ),
     );

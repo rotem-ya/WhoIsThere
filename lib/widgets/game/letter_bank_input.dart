@@ -40,10 +40,9 @@ class _LetterBankInputState extends State<LetterBankInput> {
   late List<String?> _filled;
   bool _isSubmitting = false;
   bool _showError = false;
-  bool _undoUsed = false;
 
   bool get _isComplete => _filled.every((v) => v != null);
-  bool get _canUndo => widget.enabled && !_isSubmitting && !_undoUsed && _filled.any((v) => v != null);
+  bool get _canClear => widget.enabled && !_isSubmitting && _filled.any((v) => v != null);
 
   @override
   void initState() {
@@ -73,7 +72,6 @@ class _LetterBankInputState extends State<LetterBankInput> {
     _filled = List<String?>.filled(math.max(1, total), null);
     _isSubmitting = false;
     _showError = false;
-    _undoUsed = false;
   }
 
   void _tapLetter(String letter) {
@@ -84,22 +82,21 @@ class _LetterBankInputState extends State<LetterBankInput> {
     setState(() {
       _filled[idx] = letter;
       _showError = false;
-      _undoUsed = false;
     });
   }
 
-  void _undoLastLetter() {
-    if (!_canUndo) return;
-    for (var i = _filled.length - 1; i >= 0; i--) {
-      if (_filled[i] == null) continue;
-      HapticFeedback.mediumImpact();
-      setState(() {
-        _filled[i] = null;
-        _showError = false;
-        _undoUsed = true;
-      });
-      return;
-    }
+  void _deleteOne() {
+    if (!_canClear) return;
+    HapticFeedback.lightImpact();
+    setState(() {
+      for (var i = _filled.length - 1; i >= 0; i--) {
+        if (_filled[i] != null) {
+          _filled[i] = null;
+          break;
+        }
+      }
+      _showError = false;
+    });
   }
 
   Future<void> _submit() async {
@@ -118,7 +115,6 @@ class _LetterBankInputState extends State<LetterBankInput> {
       _showError = !ok;
       if (!ok) {
         _filled = List<String?>.filled(_filled.length, null);
-        _undoUsed = false;
       }
     });
     if (!ok) {
@@ -131,38 +127,31 @@ class _LetterBankInputState extends State<LetterBankInput> {
   @override
   Widget build(BuildContext context) {
     final enabled = widget.enabled && !_isSubmitting;
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _AnswerSlots(filled: _filled, wordLengths: _wordLengths),
-              SizedBox(
-                height: 22,
-                child: AnimatedOpacity(
-                  opacity: _showError ? 1 : 0,
-                  duration: const Duration(milliseconds: 150),
-                  child: const Center(
-                    child: Text(
-                      'לא נכון, התור עובר',
-                      style: TextStyle(color: _goldLight, fontSize: 12, fontWeight: FontWeight.w900),
-                    ),
-                  ),
-                ),
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _AnswerSlots(filled: _filled, wordLengths: _wordLengths),
+        SizedBox(
+          height: 22,
+          child: AnimatedOpacity(
+            opacity: _showError ? 1 : 0,
+            duration: const Duration(milliseconds: 150),
+            child: const Center(
+              child: Text(
+                'לא נכון, התור עובר',
+                style: TextStyle(color: _goldLight, fontSize: 12, fontWeight: FontWeight.w900),
               ),
-              const SizedBox(height: 10),
-              _HebrewKeyboard(enabled: enabled, onLetter: _tapLetter),
-              const SizedBox(height: 10),
-              _UndoAction(enabled: _canUndo, onTap: _undoLastLetter),
-              const SizedBox(height: 10),
-              _SubmitAction(enabled: enabled && _isComplete, isSubmitting: _isSubmitting, onTap: _submit),
-            ],
+            ),
           ),
         ),
-      ),
+        const SizedBox(height: 8),
+        _HebrewKeyboard(enabled: enabled, onLetter: _tapLetter),
+        const SizedBox(height: 8),
+        _ClearAction(enabled: _canClear, onTap: _deleteOne),
+        const SizedBox(height: 8),
+        _SubmitAction(enabled: enabled && _isComplete, isSubmitting: _isSubmitting, onTap: _submit),
+      ],
     );
   }
 }
@@ -311,11 +300,11 @@ class _LetterKey extends StatelessWidget {
       );
 }
 
-class _UndoAction extends StatelessWidget {
+class _ClearAction extends StatelessWidget {
   final bool enabled;
   final VoidCallback onTap;
 
-  const _UndoAction({required this.enabled, required this.onTap});
+  const _ClearAction({required this.enabled, required this.onTap});
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -323,8 +312,8 @@ class _UndoAction extends StatelessWidget {
         height: 48,
         child: OutlinedButton.icon(
           onPressed: enabled ? onTap : null,
-          icon: const Icon(Icons.undo_rounded, size: 22),
-          label: const Text('בטל פעולה', maxLines: 1, overflow: TextOverflow.visible),
+          icon: const Icon(Icons.backspace_rounded, size: 20),
+          label: const Text('מחק', maxLines: 1, overflow: TextOverflow.visible),
           style: OutlinedButton.styleFrom(
             foregroundColor: enabled ? const Color(0xFFFFE082) : Colors.white38,
             disabledForegroundColor: Colors.white38,

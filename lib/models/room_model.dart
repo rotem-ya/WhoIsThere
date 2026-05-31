@@ -32,6 +32,18 @@ class RoomModel extends Equatable {
   final int? guessModeDeadlineMs;
   final Map<String, int> wrongGuessCounts;
   final int revealCycleId;
+  final int revealCount;
+  final Map<String, int> blockedGuessers;
+  final int entryFee;
+  final int potTotal;
+  final Map<String, int> guessClaimCounts;
+  final List<String> entryFeePaidPlayerIds;
+  final String cardSkinId;
+  final int? pendingRevealTileIndex;
+  final Map<String, int> guessBlockedUntilMs;   // uid → epoch ms when block expires
+  final Map<String, int> blackoutActiveUntilMs;  // uid → epoch ms when blackout expires
+  final bool isPublicRoom;
+  final int playerRound;
 
   const RoomModel({
     required this.id,
@@ -62,7 +74,25 @@ class RoomModel extends Equatable {
     this.guessModeDeadlineMs,
     this.wrongGuessCounts = const {},
     this.revealCycleId = 0,
+    this.revealCount = 0,
+    this.blockedGuessers = const {},
+    this.entryFee = 0,
+    this.potTotal = 0,
+    this.guessClaimCounts = const {},
+    this.entryFeePaidPlayerIds = const [],
+    this.cardSkinId = 'default',
+    this.pendingRevealTileIndex,
+    this.guessBlockedUntilMs = const {},
+    this.blackoutActiveUntilMs = const {},
+    this.isPublicRoom = false,
+    this.playerRound = 0,
   });
+
+  bool isBlockedFromGuessing(String userId) {
+    final blockedUntil = blockedGuessers[userId];
+    if (blockedUntil == null) return false;
+    return revealCount < blockedUntil;
+  }
 
   String? get currentTurnUserId {
     final activePlayers = turnOrder
@@ -102,6 +132,16 @@ class RoomModel extends Equatable {
         data['wrongGuessCounts'] as Map<String, dynamic>? ?? {};
     final wrongGuessCounts =
         wrongGuessCountsRaw.map((k, v) => MapEntry(k, (v as num).toInt()));
+
+    final blockedGuessersRaw =
+        data['blockedGuessers'] as Map<String, dynamic>? ?? {};
+    final blockedGuessers =
+        blockedGuessersRaw.map((k, v) => MapEntry(k, (v as num).toInt()));
+
+    final guessClaimCountsRaw =
+        data['guessClaimCounts'] as Map<String, dynamic>? ?? {};
+    final guessClaimCounts =
+        guessClaimCountsRaw.map((k, v) => MapEntry(k, (v as num).toInt()));
 
     return RoomModel(
       id: doc.id,
@@ -145,6 +185,22 @@ class RoomModel extends Equatable {
       guessModeDeadlineMs: (data['guessModeDeadlineMs'] as num?)?.toInt(),
       wrongGuessCounts: wrongGuessCounts,
       revealCycleId: (data['revealCycleId'] as num?)?.toInt() ?? 0,
+      revealCount: (data['revealCount'] as num?)?.toInt() ?? 0,
+      blockedGuessers: blockedGuessers,
+      entryFee: (data['entryFee'] as num?)?.toInt() ?? 0,
+      potTotal: (data['potTotal'] as num?)?.toInt() ?? 0,
+      guessClaimCounts: guessClaimCounts,
+      entryFeePaidPlayerIds: List<String>.from(data['entryFeePaidPlayerIds'] ?? []),
+      cardSkinId: data['cardSkinId'] as String? ?? 'default',
+      pendingRevealTileIndex: (data['pendingRevealTileIndex'] as num?)?.toInt(),
+      guessBlockedUntilMs: Map<String, dynamic>.from(
+              data['guessBlockedUntilMs'] as Map? ?? {})
+          .map((k, v) => MapEntry(k, (v as num).toInt())),
+      blackoutActiveUntilMs: Map<String, dynamic>.from(
+              data['blackoutActiveUntilMs'] as Map? ?? {})
+          .map((k, v) => MapEntry(k, (v as num).toInt())),
+      isPublicRoom: data['isPublicRoom'] as bool? ?? false,
+      playerRound: (data['playerRound'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -176,6 +232,18 @@ class RoomModel extends Equatable {
         'guessModeDeadlineMs': guessModeDeadlineMs,
         'wrongGuessCounts': wrongGuessCounts,
         'revealCycleId': revealCycleId,
+        'revealCount': revealCount,
+        'blockedGuessers': blockedGuessers,
+        'entryFee': entryFee,
+        'potTotal': potTotal,
+        'guessClaimCounts': guessClaimCounts,
+        'entryFeePaidPlayerIds': entryFeePaidPlayerIds,
+        'cardSkinId': cardSkinId,
+        if (pendingRevealTileIndex != null) 'pendingRevealTileIndex': pendingRevealTileIndex,
+        'guessBlockedUntilMs': guessBlockedUntilMs,
+        'blackoutActiveUntilMs': blackoutActiveUntilMs,
+        'isPublicRoom': isPublicRoom,
+        'playerRound': playerRound,
       };
 
   RoomModel copyWith({
@@ -203,6 +271,18 @@ class RoomModel extends Equatable {
     int? guessModeDeadlineMs,
     Map<String, int>? wrongGuessCounts,
     int? revealCycleId,
+    int? revealCount,
+    Map<String, int>? blockedGuessers,
+    int? entryFee,
+    int? potTotal,
+    Map<String, int>? guessClaimCounts,
+    List<String>? entryFeePaidPlayerIds,
+    String? cardSkinId,
+    int? pendingRevealTileIndex,
+    Map<String, int>? guessBlockedUntilMs,
+    Map<String, int>? blackoutActiveUntilMs,
+    bool? isPublicRoom,
+    int? playerRound,
   }) =>
       RoomModel(
         id: id,
@@ -237,6 +317,18 @@ class RoomModel extends Equatable {
         guessModeDeadlineMs: guessModeDeadlineMs ?? this.guessModeDeadlineMs,
         wrongGuessCounts: wrongGuessCounts ?? this.wrongGuessCounts,
         revealCycleId: revealCycleId ?? this.revealCycleId,
+        revealCount: revealCount ?? this.revealCount,
+        blockedGuessers: blockedGuessers ?? this.blockedGuessers,
+        entryFee: entryFee ?? this.entryFee,
+        potTotal: potTotal ?? this.potTotal,
+        guessClaimCounts: guessClaimCounts ?? this.guessClaimCounts,
+        entryFeePaidPlayerIds: entryFeePaidPlayerIds ?? this.entryFeePaidPlayerIds,
+        cardSkinId: cardSkinId ?? this.cardSkinId,
+        pendingRevealTileIndex: pendingRevealTileIndex ?? this.pendingRevealTileIndex,
+        guessBlockedUntilMs: guessBlockedUntilMs ?? this.guessBlockedUntilMs,
+        blackoutActiveUntilMs: blackoutActiveUntilMs ?? this.blackoutActiveUntilMs,
+        isPublicRoom: isPublicRoom ?? this.isPublicRoom,
+        playerRound: playerRound ?? this.playerRound,
       );
 
   @override
@@ -265,5 +357,15 @@ class RoomModel extends Equatable {
         guessModeDeadlineMs,
         wrongGuessCounts,
         revealCycleId,
+        revealCount,
+        blockedGuessers,
+        entryFee,
+        potTotal,
+        guessClaimCounts,
+        entryFeePaidPlayerIds,
+        cardSkinId,
+        pendingRevealTileIndex,
+        guessBlockedUntilMs,
+        blackoutActiveUntilMs,
       ];
 }

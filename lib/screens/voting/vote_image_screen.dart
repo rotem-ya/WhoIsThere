@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
@@ -88,7 +89,12 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
           ImageCategory.landmark,
         ];
 
-        return AppScaffold(
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) {
+            if (!didPop) context.go('/home');
+          },
+          child: AppScaffold(
           backgroundGradient: AppStyles.backgroundGradient,
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
@@ -99,6 +105,7 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                   icon: const Icon(Icons.exit_to_app_rounded,
                       color: Colors.white),
                   onPressed: () async {
+                    HapticFeedback.lightImpact();
                     await ref
                         .read(roomServiceProvider)
                         .leaveRoom(widget.roomId, currentUser.id);
@@ -130,8 +137,10 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                           votes: votes,
                           locked: myVote != null,
                           onTap: myVote == null
-                              ? () => setState(
-                                  () => _selectedCategory = category.name)
+                              ? () {
+                                  HapticFeedback.lightImpact();
+                                  setState(() => _selectedCategory = category.name);
+                                }
                               : null,
                         ),
                       ),
@@ -159,7 +168,8 @@ class _VoteImageScreenState extends ConsumerState<VoteImageScreen> {
                 ),
             ],
           ),
-        );
+        ), // AppScaffold
+        ); // PopScope
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),

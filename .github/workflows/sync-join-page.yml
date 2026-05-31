@@ -1,0 +1,31 @@
+name: Sync join page → apps-share-pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/join.html
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Push join page to apps-share-pages
+        env:
+          PAGES_TOKEN: ${{ secrets.PAGES_SYNC_TOKEN }}
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+          git clone https://x-access-token:$PAGES_TOKEN@github.com/rotem-ya/apps-share-pages.git /tmp/pages
+
+          mkdir -p /tmp/pages/whoisthere/join
+          cp docs/join.html /tmp/pages/whoisthere/join/index.html
+
+          cd /tmp/pages
+          git add whoisthere/join/index.html
+          git diff --staged --quiet && echo "No changes, skipping." && exit 0
+          git commit -m "sync: WhoIsThere join page (${GITHUB_SHA::7})"
+          git push

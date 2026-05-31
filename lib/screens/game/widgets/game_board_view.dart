@@ -1,11 +1,13 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../utils/game_constants.dart';
-import '../../../widgets/game/aperture_tile.dart';
+import '../../../widgets/game/vault_cover.dart';
 
 const Duration _kApertureDuration = Duration(milliseconds: 600);
 
@@ -17,6 +19,11 @@ class GameBoardView extends StatefulWidget {
   final bool enabled;
   final bool glowEnabled;
   final void Function(int)? onReveal;
+  final String cardSkinId;
+  final int? pendingRevealTileIndex;
+  final int? revealDeadlineMs;
+
+  final VoidCallback? onTapRevealed;
 
   const GameBoardView({
     super.key,
@@ -27,6 +34,10 @@ class GameBoardView extends StatefulWidget {
     required this.enabled,
     required this.glowEnabled,
     required this.onReveal,
+    this.onTapRevealed,
+    this.cardSkinId = 'default',
+    this.pendingRevealTileIndex,
+    this.revealDeadlineMs,
   });
 
   @override
@@ -58,10 +69,10 @@ class _GameBoardViewState extends State<GameBoardView> {
             height: side,
             padding: const EdgeInsets.all(1),
             decoration: BoxDecoration(
-              color: kNavyBlack,
+              color: const Color(0xFF0A1A2E),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: widget.enabled ? kCyan.withOpacity(0.15) : Colors.transparent,
+                color: widget.enabled ? kCyan.withOpacity(0.55) : Colors.transparent,
                 width: 1,
               ),
             ),
@@ -88,6 +99,10 @@ class _GameBoardViewState extends State<GameBoardView> {
                         isAvailable: widget.availableCells.contains(index),
                         enabled: widget.enabled,
                         onReveal: widget.onReveal != null ? _handleReveal : null,
+                        onTapRevealed: widget.onTapRevealed,
+                        cardSkinId: widget.cardSkinId,
+                        isPendingReveal: index == widget.pendingRevealTileIndex,
+                        revealDeadlineMs: widget.revealDeadlineMs,
                       ),
                   ],
                 ),
@@ -109,6 +124,10 @@ class _Tile extends StatefulWidget {
   final bool isAvailable;
   final bool enabled;
   final void Function(int)? onReveal;
+  final VoidCallback? onTapRevealed;
+  final String cardSkinId;
+  final bool isPendingReveal;
+  final int? revealDeadlineMs;
 
   const _Tile({
     required this.index,
@@ -119,16 +138,87 @@ class _Tile extends StatefulWidget {
     required this.isAvailable,
     required this.enabled,
     required this.onReveal,
+    this.onTapRevealed,
+    this.cardSkinId = 'default',
+    this.isPendingReveal = false,
+    this.revealDeadlineMs,
   });
 
   @override
   State<_Tile> createState() => _TileState();
 }
 
-class _TileState extends State<_Tile> {
+class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
   bool _pressed = false;
+  late AnimationController _popCtrl;
+  late Animation<double> _popScale;
+  Timer? _countdownTimer;
+  int _secondsLeft = 10;
 
-  bool get _canTap => widget.enabled && widget.isAvailable && !widget.isRevealed && widget.onReveal != null;
+  @override
+  void initState() {
+    super.initState();
+    _popCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+    // Bounce: 1.0 → 1.10 → 0.96 → 1.0
+    _popScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.10), weight: 28),
+      TweenSequenceItem(tween: Tween(begin: 1.10, end: 0.96), weight: 32),
+      TweenSequenceItem(tween: Tween(begin: 0.96, end: 1.0), weight: 40),
+    ]).animate(_popCtrl);
+    if (widget.isPendingReveal) _startCountdown();
+  }
+
+  @override
+  void didUpdateWidget(_Tile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isRevealed && !oldWidget.isRevealed) {
+      _popCtrl.forward(from: 0.0);
+    }
+    if (widget.isPendingReveal && !oldWidget.isPendingReveal) {
+      _startCountdown();
+    } else if (!widget.isPendingReveal && oldWidget.isPendingReveal) {
+      _stopCountdown();
+    } else if (widget.isPendingReveal && widget.revealDeadlineMs != oldWidget.revealDeadlineMs) {
+      _updateSecondsLeft();
+    }
+  }
+
+  void _startCountdown() {
+    _updateSecondsLeft();
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (mounted) _updateSecondsLeft();
+    });
+  }
+
+  void _updateSecondsLeft() {
+    final deadline = widget.revealDeadlineMs;
+    if (deadline == null) return;
+    final remaining = deadline - DateTime.now().millisecondsSinceEpoch;
+    final secs = (remaining / 1000).ceil().clamp(0, 10);
+    if (mounted && secs != _secondsLeft) setState(() => _secondsLeft = secs);
+  }
+
+  void _stopCountdown() {
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    _popCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _canTap =>
+      widget.enabled &&
+      widget.isAvailable &&
+      !widget.isRevealed &&
+      widget.onReveal != null;
 
   void _setPressed(bool value) {
     if (_pressed == value) return;
@@ -145,8 +235,12 @@ class _TileState extends State<_Tile> {
       top: row * widget.tileSize,
       width: widget.tileSize,
       height: widget.tileSize,
-      child: Padding(
-        padding: const EdgeInsets.all(2),
+      child: AnimatedBuilder(
+        animation: _popScale,
+        builder: (context, child) => Transform.scale(
+          scale: _pressed ? kTapScale : _popScale.value,
+          child: child,
+        ),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: _canTap
@@ -154,7 +248,12 @@ class _TileState extends State<_Tile> {
                   HapticFeedback.lightImpact();
                   _setPressed(true);
                 }
-              : null,
+              : widget.isRevealed
+                  ? (_) {
+                      HapticFeedback.selectionClick();
+                      widget.onTapRevealed?.call();
+                    }
+                  : (_) => HapticFeedback.selectionClick(),
           onTapCancel: () => _setPressed(false),
           onTapUp: _canTap
               ? (_) {
@@ -162,38 +261,28 @@ class _TileState extends State<_Tile> {
                   widget.onReveal!(widget.index);
                 }
               : null,
-          child: AnimatedOpacity(
-            duration: kRevealDuration,
-            opacity: 1.0,
-            child: TweenAnimationBuilder<double>(
-              key: ValueKey(widget.index),
-              tween: Tween<double>(begin: widget.isRevealed ? 1.08 : 1.0, end: 1.0),
-              duration: kRevealDuration,
-              curve: Curves.easeOutCubic,
-              builder: (context, revealScale, child) {
-                return AnimatedScale(
-                  scale: _pressed ? kTapScale : revealScale,
-                  duration: const Duration(milliseconds: 100),
-                  curve: Curves.easeOutCubic,
-                  child: child,
-                );
-              },
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: widget.isRevealed
-                      ? [
-                          BoxShadow(
-                            color: kCyan.withOpacity(0.22),
-                            blurRadius: 14,
-                            spreadRadius: 1,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: ApertureTile(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            decoration: BoxDecoration(
+              border: _canTap
+                  ? Border.all(color: kCyan.withOpacity(0.80), width: 1.5)
+                  : null,
+              boxShadow: _canTap
+                  ? [
+                      BoxShadow(
+                        color: kCyan.withOpacity(0.40),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Stack(
+              children: [
+                VaultCover(
                   isRevealed: widget.isRevealed,
                   isFocused: _canTap,
+                  cardSkinId: widget.cardSkinId,
                   child: _ImageSlice(
                     index: widget.index,
                     gridSize: widget.gridSize,
@@ -201,7 +290,14 @@ class _TileState extends State<_Tile> {
                     imageUrl: widget.imageUrl,
                   ),
                 ),
-              ),
+                if (widget.isPendingReveal && !widget.isRevealed)
+                  Positioned.fill(
+                    child: _CountdownOverlay(
+                      secondsLeft: _secondsLeft,
+                      tileSize: widget.tileSize,
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
@@ -209,6 +305,71 @@ class _TileState extends State<_Tile> {
     );
   }
 }
+
+// ── Countdown overlay ────────────────────────────────────────────────────────
+
+class _CountdownOverlay extends StatelessWidget {
+  final int secondsLeft;
+  final double tileSize;
+
+  const _CountdownOverlay({required this.secondsLeft, required this.tileSize});
+
+  @override
+  Widget build(BuildContext context) {
+    final isUrgent = secondsLeft <= 2;
+    final ringColor = isUrgent ? AppColors.danger : AppColors.primary;
+    final ringSize = tileSize * 0.60;
+
+    return Container(
+      color: const Color(0xF0050A14),
+      child: Center(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: ringSize,
+              height: ringSize,
+              child: CircularProgressIndicator(
+                value: secondsLeft / 10.0,
+                strokeWidth: tileSize * 0.055,
+                backgroundColor: Colors.white12,
+                valueColor: AlwaysStoppedAnimation<Color>(ringColor),
+                strokeCap: StrokeCap.round,
+              ),
+            ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              transitionBuilder: (child, anim) => ScaleTransition(
+                scale: Tween<double>(begin: 0.5, end: 1.0).animate(
+                  CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+                ),
+                child: FadeTransition(opacity: anim, child: child),
+              ),
+              child: Text(
+                '$secondsLeft',
+                key: ValueKey(secondsLeft),
+                style: TextStyle(
+                  color: ringColor,
+                  fontSize: tileSize * 0.34,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                  shadows: [
+                    Shadow(
+                      color: ringColor.withOpacity(0.55),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Image slice ───────────────────────────────────────────────────────────────
 
 class _ImageSlice extends StatelessWidget {
   final int index;

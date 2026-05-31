@@ -12,6 +12,15 @@ enum TransactionType {
   wrongGuessPenalty,
   guessTimeoutPenalty,
   stabilityCompensation,
+  roomEntryFee,
+  guessClaimFee,
+  wrongGuessPotPenalty,
+  potWin,
+  potRefund,
+  stunCardPurchase,
+  guessBlock5Purchase,
+  guessBlock10Purchase,
+  blackoutCardPurchase,
 }
 
 class EconomyTransactionModel {

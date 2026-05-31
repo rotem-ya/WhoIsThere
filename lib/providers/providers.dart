@@ -10,6 +10,7 @@ import '../services/hint_economy_guard.dart';
 import '../services/local_economy_cache.dart';
 import '../services/qa_logger_service.dart';
 import '../services/room_service.dart';
+import '../services/settings_service.dart';
 import '../models/user_model.dart';
 import '../models/room_model.dart';
 import '../models/game_image_model.dart';
@@ -35,13 +36,31 @@ final hintEconomyGuardProvider = Provider<HintEconomyGuard>(
   (ref) => HintEconomyGuard(ref.watch(economyServiceProvider)),
 );
 
-// Wallet stream for the currently authenticated user
-final walletProvider = StreamProvider.autoDispose<UserEconomyModel?>((ref) {
+// Fires true exactly once when the onboarding wallet grant succeeds (first install).
+final firstTimeBonusProvider = StateProvider<bool>((ref) => false);
+
+// Wallet stream for the currently authenticated user.
+// Not autoDispose — keeps the ref alive so initWallet's .then() always runs.
+final walletProvider = StreamProvider<UserEconomyModel?>((ref) {
   final userAsync = ref.watch(firebaseUserProvider);
   return userAsync.maybeWhen(
     data: (user) {
       if (user == null) return Stream.value(null);
-      return ref.watch(economyServiceProvider).walletStream(user.uid);
+      ref
+          .read(economyServiceProvider)
+          .initWallet(user.uid)
+          .then(
+            (granted) {
+              QaLoggerService.instance.log('ECONOMY', 'INIT_WALLET_THEN granted=$granted');
+              if (granted) {
+                ref.read(firstTimeBonusProvider.notifier).state = true;
+              }
+            },
+            onError: (e) {
+              QaLoggerService.instance.log('ECONOMY', 'INIT_WALLET_THEN_ERROR ${e.toString().substring(0, e.toString().length.clamp(0, 60))}');
+            },
+          );
+      return ref.read(economyServiceProvider).walletStream(user.uid);
     },
     orElse: () => Stream.value(null),
   );
@@ -53,7 +72,18 @@ final firebaseUserProvider = StreamProvider<User?>((ref) {
 });
 
 final currentUserProvider = StreamProvider<UserModel?>((ref) {
-  return ref.watch(authServiceProvider).userModelStream();
+  // Drive off the canonical auth stream (firebaseUserProvider) so this can
+  // never diverge from the live SDK uid after an auth transition. The previous
+  // design opened its OWN authStateChanges subscription inside
+  // userModelStream(); if a Pigeon TypeError was swallowed mid-transition, it
+  // could stay stuck on the stale (pre-link) UserModel. That stale id was
+  // then written as a room's hostId and failed the Firestore create rule
+  // (hostId == request.auth.uid) → permission-denied. Watching
+  // firebaseUserProvider ties currentUserProvider to the exact same source as
+  // walletProvider so they always agree on who the user is.
+  final authUser = ref.watch(firebaseUserProvider).valueOrNull;
+  if (authUser == null) return Stream.value(null);
+  return ref.watch(authServiceProvider).userModelStreamForUid(authUser.uid);
 });
 
 // Deep-link join code — set by AppLinks handler, consumed by JoinRoomScreen
@@ -163,3 +193,89 @@ final turnStateProvider =
     StateNotifierProvider<TurnStateNotifier, TurnState>(
   (ref) => TurnStateNotifier(),
 );
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+
+class AppSettings {
+  final double musicVolume;
+  final double sfxVolume;
+  final bool vibrationEnabled;
+  // Previous non-zero volume, restored when un-muting
+  final double _prevMusicVolume;
+  final double _prevSfxVolume;
+
+  const AppSettings({
+    this.musicVolume = 1.0,
+    this.sfxVolume = 1.0,
+    this.vibrationEnabled = true,
+    double prevMusicVolume = 1.0,
+    double prevSfxVolume = 1.0,
+  })  : _prevMusicVolume = prevMusicVolume,
+        _prevSfxVolume = prevSfxVolume;
+
+  AppSettings copyWith({
+    double? musicVolume,
+    double? sfxVolume,
+    bool? vibrationEnabled,
+    double? prevMusicVolume,
+    double? prevSfxVolume,
+  }) =>
+      AppSettings(
+        musicVolume: musicVolume ?? this.musicVolume,
+        sfxVolume: sfxVolume ?? this.sfxVolume,
+        vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
+        prevMusicVolume: prevMusicVolume ?? _prevMusicVolume,
+        prevSfxVolume: prevSfxVolume ?? _prevSfxVolume,
+      );
+}
+
+class SettingsNotifier extends StateNotifier<AppSettings> {
+  final SettingsService _svc;
+
+  SettingsNotifier(this._svc)
+      : super(AppSettings(
+          musicVolume: _svc.musicVolume,
+          sfxVolume: _svc.sfxVolume,
+          vibrationEnabled: _svc.vibrationEnabled,
+          prevMusicVolume: _svc.musicVolume > 0 ? _svc.musicVolume : 1.0,
+          prevSfxVolume: _svc.sfxVolume > 0 ? _svc.sfxVolume : 1.0,
+        ));
+
+  void setMusicVolume(double v) {
+    final prev = v > 0 ? v : state._prevMusicVolume;
+    state = state.copyWith(musicVolume: v, prevMusicVolume: prev);
+    _svc.setMusicVolume(v).ignore();
+  }
+
+  void setSfxVolume(double v) {
+    final prev = v > 0 ? v : state._prevSfxVolume;
+    state = state.copyWith(sfxVolume: v, prevSfxVolume: prev);
+    _svc.setSfxVolume(v).ignore();
+  }
+
+  void setVibrationEnabled(bool v) {
+    state = state.copyWith(vibrationEnabled: v);
+    _svc.setVibrationEnabled(v).ignore();
+  }
+
+  void toggleMusicMute() {
+    if (state.musicVolume > 0) {
+      setMusicVolume(0);
+    } else {
+      setMusicVolume(state._prevMusicVolume);
+    }
+  }
+
+  void toggleSfxMute() {
+    if (state.sfxVolume > 0) {
+      setSfxVolume(0);
+    } else {
+      setSfxVolume(state._prevSfxVolume);
+    }
+  }
+}
+
+final settingsProvider =
+    StateNotifierProvider<SettingsNotifier, AppSettings>((ref) {
+  return SettingsNotifier(SettingsService.instance);
+});
