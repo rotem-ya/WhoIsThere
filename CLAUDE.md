@@ -8,6 +8,38 @@
 - ענף פיתוח: `claude/stability-compensation-logging-dkoQh`
 - מאגר: `rotem-ya/whoisthere`
 
+## דף הצטרפות לחדר (Join Page)
+
+### מיקום הקוד
+- **קובץ מקור**: `docs/join.html` בריפו WhoIsThere (הריפו הזה)
+- **כתובת פרודקשן**: `https://rotem-ya.github.io/apps-share-pages/whoisthere/join/?code=XXXXXX`
+- **קובץ יעד**: `whoisthere/join/index.html` בריפו `rotem-ya/apps-share-pages`
+
+### סנכרון אוטומטי
+קיים workflow בשם `sync-join-page.yml` שמסנכרן את הקובץ אוטומטית:
+- **טריגר**: push ל-`main` שמשנה את `docs/join.html`
+- **פעולה**: מעתיק את הקובץ ל-`apps-share-pages/whoisthere/join/index.html` ומבצע push
+
+### דרישה חד-פעמית: הגדרת Secret
+כדי שה-workflow יעבוד, נדרש GitHub Personal Access Token עם הרשאות `repo`:
+1. צור PAT ב-GitHub → Settings → Developer Settings → Personal Access Tokens → Fine-grained
+2. הרשאות: **Contents: Read & Write** על הריפו `apps-share-pages`
+3. הוסף כ-Secret בריפו WhoIsThere: **Settings → Secrets → Actions → New** → שם: `PAGES_SYNC_TOKEN`
+
+### עריכה ידנית (ללא Secret)
+אם ה-Secret לא מוגדר או ה-workflow נכשל:
+```bash
+# קלון apps-share-pages ידנית, עדכן, ודחף
+git clone https://github.com/rotem-ya/apps-share-pages.git /tmp/pages
+cp docs/join.html /tmp/pages/whoisthere/join/index.html
+cd /tmp/pages && git add . && git commit -m "sync join page" && git push
+```
+
+### גישת Claude למאגרים
+- Claude **יכול** לגשת רק ל-`rotem-ya/whoisthere` דרך MCP
+- Claude **אינו יכול** לדחוף ישירות ל-`apps-share-pages` — זה מטופל ע"י ה-workflow
+- עריכת הדף: ערוך `docs/join.html`, בצע push ל-main — ה-workflow ידאג לשאר
+
 ## חוקי עבודה — חובה לפעול לפיהם
 1. **משימה אחת בכל פעם** — לא מתחילים משימה הבאה לפני שהנוכחית הושלמה
 2. **אחרי כל משימה: verify + double-check** — בדיקה שהקוד תקין, לא שובר דברים אחרים
