@@ -100,7 +100,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               // ── Body ─────────────────────────────────────────────────
               Expanded(
-                child: Padding(
+                child: SingleChildScrollView(
                   padding: const EdgeInsets.only(bottom: AppSpacing.lg),
                   child: Column(
                     children: [

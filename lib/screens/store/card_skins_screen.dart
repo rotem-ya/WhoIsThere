@@ -73,7 +73,7 @@ class CardSkinsScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
             child: AppHeader(
-              title: 'עיצובי קלפים',
+              title: 'עיצוב קלפים',
               leading: IconButton(
                 icon:
                     const Icon(Icons.arrow_back_rounded, color: Colors.white),
@@ -98,6 +98,7 @@ class CardSkinsScreen extends ConsumerWidget {
               children: [
                 _SectionHeader(
                     label: 'חינמי',
+                    badge: 'חינם',
                     icon: Icons.star_outline_rounded,
                     color: const Color(0xFF8090B0)),
                 const SizedBox(height: AppSpacing.sm),
@@ -111,7 +112,8 @@ class CardSkinsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 _SectionHeader(
-                    label: 'בסיסי  50–150 🪙',
+                    label: 'בסיסי',
+                    badge: '50–150 🪙',
                     icon: Icons.palette_outlined,
                     color: const Color(0xFF4CA1AF)),
                 const SizedBox(height: AppSpacing.sm),
@@ -125,7 +127,8 @@ class CardSkinsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 _SectionHeader(
-                    label: 'נדיר  300–500 🪙',
+                    label: 'נדיר',
+                    badge: '300–500 🪙',
                     icon: Icons.auto_awesome_outlined,
                     color: const Color(0xFF00FFFF)),
                 const SizedBox(height: AppSpacing.sm),
@@ -139,7 +142,8 @@ class CardSkinsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 _SectionHeader(
-                    label: 'פרימיום  1000 🪙',
+                    label: 'פרימיום',
+                    badge: '1000 🪙',
                     icon: Icons.diamond_outlined,
                     color: const Color(0xFFFFD700)),
                 const SizedBox(height: AppSpacing.sm),
@@ -239,11 +243,13 @@ class CardSkinsScreen extends ConsumerWidget {
 
 class _SectionHeader extends StatelessWidget {
   final String label;
+  final String? badge;
   final IconData icon;
   final Color color;
 
   const _SectionHeader({
     required this.label,
+    this.badge,
     required this.icon,
     this.color = const Color(0xFFD4AF37),
   });
@@ -252,20 +258,39 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: color, size: 18),
+        Icon(icon, color: color, size: 16),
         const SizedBox(width: 6),
         Text(
           label,
           style: TextStyle(
             color: color,
             fontWeight: FontWeight.w800,
-            fontSize: 14,
+            fontSize: 13,
             letterSpacing: 0.3,
           ),
         ),
+        if (badge != null) ...[
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.14),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: color.withOpacity(0.35), width: 0.8),
+            ),
+            child: Text(
+              badge!,
+              style: TextStyle(
+                color: color.withOpacity(0.90),
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ],
         const SizedBox(width: 8),
         Expanded(
-          child: Container(height: 1, color: color.withOpacity(0.22)),
+          child: Container(height: 1, color: color.withOpacity(0.18)),
         ),
       ],
     );
@@ -300,7 +325,7 @@ class _SkinGrid extends StatelessWidget {
         crossAxisCount: 3,
         crossAxisSpacing: AppSpacing.sm,
         mainAxisSpacing: AppSpacing.sm,
-        childAspectRatio: 0.72,
+        childAspectRatio: 0.63,
       ),
       itemCount: skins.length,
       itemBuilder: (context, index) {
@@ -439,16 +464,17 @@ class _SkinTile extends StatelessWidget {
             // Name + badge row
             Padding(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
               child: Text(
                 skin.name,
                 textAlign: TextAlign.center,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
-                  fontSize: 12,
+                  fontSize: 11,
+                  height: 1.2,
                 ),
               ),
             ),
