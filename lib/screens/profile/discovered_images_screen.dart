@@ -114,6 +114,8 @@ class DiscoveredImagesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final allImagesAsync = ref.watch(allImagesProvider);
     final discoveredSet = discoveredImageIds.toSet();
+    final total = _placePositions.length;
+    final found = discoveredSet.intersection(_placePositions.keys.toSet()).length;
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
@@ -129,7 +131,44 @@ class DiscoveredImagesScreen extends ConsumerWidget {
               },
             ),
           ),
-          const SizedBox(height: 8),
+          // Progress bar + counter
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '$found / $total מקומות',
+                      style: const TextStyle(
+                        color: Color(0xFF00E5FF),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      '${(found / total * 100).round()}%',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.5),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: total > 0 ? found / total : 0,
+                    minHeight: 4,
+                    backgroundColor: Colors.white.withOpacity(0.08),
+                    valueColor: const AlwaysStoppedAnimation(Color(0xFF00E5FF)),
+                  ),
+                ),
+              ],
+            ),
+          ),
           if (discoveredSet.isEmpty)
             Expanded(
               child: Center(
@@ -172,6 +211,25 @@ class DiscoveredImagesScreen extends ConsumerWidget {
                 ),
               ),
             ),
+          // Zoom hint
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.pinch_rounded,
+                    size: 13, color: Colors.white.withOpacity(0.3)),
+                const SizedBox(width: 4),
+                Text(
+                  'צבוט להגדלה • לחץ על נקודה לפרטים',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.3),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -180,7 +238,7 @@ class DiscoveredImagesScreen extends ConsumerWidget {
 
 // ── Map view ──────────────────────────────────────────────────────────────────
 
-class _IsraelMapView extends StatelessWidget {
+class _IsraelMapView extends StatefulWidget {
   final Map<String, GameImageModel> imageMap;
   final Set<String> discoveredSet;
 
@@ -189,93 +247,137 @@ class _IsraelMapView extends StatelessWidget {
     required this.discoveredSet,
   });
 
-  void _onDotTap(BuildContext context, String placeId) {
-    if (!discoveredSet.contains(placeId)) return;
+  @override
+  State<_IsraelMapView> createState() => _IsraelMapViewState();
+}
+
+class _IsraelMapViewState extends State<_IsraelMapView> {
+  final _transformController = TransformationController();
+
+  @override
+  void dispose() {
+    _transformController.dispose();
+    super.dispose();
+  }
+
+  void _onDotTap(String placeId) {
+    if (!widget.discoveredSet.contains(placeId)) return;
     HapticFeedback.lightImpact();
-    final image = imageMap[placeId];
+    final image = widget.imageMap[placeId];
     if (image == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('תמונה אינה זמינה כרגע'),
-        duration: Duration(seconds: 2),
-        backgroundColor: Color(0xFF1A2A3A),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('תמונה אינה זמינה כרגע',
+              textAlign: TextAlign.center),
+          duration: const Duration(seconds: 2),
+          backgroundColor: const Color(0xFF1A2A3A),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
       return;
     }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      isScrollControlled: false,
+      isScrollControlled: true,
+      useRootNavigator: true,
       builder: (_) => _PlaceSheet(image: image),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
-        final h = constraints.maxHeight;
+    return InteractiveViewer(
+      transformationController: _transformController,
+      minScale: 0.8,
+      maxScale: 5.0,
+      boundaryMargin: const EdgeInsets.all(80),
+      child: LayoutBuilder(
+        builder: (ctx, constraints) {
+          final w = constraints.maxWidth;
+          final h = constraints.maxHeight;
+          final placeEntries = _placePositions.entries.toList();
 
-        final placeEntries = _placePositions.entries.toList();
-        return ClipRect(
-          child: Stack(
+          return Stack(
             children: [
-              // Neon map border — fades in
+              // Neon map background fill + border
               CustomPaint(
                 size: Size(w, h),
                 painter: _IsraelMapPainter(),
               ).animate().fadeIn(duration: 600.ms, curve: Curves.easeOut),
-              // Place dots — staggered reveal
+
+              // Place dots
               ...placeEntries.asMap().entries.map((indexed) {
                 final i = indexed.key;
-                final entry = indexed.value;
-                final id = entry.key;
-                final pos = entry.value;
-                final discovered = discoveredSet.contains(id);
+                final id = indexed.value.key;
+                final pos = indexed.value.value;
+                final discovered = widget.discoveredSet.contains(id);
                 final px = pos.dx * w;
                 final py = pos.dy * h;
-                const tapSize = 28.0;
-                final delayMs = discovered ? (260 + i * 18) : (60 + i * 8);
+                const tapSize = 36.0;
+                final delayMs = discovered ? (260 + i * 18) : (80 + i * 6);
+
                 return Positioned(
                   left: px - tapSize / 2,
                   top: py - tapSize / 2,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: () => _onDotTap(context, id),
+                    onTap: () => _onDotTap(id),
                     child: SizedBox(
                       width: tapSize,
                       height: tapSize,
                       child: Center(
-                        child: (discovered
-                                ? const _GlowDot(radius: 4.5)
-                                : const _DimDot(radius: 2.0))
-                            .animate(
-                              delay: Duration(milliseconds: delayMs),
-                            )
-                            .fadeIn(duration: 250.ms, curve: Curves.easeOut)
-                            .scaleXY(
-                              begin: 0.0,
-                              end: 1.0,
-                              duration: 300.ms,
-                              curve: Curves.elasticOut,
-                            ),
+                        child: discovered
+                            ? _GlowDot(radius: 6.0, hasImage: widget.imageMap.containsKey(id))
+                                .animate(delay: Duration(milliseconds: delayMs))
+                                .fadeIn(duration: 250.ms)
+                                .scaleXY(begin: 0.0, end: 1.0, duration: 350.ms, curve: Curves.elasticOut)
+                            : const _DimDot(radius: 2.5)
+                                .animate(delay: Duration(milliseconds: delayMs))
+                                .fadeIn(duration: 200.ms),
                       ),
                     ),
                   ),
                 );
               }),
-              // North indicator — appears last
+
+              // North indicator
               Positioned(
-                top: 6,
-                left: 6,
+                top: 8,
+                left: 8,
                 child: const _NorthIndicator()
-                    .animate(delay: 650.ms)
+                    .animate(delay: 700.ms)
                     .fadeIn(duration: 300.ms),
               ),
+
+              // Zoom reset button
+              Positioned(
+                bottom: 12,
+                right: 12,
+                child: GestureDetector(
+                  onTap: () {
+                    _transformController.value = Matrix4.identity();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF050D1A).withOpacity(0.85),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFF00E5FF).withOpacity(0.3),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: const Icon(Icons.fit_screen_rounded,
+                        color: Color(0xFF00E5FF), size: 16),
+                  ),
+                ).animate(delay: 700.ms).fadeIn(duration: 300.ms),
+              ),
             ],
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
@@ -296,29 +398,29 @@ class _IsraelMapPainter extends CustomPainter {
     }
     path.close();
 
-    // Dark fill
+    // Dark fill with subtle gradient feel
     canvas.drawPath(
       path,
       Paint()
-        ..color = const Color(0xFF050D1A)
+        ..color = const Color(0xFF061220)
         ..style = PaintingStyle.fill,
     );
 
-    // Outer glow
+    // Outer glow (wide, soft)
     canvas.drawPath(
       path,
       Paint()
-        ..color = const Color(0xFF00FFFF).withOpacity(0.12)
+        ..color = const Color(0xFF00FFFF).withOpacity(0.10)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 14.0
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+        ..strokeWidth = 18.0
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
     );
 
     // Mid glow
     canvas.drawPath(
       path,
       Paint()
-        ..color = const Color(0xFF00E5FF).withOpacity(0.38)
+        ..color = const Color(0xFF00E5FF).withOpacity(0.40)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 4.0
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
@@ -330,7 +432,7 @@ class _IsraelMapPainter extends CustomPainter {
       Paint()
         ..color = const Color(0xFF00E5FF)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
+        ..strokeWidth = 1.8
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
     );
@@ -344,26 +446,28 @@ class _IsraelMapPainter extends CustomPainter {
 
 class _GlowDot extends StatelessWidget {
   final double radius;
-  const _GlowDot({required this.radius});
+  final bool hasImage;
+  const _GlowDot({required this.radius, required this.hasImage});
 
   @override
   Widget build(BuildContext context) {
+    final color = hasImage ? const Color(0xFF00E5FF) : const Color(0xFF00FF88);
     return Container(
       width: radius * 2,
       height: radius * 2,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(0xFF00E5FF),
+        color: color,
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00FFFF).withOpacity(0.85),
+            color: color.withOpacity(0.90),
             blurRadius: 8,
             spreadRadius: 2,
           ),
           BoxShadow(
-            color: const Color(0xFF00FFFF).withOpacity(0.40),
-            blurRadius: 16,
-            spreadRadius: 4,
+            color: color.withOpacity(0.45),
+            blurRadius: 18,
+            spreadRadius: 5,
           ),
         ],
       ),
@@ -382,7 +486,7 @@ class _DimDot extends StatelessWidget {
       height: radius * 2,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white.withOpacity(0.18),
+        color: Colors.white.withOpacity(0.20),
       ),
     );
   }
@@ -396,23 +500,23 @@ class _NorthIndicator extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.45),
-        borderRadius: BorderRadius.circular(6),
+        color: Colors.black.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(7),
         border: Border.all(
-          color: const Color(0xFF00E5FF).withOpacity(0.35),
+          color: const Color(0xFF00E5FF).withOpacity(0.40),
           width: 0.8,
         ),
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.navigation_rounded, color: Color(0xFF00E5FF), size: 10),
+          Icon(Icons.navigation_rounded, color: Color(0xFF00E5FF), size: 11),
           SizedBox(width: 2),
           Text(
             'N',
             style: TextStyle(
               color: Color(0xFF00E5FF),
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -430,20 +534,21 @@ class _PlaceSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPad = MediaQuery.of(context).viewPadding.bottom;
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      margin: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomPad),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1A2E),
-        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF080F1E),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: const Color(0xFF00E5FF).withOpacity(0.35),
+          color: const Color(0xFF00E5FF).withOpacity(0.30),
           width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00FFFF).withOpacity(0.10),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
+            color: const Color(0xFF00FFFF).withOpacity(0.12),
+            blurRadius: 28,
+            offset: const Offset(0, -6),
           ),
         ],
       ),
@@ -452,62 +557,115 @@ class _PlaceSheet extends StatelessWidget {
         children: [
           // Handle
           Padding(
-            padding: const EdgeInsets.only(top: 10, bottom: 8),
+            padding: const EdgeInsets.only(top: 10, bottom: 10),
             child: Container(
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: Colors.white.withOpacity(0.20),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-          // Thumbnail
+          // Image
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: image.thumbnailUrl.isNotEmpty
-                  ? _PlaceImage(url: image.thumbnailUrl)
-                  : const _SheetImagePlaceholder(),
-            ),
-          ),
-          // Name
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Text(
-              image.name.isNotEmpty ? image.name : image.answer,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
+              borderRadius: BorderRadius.circular(16),
+              child: Stack(
+                children: [
+                  image.thumbnailUrl.isNotEmpty
+                      ? _PlaceImage(url: image.thumbnailUrl)
+                      : const _SheetImagePlaceholder(),
+                  // Gradient overlay at bottom
+                  Positioned(
+                    bottom: 0, left: 0, right: 0,
+                    child: Container(
+                      height: 60,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            const Color(0xFF080F1E).withOpacity(0.85),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Name overlaid on image
+                  Positioned(
+                    bottom: 10,
+                    left: 12,
+                    right: 12,
+                    child: Text(
+                      image.name.isNotEmpty ? image.name : image.answer,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        shadows: [
+                          Shadow(color: Colors.black, blurRadius: 8),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          // Close
+          // Answer / hint row
+          if (image.answer.isNotEmpty && image.answer != image.name)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('📍', style: TextStyle(fontSize: 13)),
+                  const SizedBox(width: 5),
+                  Text(
+                    image.answer,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.65),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          // Close button
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
                 width: double.infinity,
-                height: 40,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00E5FF).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFF00E5FF).withOpacity(0.28),
-                    width: 0.8,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF003E5A), Color(0xFF005E80)],
                   ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFF00E5FF).withOpacity(0.35),
+                    width: 0.9,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF00FFFF).withOpacity(0.15),
+                      blurRadius: 8,
+                    ),
+                  ],
                 ),
                 child: const Center(
                   child: Text(
                     'סגור',
                     style: TextStyle(
                       color: Color(0xFF00E5FF),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
@@ -520,7 +678,6 @@ class _PlaceSheet extends StatelessWidget {
   }
 }
 
-// Loads local assets (assets/...) with Image.asset, network URLs with CachedNetworkImage.
 class _PlaceImage extends StatelessWidget {
   final String url;
   const _PlaceImage({required this.url});
@@ -530,7 +687,7 @@ class _PlaceImage extends StatelessWidget {
     if (url.startsWith('assets/')) {
       return Image.asset(
         url,
-        height: 170,
+        height: 190,
         width: double.infinity,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => const _SheetImagePlaceholder(),
@@ -538,7 +695,7 @@ class _PlaceImage extends StatelessWidget {
     }
     return CachedNetworkImage(
       imageUrl: url,
-      height: 170,
+      height: 190,
       width: double.infinity,
       fit: BoxFit.cover,
       errorWidget: (_, __, ___) => const _SheetImagePlaceholder(),
@@ -552,7 +709,7 @@ class _SheetImagePlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 170,
+      height: 190,
       color: const Color(0xFF0D1E30),
       child: const Center(
         child: Text('🌍', style: TextStyle(fontSize: 48)),
