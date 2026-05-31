@@ -255,9 +255,12 @@ class _VibrationSectionState extends State<_VibrationSection> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        kBuildLabel,
-                        style: const TextStyle(color: Colors.white38, fontSize: 11),
+                      Flexible(
+                        child: Text(
+                          kBuildLabel,
+                          style: const TextStyle(color: Colors.white38, fontSize: 11),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       const Spacer(),
                       ElevatedButton.icon(
