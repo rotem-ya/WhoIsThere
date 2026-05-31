@@ -215,7 +215,7 @@ class _VibrationSectionState extends State<_VibrationSection> {
   }
 
   void _showQaSheet() {
-    final logs = QaLoggerService.instance.exportText();
+    final logs = QaLoggerService.instance.exportText;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
