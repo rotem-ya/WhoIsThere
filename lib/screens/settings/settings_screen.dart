@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/build_info.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../providers/providers.dart';
+import '../../services/qa_logger_service.dart';
 import '../../widgets/common/app_header.dart';
 import '../game/game_board_screen.dart';
 
@@ -183,23 +185,152 @@ class _SoundSection extends StatelessWidget {
   }
 }
 
-// ── Vibration section (toggle) ────────────────────────────────────────────────
+// ── Vibration section (toggle + hidden 10-tap QA trigger on icon) ────────────
 
-class _VibrationSection extends StatelessWidget {
+class _VibrationSection extends StatefulWidget {
   final bool enabled;
   final ValueChanged<bool> onChanged;
 
   const _VibrationSection({required this.enabled, required this.onChanged});
 
   @override
+  State<_VibrationSection> createState() => _VibrationSectionState();
+}
+
+class _VibrationSectionState extends State<_VibrationSection> {
+  int _tapCount = 0;
+  DateTime? _lastTap;
+
+  void _onIconTap() {
+    final now = DateTime.now();
+    if (_lastTap != null && now.difference(_lastTap!) > const Duration(seconds: 3)) {
+      _tapCount = 0;
+    }
+    _lastTap = now;
+    _tapCount++;
+    if (_tapCount >= 10) {
+      _tapCount = 0;
+      _showQaSheet();
+    }
+  }
+
+  void _showQaSheet() {
+    final logs = QaLoggerService.instance.exportText();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => Directionality(
+        textDirection: TextDirection.ltr,
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (ctx, scrollCtrl) => Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFF060F1C),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 38, height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Row(
+                    children: [
+                      const Text(
+                        'QA Logs',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        kBuildLabel,
+                        style: const TextStyle(color: Colors.white38, fontSize: 11),
+                      ),
+                      const Spacer(),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          await QaLoggerService.instance.copyToClipboard();
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                              content: Text(
+                                'הועתקו ${QaLoggerService.instance.eventCount} אירועים',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              backgroundColor: Colors.green.shade800,
+                              duration: const Duration(seconds: 2),
+                            ));
+                          }
+                        },
+                        icon: const Icon(Icons.copy_rounded, size: 16),
+                        label: const Text('העתק'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(color: Colors.white12, height: 1),
+                Expanded(
+                  child: ListView(
+                    controller: scrollCtrl,
+                    padding: const EdgeInsets.all(12),
+                    children: [
+                      SelectableText(
+                        logs,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 10.5,
+                          fontFamily: 'monospace',
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return _SettingsCard(
       child: Row(
         children: [
-          Icon(
-            enabled ? Icons.vibration_rounded : Icons.phonelink_erase_rounded,
-            color: enabled ? AppColors.primary : Colors.white30,
-            size: 22,
+          GestureDetector(
+            onTap: _onIconTap,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(
+                widget.enabled
+                    ? Icons.vibration_rounded
+                    : Icons.phonelink_erase_rounded,
+                color: widget.enabled ? AppColors.primary : Colors.white30,
+                size: 22,
+              ),
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           const Expanded(
@@ -213,10 +344,10 @@ class _VibrationSection extends StatelessWidget {
             ),
           ),
           Switch(
-            value: enabled,
+            value: widget.enabled,
             onChanged: (v) {
               if (v) HapticFeedback.mediumImpact();
-              onChanged(v);
+              widget.onChanged(v);
             },
             activeColor: AppColors.primary,
             activeTrackColor: AppColors.primary.withOpacity(0.35),

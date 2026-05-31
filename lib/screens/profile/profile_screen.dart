@@ -4,13 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/build_info.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../core/utils/display_name_sanitizer.dart';
 import '../../providers/providers.dart';
-import '../../services/qa_logger_service.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
@@ -284,32 +282,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
 
-              const SizedBox(height: AppSpacing.sm),
-
-              // ── QA row ───────────────────────────────────────────────
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextButton.icon(
-                    onPressed: () async {
-                      await QaLoggerService.instance.copyToClipboard();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('הועתקו ${QaLoggerService.instance.eventCount} אירועים'),
-                            duration: const Duration(seconds: 2),
-                            backgroundColor: Colors.green.shade800,
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.content_copy_rounded, size: 13),
-                    label: const Text('QA'),
-                    style: TextButton.styleFrom(foregroundColor: Colors.white24, textStyle: const TextStyle(fontSize: 11)),
-                  ),
-                  const Text(kBuildLabel, style: TextStyle(color: Colors.white24, fontSize: 10)),
-                ],
-              ),
 
             ],
           ),

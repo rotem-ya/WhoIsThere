@@ -18,6 +18,10 @@ class QaLoggerService {
 
   int get eventCount => _events.length;
 
+  String get exportText => _events.isEmpty
+      ? '(no QA events recorded)'
+      : _events.join('\n');
+
   Future<void> init() async {
     try {
       _prefs = await SharedPreferences.getInstance();
