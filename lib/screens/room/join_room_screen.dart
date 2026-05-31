@@ -154,7 +154,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
       fontSize: 34,
       fontWeight: FontWeight.w900,
       letterSpacing: 8,
-      color: Color(0xFF07101F),
+      color: Colors.white,
     );
 
     return AppScaffold(
@@ -194,28 +194,28 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
                       decoration: InputDecoration(
                         hintText: 'XXXXXX',
                         hintStyle: codeTextStyle.copyWith(
-                          color: const Color(0xFF07101F).withOpacity(0.28),
+                          color: Colors.white.withOpacity(0.25),
                         ),
                         counterText: '',
                         errorText: _errorMessage,
                         errorMaxLines: 2,
                         filled: true,
-                        fillColor: const Color(0xFF07101F).withOpacity(0.06),
+                        fillColor: Colors.white.withOpacity(0.06),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 14,
                         ),
-                        border: const OutlineInputBorder(
+                        border: OutlineInputBorder(
                           borderRadius: borderRadius,
                           borderSide: BorderSide(
-                            color: Color(0xFF07101F),
+                            color: Colors.white.withOpacity(0.30),
                             width: 0.8,
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: borderRadius,
                           borderSide: BorderSide(
-                            color: const Color(0xFF07101F).withOpacity(0.20),
+                            color: Colors.white.withOpacity(0.20),
                             width: 0.8,
                           ),
                         ),
