@@ -315,16 +315,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ),
       ),
-
-              // ── Store button — outside Expanded so it's always visible ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 8, AppSpacing.lg, AppSpacing.lg),
-                child: AppButton(
-                  label: 'עבור לחנות',
-                  icon: Icons.store_rounded,
-                  onPressed: () => context.push('/store'),
-                ),
-              ),
             ],
           );
         },
@@ -398,45 +388,59 @@ class _AccountSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isGuest) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFF0A1828),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF4285F4).withOpacity(0.3), width: 0.8),
+          border: Border.all(color: const Color(0xFFFF8C00).withOpacity(0.7), width: 1.2),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 38, height: 38,
-              decoration: BoxDecoration(
-                color: const Color(0xFF4285F4).withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Center(
-                child: Text('G', style: TextStyle(color: Color(0xFF4285F4), fontSize: 18, fontWeight: FontWeight.w900)),
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 38, height: 38,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4285F4).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Center(
+                    child: Text('G', style: TextStyle(color: Color(0xFF4285F4), fontSize: 18, fontWeight: FontWeight.w900)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('התחבר עם Google', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
+                      Text('שמור את ההתקדמות שלך', style: TextStyle(color: Color(0xFF4A8BAA), fontSize: 11)),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('התחבר עם Google', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
-                  Text('שמור את ההתקדמות שלך', style: TextStyle(color: Color(0xFF4A8BAA), fontSize: 11)),
-                ],
-              ),
+            const SizedBox(height: 10),
+            const Text(
+              '⚠️ אתה משחק כאורח — מחיקת האפליקציה תמחק את כל ההתקדמות!',
+              style: TextStyle(color: Color(0xFFFF8C00), fontSize: 11, fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 10),
             GestureDetector(
               onTap: onUpgrade,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4285F4).withOpacity(onUpgrade != null ? 0.2 : 0.08),
-                  borderRadius: BorderRadius.circular(8),
+                  color: const Color(0xFF4285F4).withOpacity(onUpgrade != null ? 0.25 : 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF4285F4).withOpacity(0.5), width: 0.8),
                 ),
+                alignment: Alignment.center,
                 child: onUpgrade == null
-                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF4285F4)))
-                    : const Text('התחבר', style: TextStyle(color: Color(0xFF4285F4), fontSize: 12, fontWeight: FontWeight.w800)),
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF4285F4)))
+                    : const Text('התחבר עם Google עכשיו', style: TextStyle(color: Color(0xFF4285F4), fontSize: 13, fontWeight: FontWeight.w800)),
               ),
             ),
           ],
