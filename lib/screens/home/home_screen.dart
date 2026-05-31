@@ -11,6 +11,7 @@ import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
+import '../../widgets/common/banner_ad_widget.dart';
 import '../../services/feedback_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../widgets/common/ambient_background.dart';
@@ -496,7 +497,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             delayMs: 600, durationMs: 240,
                           ),
-                          SizedBox(height: verySmall ? 10 : compact ? 14 : 20),
+                          SizedBox(height: verySmall ? 6 : 10),
+                          const BannerAdWidget(),
+                          SizedBox(height: verySmall ? 4 : 8),
                         ],
                       ),
                     );

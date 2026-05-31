@@ -13,6 +13,7 @@ import '../../providers/providers.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
 import '../../widgets/common/app_card.dart';
+import '../../widgets/common/banner_ad_widget.dart';
 import '../../widgets/common/player_avatar.dart';
 
 class WinScreen extends ConsumerStatefulWidget {
@@ -244,6 +245,8 @@ class _WinScreenState extends ConsumerState<WinScreen>
                       context.go('/home');
                     },
                   ),
+                  const SizedBox(height: AppSpacing.sm),
+                  const BannerAdWidget(),
                   const SizedBox(height: AppSpacing.sm),
                 ],
               ),

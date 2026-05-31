@@ -17,6 +17,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/pressable_scale.dart';
+import '../../widgets/common/banner_ad_widget.dart';
 
 class LobbyScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -215,6 +216,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                           : const _WaitingFooter(),
                     ),
                     const SizedBox(height: 8),
+                    const BannerAdWidget(),
+                    const SizedBox(height: 4),
                   ],
                 ),
               ),
