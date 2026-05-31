@@ -122,9 +122,30 @@ class RoomService {
   };
 
   Future<List<GameImageModel>>? _localImagesFuture;
+  Future<List<GameImageModel>>? _allActiveImagesFuture;
 
   Future<List<GameImageModel>> _loadLocalImages() {
     return _localImagesFuture ??= _readLocalImages();
+  }
+
+  // Loads ALL is_active images regardless of the gameplay whitelist.
+  // Used by the discovered-places map so tapping any discovered dot works.
+  Future<List<GameImageModel>> _loadAllActiveImages() {
+    return _allActiveImagesFuture ??= _readAllActiveImages();
+  }
+
+  Future<List<GameImageModel>> _readAllActiveImages() async {
+    final rawJson = await rootBundle.loadString('assets/game_places/data/israel_places.json');
+    final decoded = jsonDecode(rawJson);
+    final rawPlaces = decoded is List
+        ? decoded
+        : (decoded is Map<String, dynamic> ? decoded['places'] as List<dynamic>? : null);
+    if (rawPlaces == null) return const [];
+    return rawPlaces
+        .whereType<Map<String, dynamic>>()
+        .where((place) => place['is_active'] == true)
+        .map(_localPlaceToImage)
+        .toList(growable: false);
   }
 
   Future<List<GameImageModel>> _readLocalImages() async {
@@ -394,8 +415,8 @@ class RoomService {
     if (images.isEmpty) return;
     final image = await _pickSmartImage(images, room.players);
     await _rooms.doc(roomId).update({'selectedImageId': image.id});
-    await _recordPriorExposure(roomId, room.players, image.id);
-    await _startGame(roomId, room, Difficulty.easy);
+    final priorExposures = await _fetchPriorExposures(room.players, image.id);
+    await _startGame(roomId, room, Difficulty.easy, priorExposures: priorExposures);
     _recordExposureForAll(room.players, image.id);
   }
 
@@ -462,10 +483,10 @@ class RoomService {
     );
 
     final imageId = room.selectedImageId;
-    if (imageId != null && imageId.isNotEmpty) {
-      await _recordPriorExposure(roomId, room.players, imageId);
-    }
-    await _startGame(roomId, room, difficulty);
+    final priorExposures = (imageId != null && imageId.isNotEmpty)
+        ? await _fetchPriorExposures(room.players, imageId)
+        : const <String, int>{};
+    await _startGame(roomId, room, difficulty, priorExposures: priorExposures);
     if (imageId != null && imageId.isNotEmpty) {
       _recordExposureForAll(room.players, imageId);
     }
@@ -545,10 +566,9 @@ class RoomService {
     }
   }
 
-  /// Stores each real player's current exposure count for imageId in the room
-  /// BEFORE incrementing it, so the UI can show "seen N times before".
-  Future<void> _recordPriorExposure(
-    String roomId,
+  /// Returns each real player's current exposure count for imageId BEFORE incrementing.
+  /// Used to include "seen N times" in the game-start players write.
+  Future<Map<String, int>> _fetchPriorExposures(
     Map<String, PlayerModel> players,
     String imageId,
   ) async {
@@ -556,16 +576,16 @@ class RoomService {
         .where((e) => !e.value.isBot)
         .map((e) => e.key)
         .toList();
-    if (realIds.isEmpty) return;
+    if (realIds.isEmpty) return const {};
     try {
       final exposureMaps = await Future.wait(realIds.map(_getExposureCounts));
-      final updates = <String, dynamic>{};
-      for (int i = 0; i < realIds.length; i++) {
-        final count = exposureMaps[i][imageId] ?? 0;
-        updates['players.${realIds[i]}.priorExposureCount'] = count;
-      }
-      await _rooms.doc(roomId).update(updates);
-    } catch (_) {}
+      return {
+        for (int i = 0; i < realIds.length; i++)
+          realIds[i]: exposureMaps[i][imageId] ?? 0,
+      };
+    } catch (_) {
+      return const {};
+    }
   }
 
   void _recordExposureForAll(Map<String, PlayerModel> players, String imageId) {
@@ -592,8 +612,9 @@ class RoomService {
   Future<void> _startGame(
     String roomId,
     RoomModel room,
-    Difficulty difficulty,
-  ) async {
+    Difficulty difficulty, {
+    Map<String, int> priorExposures = const {},
+  }) async {
     final playerIds = room.players.keys.toList()..shuffle();
     final startScore = difficulty.startingPoints;
     final nowMs = DateTime.now().millisecondsSinceEpoch;
@@ -601,7 +622,11 @@ class RoomService {
     final updatedPlayers = room.players.map(
       (id, player) => MapEntry(
         id,
-        player.copyWith(score: startScore, letterCards: 0),
+        player.copyWith(
+          score: startScore,
+          letterCards: 0,
+          priorExposureCount: priorExposures[id] ?? player.priorExposureCount,
+        ),
       ),
     );
 
@@ -1821,7 +1846,7 @@ class RoomService {
 
   Future<List<GameImageModel>> getPublicImages() => _loadLocalImages();
 
-  Future<List<GameImageModel>> getAllImages() => _loadLocalImages();
+  Future<List<GameImageModel>> getAllImages() => _loadAllActiveImages();
 
   Future<GameImageModel?> getImage(String imageId) async {
     final images = await _loadLocalImages();

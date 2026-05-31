@@ -191,9 +191,16 @@ class _IsraelMapView extends StatelessWidget {
 
   void _onDotTap(BuildContext context, String placeId) {
     if (!discoveredSet.contains(placeId)) return;
-    final image = imageMap[placeId];
-    if (image == null) return;
     HapticFeedback.lightImpact();
+    final image = imageMap[placeId];
+    if (image == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('תמונה אינה זמינה כרגע'),
+        duration: Duration(seconds: 2),
+        backgroundColor: Color(0xFF1A2A3A),
+      ));
+      return;
+    }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
