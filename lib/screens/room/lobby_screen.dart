@@ -59,7 +59,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     msg.writeln('קוד חדר: $code');
     msg.writeln();
     msg.writeln('🎮 הצטרפות ישירה לחדר:');
-    msg.write('https://rotem-ya.github.io/apps-share-pages/whoisthere/join?code=$code');
+    msg.write('https://rotem-ya.github.io/apps-share-pages/whoisthere/join/?code=$code');
     Share.share(msg.toString());
   }
 
