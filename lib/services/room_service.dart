@@ -18,6 +18,7 @@ import '../core/utils/room_code_generator.dart';
 import 'qa_logger_service.dart';
 
 const List<String> _botNames = [
+  // batch 1
   'אריאל', 'נועה', 'עמית', 'שירה', 'דניאל', 'מאיה', 'ליאור', 'איתי',
   'שני', 'אדם', 'מור', 'רועי', 'תמר', 'אורי', 'גל', 'עידו',
   'ירדן', 'ניר', 'לירון', 'דנה', 'אייל', 'הילה', 'ניב', 'שחר',
@@ -31,6 +32,20 @@ const List<String> _botNames = [
   'גבריאל', 'אסתר', 'נחום', 'ברק', 'חגית', 'ישי', 'ריקי', 'אביחי',
   'כוכב', 'אילן', 'פנינה', 'רם', 'אנת', 'ניצן', 'אפרת', 'שוקי',
   'יגאל', 'הגר', 'עמוס', 'מזל', 'ציון', 'שושנה',
+  // batch 2
+  'אביגיל', 'אביטל', 'אדיר', 'אדוה', 'אהוד', 'איריס', 'איתמר', 'אמיר',
+  'אמנון', 'אסי', 'אפי', 'ארד', 'בועז', 'בנימין', 'בת-אל', 'גדעון',
+  'גולן', 'גיל', 'גלעד', 'גלי', 'גונן', 'דותן', 'דפנה', 'דרור',
+  'הדר', 'הלל', 'הראל', 'ורדית', 'זאב', 'זמיר', 'זוהר', 'חיים',
+  'טלי', 'יואב', 'יוחנן', 'יניב', 'ירון', 'ישראל', 'יצחק', 'יותם',
+  'יחיאל', 'כרמית', 'לאה', 'לביא', 'לידר', 'מאור', 'מיה', 'מיכאל',
+  'מלאכי', 'מנחם', 'מוראן', 'נגה', 'נחמה', 'נחשון', 'ניסים', 'נופר',
+  'נריה', 'עדן', 'עוזי', 'עלמה', 'עמרי', 'ערן', 'פלג', 'פרח',
+  'צבי', 'צח', 'צליל', 'קובי', 'קשת', 'רביד', 'רבקה', 'רזי',
+  'שגיא', 'שגית', 'שחרית', 'שמואל', 'שמחה', 'שניר', 'שפיר', 'שרה',
+  'תמי', 'תמרה', 'אגם', 'אסנת', 'אפרים', 'ינון', 'דביר', 'שרון',
+  'טוביה', 'עפרה', 'ענת', 'יהל', 'אחיה', 'נעם', 'טום', 'רן',
+  'עדיה', 'שיר', 'ליבי', 'אלאור',
 ];
 
 String _botName(int index) => _botNames[index % _botNames.length];
@@ -203,13 +218,17 @@ class RoomService {
 
     final players = <String, PlayerModel>{effectiveHostId: host};
 
+    final botRng = Random();
     for (int i = 2; i <= playerCount; i++) {
       final virtualId = 'virtual_${i}_${docRef.id}';
+      final botDiscovered = botRng.nextInt(51);
       players[virtualId] = PlayerModel(
         id: virtualId,
         name: _botName(i),
         score: 0,
         isBot: true,
+        discoveredCount: botDiscovered,
+        totalPoints: botDiscovered * (30 + botRng.nextInt(50)) + botRng.nextInt(100),
       );
     }
 
@@ -290,11 +309,15 @@ class RoomService {
     final virtualId = 'virtual_${botIndex}_$roomId';
     if (room.players.containsKey(virtualId)) return;
 
+    final botRng = Random();
+    final botDiscovered = botRng.nextInt(51);
     final botPlayer = PlayerModel(
       id: virtualId,
       name: _botName(botIndex),
       score: 0,
       isBot: true,
+      discoveredCount: botDiscovered,
+      totalPoints: botDiscovered * (30 + botRng.nextInt(50)) + botRng.nextInt(100),
     );
     await _rooms.doc(roomId).update({
       'players.$virtualId': botPlayer.toMap(),
