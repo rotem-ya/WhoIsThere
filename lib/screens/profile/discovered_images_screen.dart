@@ -62,6 +62,10 @@ const Map<String, Offset> _placePositions = {
   'ashkelon':                 Offset(0.240, 0.438),
   'cave_of_the_patriarchs':   Offset(0.549, 0.476),
   'stalactite_cave':          Offset(0.474, 0.420),
+  // ── Beit Shean Valley ────────────────────────────────────────────────────
+  'gan_hashlosha':            Offset(0.723, 0.218),
+  // ── Yarkon River (Tel Aviv) ───────────────────────────────────────────────
+  'yarkon_river':             Offset(0.357, 0.308),
 };
 
 const List<Offset> _borderPoints = [
@@ -99,7 +103,7 @@ class DiscoveredImagesScreen extends ConsumerWidget {
     final allImagesAsync = ref.watch(allImagesProvider);
     final discoveredSet = discoveredImageIds.toSet();
     final total = _placePositions.length;
-    final found = discoveredSet.intersection(_placePositions.keys.toSet()).length;
+    final totalDiscovered = discoveredImageIds.length;
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
@@ -125,7 +129,7 @@ class DiscoveredImagesScreen extends ConsumerWidget {
                 ),
               ),
               child: Text(
-                '$found / $total',
+                '$totalDiscovered / $total',
                 style: const TextStyle(
                   color: Color(0xFF00E5FF),
                   fontSize: 13,
