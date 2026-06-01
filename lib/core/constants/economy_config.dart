@@ -21,10 +21,14 @@ class EconomyConfig {
   static const int wrongGuessBlockTurns = 2;
 
   // ── Hint prices ──────────────────────────────────────────────
-  static const int hintFirstPrice = 40;       // first hint purchase
-  static const int hintSecondPrice = 80;      // second hint purchase
+  // Two distinct mechanics — do not conflate:
+  //  • Fact hints (solo, game_board_screen): first=40, second=80.
+  //  • HintEconomyGuard hint types: revealTile (=first, 40) and
+  //    extraGuess (60). extraGuess is its own action, NOT the "second" hint.
+  static const int hintFirstPrice = 40;       // first fact hint purchase
+  static const int hintSecondPrice = 80;      // second fact hint purchase
   static const int hintRevealTilePrice = 40;  // legacy alias (= hintFirstPrice)
-  static const int hintExtraGuessPrice = 60;
+  static const int hintExtraGuessPrice = 60;  // extra-guess hint (separate mechanic)
 
   // ── Match rewards: solo ───────────────────────────────────────
   static const int soloWinBase = 10;

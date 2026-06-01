@@ -876,8 +876,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     }
   }
 
-  static bool _isFirestoreUnavailable(Object e) =>
-      e.toString().contains('[cloud_firestore/unavailable]');
+  static bool _isFirestoreUnavailable(Object e) {
+    if (e is FirebaseException && e.code == 'unavailable') return true;
+    // Fallback for cases where the error isn't surfaced as a typed exception.
+    return e.toString().contains('[cloud_firestore/unavailable]');
+  }
 
   @override
   Future<bool> didPopRoute() async {
@@ -937,7 +940,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       final image = await ref.read(roomServiceProvider).getImage(imageId);
       if (mounted) setState(() => _image = image);
     } catch (e) {
-      debugPrint('Failed to load image: $e');
+      QaLoggerService.instance.log('GAME', 'IMAGE_LOAD_ERROR error=$e');
     }
   }
 
@@ -1208,7 +1211,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
           );
       if (mounted) setState(() => _rewardBreakdown = breakdown);
     } catch (e) {
-      debugPrint('Economy reward error: $e');
+      QaLoggerService.instance.log('ECONOMY', 'REWARD_CALC_ERROR error=$e');
     }
   }
 

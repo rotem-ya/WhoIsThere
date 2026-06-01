@@ -1178,7 +1178,9 @@ class RoomService {
                   userId, walletDoc.data() as Map<String, dynamic>)
               : null;
           final coinsBefore = wallet?.coins ?? 0;
-          actualCost = claimCost;
+          // Floor the deduction at the available balance so the wallet can
+          // never go negative (mirrors the wrong-guess penalty clamp below).
+          actualCost = claimCost.clamp(0, coinsBefore);
           final coinsAfter = coinsBefore - actualCost;
 
           if (actualCost > 0) {

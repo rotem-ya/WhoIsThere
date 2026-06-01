@@ -342,11 +342,14 @@ class RoomModel extends Equatable {
         difficultyVotes,
         selectedImageId,
         selectedDifficulty,
+        turnOrder,
         currentTurnIndex,
         placedPieces,
+        availablePieceIndices,
         solvedLetters,
         letterCardGrantedPlayerIds,
         winnerId,
+        lastGuessEvent,
         guessCount,
         turnPhase,
         guessOpportunityPlayerId,
@@ -367,5 +370,7 @@ class RoomModel extends Equatable {
         pendingRevealTileIndex,
         guessBlockedUntilMs,
         blackoutActiveUntilMs,
+        isPublicRoom,
+        playerRound,
       ];
 }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/constants/game_constants.dart';
 // player_rank removed — using discoveredCount badge instead;
 import '../../core/theme/app_styles.dart';
@@ -60,7 +61,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     msg.writeln('קוד חדר: $code');
     msg.writeln();
     msg.writeln('🎮 הצטרפות ישירה לחדר:');
-    msg.write('https://rotem-ya.github.io/apps-share-pages/whoisthere/join/?code=$code');
+    msg.write(AppConstants.joinUrlForCode(code));
     Share.share(msg.toString());
   }
 
@@ -112,8 +113,16 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
         return PopScope(
           canPop: false,
-          onPopInvoked: (didPop) {
-            if (!didPop) context.go('/home');
+          onPopInvoked: (didPop) async {
+            if (didPop) return;
+            // Mirror the on-screen exit button: leave the room so the player
+            // isn't left behind as a ghost in the room document.
+            if (currentUser != null) {
+              await ref
+                  .read(roomServiceProvider)
+                  .leaveRoom(widget.roomId, currentUser.id);
+            }
+            if (context.mounted) context.go('/home');
           },
           child: Scaffold(
           body: Container(
@@ -194,15 +203,18 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                               enabled: canStart && !_isStarting,
                               onTap: () async {
                                 HapticFeedback.mediumImpact();
-                                debugPrint('Lobby start tapped: roomId=${widget.roomId}');
+                                QaLoggerService.instance.log('LOBBY',
+                                    'START_GAME_TAPPED roomId=${widget.roomId}');
                                 setState(() => _isStarting = true);
                                 try {
                                   await ref
                                       .read(roomServiceProvider)
                                       .startGameDirectly(widget.roomId);
-                                  debugPrint('Lobby start success');
+                                  QaLoggerService.instance
+                                      .log('LOBBY', 'START_GAME_SUCCESS');
                                 } catch (e) {
-                                  debugPrint('Lobby startGameDirectly error: $e');
+                                  QaLoggerService.instance
+                                      .log('LOBBY', 'START_GAME_ERROR error=$e');
                                   if (mounted) {
                                     setState(() => _isStarting = false);
                                     ScaffoldMessenger.of(context).showSnackBar(

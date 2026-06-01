@@ -57,6 +57,7 @@ class PlayerModel extends Equatable {
         'isBot': isBot,
         'discoveredCount': discoveredCount,
         'playerRound': playerRound,
+        'priorExposureCount': priorExposureCount,
       };
 
   PlayerModel copyWith({

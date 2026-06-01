@@ -92,8 +92,14 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
 
         return PopScope(
           canPop: false,
-          onPopInvoked: (didPop) {
-            if (!didPop) context.go('/home');
+          onPopInvoked: (didPop) async {
+            if (didPop) return;
+            // Mirror the exit button: leave the room on Android back so the
+            // player isn't left behind as a ghost in the room document.
+            await ref
+                .read(roomServiceProvider)
+                .leaveRoom(widget.roomId, currentUser.id);
+            if (context.mounted) context.go('/home');
           },
           child: AppScaffold(
           backgroundGradient: AppStyles.backgroundGradient,
