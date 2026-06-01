@@ -18,7 +18,7 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
   @override
   void initState() {
     super.initState();
-    _loadAd();
+    if (AdConstants.adsEnabled) _loadAd();
   }
 
   void _loadAd() {
@@ -45,6 +45,10 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // Ads disabled for launch (test unit IDs) — render nothing and reserve
+    // no space so the layout looks final.
+    if (!AdConstants.adsEnabled) return const SizedBox.shrink();
+
     final noAds = ref.watch(currentUserProvider).valueOrNull?.noAds ?? false;
     if (noAds) return const SizedBox.shrink();
 

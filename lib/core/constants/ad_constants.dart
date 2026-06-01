@@ -3,6 +3,12 @@ import 'dart:io';
 class AdConstants {
   AdConstants._();
 
+  /// Master switch for ad display. Kept OFF for launch because the unit IDs
+  /// below are still Google's test IDs — showing test ads in production yields
+  /// no revenue and risks policy issues. Flip to true once real AdMob unit IDs
+  /// replace the test values below.
+  static const bool adsEnabled = false;
+
   // Replace these with real unit IDs from AdMob console before release.
   // Current values are Google's official test IDs.
   static String get bannerUnitId {
