@@ -1,0 +1,45 @@
+# Codemagic CI — build WhoIsThere for iOS and ship to TestFlight.
+#
+# One-time setup in the Codemagic UI (see IOS_TESTFLIGHT_SETUP.md):
+#   1. Connect this repository (rotem-ya/WhoIsThere) as an app.
+#   2. Teams → Integrations → App Store Connect → add an API key (.p8) and
+#      name it EXACTLY:  WhoIsThere ASC Key   (used below under `integrations`).
+#   3. In App Store Connect, create the app with bundle id  com.rotem.whoisthere.
+# Then run the `ios-testflight` workflow. Codemagic handles signing automatically.
+
+workflows:
+  ios-testflight:
+    name: WhoIsThere iOS — TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+    integrations:
+      app_store_connect: WhoIsThere ASC Key
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.rotem.whoisthere
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Install CocoaPods dependencies
+        script: find . -name "Podfile" -execdir pod install \;
+      - name: Apply Codemagic-managed signing profiles
+        script: xcode-project use-profiles
+      - name: Build signed IPA
+        script: |
+          flutter build ipa --release \
+            --build-name=1.0.0 \
+            --build-number=$PROJECT_BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Uploads the build to TestFlight so you can install it on your iPhone
+        # via the TestFlight app. Does NOT submit for App Store review.
+        submit_to_testflight: true

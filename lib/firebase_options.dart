@@ -32,12 +32,12 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDoChtGi-uEV3ZWV31-yikolOfPF8pOiX4',
-    appId: '1:815269999993:ios:whoisthere',
+    apiKey: 'AIzaSyDLf8GDMYKucAYlyEd1IkJ2NnBQ4acbIXY',
+    appId: '1:815269999993:ios:953eeb92387fa7017b2ba8',
     messagingSenderId: '815269999993',
     projectId: 'whoisthere-380fa',
     storageBucket: 'whoisthere-380fa.firebasestorage.app',
     iosClientId: '',
-    iosBundleId: 'com.whoisthere.app',
+    iosBundleId: 'com.rotem.whoisthere',
   );
 }
