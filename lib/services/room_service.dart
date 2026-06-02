@@ -460,9 +460,13 @@ class RoomService {
     return images.map((img) => exp[img.id] ?? 0).reduce(min);
   }
 
-  /// Round-robin image selection: prefer images each player hasn't seen this round.
-  /// Scores each image by how many real players have it fresh (exposure == their round).
-  /// Tiebreak: lowest total exposure across all players.
+  /// Picks the next image so that, per player:
+  ///  • an image never repeats until the whole pool has cycled once
+  ///    (tracked via the `__cycleSeen` set, not raw exposure counts — so a
+  ///    late-added image is shown once and then waits its turn, never
+  ///    "catching up" by repeating), and
+  ///  • brand-new images (never seen) jump the queue: they appear before any
+  ///    already-seen image returns for another cycle.
   Future<GameImageModel> _pickSmartImage(
     List<GameImageModel> images,
     Map<String, PlayerModel> players,
@@ -475,51 +479,81 @@ class RoomService {
     if (realIds.isEmpty) return images[Random().nextInt(images.length)];
 
     try {
-      final exposureMaps = await Future.wait(realIds.map(_getExposureCounts));
+      final allIds = images.map((img) => img.id).toSet();
+      final raws = await Future.wait(realIds.map(_getExposureRaw));
 
-      // Per-player current round = min exposure across all active images
-      final playerRounds = exposureMaps
-          .map((exp) => images.map((img) => exp[img.id] ?? 0).reduce(min))
-          .toList();
-
-      // Score each image: how many players have it fresh this round
-      final freshCounts = <String, int>{};
-      final totalExp = <String, int>{};
-      for (final img in images) {
-        int fresh = 0;
-        for (int i = 0; i < realIds.length; i++) {
-          final count = exposureMaps[i][img.id] ?? 0;
-          if (count == playerRounds[i]) fresh++;
-          totalExp[img.id] = (totalExp[img.id] ?? 0) + count;
+      // Per-player view: exposure counts, this-cycle "seen" set, last image.
+      final counts = <Map<String, int>>[];
+      final cycleSeen = <Set<String>>[];
+      final lasts = <String?>[];
+      for (final raw in raws) {
+        final c = <String, int>{};
+        for (final e in raw.entries) {
+          if (!e.key.startsWith('__')) c[e.key] = (e.value as num?)?.toInt() ?? 0;
         }
-        freshCounts[img.id] = fresh;
+        var seen = (raw['__cycleSeen'] as List?)
+                ?.map((x) => x.toString())
+                .toSet()
+                .intersection(allIds) ??
+            <String>{};
+        // Pool already fully covered → start a fresh cycle.
+        if (seen.length >= allIds.length) seen = <String>{};
+        counts.add(c);
+        cycleSeen.add(seen);
+        lasts.add(raw['__last'] as String?);
       }
 
-      final maxFresh = freshCounts.values.reduce(max);
-      final candidates = images.where((img) => freshCounts[img.id] == maxFresh).toList();
-
-      // Among equally-fresh candidates, prefer lowest total exposure;
-      // within that group shuffle so the same image isn't always picked first.
-      final minExp = candidates
-          .map((img) => totalExp[img.id] ?? 0)
-          .reduce(min);
-      final top = candidates.where((img) => (totalExp[img.id] ?? 0) == minExp).toList()
+      // Score every image across all real players. Ranking priority:
+      //   fresh-this-cycle → brand-new → not-just-shown → least-seen → random.
+      final scored = images.map((img) {
+        int fresh = 0, isNew = 0, notLast = 0, totalExp = 0;
+        for (var i = 0; i < realIds.length; i++) {
+          if (!cycleSeen[i].contains(img.id)) fresh++;
+          if ((counts[i][img.id] ?? 0) == 0) isNew++;
+          if (lasts[i] != img.id) notLast++;
+          totalExp += counts[i][img.id] ?? 0;
+        }
+        return (
+          img: img,
+          fresh: fresh,
+          isNew: isNew,
+          notLast: notLast,
+          totalExp: totalExp
+        );
+      }).toList()
         ..shuffle(Random());
-      return top.first;
+
+      scored.sort((a, b) {
+        if (a.fresh != b.fresh) return b.fresh - a.fresh;
+        if (a.isNew != b.isNew) return b.isNew - a.isNew;
+        if (a.notLast != b.notLast) return b.notLast - a.notLast;
+        return a.totalExp - b.totalExp;
+      });
+      return scored.first.img;
     } catch (_) {
       return images[Random().nextInt(images.length)];
     }
   }
 
-  Future<Map<String, int>> _getExposureCounts(String uid) async {
+  /// Raw exposure document: image-id counts plus reserved `__` cycle metadata.
+  Future<Map<String, dynamic>> _getExposureRaw(String uid) async {
     try {
       final snap = await _firestore.doc('users/$uid/exposure_history').get();
       if (!snap.exists) return {};
-      final data = snap.data() ?? {};
-      return data.map((k, v) => MapEntry(k, (v as num?)?.toInt() ?? 0));
+      return snap.data() ?? {};
     } catch (_) {
       return {};
     }
+  }
+
+  Future<Map<String, int>> _getExposureCounts(String uid) async {
+    final raw = await _getExposureRaw(uid);
+    final out = <String, int>{};
+    for (final e in raw.entries) {
+      if (e.key.startsWith('__')) continue; // skip reserved cycle metadata
+      out[e.key] = (e.value as num?)?.toInt() ?? 0;
+    }
+    return out;
   }
 
   /// Stores each real player's current exposure count for imageId in the room
@@ -548,12 +582,36 @@ class RoomService {
   void _recordExposureForAll(Map<String, PlayerModel> players, String imageId) {
     for (final entry in players.entries) {
       if (!entry.value.isBot) {
-        _firestore.doc('users/${entry.key}/exposure_history').set(
-          {imageId: FieldValue.increment(1)},
-          SetOptions(merge: true),
-        ).ignore();
+        _recordExposureForPlayer(entry.key, imageId).ignore();
       }
     }
+  }
+
+  /// Increments the player's exposure for [imageId], marks it seen in the
+  /// current cycle, and resets the cycle once the whole pool has been shown.
+  Future<void> _recordExposureForPlayer(String uid, String imageId) async {
+    final images = await _loadLocalImages();
+    final allIds = images.map((img) => img.id).toSet();
+    final ref = _firestore.doc('users/$uid/exposure_history');
+    await _firestore.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      final data = snap.data() ?? <String, dynamic>{};
+      final current = (data[imageId] as num?)?.toInt() ?? 0;
+      var seen = (data['__cycleSeen'] as List?)
+              ?.map((x) => x.toString())
+              .toSet()
+              .intersection(allIds) ??
+          <String>{};
+      seen.add(imageId);
+      // Whole pool shown → close the cycle so the next round starts fresh.
+      // (Re-showing this image immediately is prevented by the `__last` guard.)
+      if (seen.length >= allIds.length) seen = <String>{};
+      tx.set(ref, {
+        imageId: current + 1,
+        '__cycleSeen': seen.toList(),
+        '__last': imageId,
+      }, SetOptions(merge: true));
+    });
   }
 
   void _recordDiscoveredForAll(Map<String, PlayerModel> players, String imageId) {
