@@ -129,146 +129,308 @@ class DiscoveredImagesScreen extends ConsumerWidget {
               },
             ),
           ),
-          const SizedBox(height: 8),
-          if (discoveredSet.isEmpty)
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('🌍', style: TextStyle(fontSize: 64)),
-                    const SizedBox(height: 16),
-                    Text(
-                      'עדיין לא גילית מקומות',
-                      style: AppTextStyles.titleDark,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'שחק משחק ראשון כדי לגלות מקומות',
-                      style: AppTextStyles.subtitleDark,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            Expanded(
-              child: allImagesAsync.when(
-                data: (allImages) {
-                  final imageMap = {for (final img in allImages) img.id: img};
-                  return _IsraelMapView(
-                    imageMap: imageMap,
-                    discoveredSet: discoveredSet,
-                  );
-                },
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.accent),
-                ),
-                error: (e, _) => _IsraelMapView(
-                  imageMap: const {},
+          Expanded(
+            child: allImagesAsync.when(
+              data: (allImages) {
+                final imageMap = {for (final img in allImages) img.id: img};
+                final discovered = allImages
+                    .where((img) => discoveredSet.contains(img.id))
+                    .toList()
+                  ..sort((a, b) => (a.name.isNotEmpty ? a.name : a.answer)
+                      .compareTo(b.name.isNotEmpty ? b.name : b.answer));
+                final locked =
+                    allImages.where((img) => !discoveredSet.contains(img.id)).toList();
+
+                if (allImages.isEmpty) {
+                  return const _EmptyState();
+                }
+                return _CollectionView(
+                  discovered: discovered,
+                  locked: locked,
+                  total: allImages.length,
                   discoveredSet: discoveredSet,
-                ),
+                  imageMap: imageMap,
+                );
+              },
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.accent),
               ),
+              error: (e, _) => const _EmptyState(),
             ),
+          ),
         ],
       ),
     );
   }
 }
 
-// ── Map view ──────────────────────────────────────────────────────────────────
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
 
-class _IsraelMapView extends StatelessWidget {
-  final Map<String, GameImageModel> imageMap;
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🌍', style: TextStyle(fontSize: 64)),
+          const SizedBox(height: 16),
+          Text('עדיין לא גילית מקומות',
+              style: AppTextStyles.titleDark, textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Text('שחק משחק ראשון כדי לגלות מקומות',
+              style: AppTextStyles.subtitleDark, textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Collection view: hero map + progress + grid of places ──────────────────────
+
+class _CollectionView extends StatelessWidget {
+  final List<GameImageModel> discovered;
+  final List<GameImageModel> locked;
+  final int total;
   final Set<String> discoveredSet;
+  final Map<String, GameImageModel> imageMap;
 
-  const _IsraelMapView({
-    required this.imageMap,
+  const _CollectionView({
+    required this.discovered,
+    required this.locked,
+    required this.total,
     required this.discoveredSet,
+    required this.imageMap,
   });
 
-  void _onDotTap(BuildContext context, String placeId) {
-    if (!discoveredSet.contains(placeId)) return;
-    final image = imageMap[placeId];
-    if (image == null) return;
+  void _openPlace(BuildContext context, GameImageModel image) {
     HapticFeedback.lightImpact();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      isScrollControlled: false,
       builder: (_) => _PlaceSheet(image: image),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
-        final h = constraints.maxHeight;
+    final ordered = [...discovered, ...locked];
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+          16, 4, 16, 24 + MediaQuery.of(context).viewPadding.bottom),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Hero map — decorative, shows where you've been
+          _MapHero(discoveredSet: discoveredSet),
+          const SizedBox(height: 12),
+          _ProgressBar(discovered: discovered.length, total: total),
+          const SizedBox(height: 16),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 0.82,
+            ),
+            itemCount: ordered.length,
+            itemBuilder: (context, i) {
+              final img = ordered[i];
+              final isDiscovered = discoveredSet.contains(img.id);
+              return _PlaceCard(
+                image: img,
+                discovered: isDiscovered,
+                onTap: isDiscovered ? () => _openPlace(context, img) : null,
+              ).animate(delay: Duration(milliseconds: 30 * (i.clamp(0, 12))))
+                  .fadeIn(duration: 220.ms)
+                  .scaleXY(begin: 0.94, end: 1.0, duration: 220.ms, curve: Curves.easeOut);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-        final placeEntries = _placePositions.entries.toList();
-        return ClipRect(
-          child: Stack(
+// ── Progress bar ───────────────────────────────────────────────────────────────
+
+class _ProgressBar extends StatelessWidget {
+  final int discovered;
+  final int total;
+  const _ProgressBar({required this.discovered, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = total == 0 ? 0.0 : (discovered / total).clamp(0.0, 1.0);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'גילית $discovered מתוך $total מקומות',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(
+              '${(ratio * 100).round()}%',
+              style: const TextStyle(
+                color: Color(0xFF00E5FF),
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: ratio),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeOutCubic,
+            builder: (_, value, __) => LinearProgressIndicator(
+              value: value,
+              minHeight: 8,
+              backgroundColor: Colors.white.withOpacity(0.08),
+              valueColor: const AlwaysStoppedAnimation(Color(0xFF00E5FF)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Hero map (decorative, aspect-correct) ──────────────────────────────────────
+
+class _MapHero extends StatelessWidget {
+  final Set<String> discoveredSet;
+  const _MapHero({required this.discoveredSet});
+
+  // Israel's true proportions are tall & narrow (≈0.38 wide as tall),
+  // so the silhouette is fitted — never stretched — and centered.
+  static const double _aspect = 0.38;
+
+  static Rect _fittedRect(Size s) {
+    double w = s.height * _aspect;
+    double h = s.height;
+    if (w > s.width) {
+      w = s.width;
+      h = w / _aspect;
+    }
+    return Rect.fromLTWH((s.width - w) / 2, (s.height - h) / 2, w, h);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 320,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final size = Size(c.maxWidth, c.maxHeight);
+          final rect = _fittedRect(size);
+          return Stack(
             children: [
-              // Neon map border — fades in
               CustomPaint(
-                size: Size(w, h),
-                painter: _IsraelMapPainter(),
+                size: size,
+                painter: _IsraelMapPainter(rect),
               ).animate().fadeIn(duration: 600.ms, curve: Curves.easeOut),
-              // Place dots — staggered reveal
-              ...placeEntries.asMap().entries.map((indexed) {
-                final i = indexed.key;
-                final entry = indexed.value;
-                final id = entry.key;
-                final pos = entry.value;
-                final discovered = discoveredSet.contains(id);
-                final px = pos.dx * w;
-                final py = pos.dy * h;
-                const tapSize = 28.0;
-                final delayMs = discovered ? (260 + i * 18) : (60 + i * 8);
+              ..._placePositions.entries.map((e) {
+                final discovered = discoveredSet.contains(e.key);
+                final px = rect.left + e.value.dx * rect.width;
+                final py = rect.top + e.value.dy * rect.height;
+                final r = discovered ? 4.0 : 1.6;
                 return Positioned(
-                  left: px - tapSize / 2,
-                  top: py - tapSize / 2,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => _onDotTap(context, id),
-                    child: SizedBox(
-                      width: tapSize,
-                      height: tapSize,
-                      child: Center(
-                        child: (discovered
-                                ? const _GlowDot(radius: 4.5)
-                                : const _DimDot(radius: 2.0))
-                            .animate(
-                              delay: Duration(milliseconds: delayMs),
-                            )
-                            .fadeIn(duration: 250.ms, curve: Curves.easeOut)
-                            .scaleXY(
-                              begin: 0.0,
-                              end: 1.0,
-                              duration: 300.ms,
-                              curve: Curves.elasticOut,
-                            ),
-                      ),
-                    ),
-                  ),
+                  left: px - r,
+                  top: py - r,
+                  child: (discovered
+                          ? const _GlowDot(radius: 4.0)
+                          : const _DimDot(radius: 1.6))
+                      .animate().fadeIn(duration: 400.ms),
                 );
               }),
-              // North indicator — appears last
-              Positioned(
-                top: 6,
-                left: 6,
-                child: const _NorthIndicator()
-                    .animate(delay: 650.ms)
-                    .fadeIn(duration: 300.ms),
-              ),
             ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ── Place card (grid) ──────────────────────────────────────────────────────────
+
+class _PlaceCard extends StatelessWidget {
+  final GameImageModel image;
+  final bool discovered;
+  final VoidCallback? onTap;
+
+  const _PlaceCard({
+    required this.image,
+    required this.discovered,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0A1426),
+                  border: Border.all(
+                    color: discovered
+                        ? const Color(0xFF00E5FF).withOpacity(0.45)
+                        : Colors.white.withOpacity(0.08),
+                    width: discovered ? 1.2 : 0.8,
+                  ),
+                  boxShadow: discovered
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF00E5FF).withOpacity(0.18),
+                            blurRadius: 10,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: discovered
+                    ? _PlaceThumb(url: image.thumbnailUrl)
+                    : const Center(
+                        child: Icon(Icons.lock_outline_rounded,
+                            color: Colors.white24, size: 24),
+                      ),
+              ),
+            ),
           ),
-        );
-      },
+          const SizedBox(height: 6),
+          Text(
+            discovered
+                ? (image.name.isNotEmpty ? image.name : image.answer)
+                : '? ? ?',
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: discovered ? Colors.white : Colors.white38,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              height: 1.15,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -276,16 +438,19 @@ class _IsraelMapView extends StatelessWidget {
 // ── Custom painter ─────────────────────────────────────────────────────────────
 
 class _IsraelMapPainter extends CustomPainter {
-  const _IsraelMapPainter();
+  final Rect rect;
+  const _IsraelMapPainter(this.rect);
 
   @override
   void paint(Canvas canvas, Size size) {
     final path = Path();
-    path.moveTo(
-        _borderPoints[0].dx * size.width, _borderPoints[0].dy * size.height);
+    Offset p(int i) => Offset(
+          rect.left + _borderPoints[i].dx * rect.width,
+          rect.top + _borderPoints[i].dy * rect.height,
+        );
+    path.moveTo(p(0).dx, p(0).dy);
     for (var i = 1; i < _borderPoints.length; i++) {
-      path.lineTo(
-          _borderPoints[i].dx * size.width, _borderPoints[i].dy * size.height);
+      path.lineTo(p(i).dx, p(i).dy);
     }
     path.close();
 
@@ -293,30 +458,27 @@ class _IsraelMapPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = const Color(0xFF050D1A)
+        ..color = const Color(0xFF071324)
         ..style = PaintingStyle.fill,
     );
-
     // Outer glow
     canvas.drawPath(
       path,
       Paint()
         ..color = const Color(0xFF00FFFF).withOpacity(0.12)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 14.0
+        ..strokeWidth = 12.0
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
     );
-
     // Mid glow
     canvas.drawPath(
       path,
       Paint()
         ..color = const Color(0xFF00E5FF).withOpacity(0.38)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 4.0
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+        ..strokeWidth = 3.0
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
     );
-
     // Solid neon line
     canvas.drawPath(
       path,
@@ -330,7 +492,8 @@ class _IsraelMapPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _IsraelMapPainter oldDelegate) =>
+      oldDelegate.rect != rect;
 }
 
 // ── Dot widgets ───────────────────────────────────────────────────────────────
@@ -376,40 +539,6 @@ class _DimDot extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.white.withOpacity(0.18),
-      ),
-    );
-  }
-}
-
-class _NorthIndicator extends StatelessWidget {
-  const _NorthIndicator();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.45),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: const Color(0xFF00E5FF).withOpacity(0.35),
-          width: 0.8,
-        ),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.navigation_rounded, color: Color(0xFF00E5FF), size: 10),
-          SizedBox(width: 2),
-          Text(
-            'N',
-            style: TextStyle(
-              color: Color(0xFF00E5FF),
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -512,6 +641,38 @@ class _PlaceSheet extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// Fills its parent box (used by grid cards). Assets via Image.asset, URLs via CachedNetworkImage.
+class _PlaceThumb extends StatelessWidget {
+  final String url;
+  const _PlaceThumb({required this.url});
+
+  static const Widget _fallback = ColoredBox(
+    color: Color(0xFF0D1E30),
+    child: Center(child: Text('🌍', style: TextStyle(fontSize: 28))),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.isEmpty) return _fallback;
+    if (url.startsWith('assets/')) {
+      return Image.asset(
+        url,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (_, __, ___) => _fallback,
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      errorWidget: (_, __, ___) => _fallback,
     );
   }
 }
