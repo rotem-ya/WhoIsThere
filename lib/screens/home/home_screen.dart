@@ -874,11 +874,22 @@ class _DailyRewardButton extends ConsumerWidget {
 
 // ── Profile icon button (top-left, QA access) ─────────────────────────────
 
-class _ProfileIconButton extends StatelessWidget {
+class _ProfileIconButton extends ConsumerWidget {
   const _ProfileIconButton();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider).valueOrNull;
+    final isGuest = user?.isGuest ?? true;
+    final provider = user?.provider ?? 'anonymous';
+    final isGoogle = provider == 'google.com';
+    final isApple = provider == 'apple.com';
+    final connected = !isGuest && (isGoogle || isApple);
+
+    final borderColor = connected
+        ? const Color(0xFF35C759).withOpacity(0.65) // green when linked
+        : const Color(0xFFFFB020).withOpacity(0.75); // amber when guest
+
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(14),
@@ -893,26 +904,83 @@ class _ProfileIconButton extends StatelessWidget {
           width: 44,
           height: 44,
           child: Center(
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: const Color(0xFF050A14).withOpacity(0.60),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.15),
-                  width: 1.0,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF050A14).withOpacity(0.60),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: borderColor, width: 1.4),
+                  ),
+                  child: const Icon(
+                    Icons.person_rounded,
+                    color: Colors.white70,
+                    size: 20,
+                  ),
                 ),
-              ),
-              child: const Icon(
-                Icons.person_rounded,
-                color: Colors.white70,
-                size: 20,
-              ),
+                Positioned(
+                  right: -4,
+                  bottom: -4,
+                  child: _AccountStatusBadge(
+                    connected: connected,
+                    isGoogle: isGoogle,
+                    isApple: isApple,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Account connection badge on the profile icon ──────────────────────────
+// Amber "!" = guest (not linked), white "G" = Google, white  = Apple.
+class _AccountStatusBadge extends StatelessWidget {
+  final bool connected;
+  final bool isGoogle;
+  final bool isApple;
+  const _AccountStatusBadge({
+    required this.connected,
+    required this.isGoogle,
+    required this.isApple,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    late final Color bg;
+    late final Widget glyph;
+    if (!connected) {
+      bg = const Color(0xFFFFB020); // amber — attention, not backed up
+      glyph = const Icon(Icons.priority_high_rounded,
+          size: 11, color: Color(0xFF1A1206));
+    } else if (isApple) {
+      bg = Colors.white;
+      glyph = const Icon(Icons.apple_rounded, size: 11, color: Colors.black87);
+    } else {
+      bg = Colors.white;
+      glyph = const Text('G',
+          style: TextStyle(
+              color: Color(0xFF4285F4),
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              height: 1));
+    }
+    return Container(
+      width: 17,
+      height: 17,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: bg,
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFF0A1420), width: 1.5),
+      ),
+      child: glyph,
     );
   }
 }
