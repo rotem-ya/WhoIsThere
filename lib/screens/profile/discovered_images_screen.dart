@@ -424,7 +424,8 @@ class _PlaceSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      margin: EdgeInsets.fromLTRB(
+          16, 0, 16, 24 + MediaQuery.of(context).viewPadding.bottom),
       decoration: BoxDecoration(
         color: const Color(0xFF0D1A2E),
         borderRadius: BorderRadius.circular(20),
