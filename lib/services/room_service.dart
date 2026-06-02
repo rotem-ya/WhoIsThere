@@ -371,8 +371,10 @@ class RoomService {
     if (images.isEmpty) return;
     final image = await _pickSmartImage(images, room.players);
     await _rooms.doc(roomId).update({'selectedImageId': image.id});
-    await _recordPriorExposure(roomId, room.players, image.id);
+    // Start the game first (it rewrites the whole players map), THEN record
+    // priorExposureCount via field-path so it isn't clobbered by _startGame.
     await _startGame(roomId, room, Difficulty.easy);
+    await _recordPriorExposure(roomId, room.players, image.id);
     _recordExposureForAll(room.players, image.id);
   }
 
@@ -439,11 +441,11 @@ class RoomService {
     );
 
     final imageId = room.selectedImageId;
-    if (imageId != null && imageId.isNotEmpty) {
-      await _recordPriorExposure(roomId, room.players, imageId);
-    }
+    // Start the game first (it rewrites the whole players map), THEN record
+    // priorExposureCount via field-path so it isn't clobbered by _startGame.
     await _startGame(roomId, room, difficulty);
     if (imageId != null && imageId.isNotEmpty) {
+      await _recordPriorExposure(roomId, room.players, imageId);
       _recordExposureForAll(room.players, imageId);
     }
   }

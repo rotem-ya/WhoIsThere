@@ -134,6 +134,7 @@ class GameLayout extends StatelessWidget {
           children: [
             TopHud(
               players: room.sortedPlayers,
+              showExposure: !room.isPublicRoom,
               stunnedPlayerIds: stunnedPlayerIds,
               currentPlayerId: room.currentTurnUserId,
               currentPlayerName: currentPlayer?.name ?? '',

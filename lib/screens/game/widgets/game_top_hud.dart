@@ -42,6 +42,7 @@ class TopHud extends StatelessWidget {
   final int guessBlock5Count;
   final int guessBlock10Count;
   final int blackoutCardCount;
+  final bool showExposure;
 
   const TopHud({
     required this.players,
@@ -68,6 +69,7 @@ class TopHud extends StatelessWidget {
     this.guessBlock5Count = 0,
     this.guessBlock10Count = 0,
     this.blackoutCardCount = 0,
+    this.showExposure = false,
   });
 
   @override
@@ -130,6 +132,7 @@ class TopHud extends StatelessWidget {
                   guessBlock5Count: guessBlock5Count,
                   guessBlock10Count: guessBlock10Count,
                   blackoutCardCount: blackoutCardCount,
+                  showExposure: showExposure,
                 ),
               ),
           ],
@@ -178,6 +181,7 @@ class _PlayerGrid extends StatelessWidget {
   final int guessBlock5Count;
   final int guessBlock10Count;
   final int blackoutCardCount;
+  final bool showExposure;
 
   const _PlayerGrid({
     required this.players,
@@ -189,6 +193,7 @@ class _PlayerGrid extends StatelessWidget {
     this.guessBlock5Count = 0,
     this.guessBlock10Count = 0,
     this.blackoutCardCount = 0,
+    this.showExposure = false,
   });
 
   @override
@@ -210,6 +215,7 @@ class _PlayerGrid extends StatelessWidget {
               guessBlock5Count: guessBlock5Count,
               guessBlock10Count: guessBlock10Count,
               blackoutCardCount: blackoutCardCount,
+              showExposure: showExposure,
             ),
           ),
           if (i + 1 < players.length) ...[
@@ -226,6 +232,7 @@ class _PlayerGrid extends StatelessWidget {
                 guessBlock5Count: guessBlock5Count,
                 guessBlock10Count: guessBlock10Count,
                 blackoutCardCount: blackoutCardCount,
+                showExposure: showExposure,
               ),
             ),
           ] else
@@ -250,6 +257,7 @@ class _PlayerCell extends ConsumerWidget {
   final int guessBlock5Count;
   final int guessBlock10Count;
   final int blackoutCardCount;
+  final bool showExposure;
 
   const _PlayerCell({
     required this.player,
@@ -262,6 +270,7 @@ class _PlayerCell extends ConsumerWidget {
     this.guessBlock5Count = 0,
     this.guessBlock10Count = 0,
     this.blackoutCardCount = 0,
+    this.showExposure = false,
   });
 
   bool get _canTarget =>
@@ -335,7 +344,9 @@ class _PlayerCell extends ConsumerWidget {
                     padding: EdgeInsets.only(left: 4),
                     child: Text('✍', style: TextStyle(fontSize: 10)),
                   ),
-                if (player.priorExposureCount > 0)
+                // Private rooms: show how many times this player has already
+                // seen the current image (0 = first time) next to their name.
+                if (showExposure && !player.isBot)
                   Padding(
                     padding: const EdgeInsets.only(left: 3),
                     child: Text(
