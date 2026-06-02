@@ -471,6 +471,8 @@ class _PlaceSheet extends StatelessWidget {
             child: Text(
               image.name.isNotEmpty ? image.name : image.answer,
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,

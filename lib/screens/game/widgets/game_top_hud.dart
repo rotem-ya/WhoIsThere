@@ -462,6 +462,9 @@ class _PlayerActionSheetState extends ConsumerState<_PlayerActionSheet> {
           ),
           Text(
             'פעולות על ${widget.targetPlayer.name}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 17,

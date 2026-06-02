@@ -2172,6 +2172,8 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
                                         child: Text(
                                           widget.answer,
                                           textAlign: TextAlign.center,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
                                             color: Color(0xFF9B7EFF),
                                             fontSize: 26,
@@ -2223,6 +2225,8 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
                         child: Text(
                           widget.answer,
                           textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Color(0xFF9B7EFF),
                             fontSize: 26,

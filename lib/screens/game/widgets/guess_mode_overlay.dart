@@ -109,6 +109,9 @@ class _GuessModeOverlayState extends State<GuessModeOverlay>
                       Text(
                         '$displayName מנחש!',
                         textDirection: TextDirection.rtl,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: nameColor,
                           fontSize: 30,

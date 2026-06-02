@@ -424,6 +424,8 @@ class _StunCardButton extends StatelessWidget {
               leading: const Text('👤', style: TextStyle(fontSize: 20)),
               title: Text(
                 p.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
               ),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

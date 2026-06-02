@@ -143,6 +143,8 @@ class _WinScreenState extends ConsumerState<WinScreen>
                             ? 'זיהית את המקום לפני כולם'
                             : '${winner.name.isNotEmpty ? winner.name : 'שחקן'} ניצח/ה בסיבוב',
                     textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.subtitleLight,
                   )
                       .animate()
@@ -300,9 +302,9 @@ class _ScoreRow extends StatelessWidget {
           PlayerAvatar(
               name: player.name, photoUrl: player.photoUrl, radius: 16),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(
+          Flexible(
             child: Text(
-              player.name + (isCurrentUser ? ' (את/ה)' : ''),
+              player.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.body.copyWith(
@@ -311,6 +313,16 @@ class _ScoreRow extends StatelessWidget {
               ),
             ),
           ),
+          // Keep the "(את/ה)" marker outside the ellipsis so it's never clipped.
+          if (isCurrentUser)
+            Text(
+              ' (את/ה)',
+              style: AppTextStyles.body.copyWith(
+                color: scoreColor,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          const Spacer(),
           // ── 5. Coin icon: scale pulse once on row entrance ──────────
           const Icon(Icons.monetization_on_rounded,
                   color: AppColors.primary, size: 16)
