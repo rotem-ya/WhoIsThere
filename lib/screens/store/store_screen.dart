@@ -90,7 +90,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
                 fontWeight: FontWeight.w800, fontSize: 13),
             tabs: const [
               Tab(text: '💎 רכישה'),
-              Tab(text: '🎴 כרטיסים'),
+              Tab(text: '🃏 כרטיסים'),
               Tab(text: '🎨 עיצובים'),
             ],
           ),

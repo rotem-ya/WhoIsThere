@@ -24,12 +24,14 @@ class AppHeader extends StatelessWidget {
             child: leading ?? const SizedBox.shrink(),
           ),
           Expanded(
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.titleLight,
+            // Scale the title down to fit rather than truncating with "…".
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                title,
+                maxLines: 1,
+                style: AppTextStyles.titleLight,
+              ),
             ),
           ),
           SizedBox(

@@ -443,7 +443,7 @@ class _SkinTile extends StatelessWidget {
               child: Text(
                 skin.name,
                 textAlign: TextAlign.center,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Colors.white,

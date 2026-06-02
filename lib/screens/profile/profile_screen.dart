@@ -159,6 +159,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(width: 12),
                       // Discovered count big display
                       Column(
                         children: [

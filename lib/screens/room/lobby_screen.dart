@@ -293,7 +293,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             children: [
               Text(
                 'ברוכים הבאים לחדר של $hostName',
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: AppStyles.bodySmall.copyWith(color: Colors.white70),
