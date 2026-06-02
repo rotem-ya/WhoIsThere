@@ -49,7 +49,11 @@
     "city_he": "ירושלים",
     "image_asset": "assets/game_places/images/mahane_yehuda_market.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "סמטאות צרות מתפתלות בין דוכנים עמוסים, וריח של תבלינים ומאפה טרי ממלא את האוויר",
+      "ביום קולות של מוכרים וקונים, ובלילה הכול מתחלף למוזיקה, לאורות ולבילוי"
+    ]
   },
   {
     "id": "knesset",
