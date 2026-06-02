@@ -398,14 +398,18 @@ class _RewardRow extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Flexible(
-              child: Text(
-                label,
-                textDirection: TextDirection.rtl,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: color.withOpacity(0.88),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  label,
+                  textDirection: TextDirection.rtl,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: color.withOpacity(0.88),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),

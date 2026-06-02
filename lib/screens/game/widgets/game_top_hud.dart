@@ -443,7 +443,9 @@ class _PlayerActionSheetState extends ConsumerState<_PlayerActionSheet> {
         border: Border.all(color: const Color(0xFF8B4FBF).withOpacity(0.35), width: 1),
       ),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom +
+            MediaQuery.of(context).viewPadding.bottom +
+            24,
         top: 8,
         left: 20,
         right: 20,

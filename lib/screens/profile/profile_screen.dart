@@ -100,8 +100,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               // ── Body ─────────────────────────────────────────────────
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                child: SingleChildScrollView(
+                  // Scroll + clear the Android system nav bar so the last
+                  // card (guest Google upgrade) isn't hidden underneath it.
+                  padding: EdgeInsets.only(
+                      bottom: AppSpacing.lg +
+                          MediaQuery.of(context).viewPadding.bottom),
                   child: Column(
                     children: [
               Padding(
