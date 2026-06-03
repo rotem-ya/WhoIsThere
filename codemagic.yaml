@@ -15,19 +15,26 @@ workflows:
     integrations:
       app_store_connect: Apple_Key_Trivia
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.rotem.whoisthere
       flutter: stable
       xcode: latest
       cocoapods: default
     scripts:
+      - name: Set up iOS code signing
+        script: |
+          keychain initialize
+          # Create an iOS Distribution certificate WITH its private key
+          # (--save persists it to Codemagic for reuse). This is what was
+          # missing: previous runs found a cert on Apple but had no private key.
+          app-store-connect create-certificate --type IOS_DISTRIBUTION --save
+          # Create the App Store provisioning profile for our bundle id.
+          app-store-connect fetch-signing-files "com.rotem.whoisthere" \
+            --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
       - name: Get Flutter packages
         script: flutter pub get
       - name: Install CocoaPods dependencies
         script: find . -name "Podfile" -execdir pod install \;
-      - name: Apply Codemagic-managed signing (cert + profile)
-        script: xcode-project use-profiles
       - name: Build signed IPA
         script: |
           flutter build ipa --release \
