@@ -1,55 +1,104 @@
-# התקנה על אייפון דרך Codemagic + TestFlight
+# התקנה על אייפון — מדריך צעד-אחר-צעד (לצורכי בדיקות)
 
-מסמך זה (GitHub בלבד) מסביר מה צריך להגדיר כדי לבנות ולהתקין את WhoIsThere
-על אייפון לבדיקה, בלי Mac מקומי. הקוד כבר מוכן (`codemagic.yaml`, Firebase iOS,
-AdMob). מה שנשאר הוא הגדרות בקונסולות — אלו דברים שדורשים את החשבונות שלך.
+המטרה: לבנות את WhoIsThere ולהתקין אותו על האייפון שלך לבדיקה, **בלי Mac**,
+דרך שירות הבנייה Codemagic + TestFlight של אפל.
 
-מזהה האפליקציה ל-iOS: **`com.rotem.whoisthere`**
+מזהה האפליקציה (Bundle ID): **`com.rotem.whoisthere`**
+פרויקט Firebase: **whoisthere-380fa**
 
----
-
-## שלב 1 — App Store Connect (חד-פעמי)
-1. היכנס ל-https://appstoreconnect.apple.com → **My Apps → +** → New App.
-2. Platform: iOS · Bundle ID: בחר/צור **`com.rotem.whoisthere`**
-   (אם לא קיים, צור אותו ב-developer.apple.com → Identifiers → App ID חדש).
-3. שמור. אין צורך למלא צילומי מסך/תיאור עבור TestFlight פנימי.
-
-## שלב 2 — מפתח App Store Connect API (חד-פעמי)
-1. App Store Connect → **Users and Access → Integrations → App Store Connect API**.
-2. צור מפתח חדש עם הרשאת **App Manager**. הורד את קובץ ה-`.p8` (אפשר פעם אחת!).
-3. רשום: **Issuer ID**, **Key ID**.
-
-## שלב 3 — Codemagic (חד-פעמי)
-1. היכנס ל-https://codemagic.io עם GitHub וחבר את הריפו `rotem-ya/WhoIsThere`.
-2. **Teams → Integrations → App Store Connect → Add key**:
-   - העלה את ה-`.p8`, הזן Issuer ID + Key ID.
-   - תן למפתח שם **בדיוק**: `WhoIsThere ASC Key`
-     (זה השם שמופיע ב-`codemagic.yaml` תחת `integrations`).
-3. זהו — חתימת הקוד אוטומטית (Codemagic ייצור Provisioning Profile לבד).
-
-## שלב 4 — הרצה
-1. ב-Codemagic, פתח את האפליקציה → בחר workflow **`WhoIsThere iOS — TestFlight`** → **Start new build**.
-2. בסיום (≈15–25 ד׳) הבילד יעלה אוטומטית ל-TestFlight.
-
-## שלב 5 — התקנה על האייפון
-1. התקן את אפליקציית **TestFlight** מ-App Store.
-2. App Store Connect → TestFlight → הוסף את עצמך כ-Internal Tester (במייל של ה-Apple ID שלך).
-3. פתח TestFlight באייפון → התקן את WhoIsThere. ✅
+יש 6 שלבים. עשה אותם לפי הסדר. כל שלב כולל **קישור ישיר** ומה ללחוץ.
 
 ---
 
-## מה עובד בבילד הראשון
-- ✅ המשחק המלא במצב **אורח** (Anonymous) — Firebase/Firestore עובדים (תוקנו ערכי ה-iOS).
-- ✅ פרסומות מושבתות (`adsEnabled=false`) — לא קורס (נוסף `GADApplicationIdentifier`).
+## שלב 1 — צור את ה-App ID אצל אפל
+🔗 פתח: https://developer.apple.com/account/resources/identifiers/list
+(התחבר עם ה-Apple ID של חשבון המפתח שלך)
 
-## מה עדיין לא יעבוד (דורש הגדרה נוספת — אפשר בסבב שני)
-- 🔶 **Google Sign-In**: ה-`GoogleService-Info.plist` חסר `CLIENT_ID`.
-  ב-Firebase Console → Authentication → Sign-in method → הפעל **Google**, ודא שאפליקציית
-  ה-iOS (`com.rotem.whoisthere`) רשומה, הורד מחדש את `GoogleService-Info.plist`
-  (יכלול `REVERSED_CLIENT_ID`), והחלף את הקובץ ב-`ios/Runner/`. אז אוסיף את ה-URL scheme.
-- 🔶 **Sign in with Apple**: צריך להפעיל את ה-capability על ה-App ID
-  ב-developer.apple.com → Identifiers → `com.rotem.whoisthere` → סמן **Sign in with Apple**.
-  אחרי שתעשה זאת, תגיד לי ואוסיף את קובץ ה-entitlements לפרויקט.
+1. לחץ על כפתור **➕** (ליד הכותרת "Identifiers").
+2. בחר **App IDs** → **Continue** → בחר **App** → **Continue**.
+3. **Description**: כתוב `WhoIsThere`.
+4. **Bundle ID**: בחר **Explicit** והדבק בדיוק: `com.rotem.whoisthere`
+5. לחץ **Continue** → **Register**.
 
-> טיפ: לבדיקת המשחק עצמו אין צורך בהתחברות — מצב אורח מספיק. אפשר להעלות בילד
-> ראשון עכשיו ולהוסיף את ההתחברויות בסבב נפרד.
+> אם ה-Bundle ID כבר קיים ברשימה — מעולה, דלג לשלב 2.
+
+---
+
+## שלב 2 — צור את האפליקציה ב-App Store Connect
+🔗 פתח: https://appstoreconnect.apple.com/apps
+
+1. לחץ על **➕** (שמאל למעלה) → **New App**.
+2. מלא:
+   - **Platforms**: סמן **iOS**
+   - **Name**: `מה בתמונה?` (או `WhoIsThere`)
+   - **Primary Language**: Hebrew
+   - **Bundle ID**: בחר מהרשימה את `com.rotem.whoisthere`
+   - **SKU**: כתוב משהו כמו `whoisthere001` (מזהה פנימי, לא משנה מה)
+   - **User Access**: Full Access
+3. לחץ **Create**.
+
+> זהו לגבי App Store Connect — לבדיקות פנימיות לא צריך צילומי מסך/תיאור.
+
+---
+
+## שלב 3 — צור מפתח API (קובץ .p8) — זה מה ש-Codemagic צריך
+🔗 פתח: https://appstoreconnect.apple.com/access/integrations/api
+
+1. (אם מבקש) לחץ **Request Access** / אשר גישה ל-API. אם זו הפעם הראשונה.
+2. תחת **Team Keys** לחץ **➕** (Generate API Key / Add).
+3. **Name**: `Codemagic`
+4. **Access**: בחר **App Manager**.
+5. לחץ **Generate**.
+6. בשורה שנוצרה לחץ **Download API Key** → יורד קובץ בשם `AuthKey_XXXXXX.p8`.
+   ⚠️ **אפשר להוריד אותו רק פעם אחת — שמור אותו טוב.**
+7. רשום לעצמך 2 דברים מהמסך הזה:
+   - **Issuer ID** (מחרוזת ארוכה למעלה בעמוד)
+   - **Key ID** (המזהה של המפתח שיצרת)
+
+---
+
+## שלב 4 — חבר את Codemagic לריפו
+🔗 פתח: https://codemagic.io/signup
+
+1. לחץ **Sign up with GitHub** והתחבר עם חשבון ה-GitHub שלך.
+2. אשר ל-Codemagic גישה לריפו **rotem-ya/WhoIsThere** (אפשר לבחור "Only select repositories").
+3. אחרי הכניסה: 🔗 https://codemagic.io/apps → לחץ **Add application**.
+4. בחר **GitHub** → בחר את הריפו **rotem-ya/WhoIsThere** → לחץ **Finish: Add application**.
+   - Codemagic יזהה אוטומטית את הקובץ `codemagic.yaml` שכבר בריפו.
+
+---
+
+## שלב 5 — הוסף ל-Codemagic את מפתח ה-.p8 (חד-פעמי)
+🔗 פתח: https://codemagic.io/teams
+(או: בפינה למעלה לחץ על שם המשתמש/הצוות → **Integrations**)
+
+1. מצא **App Store Connect** ברשימת ה-Integrations → לחץ **Manage keys** / **Add key**.
+2. מלא:
+   - **App Store Connect API key name**: הקלד בדיוק 👉 `WhoIsThere ASC Key`
+     ⚠️ חייב להיות **בדיוק** השם הזה — ככה זה כתוב בקובץ `codemagic.yaml`.
+   - **Issuer ID**: הדבק את מה שרשמת בשלב 3.
+   - **Key ID**: הדבק את מה שרשמת בשלב 3.
+   - **API key**: העלה את קובץ ה-`AuthKey_XXXXXX.p8` מהשלב 3.
+3. לחץ **Save**.
+
+---
+
+## שלב 6 — הרץ בנייה והתקן באייפון
+1. 🔗 פתח https://codemagic.io/apps → לחץ על **WhoIsThere**.
+2. למעלה בחר את ה-workflow **`WhoIsThere iOS — TestFlight`** → לחץ **Start new build**.
+3. חכה ~15–25 דקות. בסיום, הבילד נשלח אוטומטית ל-TestFlight.
+4. באייפון: התקן את אפליקציית **TestFlight**:
+   🔗 https://apps.apple.com/app/testflight/id899247664
+5. 🔗 חזור ל-https://appstoreconnect.apple.com/apps → האפליקציה שלך → לשונית **TestFlight** →
+   תחת **Internal Testing** לחץ **➕** והוסף את עצמך (המייל של ה-Apple ID שלך) כבודק.
+6. פתח את אפליקציית **TestFlight** באייפון → תראה את "מה בתמונה?" → לחץ **Install**. 🎉
+
+---
+
+## מה יעבוד עכשיו / מה לא
+- ✅ **המשחק המלא במצב אורח** — נכנסים ומשחקים בלי התחברות.
+- 🔶 **כניסה עם Google / Apple** — עדיין לא מוגדרת (דורש הגדרות נוספות בקונסולות).
+  לבדיקת המשחק זה לא נדרש. כשתרצה להפעיל אותן — תגיד לי ואדריך/אשלים בקוד.
+
+## נתקעת?
+תגיד לי **באיזה שלב ומספר** נתקעת, ומה אתה רואה על המסך — ואכוון אותך נקודתית.
