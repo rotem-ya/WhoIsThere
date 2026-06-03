@@ -2,8 +2,8 @@
 #
 # One-time setup in the Codemagic UI (see IOS_TESTFLIGHT_SETUP.md):
 #   1. Connect this repository (rotem-ya/WhoIsThere) as an app.
-#   2. Teams → Integrations → App Store Connect → add an API key (.p8) and
-#      name it EXACTLY:  WhoIsThere ASC Key   (used below under `integrations`).
+#   2. Teams → Integrations → App Store Connect API key named "Apple_Key_Trivia"
+#      (Key ID 995PSX889V) — referenced below under `integrations`.
 #   3. In App Store Connect, create the app with bundle id  com.rotem.whoisthere.
 # Then run the `ios-testflight` workflow. Codemagic handles signing automatically.
 
@@ -13,7 +13,7 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 90
     integrations:
-      app_store_connect: WhoIsThere ASC Key
+      app_store_connect: Apple_Key_Trivia
     environment:
       flutter: stable
       xcode: latest
