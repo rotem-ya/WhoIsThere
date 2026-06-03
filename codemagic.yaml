@@ -26,8 +26,16 @@ workflows:
         script: flutter pub get
       - name: Install CocoaPods dependencies
         script: find . -name "Podfile" -execdir pod install \;
-      - name: Apply Codemagic-managed signing (uses the stored certificate)
-        script: xcode-project use-profiles
+      - name: Create App Store provisioning profile, then apply signing
+        script: |
+          # The stored whoisthere_dist certificate (with private key) is loaded
+          # into the keychain by the ios_signing block above. Create the App
+          # Store provisioning profile for our bundle id (none exists yet), then
+          # apply the fetched cert + profile to the Xcode project.
+          app-store-connect fetch-signing-files "com.rotem.whoisthere" \
+            --type IOS_APP_STORE \
+            --create
+          xcode-project use-profiles
       - name: Build signed IPA
         script: |
           flutter build ipa --release \
