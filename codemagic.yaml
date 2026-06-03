@@ -26,8 +26,15 @@ workflows:
         script: flutter pub get
       - name: Install CocoaPods dependencies
         script: find . -name "Podfile" -execdir pod install \;
-      - name: Apply signing (cert + profile fetched by Codemagic)
-        script: xcode-project use-profiles
+      - name: Apply signing (download profile to disk, then apply)
+        script: |
+          # use-profiles found no .mobileprovision on disk, so download the
+          # already-existing App Store profile + cert for our bundle id into the
+          # default location, then apply them to the Xcode project.
+          app-store-connect fetch-signing-files "com.rotem.whoisthere" \
+            --type IOS_APP_STORE \
+            --create
+          xcode-project use-profiles
       - name: Build signed IPA
         script: |
           flutter build ipa --release \
