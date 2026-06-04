@@ -26,6 +26,38 @@ workflows:
         script: flutter pub get
       - name: Install CocoaPods dependencies
         script: find . -name "Podfile" -execdir pod install \;
+      - name: Diagnose signing identities
+        script: |
+          echo "===== 1. VALID CODESIGNING IDENTITIES ====="
+          security find-identity -v -p codesigning \
+            /Users/builder/Library/codemagic-cli-tools/keychains/*.keychain-db || true
+          echo ""
+          echo "===== 2. ALL IDENTITIES (incl. invalid) ====="
+          security find-identity -v \
+            /Users/builder/Library/codemagic-cli-tools/keychains/*.keychain-db || true
+          echo ""
+          echo "===== 3. PROFILES ON DISK ====="
+          ls -la "$HOME/Library/MobileDevice/Provisioning Profiles/" || true
+          echo ""
+          echo "===== 4. CERTS ON DISK ====="
+          ls -la "$HOME/Library/MobileDevice/Certificates/" || true
+          echo ""
+          echo "===== 5. WHICH CERT EACH PROFILE EXPECTS ====="
+          for p in "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision; do
+            echo "--- Profile file: $p ---"
+            security cms -D -i "$p" > /tmp/prof.plist 2>/dev/null || true
+            echo "Name:"
+            /usr/libexec/PlistBuddy -c "Print :Name" /tmp/prof.plist 2>/dev/null || true
+            echo "UUID:"
+            /usr/libexec/PlistBuddy -c "Print :UUID" /tmp/prof.plist 2>/dev/null || true
+            echo "Expected cert SHA1 fingerprint:"
+            /usr/libexec/PlistBuddy -c "Print :DeveloperCertificates:0" /tmp/prof.plist 2>/dev/null \
+              | openssl x509 -inform DER -noout -fingerprint -sha1 2>/dev/null || true
+            echo "Expected cert subject:"
+            /usr/libexec/PlistBuddy -c "Print :DeveloperCertificates:0" /tmp/prof.plist 2>/dev/null \
+              | openssl x509 -inform DER -noout -subject 2>/dev/null || true
+            echo ""
+          done
       - name: Set up code signing settings on Xcode project
         script: xcode-project use-profiles
       - name: Build signed IPA
