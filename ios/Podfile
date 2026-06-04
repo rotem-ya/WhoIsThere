@@ -54,4 +54,20 @@ post_install do |installer|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
     end
   end
+
+  # Fix gRPC-Core C++ parse error under Xcode 16 / newer clang. Its promise
+  # library uses `Traits::template ...`, which clang 16 rejects:
+  # "A template argument list is expected after a name prefixed by the template
+  # keyword" (gRPC-Core/.../promise/detail/basic_seq.h). Drop the spurious
+  # `template` keyword in the gRPC-Core sources. Idempotent + re-applied on
+  # every pod install (incl. the one Flutter runs during archive).
+  grpc_root = File.join(installer.sandbox.root, 'gRPC-Core')
+  if Dir.exist?(grpc_root)
+    Dir.glob(File.join(grpc_root, '**', '*.{h,hpp,cc,c,mm,m}')).each do |path|
+      contents = File.read(path)
+      if contents.include?('Traits::template')
+        File.write(path, contents.gsub('Traits::template', 'Traits::'))
+      end
+    end
+  end
 end
