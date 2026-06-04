@@ -19,7 +19,10 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.rotem.whoisthere
       flutter: 3.24.5
-      xcode: 16.4
+      # Xcode 16.4 fails while compiling the current Firebase/gRPC-C++ pods
+      # with: "A template argument list is expected after a name prefixed by the template keyword".
+      # Keep the build on Xcode 16.2 until the iOS Firebase stack is upgraded.
+      xcode: 16.2
       cocoapods: default
     scripts:
       - name: Get Flutter packages
