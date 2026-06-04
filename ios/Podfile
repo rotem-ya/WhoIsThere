@@ -49,17 +49,20 @@ post_install do |installer|
       end
     end
 
-    # Keep Firebase Flutter plugins buildable as frameworks with modular headers.
-    # Xcode can otherwise reject Firebase.h as a non-modular header inside plugin modules.
-    if target.name.start_with?('firebase_') || target.name.start_with?('Firebase') || target.name == 'Runner'
-      target.build_configurations.each do |config|
-        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-      end
-    end
-
-    # Ensure a modern, supported deployment target for all pods
+    # Keep all pods buildable as frameworks with modular headers.
+    # Firebase Flutter plugins can otherwise reject Firebase.h as a non-modular header.
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      config.build_settings['DEFINES_MODULE'] = 'YES'
+    end
+  end
+
+  # Apply the same non-modular include allowance to generated aggregate targets.
+  installer.aggregate_targets.each do |aggregate_target|
+    aggregate_target.xcconfigs.each do |_config_name, xcconfig|
+      xcconfig.attributes['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      xcconfig.save_as(aggregate_target.xcconfig_path(_config_name))
     end
   end
 
