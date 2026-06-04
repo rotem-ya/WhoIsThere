@@ -19,7 +19,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.rotem.whoisthere
       flutter: 3.24.5
-      xcode: latest
+      xcode: 16.4
       cocoapods: default
     scripts:
       - name: Get Flutter packages
