@@ -27,6 +27,15 @@ workflows:
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
+      - name: Fix iOS asset catalog reference
+        script: |
+          set -e
+          PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
+          # The project currently contains two Assets.xcassets references.
+          # The resource build phase points to ios/Assets.xcassets, which has no AppIcon.
+          # Point it back to ios/Runner/Assets.xcassets, where AppIcon.appiconset exists.
+          perl -0pi -e 's/fileRef = 97C146FD1CF9000F007C117D \/\* Assets\.xcassets \*\//fileRef = 97C146FB1CF9000F007C117D \/\* Assets.xcassets \*\//g' "$PBXPROJ"
+          grep -n "Assets.xcassets in Resources" "$PBXPROJ"
       - name: Diagnose signing identities
         script: |
           echo "===== 1. VALID CODESIGNING IDENTITIES ====="
