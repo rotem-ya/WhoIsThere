@@ -24,8 +24,6 @@ workflows:
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
-      - name: Install CocoaPods dependencies
-        script: find . -name "Podfile" -execdir pod install \;
       - name: Diagnose signing identities
         script: |
           echo "===== 1. VALID CODESIGNING IDENTITIES ====="
