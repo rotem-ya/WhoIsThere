@@ -55,19 +55,20 @@ post_install do |installer|
     end
   end
 
-  # Fix gRPC-Core C++ parse error under Xcode 16 / newer clang. Its promise
-  # library uses `Traits::template ...`, which clang 16 rejects:
-  # "A template argument list is expected after a name prefixed by the template
-  # keyword" (gRPC-Core/.../promise/detail/basic_seq.h). Drop the spurious
-  # `template` keyword in the gRPC-Core sources. Idempotent + re-applied on
-  # every pod install (incl. the one Flutter runs during archive).
+  # Fix gRPC-Core C++ parse error under Xcode 16 / newer clang. gRPC 1.62 writes
+  # `Traits::template CallSeqFactory(...)` where the member is a plain function;
+  # clang 16 rejects `template` unless a template-argument list follows
+  # ("A template argument list is expected after a name prefixed by the template
+  # keyword", basic_seq.h). Upstream (gRPC 1.66) simply dropped `template` there.
+  # Strip `template` ONLY when the member is immediately called as `name(`, so
+  # valid uses like `CheckResultAndRunNext<Wrapped>(` are left untouched.
+  # Idempotent + re-applied on every pod install (incl. Flutter's during archive).
   grpc_root = File.join(installer.sandbox.root, 'gRPC-Core')
   if Dir.exist?(grpc_root)
     Dir.glob(File.join(grpc_root, '**', '*.{h,hpp,cc,c,mm,m}')).each do |path|
-      contents = File.read(path)
-      if contents.include?('Traits::template')
-        File.write(path, contents.gsub('Traits::template', 'Traits::'))
-      end
+      original = File.read(path)
+      patched = original.gsub(/(::|\.)template\s+([A-Za-z_]\w*)\(/, '\1\2(')
+      File.write(path, patched) if patched != original
     end
   end
 end
