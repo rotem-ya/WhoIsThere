@@ -11,9 +11,9 @@
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		CF9A3B1D2A5E700100F43210 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = CF9A3B1C2A5E700100F43210 /* GoogleService-Info.plist */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
-		97C146FD1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; settings = {}; };
+		B1B1B1B10000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; settings = {}; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
-		97C147041CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C147021CF9000F007C117D /* Main.storyboard */; };
+		B2B2B2B20000000000000002 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C147021CF9000F007C117D /* Main.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -164,8 +164,8 @@
 			files = (
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
-				97C147041CF9000F007C117D /* Main.storyboard in Resources */,
-				97C146FD1CF9000F007C117D /* Assets.xcassets in Resources */,
+				B2B2B2B20000000000000002 /* Main.storyboard in Resources */,
+				B1B1B1B10000000000000001 /* Assets.xcassets in Resources */,
 				CF9A3B1D2A5E700100F43210 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
