@@ -1,4 +1,5 @@
 rules_version = '2';
+// Deployed via .github/workflows/deploy-firestore-rules.yml (firebaserules REST API).
 service cloud.firestore {
   match /databases/{database}/documents {
 

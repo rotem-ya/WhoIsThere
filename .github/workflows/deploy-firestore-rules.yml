@@ -37,5 +37,8 @@ jobs:
           echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
 
-      - name: Deploy Firestore rules
-        run: npx -y firebase-tools deploy --only firestore:rules --project whoisthere-380fa --non-interactive
+      - name: Install deps
+        run: npm install google-auth-library
+
+      - name: Deploy Firestore rules (REST API)
+        run: node scripts/deploy_rules.js
