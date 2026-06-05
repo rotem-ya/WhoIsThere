@@ -379,7 +379,7 @@ class RoomService {
     // priorExposureCount via field-path so it isn't clobbered by _startGame.
     await _startGame(roomId, room, Difficulty.easy);
     await _recordPriorExposure(roomId, room.players, image.id);
-    _recordExposureForAll(room.players, image.id);
+    await _recordExposureForAll(room.players, image.id);
   }
 
   Future<void> castImageVote({
@@ -450,7 +450,7 @@ class RoomService {
     await _startGame(roomId, room, difficulty);
     if (imageId != null && imageId.isNotEmpty) {
       await _recordPriorExposure(roomId, room.players, imageId);
-      _recordExposureForAll(room.players, imageId);
+      await _recordExposureForAll(room.players, imageId);
     }
   }
 
@@ -585,12 +585,18 @@ class RoomService {
     } catch (_) {}
   }
 
-  void _recordExposureForAll(Map<String, PlayerModel> players, String imageId) {
-    for (final entry in players.entries) {
-      if (!entry.value.isBot) {
-        _recordExposureForPlayer(entry.key, imageId).ignore();
-      }
-    }
+  /// Records exposure for every real player and AWAITS the writes. This must be
+  /// awaited by callers before the round is considered started, otherwise the
+  /// next `_pickSmartImage` can read a stale `exposure_history` (the image not
+  /// yet marked in `__cycleSeen`) and repeat an image before the cycle is done.
+  Future<void> _recordExposureForAll(
+    Map<String, PlayerModel> players,
+    String imageId,
+  ) async {
+    await Future.wait([
+      for (final entry in players.entries)
+        if (!entry.value.isBot) _recordExposureForPlayer(entry.key, imageId),
+    ]);
   }
 
   /// Increments the player's exposure for [imageId], marks it seen in the
