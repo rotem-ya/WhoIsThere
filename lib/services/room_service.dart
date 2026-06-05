@@ -544,7 +544,7 @@ class RoomService {
   /// Raw exposure document: image-id counts plus reserved `__` cycle metadata.
   Future<Map<String, dynamic>> _getExposureRaw(String uid) async {
     try {
-      final snap = await _firestore.doc('users/$uid/exposure_history').get();
+      final snap = await _firestore.doc('users/$uid/exposure_history/data').get();
       if (!snap.exists) return {};
       return snap.data() ?? {};
     } catch (_) {
@@ -589,13 +589,17 @@ class RoomService {
   /// awaited by callers before the round is considered started, otherwise the
   /// next `_pickSmartImage` can read a stale `exposure_history` (the image not
   /// yet marked in `__cycleSeen`) and repeat an image before the cycle is done.
+  ///
+  /// Exposure tracking is best-effort: a failure here (permission/network) must
+  /// NEVER abort game start, so each write swallows its own error.
   Future<void> _recordExposureForAll(
     Map<String, PlayerModel> players,
     String imageId,
   ) async {
     await Future.wait([
       for (final entry in players.entries)
-        if (!entry.value.isBot) _recordExposureForPlayer(entry.key, imageId),
+        if (!entry.value.isBot)
+          _recordExposureForPlayer(entry.key, imageId).catchError((_) {}),
     ]);
   }
 
@@ -604,7 +608,7 @@ class RoomService {
   Future<void> _recordExposureForPlayer(String uid, String imageId) async {
     final images = await _loadLocalImages();
     final allIds = images.map((img) => img.id).toSet();
-    final ref = _firestore.doc('users/$uid/exposure_history');
+    final ref = _firestore.doc('users/$uid/exposure_history/data');
     await _firestore.runTransaction((tx) async {
       final snap = await tx.get(ref);
       final data = snap.data() ?? <String, dynamic>{};

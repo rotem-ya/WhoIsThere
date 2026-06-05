@@ -46,7 +46,8 @@ service cloud.firestore {
 
       // Exposure history — any authenticated user may write.
       // _recordExposureForAll() writes to other players' docs cross-user.
-      match /exposure_history {
+      // Stored at users/{userId}/exposure_history/data (4-segment doc path).
+      match /exposure_history/{document} {
         allow read: if signedIn() && request.auth.uid == userId;
         allow write: if signedIn();
       }

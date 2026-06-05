@@ -1,0 +1,41 @@
+name: Deploy Firestore Rules
+
+# Deploys firestore.rules to the Firebase project using the existing
+# FIREBASE_SERVICE_ACCOUNT secret (same one seed-firestore.yml uses).
+#
+# Run manually from the Actions tab, or it runs automatically when
+# firestore.rules changes on main.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - firestore.rules
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Write service account credentials
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT secret is not set"
+            exit 1
+          fi
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+
+      - name: Deploy Firestore rules
+        run: npx -y firebase-tools deploy --only firestore:rules --project whoisthere-380fa --non-interactive

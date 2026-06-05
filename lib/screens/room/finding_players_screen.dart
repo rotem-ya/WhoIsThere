@@ -114,7 +114,9 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
       await ref.read(roomServiceProvider).startGameDirectly(widget.roomId);
       ref.read(currentRoomIdProvider.notifier).state = widget.roomId;
       if (mounted) context.go('/game/${widget.roomId}');
-    } catch (_) {
+    } catch (e) {
+      QaLoggerService.instance
+          .log('GAME', 'START_GAME_FAILED roomId=${widget.roomId.substring(0, widget.roomId.length.clamp(0, 6))} error=$e');
       if (mounted) context.go('/home');
     }
   }
