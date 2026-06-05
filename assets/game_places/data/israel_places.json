@@ -51,8 +51,8 @@
     "difficulty": "easy",
     "is_active": true,
     "facts": [
-      "סמטאות צרות מתפתלות בין דוכנים עמוסים, וריח של תבלינים ומאפה טרי ממלא את האוויר",
-      "ביום קולות של מוכרים וקונים, ובלילה הכול מתחלף למוזיקה, לאורות ולבילוי"
+      "כאן, ריחות התבלינים מתערבבים עם קריאות הרוכלים בשפות שונות, ועשרות שנות שגרה ירושלמית ספוגות בכל אבן.",
+      "המון צבעוני שוצף בין דוכנים עמוסי גבינות, פירות ומאפים, שמחוברים כולם בגג מקושת ישן שנושא עליו עיר שלמה"
     ]
   },
   {
@@ -195,7 +195,12 @@
     "city_he": "רמת הגולן",
     "image_asset": "assets/game_places/images/mount_hermon.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "מהפסגה הגבוהה ביותר העיניים נודדות אל שלוש מדינות בבת אחת, והגבול חש קרוב מתמיד.",
+      "עליו נאמר: העיניים של המדינה"
+    ],
+    "_pendingExport": true
   },
   {
     "id": "sea_of_galilee",
@@ -265,7 +270,12 @@
     "city_he": "חיפה",
     "image_asset": "assets/game_places/images/bahai_gardens.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "מדרון תלול הופך לגן מדורג ומושלם בסימטריה שלו, כל שיח גזום כאילו נמדד בסרגל.",
+      "במרכז הכל ניצבת כיפה זהובה שאליה מפנה מבטם מאמינים מכל קצות העולם."
+    ],
+    "_pendingExport": true
   },
   {
     "id": "haifa_port",
@@ -329,7 +339,12 @@
     "city_he": "תל אביב",
     "image_asset": "assets/game_places/images/azrieli_towers.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "מהקומה העליונה נפרשת תצפית מעגלית שחושפת את כל המטרופולין עד קו החוף.",
+      "מגדלים בצורות בעיר האורות"
+    ],
+    "_pendingExport": true
   },
   {
     "id": "tel_aviv_port",
