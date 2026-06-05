@@ -24,6 +24,12 @@ on:
   push:
     tags:
       - 'aab-v*'
+    branches:
+      - main
+    # Only build an AAB when the release marker file changes, so ordinary
+    # pushes to main don't trigger a Play build on every commit.
+    paths:
+      - '.github/aab-release.txt'
 
 jobs:
   build:
