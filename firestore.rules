@@ -45,12 +45,13 @@ service cloud.firestore {
         allow read, write: if signedIn() && request.auth.uid == userId;
       }
 
-      // Exposure history — any authenticated user may write.
-      // _recordExposureForAll() writes to other players' docs cross-user.
-      // Stored at users/{userId}/exposure_history/data (4-segment doc path).
+      // Exposure history — any authenticated user may read AND write.
+      // Cross-user by design: _recordExposureForAll() writes to other players'
+      // docs, and _pickSmartImage() reads every real player's history (the host
+      // reads co-players) to rotate images without repeats. Non-sensitive data
+      // (per-image view counts). Stored at users/{userId}/exposure_history/data.
       match /exposure_history/{document} {
-        allow read: if signedIn() && request.auth.uid == userId;
-        allow write: if signedIn();
+        allow read, write: if signedIn();
       }
     }
 

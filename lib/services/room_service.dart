@@ -482,7 +482,11 @@ class RoomService {
         .map((e) => e.key)
         .toList();
 
-    if (realIds.isEmpty) return images[Random().nextInt(images.length)];
+    if (realIds.isEmpty) {
+      final r = images[Random().nextInt(images.length)];
+      QaLoggerService.instance.log('IMG', 'PICK_RANDOM_NOREAL chosen=${r.id} pool=${images.length}');
+      return r;
+    }
 
     try {
       final allIds = images.map((img) => img.id).toSet();
@@ -535,9 +539,18 @@ class RoomService {
         if (a.notLast != b.notLast) return b.notLast - a.notLast;
         return a.totalExp - b.totalExp;
       });
-      return scored.first.img;
-    } catch (_) {
-      return images[Random().nextInt(images.length)];
+      final pick = scored.first;
+      final freshPool = scored.where((s) => s.fresh == realIds.length).length;
+      QaLoggerService.instance.log(
+          'IMG',
+          'PICK chosen=${pick.img.id} fresh=${pick.fresh}/${realIds.length} '
+              'isNew=${pick.isNew} notLast=${pick.notLast} totalExp=${pick.totalExp} '
+              'pool=${images.length} freshRemaining=$freshPool');
+      return pick.img;
+    } catch (e) {
+      final r = images[Random().nextInt(images.length)];
+      QaLoggerService.instance.log('IMG', 'PICK_FALLBACK_ERR chosen=${r.id} error=$e');
+      return r;
     }
   }
 
@@ -547,10 +560,14 @@ class RoomService {
       final snap = await _firestore.doc('users/$uid/exposure_history/data').get();
       if (!snap.exists) return {};
       return snap.data() ?? {};
-    } catch (_) {
+    } catch (e) {
+      QaLoggerService.instance.log('IMG', 'EXPOSURE_READ_FAIL uid=${_short(uid)} error=$e');
       return {};
     }
   }
+
+  static String _short(String id) =>
+      id.length <= 6 ? id : id.substring(id.length - 6);
 
   Future<Map<String, int>> _getExposureCounts(String uid) async {
     final raw = await _getExposureRaw(uid);
@@ -599,7 +616,10 @@ class RoomService {
     await Future.wait([
       for (final entry in players.entries)
         if (!entry.value.isBot)
-          _recordExposureForPlayer(entry.key, imageId).catchError((_) {}),
+          _recordExposureForPlayer(entry.key, imageId).catchError((e) {
+            QaLoggerService.instance.log(
+                'IMG', 'EXPOSURE_WRITE_FAIL uid=${_short(entry.key)} img=$imageId error=$e');
+          }),
     ]);
   }
 
@@ -609,6 +629,8 @@ class RoomService {
     final images = await _loadLocalImages();
     final allIds = images.map((img) => img.id).toSet();
     final ref = _firestore.doc('users/$uid/exposure_history/data');
+    var loggedSeen = 0;
+    var loggedCount = 0;
     await _firestore.runTransaction((tx) async {
       final snap = await tx.get(ref);
       final data = snap.data() ?? <String, dynamic>{};
@@ -622,12 +644,18 @@ class RoomService {
       // Whole pool shown → close the cycle so the next round starts fresh.
       // (Re-showing this image immediately is prevented by the `__last` guard.)
       if (seen.length >= allIds.length) seen = <String>{};
+      loggedSeen = seen.length;
+      loggedCount = current + 1;
       tx.set(ref, {
         imageId: current + 1,
         '__cycleSeen': seen.toList(),
         '__last': imageId,
       }, SetOptions(merge: true));
     });
+    QaLoggerService.instance.log(
+        'IMG',
+        'EXPOSURE_OK uid=${_short(uid)} img=$imageId count=$loggedCount '
+            'cycleSeen=$loggedSeen/${allIds.length}');
   }
 
   void _recordDiscoveredForAll(Map<String, PlayerModel> players, String imageId) {
