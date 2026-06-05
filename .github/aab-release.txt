@@ -1,2 +1,3 @@
-Release AAB build requested: 2026-06-05T11:28:34Z
+Release AAB build requested: 2026-06-05T12:50:39Z
 version: 1.0.0
+includes: game-start fix, exposure rotation, hebrew app name, hidden hints
