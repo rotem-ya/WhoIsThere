@@ -71,15 +71,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
       final roomSvc = ref.read(roomServiceProvider);
 
-      // Compute player's round, then attempt to find an existing public room twice
-      final myRound = await roomSvc.computePlayerRound(user.id);
-      QaLoggerService.instance.log('HOME', 'QUICK_GAME_ROUND round=$myRound');
+      // Quick-match against real players who have seen the candidate image the
+      // SAME number of times. Try to find a compatible waiting room twice before
+      // falling back to creating our own (bots then fill it on the waiting screen).
+      final myExposure = await roomSvc.exposureCountsFor(user.id);
+      QaLoggerService.instance.log('HOME', 'QUICK_GAME_MATCH_SEARCH images=${myExposure.length}');
 
-      RoomModel? existingRoom = await roomSvc.findPublicRoom(myRound);
+      RoomModel? existingRoom = await roomSvc.findMatchRoom(myExposure);
       if (existingRoom == null) {
         await Future.delayed(const Duration(seconds: 2));
         if (!mounted) return;
-        existingRoom = await roomSvc.findPublicRoom(myRound);
+        existingRoom = await roomSvc.findMatchRoom(myExposure);
       }
 
       String roomId;

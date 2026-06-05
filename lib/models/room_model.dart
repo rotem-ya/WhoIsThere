@@ -44,6 +44,10 @@ class RoomModel extends Equatable {
   final Map<String, int> blackoutActiveUntilMs;  // uid → epoch ms when blackout expires
   final bool isPublicRoom;
   final int playerRound;
+  /// Quick-match key: the host's exposure count to [selectedImageId]. A real
+  /// player is only matched into this room if THEIR exposure to the same image
+  /// equals this value (same-exposure matchmaking).
+  final int matchExposureCount;
 
   const RoomModel({
     required this.id,
@@ -86,6 +90,7 @@ class RoomModel extends Equatable {
     this.blackoutActiveUntilMs = const {},
     this.isPublicRoom = false,
     this.playerRound = 0,
+    this.matchExposureCount = 0,
   });
 
   bool isBlockedFromGuessing(String userId) {
@@ -201,6 +206,7 @@ class RoomModel extends Equatable {
           .map((k, v) => MapEntry(k, (v as num).toInt())),
       isPublicRoom: data['isPublicRoom'] as bool? ?? false,
       playerRound: (data['playerRound'] as num?)?.toInt() ?? 0,
+      matchExposureCount: (data['matchExposureCount'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -244,6 +250,7 @@ class RoomModel extends Equatable {
         'blackoutActiveUntilMs': blackoutActiveUntilMs,
         'isPublicRoom': isPublicRoom,
         'playerRound': playerRound,
+        'matchExposureCount': matchExposureCount,
       };
 
   RoomModel copyWith({
@@ -283,6 +290,7 @@ class RoomModel extends Equatable {
     Map<String, int>? blackoutActiveUntilMs,
     bool? isPublicRoom,
     int? playerRound,
+    int? matchExposureCount,
   }) =>
       RoomModel(
         id: id,
@@ -329,6 +337,7 @@ class RoomModel extends Equatable {
         blackoutActiveUntilMs: blackoutActiveUntilMs ?? this.blackoutActiveUntilMs,
         isPublicRoom: isPublicRoom ?? this.isPublicRoom,
         playerRound: playerRound ?? this.playerRound,
+        matchExposureCount: matchExposureCount ?? this.matchExposureCount,
       );
 
   @override
@@ -372,5 +381,6 @@ class RoomModel extends Equatable {
         blackoutActiveUntilMs,
         isPublicRoom,
         playerRound,
+        matchExposureCount,
       ];
 }

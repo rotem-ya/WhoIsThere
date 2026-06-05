@@ -217,6 +217,23 @@ class RoomService {
       );
     }
 
+    // For public quick-match rooms, pre-pick the image now so the waiting room is
+    // discoverable by exposure. matchExposureCount = the host's exposure to that
+    // image; only same-exposure real players will be matched into this room.
+    String? preImageId;
+    int matchExposure = 0;
+    if (isPublicRoom) {
+      final images = await _loadLocalImages();
+      if (images.isNotEmpty) {
+        final img = await _pickSmartImage(images, players);
+        preImageId = img.id;
+        final hostExp = await _getExposureCounts(effectiveHostId);
+        matchExposure = hostExp[img.id] ?? 0;
+        QaLoggerService.instance.log('MATCH',
+            'CREATE_MATCH_ROOM img=$preImageId hostExposure=$matchExposure');
+      }
+    }
+
     final room = RoomModel(
       id: docRef.id,
       code: code,
@@ -227,6 +244,8 @@ class RoomService {
       cardSkinId: cardSkinId,
       isPublicRoom: isPublicRoom,
       playerRound: hostRound,
+      selectedImageId: preImageId,
+      matchExposureCount: matchExposure,
     );
 
     QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_WRITE id=${docRef.id}');
@@ -325,6 +344,39 @@ class RoomService {
     }
   }
 
+  /// Public accessor for a user's per-image exposure counts (for matchmaking).
+  Future<Map<String, int>> exposureCountsFor(String uid) => _getExposureCounts(uid);
+
+  /// Quick-match by exposure: finds a waiting public room whose image the joining
+  /// player has seen the SAME number of times as the host (room.matchExposureCount).
+  /// Uses an equality-only query (no composite index needed) and filters locally.
+  Future<RoomModel?> findMatchRoom(Map<String, int> myExposure) async {
+    try {
+      final snap = await _rooms
+          .where('phase', isEqualTo: GamePhase.waiting.name)
+          .where('isPublicRoom', isEqualTo: true)
+          .limit(10)
+          .get();
+      for (final doc in snap.docs) {
+        final room = RoomModel.fromFirestore(doc);
+        if (room.players.length >= GameConstants.maxPlayers) continue;
+        final imgId = room.selectedImageId;
+        if (imgId == null || imgId.isEmpty) continue;
+        final myExp = myExposure[imgId] ?? 0;
+        if (myExp == room.matchExposureCount) {
+          QaLoggerService.instance.log('MATCH',
+              'MATCH_ROOM_FOUND room=${room.id.substring(0, room.id.length.clamp(0, 6))} img=$imgId exposure=$myExp');
+          return room;
+        }
+      }
+      QaLoggerService.instance.log('MATCH', 'MATCH_ROOM_NONE candidates=${snap.docs.length}');
+      return null;
+    } catch (e) {
+      QaLoggerService.instance.log('MATCH', 'MATCH_ROOM_ERROR error=$e');
+      return null;
+    }
+  }
+
   Future<RoomModel?> findRoomByCode(String code) async {
     final query = await _rooms
         .where('code', isEqualTo: code.toUpperCase())
@@ -373,7 +425,13 @@ class RoomService {
     final room = RoomModel.fromFirestore(doc);
     final images = await _loadLocalImages();
     if (images.isEmpty) return;
-    final image = await _pickSmartImage(images, room.players);
+    // Reuse the image pre-picked at room creation (public quick-match rooms) so
+    // the game image matches the one matchmaking paired players on. Falls back to
+    // a fresh pick for rooms that don't have one yet.
+    final existingId = room.selectedImageId;
+    final image = (existingId != null && existingId.isNotEmpty)
+        ? images.firstWhere((i) => i.id == existingId, orElse: () => images.first)
+        : await _pickSmartImage(images, room.players);
     await _rooms.doc(roomId).update({'selectedImageId': image.id});
     // Start the game first (it rewrites the whole players map), THEN record
     // priorExposureCount via field-path so it isn't clobbered by _startGame.
