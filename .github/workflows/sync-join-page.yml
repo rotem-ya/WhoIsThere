@@ -1,10 +1,11 @@
-name: Sync join page → apps-share-pages
+name: Sync public pages → apps-share-pages
 
 on:
   push:
     branches: [main]
     paths:
       - docs/join.html
+      - docs/privacy.html
 
 jobs:
   sync:
@@ -12,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Push join page to apps-share-pages
+      - name: Push public pages to apps-share-pages
         env:
           PAGES_TOKEN: ${{ secrets.PAGES_SYNC_TOKEN }}
         run: |
@@ -24,8 +25,11 @@ jobs:
           mkdir -p /tmp/pages/whoisthere/join
           cp docs/join.html /tmp/pages/whoisthere/join/index.html
 
+          mkdir -p /tmp/pages/whoisthere/privacy
+          cp docs/privacy.html /tmp/pages/whoisthere/privacy/index.html
+
           cd /tmp/pages
-          git add whoisthere/join/index.html
+          git add whoisthere/join/index.html whoisthere/privacy/index.html
           git diff --staged --quiet && echo "No changes, skipping." && exit 0
-          git commit -m "sync: WhoIsThere join page (${GITHUB_SHA::7})"
+          git commit -m "sync: WhoIsThere public pages (${GITHUB_SHA::7})"
           git push
