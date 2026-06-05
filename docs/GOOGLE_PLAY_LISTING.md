@@ -90,9 +90,15 @@
 ## 6. מדיניות פרטיות (URL — חובה)
 
 ```
-https://rotem-ya.github.io/apps-share-pages/whoisthere/privacy/
+https://rotem-ya.github.io/WhoIsThere/privacy.html
 ```
-> הדף מתפרסם אוטומטית מ-`docs/privacy.html` דרך workflow הסנכרון. ודאו שהקישור נטען לפני ההגשה.
+> **דרוש פעם אחת:** הפעל GitHub Pages לריפו —
+> Settings → Pages → Source: **Deploy from a branch** → Branch: **main** → Folder: **/docs** → Save.
+> תוך ~דקה הדף `docs/privacy.html` יהיה זמין בכתובת לעיל.
+>
+> (חלופה: לתקן את `PAGES_SYNC_TOKEN` להרשאת Contents:Write על `apps-share-pages` — אז הדף
+> יסונכרן גם ל-`https://rotem-ya.github.io/apps-share-pages/whoisthere/privacy/`. הטוקן הנוכחי
+> קריאה-בלבד, ולכן גם סנכרון דף ה-join נכשל.)
 
 ---
 
