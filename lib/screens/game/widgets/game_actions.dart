@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/economy_config.dart';
+import '../../../core/constants/game_constants.dart';
 import '../../../models/player_model.dart';
 import '../../../providers/providers.dart';
 import '../../../services/feedback_service.dart';
@@ -119,8 +120,10 @@ class GameActions extends ConsumerWidget {
                 onTap: primaryOnTap,
                 reward: showReward ? earlyBonus : null,
               ),
-              // Hint button — only in solo mode (shown regardless of turn state)
-              if (isSolo && onRevealHint != null) ...[
+              // Hint button — only in solo mode (shown regardless of turn state).
+              // Temporarily hidden via GameConstants.hintsEnabled for this launch;
+              // the underlying buy/re-view flow is kept intact for re-enabling later.
+              if (GameConstants.hintsEnabled && isSolo && onRevealHint != null) ...[
                 const SizedBox(height: 6),
                 _HintButton(
                   label: purchasedHintCount >= 1

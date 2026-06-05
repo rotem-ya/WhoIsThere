@@ -188,6 +188,12 @@ extension ImageCategoryExtension on ImageCategory {
 }
 
 class GameConstants {
+  // Feature flag: hints are temporarily hidden from the UI for this launch.
+  // The full hint flow (buy/re-view buttons, dialogs, per-place facts) stays
+  // in the code and facts keep being stored for new places — flip this back to
+  // `true` to surface the hint buttons again. See game_actions.dart.
+  static const bool hintsEnabled = false;
+
   static const int maxPlayers = 8;
   static const int minPlayers = 2;
   static const int roomCodeLength = 6;
