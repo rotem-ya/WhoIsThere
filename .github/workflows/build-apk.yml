@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -85,3 +87,16 @@ jobs:
           name: ${{ steps.artifact_name.outputs.name }}
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
+
+      # Publish a direct, mobile-friendly download link. Updates a moving
+      # "qa-latest" release on every main build so the URL never changes:
+      #   https://github.com/rotem-ya/WhoIsThere/releases/download/qa-latest/app-release.apk
+      - name: Publish APK to qa-latest release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: qa-latest
+          name: QA build (latest)
+          body: "Latest QA APK — commit ${{ github.sha }}"
+          files: build/app/outputs/flutter-apk/app-release.apk
+          make_latest: true
