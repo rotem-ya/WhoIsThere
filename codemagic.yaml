@@ -19,23 +19,24 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.rotem.whoisthere
       flutter: 3.24.5
-      # Xcode 16.4 fails while compiling the current Firebase/gRPC-C++ pods
-      # with: "A template argument list is expected after a name prefixed by the template keyword".
-      # Keep the build on Xcode 16.2 until the iOS Firebase stack is upgraded.
-      xcode: 16.2
+      # App Store Connect now requires the current Apple SDK. Keep the gRPC/Firebase
+      # compatibility patches below because the current Firebase iOS stack is old.
+      xcode: latest
       cocoapods: default
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
-      - name: Fix iOS asset catalog reference
+      - name: Fix iOS project assets
         script: |
           set -e
           PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
           # The project currently contains two Assets.xcassets references.
-          # The resource build phase points to ios/Assets.xcassets, which has no AppIcon.
+          # The resource build phase can point to ios/Assets.xcassets, which has no AppIcon.
           # Point it back to ios/Runner/Assets.xcassets, where AppIcon.appiconset exists.
           perl -0pi -e 's/fileRef = 97C146FD1CF9000F007C117D \/\* Assets\.xcassets \*\//fileRef = 97C146FB1CF9000F007C117D \/\* Assets.xcassets \*\//g' "$PBXPROJ"
           grep -n "Assets.xcassets in Resources" "$PBXPROJ"
+          # App Store Connect rejects app icons that contain transparency or an alpha channel.
+          python3 tool/ci/flatten_ios_app_icons.py ios/Runner/Assets.xcassets/AppIcon.appiconset
       - name: Diagnose signing identities
         script: |
           echo "===== 1. VALID CODESIGNING IDENTITIES ====="
