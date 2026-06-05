@@ -21,6 +21,9 @@ on:
         description: 'Version name shown to users (e.g. 1.0.0)'
         required: true
         default: '1.0.0'
+  push:
+    tags:
+      - 'aab-v*'
 
 jobs:
   build:
@@ -74,7 +77,7 @@ jobs:
           KEYSTORE_KEY_PASS: "WhoIsThere2024!"
         run: |
           flutter build appbundle --release \
-            --build-name="${{ github.event.inputs.build_name }}" \
+            --build-name="${{ github.event.inputs.build_name || '1.0.0' }}" \
             --build-number="${{ github.run_number }}"
 
       - name: Verify AAB signing certificate SHA
