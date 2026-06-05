@@ -33,6 +33,10 @@ class GameLayout extends StatelessWidget {
   final VoidCallback? onBuySecondHint;
   final VoidCallback? onGuess;
   final Future<bool> Function(String)? onGuessSubmit;
+  // Parallel guessing: the guess input overlay is driven by a LOCAL flag so each
+  // player can open their own input independently (no shared exclusive lock).
+  final bool showGuessInput;
+  final int? localGuessDeadlineMs;
   final double revealRatio;
   final int potTotal;
   final int stunCardCount;
@@ -62,6 +66,8 @@ class GameLayout extends StatelessWidget {
     required this.onRevealHint,
     required this.onGuess,
     required this.onGuessSubmit,
+    this.showGuessInput = false,
+    this.localGuessDeadlineMs,
     this.purchasedHintCount = 0,
     this.onBuySecondHint,
     this.revealRatio = 0.0,
@@ -258,13 +264,15 @@ class GameLayout extends StatelessWidget {
           ],
         ),
 
-        // ── Dramatic guess overlay — shown only for the active guesser ─
-        if (isMyGuessModeActive)
+        // ── Dramatic guess overlay — opened locally by THIS player ─
+        // Parallel guessing: shown when this client opened its own input, so
+        // multiple players can be guessing simultaneously on their own screens.
+        if (showGuessInput && room.phase == GamePhase.playing)
           GuessModeOverlay(
-            key: ValueKey('guess-overlay-${room.guessModeDeadlineMs}'),
-            guesserName: guessModePlayerName,
-            isMyGuess: isMyGuessModeActive,
-            deadlineMs: room.guessModeDeadlineMs,
+            key: ValueKey('guess-overlay-$localGuessDeadlineMs'),
+            guesserName: room.players[currentUserId]?.name ?? '',
+            isMyGuess: true,
+            deadlineMs: localGuessDeadlineMs,
             answer: image?.answer ?? '',
             onSubmit: onGuessSubmit,
           ),

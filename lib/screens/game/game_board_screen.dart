@@ -222,6 +222,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   final Set<String> _sessionTimeoutKeys = {};
   int _sessionGuessModeCount = 0;
   int _sessionWrongGuessCount = 0;
+
+  // Parallel guessing: the guess input overlay is opened LOCALLY (no global lock),
+  // so several players can race at once. _localGuessOpen drives the overlay; the
+  // local deadline auto-closes it if the player never submits.
+  bool _localGuessOpen = false;
+  int? _localGuessDeadlineMs;
+  Timer? _localGuessTimer;
   int _sessionWatchdogEventCount = 0;
   bool? _lastGuessEventCorrect;
 
@@ -914,6 +921,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _musicShouldBePlaying = false;
     _bgPlayerStateSub?.cancel();
     _expiryTimer?.cancel();
+    _localGuessTimer?.cancel();
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
@@ -1072,47 +1080,27 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       return;
     }
 
-    // Bot decided to enter guessMode — pause first, then enter
-    final enterDelayMs = ((1800 + _random.nextInt(1801)) * delayMultiplier).round();
+    // Parallel guessing: the bot no longer claims an exclusive guess lock. It
+    // simply waits a human-like delay (during which the typing banner shows) and
+    // then submits directly — racing the human, who can guess at the same time.
+    final thinkDelayMs = ((3000 + _random.nextInt(5001)) * delayMultiplier).round();
     QaLoggerService.instance.log('BOT',
-        'BOT_DELAY_SCHEDULED action=enter_guess_mode ms=$enterDelayMs');
+        'BOT_DELAY_SCHEDULED action=submit_guess ms=$thinkDelayMs');
 
-    Future.delayed(Duration(milliseconds: enterDelayMs), () async {
+    Future.delayed(Duration(milliseconds: thinkDelayMs), () async {
       if (!mounted) return;
-      // Re-read before entering to confirm opportunity is still ours
+      // Re-read before submitting to confirm the game is still live and the bot
+      // isn't blocked from a previous wrong guess.
       final snap = await ref.read(roomServiceProvider).watchRoom(room.id).first;
       if (snap == null) return;
-      if (snap.phase == GamePhase.finished) return;
-      if (snap.turnPhase != TurnPhase.guessOpportunity) return;
-      if (snap.guessOpportunityPlayerId != null) return; // already claimed
+      if (snap.phase != GamePhase.playing) return;
       if (snap.isBlockedFromGuessing(botId)) return;
-
-      final entered = await ref.read(roomServiceProvider).enterGuessMode(
-            roomId: room.id, userId: botId);
-      if (!entered) return;
-
-      QaLoggerService.instance.log('BOT', 'BOT_ENTER_GUESS_MODE');
-
-      // Wait human-like time before submitting
-      final submitDelayMs = ((3000 + _random.nextInt(5001)) * delayMultiplier).round();
-      QaLoggerService.instance.log('BOT',
-          'BOT_DELAY_SCHEDULED action=submit_guess ms=$submitDelayMs');
-
-      await Future.delayed(Duration(milliseconds: submitDelayMs));
-      if (!mounted) return;
-
-      // Confirm guessMode is still ours before submitting
-      final snap2 = await ref.read(roomServiceProvider).watchRoom(room.id).first;
-      if (snap2 == null) return;
-      if (snap2.phase == GamePhase.finished) return;
-      if (snap2.turnPhase != TurnPhase.guessMode) return;
-      if (snap2.guessModePlayerId != botId) return;
 
       // Correct guess: ≥60% revealed → 20% base; 75%+ → 35%; 85%+ → 45%
       final double correctChance = ratio >= 0.60
           ? (isSuperEndgame ? 0.45 : isEndgameBotMode ? 0.35 : 0.20)
           : 0.0;
-      await _performBotGuess(snap2, botId, correctChance);
+      await _performBotGuess(snap, botId, correctChance);
     });
   }
 
@@ -1304,6 +1292,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       return false;
     }
 
+    // Close the local guess overlay either way (correct ends the game; wrong
+    // blocks the player so they can't immediately re-open).
+    _closeLocalGuess();
+
     if (!mounted) return correct;
     if (correct) {
       setState(() => _showCorrectGuess = true);
@@ -1319,9 +1311,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   }
 
   void _handleGuessTap(RoomModel room, String userId, bool canGuessNow) {
-    if (canGuessNow) {
-      _enterGuessMode(room, userId);
-    } else {
+    if (!canGuessNow) {
       QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED_BLOCKED phase=${room.turnPhase.name}');
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
@@ -1332,39 +1322,39 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             behavior: SnackBarBehavior.floating,
           ),
         );
+      return;
     }
-  }
-
-  Future<void> _enterGuessMode(RoomModel room, String userId) async {
+    if (_localGuessOpen) return; // overlay already open
     QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED phase=${room.turnPhase.name}');
 
-    // Client-side guard for guessOpportunity deadline only
-    if (room.turnPhase == TurnPhase.guessOpportunity) {
-      final deadline = room.guessOpportunityDeadlineMs;
-      if (deadline != null && DateTime.now().millisecondsSinceEpoch >= deadline) {
-        QaLoggerService.instance.log('GUESS', 'GUESS_ENTER_SKIPPED reason=deadline_expired_client');
-        return;
+    // Parallel guessing: open the guess input LOCALLY — no server lock, so other
+    // players can open their own input at the same time. A local timer auto-closes
+    // the overlay if the player never submits (no penalty for not guessing).
+    _localGuessTimer?.cancel();
+    final deadline = DateTime.now().millisecondsSinceEpoch + 20000;
+    setState(() {
+      _localGuessOpen = true;
+      _localGuessDeadlineMs = deadline;
+    });
+    _localGuessTimer = Timer(const Duration(milliseconds: 20000), () {
+      if (mounted && _localGuessOpen) {
+        QaLoggerService.instance.log('GUESS', 'LOCAL_GUESS_TIMEOUT_CLOSED');
+        setState(() {
+          _localGuessOpen = false;
+          _localGuessDeadlineMs = null;
+        });
       }
-    }
+    });
+  }
 
-    final alreadyInGuessMode = room.turnPhase == TurnPhase.guessMode &&
-        room.guessModePlayerId == userId;
-    if (alreadyInGuessMode) return;
-
-    try {
-      final entered = await ref.read(roomServiceProvider).enterGuessMode(
-        roomId: room.id,
-        userId: userId,
-      );
-      if (!entered) {
-        QaLoggerService.instance.log('GUESS', 'ENTER_GUESS_MODE_REJECTED phase=${room.turnPhase.name}');
-        return;
-      }
-      QaLoggerService.instance.log('GUESS', 'ENTER_GUESS_MODE_SUCCESS');
-    } catch (e) {
-      if (_isFirestoreUnavailable(e)) _markOffline('firestore_unavailable');
+  void _closeLocalGuess() {
+    _localGuessTimer?.cancel();
+    if (_localGuessOpen && mounted) {
+      setState(() {
+        _localGuessOpen = false;
+        _localGuessDeadlineMs = null;
+      });
     }
-    // Inline UI shows automatically via Firestore state stream
   }
 
   Future<void> _showExitConfirmation(BuildContext context) async {
@@ -1919,9 +1909,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   onGuess: (!_isFinished && currentUserId != null)
                       ? () => _handleGuessTap(room, currentUserId!, canGuessNow)
                       : null,
-                  onGuessSubmit: (currentUserId != null &&
-                          room.turnPhase == TurnPhase.guessMode &&
-                          room.guessModePlayerId == currentUserId)
+                  showGuessInput: _localGuessOpen && !_isFinished,
+                  localGuessDeadlineMs: _localGuessDeadlineMs,
+                  onGuessSubmit: (currentUserId != null && _localGuessOpen)
                       ? (value) => _submitGuess(room, currentUserId!, value)
                       : null,
                   stunCardCount: user?.stunCardCount ?? 0,

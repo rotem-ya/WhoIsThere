@@ -1626,15 +1626,18 @@ class RoomService {
 
       QaLoggerService.instance.log('GUESS', 'TX_BEGIN name=submitAnswer');
 
-      // Authorization guard: only the designated guesser in guessMode may submit
-      if (room.turnPhase != TurnPhase.guessMode) {
-        QaLoggerService.instance.log('GUESS', 'GUESS_SUBMIT_DUPLICATE_REJECTED phase=${room.turnPhase.name}');
-        QaLoggerService.instance.log('GUESS', 'TX_ABORT name=submitAnswer reason=wrong_phase phase=${room.turnPhase.name}');
+      // Parallel guessing: any live, non-blocked player may submit at any time.
+      // The first correct answer wins the race — this transaction is the arbiter.
+      if (room.phase != GamePhase.playing) {
+        QaLoggerService.instance.log('GUESS',
+            'TX_ABORT name=submitAnswer reason=not_playing phase=${room.phase.name}');
         return;
       }
-      if (room.guessModePlayerId != userId) {
-        QaLoggerService.instance.log('GUESS', 'GUESS_SUBMIT_REJECTED_UNAUTHORIZED');
-        QaLoggerService.instance.log('GUESS', 'TX_ABORT name=submitAnswer reason=unauthorized');
+      final nowBlockMs = DateTime.now().millisecondsSinceEpoch;
+      final timeBlocked = (room.guessBlockedUntilMs[userId] ?? 0) > nowBlockMs;
+      if (room.isBlockedFromGuessing(userId) || timeBlocked) {
+        QaLoggerService.instance.log('GUESS',
+            'TX_ABORT name=submitAnswer reason=blocked uid=${_short(userId)}');
         return;
       }
 
@@ -1662,20 +1665,13 @@ class RoomService {
       // Bots have no wallet document — skip wallet operations entirely
       if (userId.startsWith('virtual_')) {
         final currentWrongCountBot = room.wrongGuessCounts[userId] ?? 0;
-        final currentScoreBot = room.players[userId]?.score ?? 0;
-        final nextTurnIndexBot = room.currentTurnIndex + 1;
+        // Parallel mode: a wrong guess penalises/blocks only this player; it does
+        // NOT advance the turn or restart the reveal cadence (which keeps running
+        // on its own timers so other players can still race).
         tx.update(_rooms.doc(roomId), {
-          'currentTurnIndex': nextTurnIndexBot,
           'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
           'guessCount': FieldValue.increment(1),
-          'turnPhase': TurnPhase.revealTurn.name,
-          'revealDeadlineMs': nowMs + EconomyConfig.autoRevealIntervalMs,
-          'guessModePlayerId': null,
-          'guessOpportunityPlayerId': null,
-          'guessOpportunityDeadlineMs': null,
-          'guessModeDeadlineMs': null,
           'wrongGuessCounts.$userId': currentWrongCountBot + 1,
-          'revealCycleId': FieldValue.increment(1),
           'blockedGuessers.$userId': room.revealCount + EconomyConfig.wrongGuessBlockTurns,
           'players.$userId.score': FieldValue.increment(-difficulty.wrongGuessPenalty),
         });
@@ -1717,20 +1713,13 @@ class RoomService {
 
       final currentScore = room.players[userId]?.score ?? 0;
       final newScore = currentScore - difficulty.wrongGuessPenalty;
-      final nextTurnIndex = room.currentTurnIndex + 1;
 
+      // Parallel mode: a wrong guess penalises/blocks only this player; the reveal
+      // cadence and turn order are left untouched so others can keep racing.
       final updates = <String, dynamic>{
-        'currentTurnIndex': nextTurnIndex,
         'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': false},
         'guessCount': FieldValue.increment(1),
-        'turnPhase': TurnPhase.revealTurn.name,
-        'revealDeadlineMs': nowMs + EconomyConfig.autoRevealIntervalMs,
-        'guessModePlayerId': null,
-        'guessOpportunityPlayerId': null,
-        'guessOpportunityDeadlineMs': null,
-        'guessModeDeadlineMs': null,
         'wrongGuessCounts.$userId': currentWrongCount + 1,
-        'revealCycleId': FieldValue.increment(1),
         'blockedGuessers.$userId': room.revealCount + EconomyConfig.wrongGuessBlockTurns,
       };
 
