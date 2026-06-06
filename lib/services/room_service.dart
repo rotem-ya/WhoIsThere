@@ -100,14 +100,19 @@ class RoomService {
     'masada',
     'dead_sea',
     'ein_gedi',
+    'ramon_crater',
     'timna_park',
-    'eilat',
+    'dolphin_reef',
     'mount_hermon',
+    'sea_of_galilee',
+    'old_acre',
     'bahai_gardens',
     'haifa_port',
+    'old_jaffa',
     'azrieli_towers',
+    'stalactite_cave',
     'gan_hashlosha',
-    'yarkon_river',
+    'banias_waterfall',
   };
 
   Future<List<GameImageModel>>? _localImagesFuture;
