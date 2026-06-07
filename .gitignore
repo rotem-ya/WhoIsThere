@@ -28,3 +28,7 @@ ios/Flutter/ephemeral/
 
 # Misc
 *.log
+
+# Python (asset/uploader tooling)
+__pycache__/
+*.pyc
