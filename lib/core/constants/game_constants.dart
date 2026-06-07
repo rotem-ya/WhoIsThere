@@ -188,11 +188,15 @@ extension ImageCategoryExtension on ImageCategory {
 }
 
 class GameConstants {
-  // Feature flag: hints are temporarily hidden from the UI for this launch.
+  // Feature flag: master switch for the hint buttons. When enabled, the hint
+  // button only surfaces once [hintRevealThreshold] of the board is revealed
+  // (so it appears late, as a rescue, rather than from the start).
   // The full hint flow (buy/re-view buttons, dialogs, per-place facts) stays
-  // in the code and facts keep being stored for new places — flip this back to
-  // `true` to surface the hint buttons again. See game_actions.dart.
-  static const bool hintsEnabled = false;
+  // in the code and facts keep being stored for new places. See game_actions.dart.
+  static const bool hintsEnabled = true;
+
+  // Fraction of tiles that must be revealed before the hint button appears.
+  static const double hintRevealThreshold = 0.70;
 
   static const int maxPlayers = 8;
   static const int minPlayers = 2;

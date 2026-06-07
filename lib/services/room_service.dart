@@ -33,7 +33,28 @@ const List<String> _botNames = [
   'יגאל', 'הגר', 'עמוס', 'מזל', 'ציון', 'שושנה',
 ];
 
-String _botName(int index) => _botNames[index % _botNames.length];
+final Random _botRng = Random();
+
+/// Picks a random bot name, avoiding any already in [used] so a single room
+/// never shows the same fake player twice and the roster feels fresh every
+/// match (previously the name was chosen by index, so a solo game was always
+/// "עמית").
+String _randomBotName(Set<String> used) {
+  final pool = _botNames.where((n) => !used.contains(n)).toList();
+  final source = pool.isNotEmpty ? pool : _botNames;
+  return source[_botRng.nextInt(source.length)];
+}
+
+/// Believable, varied profile for a bot so each one looks like a distinct real
+/// player — a different "places discovered" badge and loosely-correlated points.
+({int discoveredCount, int totalPoints}) _randomBotProfile() {
+  final discovered = _botRng.nextInt(41); // 0..40 discovered places
+  // ~60-130 points per discovery plus jitter, so any rank-based display varies
+  // naturally across the roster instead of every bot reading as a beginner.
+  final totalPoints =
+      discovered * (60 + _botRng.nextInt(70)) + _botRng.nextInt(120);
+  return (discoveredCount: discovered, totalPoints: totalPoints);
+}
 
 /// Picks a tile index using a checkerboard-first strategy.
 /// Prefers tiles that have no revealed neighbour (up/down/left/right).
@@ -212,13 +233,19 @@ class RoomService {
 
     final players = <String, PlayerModel>{effectiveHostId: host};
 
+    final usedBotNames = <String>{host.name};
     for (int i = 2; i <= playerCount; i++) {
       final virtualId = 'virtual_${i}_${docRef.id}';
+      final name = _randomBotName(usedBotNames);
+      usedBotNames.add(name);
+      final profile = _randomBotProfile();
       players[virtualId] = PlayerModel(
         id: virtualId,
-        name: _botName(i),
+        name: name,
         score: 0,
         isBot: true,
+        discoveredCount: profile.discoveredCount,
+        totalPoints: profile.totalPoints,
       );
     }
 
@@ -318,11 +345,15 @@ class RoomService {
     final virtualId = 'virtual_${botIndex}_$roomId';
     if (room.players.containsKey(virtualId)) return;
 
+    final usedNames = room.players.values.map((p) => p.name).toSet();
+    final profile = _randomBotProfile();
     final botPlayer = PlayerModel(
       id: virtualId,
-      name: _botName(botIndex),
+      name: _randomBotName(usedNames),
       score: 0,
       isBot: true,
+      discoveredCount: profile.discoveredCount,
+      totalPoints: profile.totalPoints,
     );
     await _rooms.doc(roomId).update({
       'players.$virtualId': botPlayer.toMap(),

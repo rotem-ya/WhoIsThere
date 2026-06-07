@@ -121,9 +121,13 @@ class GameActions extends ConsumerWidget {
                 reward: showReward ? earlyBonus : null,
               ),
               // Hint button — only in solo mode (shown regardless of turn state).
-              // Temporarily hidden via GameConstants.hintsEnabled for this launch;
-              // the underlying buy/re-view flow is kept intact for re-enabling later.
-              if (GameConstants.hintsEnabled && isSolo && onRevealHint != null) ...[
+              // Gated behind GameConstants.hintsEnabled and only surfaces once
+              // 70% of the board is revealed, so it acts as a late rescue.
+              if (GameConstants.hintsEnabled &&
+                  isSolo &&
+                  onRevealHint != null &&
+                  totalTiles > 0 &&
+                  revealedCount >= totalTiles * GameConstants.hintRevealThreshold) ...[
                 const SizedBox(height: 6),
                 _HintButton(
                   label: purchasedHintCount >= 1
