@@ -6,8 +6,8 @@
 google-play-assets/
 ├── texts/
 │   ├── app_title.txt            ← שם האפליקציה (10/30 תווים)
-│   ├── short_description.txt    ← תיאור קצר (64/80 תווים)
-│   ├── full_description.txt     ← תיאור מלא (632/4000 תווים)
+│   ├── short_description.txt    ← תיאור קצר (71/80 תווים)
+│   ├── full_description.txt     ← תיאור מלא (689/4000 תווים)
 │   └── privacy_policy_url.txt   ← קישור מדיניות פרטיות
 ├── graphics/
 │   ├── icon_512x512.png         ← אייקון 512×512 PNG (32-bit)
