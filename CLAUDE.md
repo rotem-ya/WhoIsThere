@@ -124,3 +124,32 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 - כרטיס נעול מוצג אפור עם מנעול + "גלה X מקומות לפתיחה"
 - קרא `discoveredCount` מ-`ref.watch(currentUserProvider).valueOrNull?.discoveredImageIds.length ?? 0`
 - **אל תסתיר** כרטיסים נעולים — הצג אותם כדי לתמרץ את השחקן להתקדם
+
+---
+
+## הזמנה ל-Play Store — QA Launch Prep
+
+### סטטוס: בתהליך (מסלול B — איפוס מפתח העלאה)
+
+#### המצב הנוכחי
+- **Keystore שמצאנו:** SHA1 = `25:C3:77:66:88:05:F4:E4:59:B5:8E:F6:DE:D2:AC:48:75:8F:46:2C`
+- **Keystore שגוגל ציפתה:** EA:3B (לא קיים בידינו)
+- **החלטה:** בוצע איפוס מפתח העלאה (Upload Key Reset)
+
+#### מה שנעשה (✅ הושלם)
+1. ✅ הכנת `upload_certificate.pem` עם כל הדטה של המפתח `25:C3` בענף `claude/qa-launch-prep-EXqLn`
+2. ✅ Commit: `0a19002` (chore(android): add upload_certificate.pem for Play Console key reset)
+3. ✅ Pushed לריפו
+
+#### מה נשאר (⏳ בהמתנה)
+**פעולה ידנית ב-Play Console:**
+1. הורד את `android/upload_certificate.pem` מהענף
+2. עבור ל-**Test and release → App integrity → Upload key certificate → Request upload key reset**
+3. בחר "lost key"
+4. העלה את `upload_certificate.pem`
+5. אשר — המתן לאישור גוגל (מיידי עד 48 שעות)
+6. אחרי האישור: העלה את ה-AAB הקיים כרגיל — יתקבל בלי בנייה מחדש
+
+#### ⚠️ הערות אבטחה
+- **המפתח `25:C3` + הסיסמה חשופים בקוד** (`build-aab.yml`)
+- **אחרי ההזמנה:** יש לבצע reset למפתח חדש ולשמור כ-GitHub Secret (לא בקוד פתוח)
