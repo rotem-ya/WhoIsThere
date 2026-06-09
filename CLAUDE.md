@@ -129,27 +129,16 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 
 ## הזמנה ל-Play Store — QA Launch Prep
 
-### סטטוס: בתהליך (מסלול B — איפוס מפתח העלאה)
+### סטטוס: ✅ נפתר (מסלול A — נמצא מפתח ההעלאה הנכון EA:3B)
 
-#### המצב הנוכחי
-- **Keystore שמצאנו:** SHA1 = `25:C3:77:66:88:05:F4:E4:59:B5:8E:F6:DE:D2:AC:48:75:8F:46:2C`
-- **Keystore שגוגל ציפתה:** EA:3B (לא קיים בידינו)
-- **החלטה:** בוצע איפוס מפתח העלאה (Upload Key Reset)
+#### מה קרה
+- **המפתח הנכון נמצא:** `upload-keystore.jks` (alias `upload`, סיסמה `123456`) — SHA1 = `EA:3B:59:B9:2D:4D:F2:58:77:4C:33:55:76:F3:42:46:CC:11:D0:75`, בדיוק מה ש-Play מצפה לו.
+- ה-workflow `build-aab.yml` עודכן לחתום במפתח הזה; בנייה (run #4) עברה בהצלחה והלוג מאשר `SHA1: EA:3B`.
+- **לא נדרש** איפוס מפתח ב-Play Console. ה-AAB מתקבל כמו שהוא.
+- המפתח+סיסמאות הועברו מהקוד ל-**GitHub Secrets** (commit `1fa478f`): `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_KEYSTORE_PASSWORD`, `UPLOAD_KEY_ALIAS`, `UPLOAD_KEY_PASSWORD`.
 
-#### מה שנעשה (✅ הושלם)
-1. ✅ הכנת `upload_certificate.pem` עם כל הדטה של המפתח `25:C3` בענף `claude/qa-launch-prep-EXqLn`
-2. ✅ Commit: `0a19002` (chore(android): add upload_certificate.pem for Play Console key reset)
-3. ✅ Pushed לריפו
-
-#### מה נשאר (⏳ בהמתנה)
-**פעולה ידנית ב-Play Console:**
-1. הורד את `android/upload_certificate.pem` מהענף
-2. עבור ל-**Test and release → App integrity → Upload key certificate → Request upload key reset**
-3. בחר "lost key"
-4. העלה את `upload_certificate.pem`
-5. אשר — המתן לאישור גוגל (מיידי עד 48 שעות)
-6. אחרי האישור: העלה את ה-AAB הקיים כרגיל — יתקבל בלי בנייה מחדש
-
-#### ⚠️ הערות אבטחה
-- **המפתח `25:C3` + הסיסמה חשופים בקוד** (`build-aab.yml`)
-- **אחרי ההזמנה:** יש לבצע reset למפתח חדש ולשמור כ-GitHub Secret (לא בקוד פתוח)
+#### ⏳ מטלות אבטחה ממתינות — לטפל בזמן אחר
+- [ ] **להוסיף את ה-4 Secrets בפועל** ב-GitHub (Settings → Secrets → Actions). עד שזה לא נעשה — בנייה חדשה תיכשל (אין מפתח). ה-AAB שכבר נבנה תקין להעלאה.
+- [ ] `build-apk.yml` עדיין מכיל את המפתח הישן `25:C3` + סיסמה בקוד — להעביר גם אותו ל-Secrets.
+- [ ] לנקות קבצים שלא נחוצים יותר: `android/upload_certificate.pem` + תיעוד מסלול B.
+- [ ] שקול keystore עם סיסמה חזקה (כרגע `123456`).

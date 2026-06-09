@@ -126,14 +126,20 @@ class RoomService {
     'dolphin_reef',
     'mount_hermon',
     'sea_of_galilee',
+    'rosh_hanikra',
     'old_acre',
     'bahai_gardens',
     'haifa_port',
     'old_jaffa',
     'azrieli_towers',
+    'cave_of_the_patriarchs',
+    'mount_tabor',
     'stalactite_cave',
     'gan_hashlosha',
     'banias_waterfall',
+    'Ben_Gurion',
+    'ben_gurion_hut',
+    'lions_gate',
   };
 
   Future<List<GameImageModel>>? _localImagesFuture;

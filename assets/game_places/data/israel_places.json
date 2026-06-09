@@ -147,7 +147,11 @@
     "city_he": "מצפה רמון",
     "image_asset": "assets/game_places/images/ramon_crater.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "הארץ נפערת כאן לפתע לתוך שקע עצום שיצר הזמן עצמו, וקירותיו חושפים מיליוני שנות היסטוריה גיאולוגית בשכבות צבע שקשה להאמין שטבע צייר.",
+      "בשפת המדבר, שתיקה כבדה שוררת מעל נוף ירחי הנראה כאילו שייך לכוכב אחר, ורק הרוח מזכירה לך שאתה עדיין על פני האדמה."
+    ]
   },
   {
     "id": "timna_park",
@@ -164,20 +168,6 @@
     ]
   },
   {
-    "id": "eilat",
-    "name_he": "אילת",
-    "answer_he": "אילת",
-    "category": "city",
-    "city_he": "אילת",
-    "image_asset": "assets/game_places/images/eilat.png",
-    "difficulty": "easy",
-    "is_active": true,
-    "facts": [
-      "חוף ים בתרמילים צבעוניים וטרופיים",
-      "מים בלו-טורקיז ברורים מאד"
-    ]
-  },
-  {
     "id": "dolphin_reef",
     "name_he": "ריף הדולפינים",
     "answer_he": "ריף הדולפינים",
@@ -185,7 +175,11 @@
     "city_he": "אילת",
     "image_asset": "assets/game_places/images/dolphin_reef.jpg",
     "difficulty": "medium",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "מתחת לפני המים הכחולים של הים האדום, עולם שקט של אלמוגים ויצורים צבעוניים נגלה למי שמעז לצלול ושכן קבוע מהחי מגיע כל יום לבקר מרצונו החופשי.",
+      "כאן לא צריך ללכת רחוק לים, הים בא אליך, יחד עם תושביו המגיחים מן העומק בחיוך שאי אפשר לפספס."
+    ]
   },
   {
     "id": "mount_hermon",
@@ -199,8 +193,7 @@
     "facts": [
       "מהפסגה הגבוהה ביותר העיניים נודדות אל שלוש מדינות בבת אחת, והגבול חש קרוב מתמיד.",
       "עליו נאמר: העיניים של המדינה"
-    ],
-    "_pendingExport": true
+    ]
   },
   {
     "id": "sea_of_galilee",
@@ -210,27 +203,11 @@
     "city_he": "טבריה",
     "image_asset": "assets/game_places/images/sea_of_galilee.jpg",
     "difficulty": "easy",
-    "is_active": true
-  },
-  {
-    "id": "tiberias",
-    "name_he": "טבריה",
-    "answer_he": "טבריה",
-    "category": "city",
-    "city_he": "טבריה",
-    "image_asset": "assets/game_places/images/tiberias.jpg",
-    "difficulty": "easy",
-    "is_active": true
-  },
-  {
-    "id": "safed",
-    "name_he": "צפת",
-    "answer_he": "צפת",
-    "category": "city",
-    "city_he": "צפת",
-    "image_asset": "assets/game_places/images/safed.jpg",
-    "difficulty": "medium",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "מימיו השקטים שמעו סיפורים שהפכו לבסיס של דת שכבשה את העולם",
+      "הרים ירוקים מקיפים אותו מכל עבר כמו כפיים עוטפות אוצר, ובשחר הדייגים יוצאים אל פניו"
+    ]
   },
   {
     "id": "rosh_hanikra",
@@ -240,7 +217,11 @@
     "city_he": "ראש הנקרה",
     "image_asset": "assets/game_places/images/rosh_hanikra.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "רכבל תלול מוביל אל נקיק שבו רכבת בריטית חצתה פעם בדרכה אל ארץ רחוקה.",
+      "במקום שבו היבשת נגמרת בקצה הצפוני ביותr, גלי הים פיסלו במשך אלפי שנים מערות בתוך סלע לבן"
+    ]
   },
   {
     "id": "old_acre",
@@ -250,17 +231,11 @@
     "city_he": "עכו",
     "image_asset": "assets/game_places/images/old_acre.jpg",
     "difficulty": "easy",
-    "is_active": true
-  },
-  {
-    "id": "haifa",
-    "name_he": "חיפה",
-    "answer_he": "חיפה",
-    "category": "city",
-    "city_he": "חיפה",
-    "image_asset": "assets/game_places/images/haifa.jpg",
-    "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "חומות אבן עבות צוללות אל הים ומספרות על מצור שאפילו קיסר גדול לא הצליח לפצח",
+      "מתחת לרחובות ההומים מסתתרים אולמות אבירים ומנהרה סודית שחפרו נזירים־לוחמים לפני מאות שנים."
+    ]
   },
   {
     "id": "bahai_gardens",
@@ -274,8 +249,7 @@
     "facts": [
       "מדרון תלול הופך לגן מדורג ומושלם בסימטריה שלו, כל שיח גזום כאילו נמדד בסרגל.",
       "במרכז הכל ניצבת כיפה זהובה שאליה מפנה מבטם מאמינים מכל קצות העולם."
-    ],
-    "_pendingExport": true
+    ]
   },
   {
     "id": "haifa_port",
@@ -292,36 +266,6 @@
     ]
   },
   {
-    "id": "caesarea",
-    "name_he": "קיסריה",
-    "answer_he": "קיסריה",
-    "category": "landmark",
-    "city_he": "קיסריה",
-    "image_asset": "assets/game_places/images/caesarea.jpg",
-    "difficulty": "easy",
-    "is_active": true
-  },
-  {
-    "id": "zichron_yaakov",
-    "name_he": "זכרון יעקב",
-    "answer_he": "זכרון יעקב",
-    "category": "city",
-    "city_he": "זכרון יעקב",
-    "image_asset": "assets/game_places/images/zichron_yaakov.jpg",
-    "difficulty": "medium",
-    "is_active": true
-  },
-  {
-    "id": "tel_aviv",
-    "name_he": "תל אביב",
-    "answer_he": "תל אביב",
-    "category": "city",
-    "city_he": "תל אביב",
-    "image_asset": "assets/game_places/images/tel_aviv.jpg",
-    "difficulty": "easy",
-    "is_active": true
-  },
-  {
     "id": "old_jaffa",
     "name_he": "יפו העתיקה",
     "answer_he": "יפו",
@@ -329,7 +273,11 @@
     "city_he": "תל אביב יפו",
     "image_asset": "assets/game_places/images/old_jaffa.jpg",
     "difficulty": "easy",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "סמטאות אבן עתיקות מתפתלות במעלה גבעה שצופה אל הים, מהאחד הנמלים הקדומים בעולם",
+      "לפי המסורת מכאן הפליג נביא אל בטן הדג, וכאן נקשרה נסיכה לסלע בציפייה למפלצת."
+    ]
   },
   {
     "id": "azrieli_towers",
@@ -343,128 +291,7 @@
     "facts": [
       "מהקומה העליונה נפרשת תצפית מעגלית שחושפת את כל המטרופולין עד קו החוף.",
       "מגדלים בצורות בעיר האורות"
-    ],
-    "_pendingExport": true
-  },
-  {
-    "id": "tel_aviv_port",
-    "name_he": "נמל תל אביב",
-    "answer_he": "נמל תל אביב",
-    "category": "landmark",
-    "city_he": "תל אביב",
-    "image_asset": "assets/game_places/images/tel_aviv_port.jpg",
-    "difficulty": "medium",
-    "is_active": true
-  },
-  {
-    "id": "carmel_market",
-    "name_he": "שוק הכרמל",
-    "answer_he": "שוק הכרמל",
-    "category": "market",
-    "city_he": "תל אביב",
-    "image_asset": "assets/game_places/images/carmel_market.jpg",
-    "difficulty": "medium",
-    "is_active": true
-  },
-  {
-    "id": "yarkon_park",
-    "name_he": "פארק הירקון",
-    "answer_he": "פארק הירקון",
-    "category": "park",
-    "city_he": "תל אביב",
-    "image_asset": "assets/game_places/images/yarkon_park.jpg",
-    "difficulty": "medium",
-    "is_active": true
-  },
-  {
-    "id": "netanya",
-    "name_he": "נתניה",
-    "answer_he": "נתניה",
-    "category": "city",
-    "city_he": "נתניה",
-    "image_asset": "assets/game_places/images/netanya.jpg",
-    "difficulty": "easy",
-    "is_active": true
-  },
-  {
-    "id": "ashdod",
-    "name_he": "אשדוד",
-    "answer_he": "אשדוד",
-    "category": "city",
-    "city_he": "אשדוד",
-    "image_asset": "assets/game_places/images/ashdod.jpg",
-    "difficulty": "easy",
-    "is_active": true
-  },
-  {
-    "id": "ashkelon",
-    "name_he": "אשקלון",
-    "answer_he": "אשקלון",
-    "category": "city",
-    "city_he": "אשקלון",
-    "image_asset": "assets/game_places/images/ashkelon.jpg",
-    "difficulty": "easy",
-    "is_active": true
-  },
-  {
-    "id": "beer_sheva",
-    "name_he": "באר שבע",
-    "answer_he": "באר שבע",
-    "category": "city",
-    "city_he": "באר שבע",
-    "image_asset": "assets/game_places/images/beer_sheva.jpg",
-    "difficulty": "easy",
-    "is_active": true
-  },
-  {
-    "id": "old_city_jerusalem",
-    "name_he": "העיר העתיקה בירושלים",
-    "answer_he": "העיר העתיקה",
-    "category": "old_city",
-    "city_he": "ירושלים",
-    "image_asset": "assets/game_places/images/old_city_jerusalem.jpg",
-    "difficulty": "easy",
-    "is_active": true
-  },
-  {
-    "id": "jaffa_gate",
-    "name_he": "שער יפו",
-    "answer_he": "שער יפו",
-    "category": "landmark",
-    "city_he": "ירושלים",
-    "image_asset": "assets/game_places/images/jaffa_gate.jpg",
-    "difficulty": "medium",
-    "is_active": true
-  },
-  {
-    "id": "damascus_gate",
-    "name_he": "שער שכם",
-    "answer_he": "שער שכם",
-    "category": "landmark",
-    "city_he": "ירושלים",
-    "image_asset": "assets/game_places/images/damascus_gate.jpg",
-    "difficulty": "medium",
-    "is_active": true
-  },
-  {
-    "id": "mount_of_olives",
-    "name_he": "הר הזיתים",
-    "answer_he": "הר הזיתים",
-    "category": "landmark",
-    "city_he": "ירושלים",
-    "image_asset": "assets/game_places/images/mount_of_olives.jpg",
-    "difficulty": "medium",
-    "is_active": true
-  },
-  {
-    "id": "temple_mount",
-    "name_he": "הר הבית",
-    "answer_he": "הר הבית",
-    "category": "landmark",
-    "city_he": "ירושלים",
-    "image_asset": "assets/game_places/images/temple_mount.jpg",
-    "difficulty": "easy",
-    "is_active": true
+    ]
   },
   {
     "id": "cave_of_the_patriarchs",
@@ -474,67 +301,11 @@
     "city_he": "חברון",
     "image_asset": "assets/game_places/images/cave_of_the_patriarchs.jpg",
     "difficulty": "medium",
-    "is_active": true
-  },
-  {
-    "id": "beit_shean",
-    "name_he": "בית שאן",
-    "answer_he": "בית שאן",
-    "category": "landmark",
-    "city_he": "בית שאן",
-    "image_asset": "assets/game_places/images/beit_shean.jpg",
-    "difficulty": "medium",
-    "is_active": true
-  },
-  {
-    "id": "megiddo",
-    "name_he": "מגידו",
-    "answer_he": "מגידו",
-    "category": "landmark",
-    "city_he": "מגידו",
-    "image_asset": "assets/game_places/images/megiddo.jpg",
-    "difficulty": "medium",
-    "is_active": true
-  },
-  {
-    "id": "amud_stream",
-    "name_he": "נחל עמוד",
-    "answer_he": "נחל עמוד",
-    "category": "nature",
-    "city_he": "גליל עליון",
-    "image_asset": "assets/game_places/images/amud_stream.jpg",
-    "difficulty": "medium",
-    "is_active": true
-  },
-  {
-    "id": "david_stream",
-    "name_he": "נחל דוד",
-    "answer_he": "נחל דוד",
-    "category": "nature",
-    "city_he": "עין גדי",
-    "image_asset": "assets/game_places/images/david_stream.jpg",
-    "difficulty": "medium",
-    "is_active": true
-  },
-  {
-    "id": "banias_stream",
-    "name_he": "נחל הבניאס",
-    "answer_he": "הבניאס",
-    "category": "nature",
-    "city_he": "רמת הגולן",
-    "image_asset": "assets/game_places/images/banias_stream.jpg",
-    "difficulty": "medium",
-    "is_active": true
-  },
-  {
-    "id": "ein_gev_kibbutz",
-    "name_he": "קיבוץ עין גב",
-    "answer_he": "עין גב",
-    "category": "landmark",
-    "city_he": "עין גב",
-    "image_asset": "assets/game_places/images/ein_gev_kibbutz.jpg",
-    "difficulty": "medium",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "מבנה אבן עתיק מעל קברי האבות, בעיר שדרומית להרים",
+      "אתר קדוש שמתחתיו מערה שלפי המסורת קנה אברהם"
+    ]
   },
   {
     "id": "mount_tabor",
@@ -544,17 +315,11 @@
     "city_he": "גליל תחתון",
     "image_asset": "assets/game_places/images/mount_tabor.jpg",
     "difficulty": "medium",
-    "is_active": true
-  },
-  {
-    "id": "apollonia_national_park",
-    "name_he": "גן לאומי אפולוניה",
-    "answer_he": "אפולוניה",
-    "category": "landmark",
-    "city_he": "הרצליה",
-    "image_asset": "assets/game_places/images/apollonia_national_park.jpg",
-    "difficulty": "medium",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "הר כיפתי ובודד הניצב בלב העמק, ובראשו כנסייה",
+      "צורתו העגולה בולטת מרחוק, ומעליו נשקף כל העמק"
+    ]
   },
   {
     "id": "stalactite_cave",
@@ -564,7 +329,11 @@
     "city_he": "בית שמש",
     "image_asset": "assets/game_places/images/stalactite_cave.jpg",
     "difficulty": "medium",
-    "is_active": true
+    "is_active": true,
+    "facts": [
+      "עמוק מתחת לאדמה, אבן נוזלת לאט־לאט וטיפה אחר טיפה בונה יער של עמודים לאורך אלפי שנים.",
+      "התקרה והרצפה שולחות זו לזו אצבעות סיד שנפגשות באמצע אחרי נצח של סבלנות"
+    ]
   },
   {
     "id": "gan_hashlosha",
@@ -581,20 +350,6 @@
     ]
   },
   {
-    "id": "yarkon_river",
-    "name_he": "נהר הירקון",
-    "answer_he": "נהר הירקון",
-    "category": "nature",
-    "city_he": "תל אביב",
-    "image_asset": "assets/game_places/images/yarkon_river.png",
-    "difficulty": "medium",
-    "is_active": true,
-    "facts": [
-      "נהר זורם דרך תל אביב ירוקה",
-      "שביל הליכה יפה עם נוף עירוני"
-    ]
-  },
-  {
     "id": "banias_waterfall",
     "name_he": "מפל הבניאס",
     "answer_he": "הבניאס",
@@ -606,6 +361,47 @@
     "facts": [
       "המפל הגדול בארץ בשפע מים",
       "שמורה ירוקה למרגלות החרמון"
+    ]
+  },
+  {
+    "id": "Ben_Gurion",
+    "name_he": "שדה התעופה בן גוריון",
+    "answer_he": "בן גוריון",
+    "category": "landmark",
+    "city_he": "לוד",
+    "image_asset": "assets/game_places/images/Ben_Gurion.jpg",
+    "difficulty": "easy",
+    "is_active": true,
+    "facts": [
+      "עיר שלמה נבנתה סביבו, ואולי לא יודעים שהיא נקראת על שם העיר שהייתה כאן הרבה לפניו"
+    ]
+  },
+  {
+    "id": "ben_gurion_hut",
+    "name_he": "צריף בן גוריון",
+    "answer_he": "צריף בן גוריון",
+    "category": "landmark",
+    "city_he": "שדה בוקר",
+    "image_asset": "assets/game_places/images/ben_gurion_hut.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "צריף עץ צנוע במדבר — ביתו של מנהיג שחלם להפריח את השממה",
+      "כאן חי וכאן נטמן ראש הממשלה הראשון, בלב הנגב"
+    ]
+  },
+  {
+    "id": "lions_gate",
+    "name_he": "שער האריות",
+    "answer_he": "שער האריות",
+    "category": "landmark",
+    "city_he": "ירושלים",
+    "image_asset": "assets/game_places/images/lions_gate.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "בחומה המזרחית של העיר העתיקה",
+      "דרכו פרצו הצנחנים בדרכם אל הר הבית במלחמת ששת הימים"
     ]
   }
 ]
