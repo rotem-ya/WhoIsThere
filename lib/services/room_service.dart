@@ -134,6 +134,16 @@ class RoomService {
     'stalactite_cave',
     'gan_hashlosha',
     'banias_waterfall',
+    'rosh_hanikra',
+    'caesarea',
+    'tel_aviv_port',
+    'cave_of_the_patriarchs',
+    'mount_tabor',
+    'hexagon_pool',
+    'agamon_hahula',
+    'mount_meron',
+    'montfort',
+    'mini_israel',
   };
 
   Future<List<GameImageModel>>? _localImagesFuture;
