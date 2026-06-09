@@ -144,6 +144,9 @@ class RoomService {
     'mount_meron',
     'montfort',
     'mini_israel',
+    'Ben_Gurion',
+    'ben_gurion_hut',
+    'lions_gate',
   };
 
   Future<List<GameImageModel>>? _localImagesFuture;

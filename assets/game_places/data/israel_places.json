@@ -470,5 +470,46 @@
       "אפשר לטייל מהצפון ועד אילת בכמה דקות הליכה."
     ],
     "stage": "ready"
+  },
+  {
+    "id": "Ben_Gurion",
+    "name_he": "שדה התעופה בן גוריון",
+    "answer_he": "בן גוריון",
+    "category": "landmark",
+    "city_he": "לוד",
+    "image_asset": "assets/game_places/images/Ben_Gurion.jpg",
+    "difficulty": "easy",
+    "is_active": true,
+    "facts": [
+      "עיר שלמה נבנתה סביבו, ואולי לא יודעים שהיא נקראת על שם העיר שהייתה כאן הרבה לפניו"
+    ]
+  },
+  {
+    "id": "ben_gurion_hut",
+    "name_he": "צריף בן גוריון",
+    "answer_he": "צריף בן גוריון",
+    "category": "landmark",
+    "city_he": "שדה בוקר",
+    "image_asset": "assets/game_places/images/ben_gurion_hut.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "צריף עץ צנוע במדבר — ביתו של מנהיג שחלם להפריח את השממה",
+      "כאן חי וכאן נטמן ראש הממשלה הראשון, בלב הנגב"
+    ]
+  },
+  {
+    "id": "lions_gate",
+    "name_he": "שער האריות",
+    "answer_he": "שער האריות",
+    "category": "landmark",
+    "city_he": "ירושלים",
+    "image_asset": "assets/game_places/images/lions_gate.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "בחומה המזרחית של העיר העתיקה",
+      "דרכו פרצו הצנחנים בדרכם אל הר הבית במלחמת ששת הימים"
+    ]
   }
 ]

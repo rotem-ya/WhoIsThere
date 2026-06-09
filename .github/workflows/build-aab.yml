@@ -7,9 +7,11 @@ name: Build AAB (Google Play)
 # app-release.aab is uploaded as a build artifact you can download and
 # upload to the Play Console (Internal testing / Production).
 #
-# Signing reuses the SAME established keystore as build-apk.yml (alias
-# "whoisthere"), whose SHA-1 is registered in Firebase for Google Sign-In.
-# Do NOT regenerate the keystore — it would break Google Sign-In.
+# Signing uses the dedicated Play upload keystore supplied via GitHub
+# Secrets (UPLOAD_KEYSTORE_BASE64 / UPLOAD_KEYSTORE_PASSWORD /
+# UPLOAD_KEY_ALIAS / UPLOAD_KEY_PASSWORD), whose SHA-1 is registered in
+# Firebase for Google Sign-In. Do NOT swap or regenerate these secrets —
+# it would break Google Sign-In and Play upload signing.
 #
 # versionCode is set from the workflow run number so every build that lands
 # on Play has a strictly increasing code (Play rejects duplicate codes).
@@ -58,9 +60,9 @@ jobs:
           echo "flutter.sdk=$FLUTTER_SDK" > android/local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
 
-      - name: Restore fixed keystore
+      - name: Restore upload keystore from secret
         run: |
-          echo "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" | base64 -d > android/app/keystore.jks
+          echo "${{ secrets.UPLOAD_KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
 
       - name: Clean Flutter and pub cache
         run: |
@@ -78,9 +80,9 @@ jobs:
 
       - name: Build signed App Bundle
         env:
-          KEYSTORE_STORE_PASS: "WhoIsThere2024!"
-          KEYSTORE_ALIAS: "whoisthere"
-          KEYSTORE_KEY_PASS: "WhoIsThere2024!"
+          KEYSTORE_STORE_PASS: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          KEYSTORE_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          KEYSTORE_KEY_PASS: ${{ secrets.UPLOAD_KEY_PASSWORD }}
         run: |
           flutter build appbundle --release \
             --build-name="${{ github.event.inputs.build_name || '1.0.0' }}" \
