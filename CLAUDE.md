@@ -5,7 +5,9 @@
 ---
 
 ## כללי פיתוח
-- ענף פיתוח: `claude/stability-compensation-logging-dkoQh`
+- **ענף פיתוח / השקה (מאוחד):** `claude/qa-launch-prep-EXqLn`
+  - זהו הענף המאוחד והיחיד לבנייה (iOS + Android). מכיל: 36 מקומות + טקסט עברי מבוקר, Apple Sign-in entitlement, תיקון קריסת "משחק מהיר" (ניטרול Firestore cache), חתימת AAB עם מפתח EA:3B דרך Secrets, וכל הקו הראשי (parallel guessing, quick-match, פרסומות, מפת גילויים).
+  - ⚠️ **לבנות אך ורק מהענף הזה.** אין לבנות מ-`stability-compensation-logging` (ענף תקוע/מיושן) או מ-`hebrew-text-review` (מוזג לכאן).
 - מאגר: `rotem-ya/whoisthere`
 
 ## דף הצטרפות לחדר (Join Page)
