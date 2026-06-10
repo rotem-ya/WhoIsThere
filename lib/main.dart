@@ -51,6 +51,24 @@ void main() async {
   );
 
   await QaLoggerService.instance.init();
+
+  // Capture otherwise-fatal uncaught errors into the QA log and keep the app
+  // alive. A stray Dart exception on a screen (e.g. the win/finished flow) is
+  // turned into a logged, non-fatal event instead of tearing the process down;
+  // if a crash still occurs with no CRASH entry, the cause is native (plugin).
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    final msg = details.exceptionAsString();
+    QaLoggerService.instance.log(
+        'CRASH', 'FLUTTER_ERROR ${msg.length > 160 ? msg.substring(0, 160) : msg}');
+  };
+  WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
+    final msg = error.toString();
+    QaLoggerService.instance.log(
+        'CRASH', 'UNCAUGHT ${msg.length > 160 ? msg.substring(0, 160) : msg}');
+    return true; // handled — keep the app running
+  };
+
   await SettingsService.init();
   final platform = Platform.operatingSystem; // android / ios / linux / ...
   final utcNow = DateTime.now().toUtc();

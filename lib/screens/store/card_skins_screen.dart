@@ -271,7 +271,7 @@ class _SectionHeader extends StatelessWidget {
         ),
         if (trailingCoin) ...[
           const SizedBox(width: 3),
-          CoinIcon(size: 14, color: color),
+          const CoinIcon(size: 14),
         ],
         const SizedBox(width: 8),
         Expanded(
@@ -554,7 +554,7 @@ class _Chip extends StatelessWidget {
           ),
           if (trailingCoin) ...[
             const SizedBox(width: 2),
-            CoinIcon(size: 11, color: color),
+            const CoinIcon(size: 11),
           ],
         ],
       ),

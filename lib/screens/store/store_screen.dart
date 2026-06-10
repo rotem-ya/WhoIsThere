@@ -649,7 +649,7 @@ class _PlayingCard extends StatelessWidget {
                 child: Text.rich(
                   TextSpan(
                     text: '$price ',
-                    children: [coinSpan(size: 14, color: canAfford ? Colors.white : Colors.white38)],
+                    children: [coinSpan(size: 14, color: canAfford ? const Color(0xFFFFC107) : Colors.white38)],
                   ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -1036,7 +1036,7 @@ class _RewardedAdTile extends ConsumerWidget {
                     Text.rich(
                       TextSpan(
                         text: 'צפה וקבל ${EconomyConfig.adRewardCoins} ',
-                        children: [coinSpan(size: 16, color: Colors.white)],
+                        children: [coinSpan(size: 16)],
                       ),
                       textDirection: TextDirection.rtl,
                       style: const TextStyle(

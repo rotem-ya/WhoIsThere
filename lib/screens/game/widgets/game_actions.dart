@@ -225,7 +225,7 @@ class _HintButton extends StatelessWidget {
                       TextSpan(
                         text: '$label  ($coinPrice ',
                         children: [
-                          coinSpan(size: 14, color: const Color(0xFF5A9BBB)),
+                          coinSpan(size: 14),
                           const TextSpan(text: ')'),
                         ],
                       ),

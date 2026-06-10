@@ -418,7 +418,7 @@ class _RewardRow extends StatelessWidget {
             Text.rich(
               TextSpan(
                 text: coinText,
-                children: [coinSpan(size: 15, color: color)],
+                children: [coinSpan(size: 15)],
               ),
               style: TextStyle(
                 color: color,

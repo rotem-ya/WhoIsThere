@@ -295,6 +295,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   // Correct-guess victory overlay
   bool _showCorrectGuess = false;
+  bool _finishedMusicStopped = false;
   late final ConfettiController _confettiLeft;
   late final ConfettiController _confettiRight;
   static final AudioPlayer _victoryPlayer = AudioPlayer(playerId: 'victory-fanfare');
@@ -1298,6 +1299,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     if (!mounted) return correct;
     if (correct) {
+      // Duck the looping background music before the victory fanfare. Two
+      // simultaneous mp3 streams through separate AudioPlayer instances is a
+      // known native-crash trigger on iOS (audioplayers); the game is ending,
+      // so the music does not need to resume.
+      _musicShouldBePlaying = false;
+      unawaited(_bgPlayer.stop());
       setState(() => _showCorrectGuess = true);
       _confettiLeft.play();
       _confettiRight.play();
@@ -1725,6 +1732,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 }
 
                 if (room.phase == GamePhase.finished) {
+                  // Stop the looping background music once on game end so it does
+                  // not overlap the victory fanfare (dual-mp3 playback is a known
+                  // iOS native-crash trigger in audioplayers).
+                  if (!_finishedMusicStopped) {
+                    _finishedMusicStopped = true;
+                    _musicShouldBePlaying = false;
+                    _bgPlayer.stop().ignore();
+                  }
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     _triggerMatchReward(room, currentUserId);
                   });

@@ -687,7 +687,7 @@ class _QuickGameButton extends StatelessWidget {
                           Text.rich(
                             TextSpan(
                               text: '${EconomyConfig.gameEntryFee * players} ',
-                              children: [coinSpan(size: 13, color: cfg.borderColor)],
+                              children: [coinSpan(size: 13)],
                             ),
                             style: TextStyle(color: cfg.borderColor, fontSize: 13, fontWeight: FontWeight.w900, height: 1.1),
                           ),
