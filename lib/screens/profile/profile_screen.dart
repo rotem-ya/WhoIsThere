@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,6 +42,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() => _upgrading = true);
     try {
       final user = await ref.read(authServiceProvider).signInWithGoogle();
+      if (!mounted) return;
+      if (user != null && !user.isGuest) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('מחובר כ-${user.name} ✓', textDirection: TextDirection.rtl,
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+            backgroundColor: const Color(0xFF1B5E20),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      // null = user cancelled or sign-in failed silently — no snackbar needed
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('שגיאה: $e'), duration: const Duration(seconds: 3)),
+      );
+    } finally {
+      if (mounted) setState(() => _upgrading = false);
+    }
+  }
+
+  Future<void> _upgradeWithApple() async {
+    if (_upgrading) return;
+    HapticFeedback.lightImpact();
+    setState(() => _upgrading = true);
+    try {
+      final user = await ref.read(authServiceProvider).signInWithApple();
       if (!mounted) return;
       if (user != null && !user.isGuest) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -286,6 +316,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     if (context.mounted) context.go('/auth');
                   },
                   onUpgrade: _upgrading ? null : _upgradeWithGoogle,
+                  onUpgradeApple: _upgrading ? null : _upgradeWithApple,
                 ),
               ),
 
@@ -382,11 +413,13 @@ class _AccountSection extends StatelessWidget {
   final bool isGuest;
   final VoidCallback onSignOut;
   final VoidCallback? onUpgrade;
+  final VoidCallback? onUpgradeApple;
   const _AccountSection({
     required this.provider,
     required this.isGuest,
     required this.onSignOut,
     required this.onUpgrade,
+    required this.onUpgradeApple,
   });
 
   @override
@@ -448,6 +481,33 @@ class _AccountSection extends StatelessWidget {
                     : const Text('התחבר עם Google עכשיו', style: TextStyle(color: Color(0xFF4285F4), fontSize: 13, fontWeight: FontWeight.w800)),
               ),
             ),
+            // Sign in with Apple — required on iOS whenever a third-party
+            // login (Google) is offered (App Store Review Guideline 4.8).
+            if (Platform.isIOS) ...[
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: onUpgradeApple,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(onUpgradeApple != null ? 0.92 : 0.10),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white.withOpacity(0.5), width: 0.8),
+                  ),
+                  alignment: Alignment.center,
+                  child: onUpgradeApple == null
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87))
+                      : const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.apple_rounded, size: 17, color: Colors.black),
+                            SizedBox(width: 6),
+                            Text('התחבר עם Apple עכשיו', style: TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                ),
+              ),
+            ],
           ],
         ),
       );
