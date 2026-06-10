@@ -112,7 +112,8 @@ class AuthService {
             'AUTH', 'AUTH_GOOGLE_LINKED uid=${userCredential.user?.uid}');
         } on FirebaseAuthException catch (e) {
           if (e.code == 'credential-already-in-use' ||
-              e.code == 'provider-already-linked') {
+              e.code == 'provider-already-linked' ||
+              e.code == 'email-already-in-use') {
             // This Google account already has its own Firebase UID.
             // Sign into the existing account (UID will change).
             QaLoggerService.instance.log(
@@ -217,7 +218,11 @@ class AuthService {
             'AUTH', 'AUTH_APPLE_LINKED uid=${userCredential.user?.uid}');
       } on FirebaseAuthException catch (e) {
         if (e.code == 'credential-already-in-use' ||
-            e.code == 'provider-already-linked') {
+            e.code == 'provider-already-linked' ||
+            e.code == 'email-already-in-use') {
+          // The Apple account already exists (e.g. the user signed in with
+          // Apple before). Sign into that existing account instead of linking,
+          // then merge the anonymous guest's data into it.
           QaLoggerService.instance.log(
               'AUTH', 'AUTH_APPLE_LINK_CONFLICT code=${e.code} → signIn');
           userCredential =
