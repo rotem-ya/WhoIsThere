@@ -210,20 +210,6 @@
     ]
   },
   {
-    "id": "rosh_hanikra",
-    "name_he": "ראש הנקרה",
-    "answer_he": "ראש הנקרה",
-    "category": "nature",
-    "city_he": "ראש הנקרה",
-    "image_asset": "assets/game_places/images/rosh_hanikra.jpg",
-    "difficulty": "easy",
-    "is_active": true,
-    "facts": [
-      "רכבל תלול מוביל אל נקיק שבו רכבת בריטית חצתה פעם בדרכה אל ארץ רחוקה.",
-      "במקום שבו היבשת נגמרת בקצה הצפוני ביותr, גלי הים פיסלו במשך אלפי שנים מערות בתוך סלע לבן"
-    ]
-  },
-  {
     "id": "old_acre",
     "name_he": "עכו העתיקה",
     "answer_he": "עכו",
@@ -294,34 +280,6 @@
     ]
   },
   {
-    "id": "cave_of_the_patriarchs",
-    "name_he": "מערת המכפלה",
-    "answer_he": "מערת המכפלה",
-    "category": "landmark",
-    "city_he": "חברון",
-    "image_asset": "assets/game_places/images/cave_of_the_patriarchs.jpg",
-    "difficulty": "medium",
-    "is_active": true,
-    "facts": [
-      "מבנה אבן עתיק מעל קברי האבות, בעיר שדרומית להרים",
-      "אתר קדוש שמתחתיו מערה שלפי המסורת קנה אברהם"
-    ]
-  },
-  {
-    "id": "mount_tabor",
-    "name_he": "הר תבור",
-    "answer_he": "הר תבור",
-    "category": "nature",
-    "city_he": "גליל תחתון",
-    "image_asset": "assets/game_places/images/mount_tabor.jpg",
-    "difficulty": "medium",
-    "is_active": true,
-    "facts": [
-      "הר כיפתי ובודד הניצב בלב העמק, ובראשו כנסייה",
-      "צורתו העגולה בולטת מרחוק, ומעליו נשקף כל העמק"
-    ]
-  },
-  {
     "id": "stalactite_cave",
     "name_he": "מערת הנטיפים",
     "answer_he": "מערת הנטיפים",
@@ -362,6 +320,156 @@
       "המפל הגדול בארץ בשפע מים",
       "שמורה ירוקה למרגלות החרמון"
     ]
+  },
+  {
+    "id": "rosh_hanikra",
+    "name_he": "ראש הנקרה",
+    "answer_he": "ראש הנקרה",
+    "category": "nature",
+    "city_he": "ראש הנקרה",
+    "image_asset": "assets/game_places/images/rosh_hanikra.jpg",
+    "difficulty": "easy",
+    "is_active": true,
+    "facts": [
+      "רכבל תלול מוביל אל נקיק שבו רכבת בריטית חצתה פעם בדרכה אל ארץ רחוקה.",
+      "במקום שבו היבשת נגמרת בקצה הצפוני ביותr, גלי הים פיסלו במשך אלפי שנים מערות בתוך סלע לבן"
+    ],
+    "stage": "ready"
+  },
+  {
+    "id": "caesarea",
+    "name_he": "אמפי קיסריה",
+    "answer_he": "אמפי קיסריה",
+    "category": "landmark",
+    "city_he": "קיסריה",
+    "image_asset": "assets/game_places/images/caesarea.jpg",
+    "difficulty": "easy",
+    "is_active": true,
+    "facts": [
+      "תיאטרון רומי ונמל עתיק על חוף הים, שהקים מלך בנאי גדול",
+      "חורבות מלכותיות מול הגלים, בין אמת מים לאמפיתיאטרון"
+    ],
+    "stage": "ready"
+  },
+  {
+    "id": "tel_aviv_port",
+    "name_he": "נמל תל אביב",
+    "answer_he": "נמל תל אביב",
+    "category": "landmark",
+    "city_he": "תל אביב",
+    "image_asset": "assets/game_places/images/tel_aviv_port.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "רציף עץ גלי לצד הים, מלא מסעדות, חנויות ושוק בסופי שבוע",
+      "נמל ישן שהפך למתחם בילוי תוסס על קו החוף"
+    ],
+    "stage": "ready"
+  },
+  {
+    "id": "cave_of_the_patriarchs",
+    "name_he": "מערת המכפלה",
+    "answer_he": "מערת המכפלה",
+    "category": "landmark",
+    "city_he": "חברון",
+    "image_asset": "assets/game_places/images/cave_of_the_patriarchs.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "מבנה אבן עתיק מעל קברי האבות, בעיר שדרומית להרים",
+      "אתר קדוש שמתחתיו מערה שלפי המסורת קנה אברהם"
+    ],
+    "stage": "ready"
+  },
+  {
+    "id": "mount_tabor",
+    "name_he": "הר תבור",
+    "answer_he": "הר תבור",
+    "category": "nature",
+    "city_he": "גליל תחתון",
+    "image_asset": "assets/game_places/images/mount_tabor.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "הר כיפתי ובודד הניצב בלב העמק, ובראשו כנסייה",
+      "צורתו העגולה בולטת מרחוק, ומעליו נשקף כל העמק"
+    ],
+    "stage": "ready"
+  },
+  {
+    "id": "hexagon_pool",
+    "name_he": "בריכת המשושים",
+    "answer_he": "בריכת המשושים",
+    "category": "nature",
+    "city_he": "רמת הגולן",
+    "image_asset": "assets/game_places/images/hexagon_pool.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "בריכת מים בין עמודי בזלת מצולעים",
+      "אתר רחצה פראי בגולן"
+    ],
+    "stage": "ready"
+  },
+  {
+    "id": "agamon_hahula",
+    "name_he": "אגמון החולה",
+    "answer_he": "אגמון החולה",
+    "category": "nature",
+    "city_he": "גליל עליון",
+    "image_asset": "assets/game_places/images/agamon_hahula.jpg",
+    "difficulty": "easy",
+    "is_active": true,
+    "facts": [
+      "אתר צפרות עם מאות אלפי עופות נודדים",
+      "שבילי אופניים ועגלות בעמק"
+    ],
+    "stage": "ready"
+  },
+  {
+    "id": "mount_meron",
+    "name_he": "הר מירון",
+    "answer_he": "הר מירון",
+    "category": "nature",
+    "city_he": "גליל עליון",
+    "image_asset": "assets/game_places/images/mount_meron.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "אחד ההרים הגבוהים בגליל",
+      "אתר עלייה לרגל בל\"ג בעומר"
+    ],
+    "stage": "ready"
+  },
+  {
+    "id": "montfort",
+    "name_he": "מבצר מונפור",
+    "answer_he": "מונפור",
+    "category": "landmark",
+    "city_he": "גליל מערבי",
+    "image_asset": "assets/game_places/images/montfort.jpg",
+    "difficulty": "hard",
+    "is_active": true,
+    "facts": [
+      "חורבות מבצר צלבני על רכס ירוק",
+      "נשקף מעל נחל זורם בגליל"
+    ],
+    "stage": "ready"
+  },
+  {
+    "id": "mini_israel",
+    "name_he": "מיני ישראל",
+    "answer_he": "מיני ישראל",
+    "category": "landmark",
+    "city_he": "לטרון",
+    "image_asset": "assets/game_places/images/mini_israel.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "כאן המדינה כולה",
+      "אפשר לטייל מהצפון ועד אילת בכמה דקות הליכה."
+    ],
+    "stage": "ready"
   },
   {
     "id": "Ben_Gurion",

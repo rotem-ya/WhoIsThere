@@ -7,9 +7,11 @@ name: Build AAB (Google Play)
 # app-release.aab is uploaded as a build artifact you can download and
 # upload to the Play Console (Internal testing / Production).
 #
-# Signing reuses the SAME established keystore as build-apk.yml (alias
-# "whoisthere"), whose SHA-1 is registered in Firebase for Google Sign-In.
-# Do NOT regenerate the keystore — it would break Google Sign-In.
+# Signing uses the dedicated Play upload keystore supplied via GitHub
+# Secrets (UPLOAD_KEYSTORE_BASE64 / UPLOAD_KEYSTORE_PASSWORD /
+# UPLOAD_KEY_ALIAS / UPLOAD_KEY_PASSWORD), whose SHA-1 is registered in
+# Firebase for Google Sign-In. Do NOT swap or regenerate these secrets —
+# it would break Google Sign-In and Play upload signing.
 #
 # versionCode is set from the workflow run number so every build that lands
 # on Play has a strictly increasing code (Play rejects duplicate codes).
