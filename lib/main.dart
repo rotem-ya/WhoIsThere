@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:app_links/app_links.dart';
 import 'core/constants/build_info.dart';
 import 'core/theme/app_styles.dart';
@@ -64,6 +65,20 @@ void main() async {
   if (firebaseError != null) {
     runApp(_ErrorApp(error: firebaseError.toString()));
     return;
+  }
+
+  // Disable Firestore offline persistence. A corrupted on-disk cache (LevelDB)
+  // is the leading cause of a deterministic NATIVE crash on the first doc
+  // .get() — observed when entering Quick Game (crash inside the exposure read,
+  // before any catchable Dart frame). Live multiplayer doesn't need offline
+  // reads, so memory-only is safe. Must run before any Firestore use (the first
+  // is the wallet read, which happens after runApp).
+  try {
+    FirebaseFirestore.instance.settings =
+        const Settings(persistenceEnabled: false);
+    QaLoggerService.instance.log('APP', 'FIRESTORE_PERSISTENCE_DISABLED');
+  } catch (e) {
+    QaLoggerService.instance.log('APP', 'FIRESTORE_SETTINGS_FAIL error=$e');
   }
 
   runApp(const ProviderScope(child: GuessThePlaceApp()));

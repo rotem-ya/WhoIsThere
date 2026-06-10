@@ -656,8 +656,19 @@ class RoomService {
 
   /// Raw exposure document: image-id counts plus reserved `__` cycle metadata.
   Future<Map<String, dynamic>> _getExposureRaw(String uid) async {
+    // Breadcrumbs around the exact line that crashed Quick Game on iOS. If a
+    // native crash recurs, the last persisted QA event pinpoints it: BEGIN with
+    // no OK/FAIL after = crash inside the native .get(). The timeout prevents a
+    // hung read from freezing matchmaking; on any failure we degrade to {} so
+    // the game can still start.
+    QaLoggerService.instance.log('IMG', 'EXPOSURE_READ_BEGIN uid=${_short(uid)}');
     try {
-      final snap = await _firestore.doc('users/$uid/exposure_history/data').get();
+      final snap = await _firestore
+          .doc('users/$uid/exposure_history/data')
+          .get()
+          .timeout(const Duration(seconds: 8));
+      QaLoggerService.instance.log(
+          'IMG', 'EXPOSURE_READ_OK uid=${_short(uid)} exists=${snap.exists}');
       if (!snap.exists) return {};
       return snap.data() ?? {};
     } catch (e) {
