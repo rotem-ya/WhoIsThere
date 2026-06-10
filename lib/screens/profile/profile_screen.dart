@@ -67,11 +67,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _upgradeWithApple() async {
     if (_upgrading) return;
     HapticFeedback.lightImpact();
+    QaLoggerService.instance.log('AUTH', 'PROFILE_APPLE_UPGRADE_ATTEMPT');
     setState(() => _upgrading = true);
     try {
       final user = await ref.read(authServiceProvider).signInWithApple();
       if (!mounted) return;
       if (user != null && !user.isGuest) {
+        QaLoggerService.instance.log('AUTH', 'PROFILE_APPLE_UPGRADE_OK uid=${user.id}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('מחובר כ-${user.name} ✓', textDirection: TextDirection.rtl,
@@ -83,6 +85,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
       // null = user cancelled or sign-in failed silently — no snackbar needed
     } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log('AUTH',
+          'PROFILE_APPLE_UPGRADE_ERROR ${msg.length > 80 ? msg.substring(0, 80) : msg}');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('שגיאה: $e'), duration: const Duration(seconds: 3)),

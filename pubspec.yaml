@@ -21,6 +21,7 @@ dependencies:
   # Auth
   google_sign_in: ^6.2.2
   sign_in_with_apple: ^6.1.0
+  crypto: ^3.0.0  # SHA-256 nonce for Apple sign-in
 
   # State Management
   flutter_riverpod: ^2.4.10

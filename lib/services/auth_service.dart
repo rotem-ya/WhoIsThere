@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:firebase_auth/firebase_auth.dart';
@@ -171,16 +173,35 @@ class AuthService {
     return null;
   }
 
+  /// Cryptographically-random nonce (Apple sign-in replay protection).
+  static String _generateNonce([int length = 32]) {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._';
+    final rnd = math.Random.secure();
+    return List.generate(length, (_) => charset[rnd.nextInt(charset.length)])
+        .join();
+  }
+
   Future<UserModel?> signInWithApple() async {
+    QaLoggerService.instance.log('AUTH', 'AUTH_APPLE_BEGIN');
+    // Firebase requires a nonce: send the SHA-256 hash to Apple, and the raw
+    // value to Firebase, so it can verify the ID token wasn't replayed. Missing
+    // nonce is a common cause of Apple sign-in failing at the Firebase stage.
+    final rawNonce = _generateNonce();
+    final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
+
     final appleCredential = await SignInWithApple.getAppleIDCredential(
       scopes: [
         AppleIDAuthorizationScopes.email,
         AppleIDAuthorizationScopes.fullName,
       ],
+      nonce: hashedNonce,
     );
+    QaLoggerService.instance.log('AUTH', 'AUTH_APPLE_CREDENTIAL_OK');
 
     final oauthCredential = OAuthProvider('apple.com').credential(
       idToken: appleCredential.identityToken,
+      rawNonce: rawNonce,
       accessToken: appleCredential.authorizationCode,
     );
 

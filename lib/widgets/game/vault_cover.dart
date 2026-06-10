@@ -435,6 +435,7 @@ class _AperturePainter extends CustomPainter {
           rimOuter:     Color(0xFFBDC3C7),
           rimInner:     Color(0xFF909090),
         );
+      case 'default': // default card back = Israeli flag (shares this artwork)
       case 'classic_zionist':
         return const _SkinPalette(
           base:         Color(0xFFF0F4FF),
@@ -1096,6 +1097,7 @@ class _AperturePainter extends CustomPainter {
         }
 
       // ── classic_zionist — two Israeli flag stripes ────────────────────
+      case 'default': // default card back = Israeli flag (shares this artwork)
       case 'classic_zionist':
         final stripePaint = Paint()
           ..color = pal.bladeDark.withOpacity(0.85)
@@ -2062,6 +2064,7 @@ class _SkinPreviewPainter extends CustomPainter {
         for (var x = 0.0; x < w; x += gs) canvas.drawLine(Offset(x, 0), Offset(x, h), lp);
         _tierBorder(canvas, rect, const Color(0xFF90A0B0));
 
+      case 'default': // default card back = Israeli flag (shares this artwork)
       case 'classic_zionist':
         canvas.drawRect(rect, fp..color = const Color(0xFFF0F4FF));
         fp.color = const Color(0xFF0038B8);

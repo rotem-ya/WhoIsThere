@@ -352,6 +352,7 @@ Color _skinAccentColor(String id) {
     case 'quiet_night':        return const Color(0xFF8090C8);
     case 'dawn_light':         return const Color(0xFFFF9A9E);
     case 'urban_concrete':     return const Color(0xFF90A0B0);
+    case 'default':            return const Color(0xFF4472C8);
     case 'classic_zionist':    return const Color(0xFF4472C8);
     case 'summer_pastel':      return const Color(0xFFF0A0C0);
     case 'simple_gold_basic':  return const Color(0xFFFFD700);

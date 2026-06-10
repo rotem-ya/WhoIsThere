@@ -50,7 +50,9 @@ class CardSkin {
 
 const kAvailableCardSkins = <CardSkin>[
   // ── חינמי (ברירת מחדל) ───────────────────────────────────────────────────────
-  CardSkin(id: 'default', name: 'מנדלה', price: 0, assetPath: 'assets/skins/default.png'),
+  // Default card back is the Israeli flag (shares the classic_zionist artwork).
+  // No assetPath → rendered by the painter, not a PNG.
+  CardSkin(id: 'default', name: 'דגל ישראל', price: 0),
 
   // ── בסיסי (50–150 מטבעות) ───────────────────────────────────────────────────
   CardSkin(id: 'mediterranean_blue', name: 'כחול ים תיכון',  price: 50),
