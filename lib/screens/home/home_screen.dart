@@ -299,13 +299,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text.rich(
                     TextSpan(
                       text: 'צפה בסרטון וקבל 20 ',
                       children: [coinSpan(size: 16)],
                     ),
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
                     textDirection: TextDirection.rtl,
                   ),
                 ),
