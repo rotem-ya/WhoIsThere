@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_styles.dart';
 import '../../../models/economy/match_reward_breakdown.dart';
+import '../../../widgets/economy/coin_icon.dart';
 
 class GameWinnerView extends StatefulWidget {
   final String winnerName;
@@ -388,7 +389,7 @@ class _RewardRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final coinText = isNegative ? '−$coins 🪙' : '+$coins 🪙';
+    final coinText = isNegative ? '−$coins ' : '+$coins ';
     return AnimatedOpacity(
       opacity: visible ? 1 : 0,
       duration: const Duration(milliseconds: 300),
@@ -414,8 +415,11 @@ class _RewardRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Text(
-              coinText,
+            Text.rich(
+              TextSpan(
+                text: coinText,
+                children: [coinSpan(size: 15, color: color)],
+              ),
               style: TextStyle(
                 color: color,
                 fontSize: 15,
@@ -454,8 +458,11 @@ class _TotalRow extends StatelessWidget {
               fontWeight: FontWeight.w900,
             ),
           ),
-          Text(
-            '+$total 🪙',
+          Text.rich(
+            TextSpan(
+              text: '+$total ',
+              children: [coinSpan(size: 18, color: Color(0xFFD4AF37))],
+            ),
             style: const TextStyle(
               color: Color(0xFFD4AF37),
               fontSize: 18,

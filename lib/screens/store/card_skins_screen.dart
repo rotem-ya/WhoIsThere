@@ -11,6 +11,7 @@ import '../../providers/providers.dart';
 import '../../providers/skin_providers.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/economy/coin_display.dart';
+import '../../widgets/economy/coin_icon.dart';
 import '../../widgets/game/vault_cover.dart'; // CardSkinPreview
 
 final selectedSkinProvider = StreamProvider.autoDispose<String>((ref) {
@@ -111,7 +112,8 @@ class CardSkinsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 _SectionHeader(
-                    label: 'בסיסי  50–150 🪙',
+                    label: 'בסיסי  50–150',
+                    trailingCoin: true,
                     icon: Icons.palette_outlined,
                     color: const Color(0xFF4CA1AF)),
                 const SizedBox(height: AppSpacing.sm),
@@ -125,7 +127,8 @@ class CardSkinsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 _SectionHeader(
-                    label: 'נדיר  300–500 🪙',
+                    label: 'נדיר  300–500',
+                    trailingCoin: true,
                     icon: Icons.auto_awesome_outlined,
                     color: const Color(0xFF00FFFF)),
                 const SizedBox(height: AppSpacing.sm),
@@ -139,7 +142,8 @@ class CardSkinsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 _SectionHeader(
-                    label: 'פרימיום  1000 🪙',
+                    label: 'פרימיום  1000',
+                    trailingCoin: true,
                     icon: Icons.diamond_outlined,
                     color: const Color(0xFFFFD700)),
                 const SizedBox(height: AppSpacing.sm),
@@ -241,11 +245,13 @@ class _SectionHeader extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
+  final bool trailingCoin;
 
   const _SectionHeader({
     required this.label,
     required this.icon,
     this.color = const Color(0xFFD4AF37),
+    this.trailingCoin = false,
   });
 
   @override
@@ -263,6 +269,10 @@ class _SectionHeader extends StatelessWidget {
             letterSpacing: 0.3,
           ),
         ),
+        if (trailingCoin) ...[
+          const SizedBox(width: 3),
+          CoinIcon(size: 14, color: color),
+        ],
         const SizedBox(width: 8),
         Expanded(
           child: Container(height: 1, color: color.withOpacity(0.22)),
@@ -496,7 +506,8 @@ class _StatusChip extends StatelessWidget {
       return _Chip(label: 'הצמד', color: accent, icon: Icons.touch_app_rounded);
     }
     return _Chip(
-      label: '${skin.price} 🪙',
+      label: '${skin.price}',
+      trailingCoin: true,
       color: canAfford ? gold : Colors.grey,
       icon: null,
     );
@@ -507,8 +518,9 @@ class _Chip extends StatelessWidget {
   final String label;
   final Color color;
   final IconData? icon;
+  final bool trailingCoin;
 
-  const _Chip({required this.label, required this.color, this.icon});
+  const _Chip({required this.label, required this.color, this.icon, this.trailingCoin = false});
 
   @override
   Widget build(BuildContext context) {
@@ -540,6 +552,10 @@ class _Chip extends StatelessWidget {
               ),
             ),
           ),
+          if (trailingCoin) ...[
+            const SizedBox(width: 2),
+            CoinIcon(size: 11, color: color),
+          ],
         ],
       ),
     );

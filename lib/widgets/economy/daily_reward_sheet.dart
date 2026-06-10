@@ -7,6 +7,7 @@ import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
 import '../../services/reward_calculator.dart';
 import '../../services/settings_service.dart';
+import 'coin_icon.dart';
 
 void showDailyRewardSheet(BuildContext context, WidgetRef ref) {
   showModalBottomSheet<void>(
@@ -390,8 +391,7 @@ class _CoinsPreview extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  const Text('🪙',
-                      style: TextStyle(fontSize: 24, height: 1)),
+                  const CoinIcon(size: 24),
                 ],
               ),
             ],
@@ -448,7 +448,7 @@ class _ClaimSuccess extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('🪙', style: TextStyle(fontSize: 28, height: 1)),
+              const CoinIcon(size: 28),
               const SizedBox(width: 10),
               Text(
                 '+$coins הופקדו!',

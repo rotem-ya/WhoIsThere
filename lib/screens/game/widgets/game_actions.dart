@@ -10,6 +10,7 @@ import '../../../providers/providers.dart';
 import '../../../services/feedback_service.dart';
 import '../../../services/reward_calculator.dart';
 import '../../../widgets/game/animated_reward.dart';
+import '../../../widgets/economy/coin_icon.dart';
 
 class GameActions extends ConsumerWidget {
   final bool isMyTurn;
@@ -130,9 +131,8 @@ class GameActions extends ConsumerWidget {
                   revealedCount >= totalTiles * GameConstants.hintRevealThreshold) ...[
                 const SizedBox(height: 6),
                 _HintButton(
-                  label: purchasedHintCount >= 1
-                      ? 'ראה רמז'
-                      : 'רמז  (${EconomyConfig.hintFirstPrice} 🪙)',
+                  label: purchasedHintCount >= 1 ? 'ראה רמז' : 'רמז',
+                  coinPrice: purchasedHintCount >= 1 ? null : EconomyConfig.hintFirstPrice,
                   canAfford: purchasedHintCount >= 1 || (canAffordFirstHint && !isBusy),
                   isBusy: isBusy && purchasedHintCount == 0,
                   onTap: (purchasedHintCount >= 1 || (canAffordFirstHint && !isBusy))
@@ -142,7 +142,8 @@ class GameActions extends ConsumerWidget {
                 if (onBuySecondHint != null) ...[
                   const SizedBox(height: 6),
                   _HintButton(
-                    label: 'רמז נוסף  (${EconomyConfig.hintSecondPrice} 🪙)',
+                    label: 'רמז נוסף',
+                    coinPrice: EconomyConfig.hintSecondPrice,
                     canAfford: canAffordSecondHint && !isBusy,
                     isBusy: isBusy,
                     onTap: canAffordSecondHint && !isBusy ? onBuySecondHint : null,
@@ -168,12 +169,14 @@ class GameActions extends ConsumerWidget {
 
 class _HintButton extends StatelessWidget {
   final String label;
+  final int? coinPrice;
   final bool canAfford;
   final bool isBusy;
   final VoidCallback? onTap;
 
   const _HintButton({
     required this.label,
+    this.coinPrice,
     required this.canAfford,
     required this.isBusy,
     required this.onTap,
@@ -208,15 +211,31 @@ class _HintButton extends StatelessWidget {
               const Icon(Icons.lightbulb_outline_rounded,
                   color: Color(0xFF5A9BBB), size: 18),
               const SizedBox(width: 6),
-              Text(
-                label,
-                textDirection: TextDirection.rtl,
-                style: const TextStyle(
-                  color: Color(0xFF5A9BBB),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+              coinPrice == null
+                  ? Text(
+                      label,
+                      textDirection: TextDirection.rtl,
+                      style: const TextStyle(
+                        color: Color(0xFF5A9BBB),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    )
+                  : Text.rich(
+                      TextSpan(
+                        text: '$label  ($coinPrice ',
+                        children: [
+                          coinSpan(size: 14, color: const Color(0xFF5A9BBB)),
+                          const TextSpan(text: ')'),
+                        ],
+                      ),
+                      textDirection: TextDirection.rtl,
+                      style: const TextStyle(
+                        color: Color(0xFF5A9BBB),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
             ],
           ),
         ),

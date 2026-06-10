@@ -17,6 +17,7 @@ import '../../services/qa_logger_service.dart';
 import '../../widgets/common/ambient_background.dart';
 import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/economy/coin_display.dart';
+import '../../widgets/economy/coin_icon.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
 import '../../models/room_model.dart';
 
@@ -265,7 +266,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('🪙', style: TextStyle(fontSize: 40)),
+            const CoinIcon(size: 40),
             const SizedBox(height: 12),
             const Text(
               'אין מספיק מטבעות',
@@ -273,8 +274,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               textDirection: TextDirection.rtl,
             ),
             const SizedBox(height: 6),
-            Text(
-              'כניסה למשחק עולה ${EconomyConfig.gameEntryFee} 🪙',
+            Text.rich(
+              TextSpan(
+                text: 'כניסה למשחק עולה ${EconomyConfig.gameEntryFee} ',
+                children: [coinSpan(size: 14)],
+              ),
               style: const TextStyle(color: Colors.white60, fontSize: 14),
               textDirection: TextDirection.rtl,
             ),
@@ -296,8 +300,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Center(
-                  child: Text(
-                    'צפה בסרטון וקבל 20 🪙',
+                  child: Text.rich(
+                    TextSpan(
+                      text: 'צפה בסרטון וקבל 20 ',
+                      children: [coinSpan(size: 16)],
+                    ),
                     style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
                     textDirection: TextDirection.rtl,
                   ),
@@ -653,8 +660,11 @@ class _QuickGameButton extends StatelessWidget {
                             style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900, height: 1.1),
                           ),
                           const SizedBox(height: 3),
-                          Text(
-                            'כניסה ${EconomyConfig.gameEntryFee} 🪙',
+                          Text.rich(
+                            TextSpan(
+                              text: 'כניסה ${EconomyConfig.gameEntryFee} ',
+                              children: [coinSpan(size: 12)],
+                            ),
                             style: TextStyle(color: Colors.white.withOpacity(0.60), fontSize: 11.5, fontWeight: FontWeight.w600, height: 1),
                           ),
                         ],
@@ -674,8 +684,11 @@ class _QuickGameButton extends StatelessWidget {
                             'קופה',
                             style: TextStyle(color: cfg.borderColor.withOpacity(0.70), fontSize: 9, fontWeight: FontWeight.w700, height: 1.1),
                           ),
-                          Text(
-                            '${EconomyConfig.gameEntryFee * players} 🪙',
+                          Text.rich(
+                            TextSpan(
+                              text: '${EconomyConfig.gameEntryFee * players} ',
+                              children: [coinSpan(size: 13, color: cfg.borderColor)],
+                            ),
                             style: TextStyle(color: cfg.borderColor, fontSize: 13, fontWeight: FontWeight.w900, height: 1.1),
                           ),
                         ],

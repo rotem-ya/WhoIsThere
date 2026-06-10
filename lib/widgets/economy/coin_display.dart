@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/providers.dart';
+import 'coin_icon.dart';
 
 /// Compact coin balance widget that reads walletProvider directly.
 /// Animates the displayed number when the balance changes.
@@ -91,8 +92,7 @@ class _AnimatedCoinChipState extends State<_AnimatedCoinChip>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('🪙',
-                  style: TextStyle(fontSize: iconSize, height: 1)),
+              CoinIcon(size: iconSize),
               SizedBox(width: widget.compact ? 3 : 4),
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 220),

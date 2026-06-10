@@ -13,6 +13,7 @@ import '../../providers/providers.dart';
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/economy/coin_display.dart';
+import '../../widgets/economy/coin_icon.dart';
 
 class StoreScreen extends ConsumerStatefulWidget {
   const StoreScreen({super.key});
@@ -129,7 +130,7 @@ class _PurchaseTab extends StatelessWidget {
           AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
       children: [
         // ── Coin packages ─────────────────────────────────────────────────
-        _SectionLabel(label: 'קנה מטבעות', icon: '🪙'),
+        _SectionLabel(label: 'קנה מטבעות', iconWidget: const CoinIcon(size: 16)),
         const SizedBox(height: 10),
         Row(
           children: [
@@ -185,14 +186,15 @@ class _PurchaseTab extends StatelessWidget {
 
 class _SectionLabel extends StatelessWidget {
   final String label;
-  final String icon;
-  const _SectionLabel({required this.label, required this.icon});
+  final String? icon;
+  final Widget? iconWidget;
+  const _SectionLabel({required this.label, this.icon, this.iconWidget});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(icon, style: const TextStyle(fontSize: 15, height: 1)),
+        iconWidget ?? Text(icon ?? '', style: const TextStyle(fontSize: 15, height: 1)),
         const SizedBox(width: 6),
         Text(
           label,
@@ -270,7 +272,7 @@ class _CoinPackageTile extends StatelessWidget {
               ),
               const SizedBox(height: 6),
             ],
-            const Text('🪙', style: TextStyle(fontSize: 26, height: 1)),
+            const CoinIcon(size: 26),
             const SizedBox(height: 6),
             Text(
               '$coins',
@@ -644,8 +646,11 @@ class _PlayingCard extends StatelessWidget {
                   color: canAfford ? accentColor : Colors.white12,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  '$price 🪙',
+                child: Text.rich(
+                  TextSpan(
+                    text: '$price ',
+                    children: [coinSpan(size: 14, color: canAfford ? Colors.white : Colors.white38)],
+                  ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: canAfford ? Colors.white : Colors.white38,
@@ -913,7 +918,7 @@ class _AdRemovalCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          _PackFeature(text: '500 🪙 מטבעות'),
+          _PackFeature(text: '500 מטבעות'),
           const SizedBox(height: 2),
           _PackFeature(text: 'ללא פרסומות לצמיתות'),
           const SizedBox(height: 14),
@@ -1028,8 +1033,11 @@ class _RewardedAdTile extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'צפה וקבל ${EconomyConfig.adRewardCoins} 🪙',
+                    Text.rich(
+                      TextSpan(
+                        text: 'צפה וקבל ${EconomyConfig.adRewardCoins} ',
+                        children: [coinSpan(size: 16, color: Colors.white)],
+                      ),
                       textDirection: TextDirection.rtl,
                       style: const TextStyle(
                         color: Colors.white,
@@ -1073,7 +1081,7 @@ class _RewardedAdTile extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content:
-              Text('+${EconomyConfig.adRewardCoins} מטבעות הופקדו! 🪙'),
+              Text('+${EconomyConfig.adRewardCoins} מטבעות הופקדו!'),
           backgroundColor: const Color(0xFF0A3880),
         ),
       );
