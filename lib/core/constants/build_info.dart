@@ -1,7 +1,7 @@
 /// Manually updated on each push. Check this label in Profile screen
 /// to verify which build is installed on a test device.
-const String kBuildLabel = 'build-20260610-launch-r6';
+const String kBuildLabel = 'build-20260610-launch-r7';
 
 const String kGitBranch = 'main';
 
-const String kAppVersion = '1.0.0+42';
+const String kAppVersion = '1.0.0+43';

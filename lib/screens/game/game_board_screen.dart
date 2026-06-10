@@ -933,11 +933,21 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   }
 
   static Future<void> _playVictorySound() async {
+    QaLoggerService.instance.log('SOUND', 'VICTORY_PLAY_BEGIN');
     try {
+      // ReleaseMode.stop keeps the native player alive after the clip ends.
+      // The default (release) frees the AVAudioPlayer on completion, which is a
+      // native crash trigger on iOS — and the victory fanfare is the only sound
+      // that plays once to its natural end (all SFX are stop()+replayed, the bg
+      // music loops), so it was the one hitting the release path ~5s after a win.
+      await _victoryPlayer.setReleaseMode(ReleaseMode.stop);
       await _victoryPlayer.stop();
       await _victoryPlayer.setVolume(_sfxScale);
       await _victoryPlayer.play(_victorySound);
-    } catch (_) {}
+      QaLoggerService.instance.log('SOUND', 'VICTORY_PLAY_OK');
+    } catch (e) {
+      QaLoggerService.instance.log('SOUND', 'VICTORY_PLAY_ERR $e');
+    }
   }
 
   Future<void> _loadImage(String imageId) async {
@@ -1186,6 +1196,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         : const Duration(seconds: 999);
     final totalTilesCount = room.gridSize * room.gridSize;
 
+    QaLoggerService.instance.log('ECONOMY', 'REWARD_BEGIN isWin=$isWin isSolo=$isSolo');
     try {
       final breakdown = await ref.read(economyServiceProvider).applyMatchReward(
             uid: uid,
@@ -1198,6 +1209,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             roomId: room.id,
             imageId: _image?.id,
           );
+      QaLoggerService.instance.log('ECONOMY', 'REWARD_OK total=${breakdown.total}');
       if (mounted) setState(() => _rewardBreakdown = breakdown);
     } catch (e) {
       QaLoggerService.instance.log('ECONOMY', 'REWARD_CALC_ERROR error=$e');

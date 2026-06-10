@@ -107,6 +107,7 @@ class EconomyService {
     final exposureCount = imageId != null
         ? await _getExposureCount(uid, imageId)
         : 0;
+    QaLoggerService.instance.log('ECONOMY', 'REWARD_EXPO_OK count=$exposureCount');
 
     final breakdown = RewardCalculator.calculateMatchReward(
       isWin: isWin,
@@ -141,6 +142,7 @@ class EconomyService {
           totalMatchesWon: isWin ? w.totalMatchesWon + 1 : null,
         ),
       );
+      QaLoggerService.instance.log('ECONOMY', 'REWARD_DELTA_OK delta=${breakdown.total}');
     }
 
     return breakdown;

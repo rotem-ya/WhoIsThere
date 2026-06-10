@@ -183,14 +183,17 @@ class AuthService {
         .join();
   }
 
-  Future<UserModel?> signInWithApple() async {
-    QaLoggerService.instance.log('AUTH', 'AUTH_APPLE_BEGIN');
+  /// Acquires a fresh Apple credential carrying a new single-use nonce. Each
+  /// Apple ID token is bound to one nonce and may be presented to Firebase only
+  /// once, so a fresh credential must be re-acquired whenever a prior attempt
+  /// (e.g. a failed link) already consumed one — otherwise Firebase rejects it
+  /// with missing-or-invalid-nonce ("Duplicate credential received").
+  Future<(AuthorizationCredentialAppleID, OAuthCredential)>
+      _acquireAppleCredential() async {
     // Firebase requires a nonce: send the SHA-256 hash to Apple, and the raw
-    // value to Firebase, so it can verify the ID token wasn't replayed. Missing
-    // nonce is a common cause of Apple sign-in failing at the Firebase stage.
+    // value to Firebase, so it can verify the ID token wasn't replayed.
     final rawNonce = _generateNonce();
     final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
-
     final appleCredential = await SignInWithApple.getAppleIDCredential(
       scopes: [
         AppleIDAuthorizationScopes.email,
@@ -198,13 +201,18 @@ class AuthService {
       ],
       nonce: hashedNonce,
     );
-    QaLoggerService.instance.log('AUTH', 'AUTH_APPLE_CREDENTIAL_OK');
-
     final oauthCredential = OAuthProvider('apple.com').credential(
       idToken: appleCredential.identityToken,
       rawNonce: rawNonce,
       accessToken: appleCredential.authorizationCode,
     );
+    return (appleCredential, oauthCredential);
+  }
+
+  Future<UserModel?> signInWithApple() async {
+    QaLoggerService.instance.log('AUTH', 'AUTH_APPLE_BEGIN');
+    var (appleCredential, oauthCredential) = await _acquireAppleCredential();
+    QaLoggerService.instance.log('AUTH', 'AUTH_APPLE_CREDENTIAL_OK');
 
     // Mirrors the Google link-and-upgrade strategy: anonymous accounts are
     // upgraded in-place so the UID, wallet, and Firestore data are preserved.
@@ -225,8 +233,20 @@ class AuthService {
           // then merge the anonymous guest's data into it.
           QaLoggerService.instance.log(
               'AUTH', 'AUTH_APPLE_LINK_CONFLICT code=${e.code} → signIn');
-          userCredential =
-              await _auth.signInWithCredential(e.credential ?? oauthCredential);
+          // The failed link already consumed our Apple nonce. Firebase only
+          // returns a reusable credential for credential-already-in-use; for
+          // email-already-in-use (e.credential == null) we must re-acquire a
+          // fresh Apple credential, otherwise sign-in fails with
+          // missing-or-invalid-nonce ("Duplicate credential received").
+          final conflictCredential = e.credential;
+          if (conflictCredential != null) {
+            userCredential =
+                await _auth.signInWithCredential(conflictCredential);
+          } else {
+            final (freshApple, freshOauth) = await _acquireAppleCredential();
+            appleCredential = freshApple;
+            userCredential = await _auth.signInWithCredential(freshOauth);
+          }
           final newUid = userCredential.user?.uid;
           if (anonUser.uid != newUid && newUid != null) {
             await _mergeAnonymousData(anonUser.uid, newUid);
