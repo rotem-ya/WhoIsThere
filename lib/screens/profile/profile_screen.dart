@@ -440,20 +440,23 @@ class _AccountSection extends StatelessWidget {
                 Container(
                   width: 38, height: 38,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4285F4).withOpacity(0.15),
+                    color: (Platform.isIOS ? Colors.white : const Color(0xFF4285F4)).withOpacity(0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Center(
-                    child: Text('G', style: TextStyle(color: Color(0xFF4285F4), fontSize: 18, fontWeight: FontWeight.w900)),
+                  child: Center(
+                    child: Platform.isIOS
+                        ? const Icon(Icons.apple_rounded, color: Colors.white, size: 22)
+                        : const Text('G', style: TextStyle(color: Color(0xFF4285F4), fontSize: 18, fontWeight: FontWeight.w900)),
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('התחבר עם Google', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
-                      Text('שמור את ההתקדמות שלך', style: TextStyle(color: Color(0xFF4A8BAA), fontSize: 11)),
+                      Text(Platform.isIOS ? 'התחבר עם Apple' : 'התחבר עם Google',
+                          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
+                      const Text('שמור את ההתקדמות שלך', style: TextStyle(color: Color(0xFF4A8BAA), fontSize: 11)),
                     ],
                   ),
                 ),
@@ -466,25 +469,25 @@ class _AccountSection extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 10),
-            GestureDetector(
-              onTap: onUpgrade,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4285F4).withOpacity(onUpgrade != null ? 0.25 : 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF4285F4).withOpacity(0.5), width: 0.8),
+            // Google sign-in is not configured for iOS (no OAuth client in
+            // GoogleService-Info.plist), so on iOS we offer Apple only.
+            if (!Platform.isIOS)
+              GestureDetector(
+                onTap: onUpgrade,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4285F4).withOpacity(onUpgrade != null ? 0.25 : 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF4285F4).withOpacity(0.5), width: 0.8),
+                  ),
+                  alignment: Alignment.center,
+                  child: onUpgrade == null
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF4285F4)))
+                      : const Text('התחבר עם Google עכשיו', style: TextStyle(color: Color(0xFF4285F4), fontSize: 13, fontWeight: FontWeight.w800)),
                 ),
-                alignment: Alignment.center,
-                child: onUpgrade == null
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF4285F4)))
-                    : const Text('התחבר עם Google עכשיו', style: TextStyle(color: Color(0xFF4285F4), fontSize: 13, fontWeight: FontWeight.w800)),
               ),
-            ),
-            // Sign in with Apple — required on iOS whenever a third-party
-            // login (Google) is offered (App Store Review Guideline 4.8).
-            if (Platform.isIOS) ...[
-              const SizedBox(height: 8),
+            if (Platform.isIOS)
               GestureDetector(
                 onTap: onUpgradeApple,
                 child: Container(
@@ -507,7 +510,6 @@ class _AccountSection extends StatelessWidget {
                         ),
                 ),
               ),
-            ],
           ],
         ),
       );

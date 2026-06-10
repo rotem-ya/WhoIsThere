@@ -229,17 +229,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               )
                             else ...[
 
-                              // ── Primary: Google ─────────────────────────────
-                              _step(
-                                _SocialButton(
-                                  label: 'כניסה עם Google',
-                                  icon: _GoogleIcon(),
-                                  isPrimary: true,
-                                  onTap: _signInWithGoogle,
+                              // ── Primary: Google (hidden on iOS — Google
+                              // sign-in isn't configured for iOS) ─────────────
+                              if (!Platform.isIOS) ...[
+                                _step(
+                                  _SocialButton(
+                                    label: 'כניסה עם Google',
+                                    icon: _GoogleIcon(),
+                                    isPrimary: true,
+                                    onTap: _signInWithGoogle,
+                                  ),
+                                  delayMs: 360, durationMs: 300, dy: 8,
                                 ),
-                                delayMs: 360, durationMs: 300, dy: 8,
-                              ),
-                              const SizedBox(height: 12),
+                                const SizedBox(height: 12),
+                              ],
 
                               // ── Primary: Apple (always shown — disabled on Android) ──
                               _step(
