@@ -423,10 +423,10 @@ class AuthService {
       final results = await Future.wait([
         _firestore.doc('users/$fromUid').get(),
         _firestore.doc('users/$fromUid/economy/wallet').get(),
-        _firestore.doc('users/$fromUid/exposure_history').get(),
+        _firestore.doc('users/$fromUid/exposure_history/data').get(),
         _firestore.doc('users/$toUid').get(),
         _firestore.doc('users/$toUid/economy/wallet').get(),
-        _firestore.doc('users/$toUid/exposure_history').get(),
+        _firestore.doc('users/$toUid/exposure_history/data').get(),
       ]);
 
       final srcUser   = results[0];
@@ -501,7 +501,7 @@ class AuthService {
         }
         if (merged.isNotEmpty) {
           await _firestore
-              .doc('users/$toUid/exposure_history')
+              .doc('users/$toUid/exposure_history/data')
               .set(merged, SetOptions(merge: true));
         }
       }

@@ -22,7 +22,7 @@ class EconomyService {
       _db.doc('users/$uid/economy/wallet');
 
   DocumentReference<Map<String, dynamic>> _exposureRef(String uid) =>
-      _db.doc('users/$uid/exposure_history');
+      _db.doc('users/$uid/exposure_history/data');
 
   CollectionReference<Map<String, dynamic>> _txCol(String uid) =>
       _db.collection('users/$uid/economy_transactions');
@@ -85,7 +85,8 @@ class EconomyService {
 
   Future<int> _getExposureCount(String uid, String imageId) async {
     try {
-      final snap = await _exposureRef(uid).get();
+      final snap =
+          await _exposureRef(uid).get().timeout(const Duration(seconds: 8));
       if (!snap.exists) return 0;
       return (snap.data()?[imageId] as num?)?.toInt() ?? 0;
     } catch (_) {
