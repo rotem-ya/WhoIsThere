@@ -147,6 +147,11 @@ class RoomService {
     'Ben_Gurion',
     'ben_gurion_hut',
     'lions_gate',
+    'coral_beach',
+    'ein_bokek',
+    'yehiam',
+    'jaffa_clock_tower',
+    'rabin_square',
   };
 
   Future<List<GameImageModel>>? _localImagesFuture;

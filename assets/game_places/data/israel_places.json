@@ -511,5 +511,75 @@
       "בחומה המזרחית של העיר העתיקה",
       "דרכו פרצו הצנחנים בדרכם אל הר הבית במלחמת ששת הימים"
     ]
+  },
+  {
+    "id": "coral_beach",
+    "name_he": "חוף האלמוגים",
+    "answer_he": "חוף האלמוגים",
+    "category": "nature",
+    "city_he": "אילת",
+    "image_asset": "assets/game_places/images/coral_beach.jpg",
+    "difficulty": "easy",
+    "is_active": true,
+    "facts": [
+      "שמורת שונית בים האדום",
+      "שנורקלינג בין דגים צבעוניים"
+    ]
+  },
+  {
+    "id": "ein_bokek",
+    "name_he": "עין בוקק",
+    "answer_he": "עין בוקק",
+    "category": "nature",
+    "city_he": "ים המלח",
+    "image_asset": "assets/game_places/images/ein_bokek.jpg",
+    "difficulty": "easy",
+    "is_active": true,
+    "facts": [
+      "אזור מלונות בים המלח",
+      "רחצה במים עשירים במלחים"
+    ]
+  },
+  {
+    "id": "yehiam",
+    "name_he": "מבצר יחיעם",
+    "answer_he": "מבצר יחיעם",
+    "category": "landmark",
+    "city_he": "גליל מערבי",
+    "image_asset": "assets/game_places/images/yehiam.jpg",
+    "difficulty": "hard",
+    "is_active": true,
+    "facts": [
+      "שרידי מבנה ליד קיבוץ בגליל",
+      "סמל לקרב היסטורי בדרך פרוצה"
+    ]
+  },
+  {
+    "id": "jaffa_clock_tower",
+    "name_he": "מגדל השעון",
+    "answer_he": "מגדל השעון",
+    "category": "landmark",
+    "city_he": "תל אביב",
+    "image_asset": "assets/game_places/images/jaffa_clock_tower.jpg",
+    "difficulty": "easy",
+    "is_active": true,
+    "facts": [
+      "מגדל אבן עם שעון בכניסה לעיר עתיקה",
+      "הקולות שהוא השמיע פעם נשמעו ברחבי השוק הסואן שצמח למרגלותיו"
+    ]
+  },
+  {
+    "id": "rabin_square",
+    "name_he": "כיכר רבין",
+    "answer_he": "כיכר רבין",
+    "category": "landmark",
+    "city_he": "תל אביב",
+    "image_asset": "assets/game_places/images/rabin_square.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "כיכר עירונית גדולה לכינוסים",
+      "אתר זיכרון לדמות חשובה"
+    ]
   }
 ]
