@@ -10,6 +10,7 @@ import '../../../widgets/economy/coin_icon.dart';
 class GameWinnerView extends StatefulWidget {
   final String winnerName;
   final String? placeName;
+  final String? trivia;
   final MatchRewardBreakdown? rewardBreakdown;
   final VoidCallback onHome;
 
@@ -17,6 +18,7 @@ class GameWinnerView extends StatefulWidget {
     super.key,
     required this.winnerName,
     this.placeName,
+    this.trivia,
     this.rewardBreakdown,
     required this.onHome,
   });
@@ -70,23 +72,36 @@ class _GameWinnerViewState extends State<GameWinnerView> {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Center(
-            child: AnimatedScale(
-              scale: _showCard ? 1 : 0.86,
-              duration: const Duration(milliseconds: 420),
-              curve: Curves.easeOutBack,
-              child: AnimatedOpacity(
-                opacity: _showCard ? 1 : 0,
-                duration: const Duration(milliseconds: 260),
-                child: _WinnerCard(
-                  winnerName: widget.winnerName,
-                  placeName: widget.placeName,
-                  rewardBreakdown: widget.rewardBreakdown,
-                  showButton: _showButton,
-                  onHome: widget.onHome,
+          // Centered normally (no scroll), but if the card is taller than the
+          // viewport (small screens + many reward rows + trivia) it scrolls
+          // instead of overflowing.
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Center(
+                    child: AnimatedScale(
+                      scale: _showCard ? 1 : 0.86,
+                      duration: const Duration(milliseconds: 420),
+                      curve: Curves.easeOutBack,
+                      child: AnimatedOpacity(
+                        opacity: _showCard ? 1 : 0,
+                        duration: const Duration(milliseconds: 260),
+                        child: _WinnerCard(
+                          winnerName: widget.winnerName,
+                          placeName: widget.placeName,
+                          trivia: widget.trivia,
+                          rewardBreakdown: widget.rewardBreakdown,
+                          showButton: _showButton,
+                          onHome: widget.onHome,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ],
@@ -110,6 +125,7 @@ class _WinnerBackground extends StatelessWidget {
 class _WinnerCard extends StatelessWidget {
   final String winnerName;
   final String? placeName;
+  final String? trivia;
   final MatchRewardBreakdown? rewardBreakdown;
   final bool showButton;
   final VoidCallback onHome;
@@ -117,6 +133,7 @@ class _WinnerCard extends StatelessWidget {
   const _WinnerCard({
     required this.winnerName,
     this.placeName,
+    this.trivia,
     required this.rewardBreakdown,
     required this.showButton,
     required this.onHome,
@@ -194,6 +211,44 @@ class _WinnerCard extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
+          if (trivia != null && trivia!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0E1E33).withOpacity(0.7),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF2080C0).withOpacity(0.35)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    '💡 ידעת?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF87CEEB),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    trivia!,
+                    textAlign: TextAlign.center,
+                    textDirection: TextDirection.rtl,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.85),
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (rewardBreakdown != null) ...[
             const SizedBox(height: 10),
             _RewardSummary(breakdown: rewardBreakdown!),

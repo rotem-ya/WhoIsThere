@@ -1759,9 +1759,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   if (hasWinner) {
                     final rawName = room.players[room.winnerId]?.name ?? '';
                     final winnerName = rawName.isEmpty ? 'שחקן' : rawName;
+                    // Pick a fact to show as post-win trivia. Deterministic by
+                    // place id so it stays stable across snapshot rebuilds (a
+                    // Random() here would flicker on every Firestore update).
+                    final winFacts = _image?.facts ?? const <String>[];
+                    final trivia = winFacts.isEmpty
+                        ? null
+                        : winFacts[(_image!.id.hashCode & 0x7fffffff) % winFacts.length];
                     return GameWinnerView(
                       winnerName: winnerName,
                       placeName: _image?.name,
+                      trivia: trivia,
                       rewardBreakdown: _rewardBreakdown,
                       onHome: () {
                         QaLoggerService.instance.log('GAME', 'GAME_RETURN_HOME phase=finished_winner');

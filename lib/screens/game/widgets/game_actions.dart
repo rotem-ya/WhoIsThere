@@ -119,8 +119,19 @@ class GameActions extends ConsumerWidget {
                 isActive: primaryIsActive,
                 glow: primaryGlow,
                 onTap: primaryOnTap,
-                reward: showReward ? earlyBonus : null,
+                reward: null,
               ),
+              // Shrinking early-guess bonus meter: a bar that depletes (and
+              // shifts green→amber→red) as more of the board is revealed, making
+              // the decaying reward feel urgent. Hides itself once the bonus is 0.
+              if (showReward) ...[
+                const SizedBox(height: 6),
+                _RewardMeter(
+                  revealedCount: revealedCount,
+                  totalTiles: totalTiles,
+                  bonus: earlyBonus,
+                ),
+              ],
               // Hint button — only in solo mode (shown regardless of turn state).
               // Gated behind GameConstants.hintsEnabled and only surfaces once
               // 70% of the board is revealed, so it acts as a late rescue.
@@ -408,6 +419,95 @@ class _ActionButton extends StatelessWidget {
           );
     }
     return btn;
+  }
+}
+
+// ── Early-guess reward meter ──────────────────────────────────────────────────
+
+/// A slim bar that visualises the decaying early-guess bonus. It empties (and
+/// recolours green→amber→red) continuously as the board is revealed, so guessing
+/// early feels rewarding. The numeric bonus still steps by tier; the bar gives
+/// the smooth "act now" pressure. Purely cosmetic — reads board state only.
+class _RewardMeter extends StatelessWidget {
+  final int revealedCount;
+  final int totalTiles;
+  final int bonus;
+
+  const _RewardMeter({
+    required this.revealedCount,
+    required this.totalTiles,
+    required this.bonus,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio =
+        totalTiles <= 0 ? 1.0 : (revealedCount / totalTiles).clamp(0.0, 1.0);
+    // The bonus is positive only while the reveal ratio is within tier 4
+    // (≤ 80%); deplete the bar to empty exactly at that point.
+    final cutoff = EconomyConfig.earlyGuessTier4MaxRatio;
+    final fill = cutoff <= 0 ? 0.0 : (1.0 - ratio / cutoff).clamp(0.0, 1.0);
+    final Color barColor = fill > 0.6
+        ? const Color(0xFF34D399) // green — plenty of bonus left
+        : fill > 0.3
+            ? const Color(0xFFFBBF24) // amber — running down
+            : const Color(0xFFF87171); // red — almost gone
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'בונוס ניחוש מוקדם',
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '+$bonus',
+              style: TextStyle(
+                color: barColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(width: 2),
+            const CoinIcon(size: 13),
+          ],
+        ),
+        const SizedBox(height: 3),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Container(
+            height: 6,
+            color: Colors.white.withOpacity(0.12),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: AnimatedFractionallySizedBox(
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOut,
+                widthFactor: fill,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: barColor,
+                    borderRadius: BorderRadius.circular(4),
+                    boxShadow: [
+                      BoxShadow(color: barColor.withOpacity(0.6), blurRadius: 6),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
