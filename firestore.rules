@@ -56,9 +56,13 @@ service cloud.firestore {
     }
 
     // ── Place / image catalogue ───────────────────────────────────────────────
+    // Read: any signed-in player (the app loads the catalogue at game start).
+    // Write: admins only — a user carrying the custom claim { admin: true },
+    // granted to the owner's account and used by the admin content app.
+    // See docs/admin/CONTENT_SCHEMA.md.
     match /images/{imageId} {
       allow read: if signedIn();
-      allow write: if false;
+      allow write: if signedIn() && request.auth.token.admin == true;
     }
 
     // ── Deny everything else ─────────────────────────────────────────────────
