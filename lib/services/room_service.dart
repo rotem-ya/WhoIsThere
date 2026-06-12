@@ -97,9 +97,12 @@ class RoomService {
 
   // Returns reveal countdown ring duration: fast early, slower as image becomes clearer.
   static int _revealTimerMs(int revealedCount, int totalTiles) {
-    if (revealedCount < 3) return 3000;
-    if (revealedCount < 13) return 6000;
-    return 9000;
+    // Per-tile reveal countdown. Quick for the opening tiles (so the board
+    // builds up fast), slower once enough is showing. revealedCount counts all
+    // already-open tiles, including the ones opened at game start — so the 2s
+    // window covers the first 10 tiles on the board, 5s for every tile after.
+    if (revealedCount < 10) return 2000; // first 10 tiles: 2s each
+    return 5000; // remaining tiles: 5s each
   }
 
   // Returns guess-opportunity timer duration in ms based on board state after the latest reveal.
@@ -815,14 +818,35 @@ class RoomService {
     final totalCells = difficulty.gridSize * difficulty.gridSize;
     final allCells = List.generate(totalCells, (i) => i);
 
+    // Open a few non-adjacent tiles up front so the board isn't blank at the
+    // whistle. Reuses the checkerboard picker (same spacing rule as auto-reveal)
+    // and is clamped so we can never reveal the entire board on the smallest
+    // grid. These count as 'system' reveals — no points, no turn.
+    final startRng = Random();
+    final startOpenCount = min(3, totalCells - 1);
+    final startAvailable = List<int>.from(allCells);
+    final startRevealed = <int>{};
+    final initialPlaced = <String, String>{};
+    for (var i = 0; i < startOpenCount; i++) {
+      final idx = _pickCheckerboardTile(
+        startAvailable,
+        startRevealed,
+        difficulty.gridSize,
+        startRng,
+      );
+      startAvailable.remove(idx);
+      startRevealed.add(idx);
+      initialPlaced[idx.toString()] = 'system';
+    }
+
     await _rooms.doc(roomId).update({
       'phase': GamePhase.playing.name,
       'selectedDifficulty': difficulty.name,
       'turnOrder': playerIds,
       'currentTurnIndex': 0,
       'players': updatedPlayers.map((k, v) => MapEntry(k, v.toMap())),
-      'placedPieces': {},
-      'availablePieceIndices': allCells,
+      'placedPieces': initialPlaced,
+      'availablePieceIndices': startAvailable,
       'solvedLetters': [],
       'letterCardGrantedPlayerIds': [],
       'turnPhase': TurnPhase.revealTurn.name,
