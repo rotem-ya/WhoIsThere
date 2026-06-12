@@ -171,7 +171,12 @@ class RoomService {
 
     return rawPlaces
         .whereType<Map<String, dynamic>>()
-        .where((place) => place['is_active'] == true)
+        // Active/hidden state is the source of truth for what enters the game.
+        // Back-compat: a place is active UNLESS it is explicitly disabled
+        // (is_active == false). A missing/legacy field counts as active, so
+        // older data is never silently dropped. Admin "hide" = set is_active
+        // to false (data-only, fully reversible — no code change required).
+        .where((place) => place['is_active'] != false)
         .where((place) => _availableLocalPlaceIds.contains(place['id']))
         .map(_localPlaceToImage)
         .toList(growable: false);
