@@ -52,6 +52,11 @@ class GameLayout extends StatelessWidget {
   final int revealBuyPrice;
   final int revealBuyCount;
   final int maxRevealBuys;
+  // Bought-letter reveal in the guess overlay.
+  final int revealedLetterCount;
+  final VoidCallback? onBuyLetter;
+  final int nextLetterPrice;
+  final bool showBuyLetter;
 
   const GameLayout({
     required this.room,
@@ -90,6 +95,10 @@ class GameLayout extends StatelessWidget {
     this.revealBuyPrice = 0,
     this.revealBuyCount = 0,
     this.maxRevealBuys = 5,
+    this.revealedLetterCount = 0,
+    this.onBuyLetter,
+    this.nextLetterPrice = 0,
+    this.showBuyLetter = false,
   });
 
   @override
@@ -295,6 +304,10 @@ class GameLayout extends StatelessWidget {
             deadlineMs: localGuessDeadlineMs,
             answer: image?.answer ?? '',
             onSubmit: onGuessSubmit,
+            revealedLetterCount: revealedLetterCount,
+            onBuyLetter: onBuyLetter,
+            nextLetterPrice: nextLetterPrice,
+            showBuyLetter: showBuyLetter,
           ),
       ],
     );

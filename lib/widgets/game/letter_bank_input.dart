@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../economy/coin_icon.dart';
+
 String normalizeHebrewFinals(String s) => s
     .replaceAll('ך', 'כ')
     .replaceAll('ם', 'מ')
@@ -22,7 +24,26 @@ class LetterBankInput extends StatefulWidget {
   final bool enabled;
   final Future<bool> Function(String filled) onComplete;
 
-  const LetterBankInput({super.key, required this.answer, required this.enabled, required this.onComplete});
+  // Bought-letter reveal: the first [revealedLetterCount] slots are pre-filled
+  // with the correct answer letters and locked (always capped so at least one
+  // slot is left for the player). The buy button + coin cost are owned by the
+  // parent; [onBuyLetter] is null when buying isn't possible (maxed / can't
+  // afford). [showBuyLetter] controls whether the button is shown at all.
+  final int revealedLetterCount;
+  final VoidCallback? onBuyLetter;
+  final int nextLetterPrice;
+  final bool showBuyLetter;
+
+  const LetterBankInput({
+    super.key,
+    required this.answer,
+    required this.enabled,
+    required this.onComplete,
+    this.revealedLetterCount = 0,
+    this.onBuyLetter,
+    this.nextLetterPrice = 0,
+    this.showBuyLetter = false,
+  });
 
   @override
   State<LetterBankInput> createState() => _LetterBankInputState();
@@ -38,38 +59,65 @@ class _LetterBankInputState extends State<LetterBankInput> {
 
   late List<int> _wordLengths;
   late List<String?> _filled;
+  late List<String> _answerLetters; // correct letter per slot, in slot order
+  int _revealedCount = 0; // effective number of locked, pre-revealed slots
   bool _isSubmitting = false;
   bool _showError = false;
 
   bool get _isComplete => _filled.every((v) => v != null);
-  bool get _canClear => widget.enabled && !_isSubmitting && _filled.any((v) => v != null);
+  // Clearable only if the player has placed a letter in a NON-revealed slot.
+  bool get _canClear =>
+      widget.enabled &&
+      !_isSubmitting &&
+      _filled.asMap().entries.any((e) => e.key >= _revealedCount && e.value != null);
 
   @override
   void initState() {
     super.initState();
     _resetForAnswer();
+    _applyRevealedLetters();
   }
 
   @override
   void didUpdateWidget(covariant LetterBankInput oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.answer != widget.answer) _resetForAnswer();
+    if (oldWidget.answer != widget.answer) {
+      _resetForAnswer();
+      _applyRevealedLetters();
+    } else if (oldWidget.revealedLetterCount != widget.revealedLetterCount) {
+      // A letter was just bought — pre-fill one more correct slot.
+      _applyRevealedLetters();
+    }
+  }
+
+  /// Locks the first N slots to the correct answer letters. Always leaves at
+  /// least one slot for the player (never fully reveals the word).
+  void _applyRevealedLetters() {
+    final n = widget.revealedLetterCount.clamp(0, math.max(0, _filled.length - 1));
+    for (var i = 0; i < n && i < _filled.length && i < _answerLetters.length; i++) {
+      _filled[i] = _answerLetters[i];
+    }
+    _revealedCount = n;
   }
 
   void _resetForAnswer() {
     final words = widget.answer.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
     var total = 0;
     final lengths = <int>[];
+    final letters = <String>[];
     for (final word in words) {
       if (total >= 12) break;
       final allowed = math.min(word.characters.length, 12 - total);
       if (allowed > 0) {
         lengths.add(allowed);
+        letters.addAll(word.characters.take(allowed));
         total += allowed;
       }
     }
     _wordLengths = lengths.isEmpty ? [1] : lengths;
+    _answerLetters = letters;
     _filled = List<String?>.filled(math.max(1, total), null);
+    _revealedCount = 0;
     _isSubmitting = false;
     _showError = false;
   }
@@ -89,7 +137,7 @@ class _LetterBankInputState extends State<LetterBankInput> {
     if (!_canClear) return;
     HapticFeedback.lightImpact();
     setState(() {
-      for (var i = _filled.length - 1; i >= 0; i--) {
+      for (var i = _filled.length - 1; i >= _revealedCount; i--) {
         if (_filled[i] != null) {
           _filled[i] = null;
           break;
@@ -114,7 +162,9 @@ class _LetterBankInputState extends State<LetterBankInput> {
       _isSubmitting = false;
       _showError = !ok;
       if (!ok) {
+        // Clear the player's letters but keep the ones they paid to reveal.
         _filled = List<String?>.filled(_filled.length, null);
+        _applyRevealedLetters();
       }
     });
     if (!ok) {
@@ -127,11 +177,14 @@ class _LetterBankInputState extends State<LetterBankInput> {
   @override
   Widget build(BuildContext context) {
     final enabled = widget.enabled && !_isSubmitting;
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _AnswerSlots(filled: _filled, wordLengths: _wordLengths),
+    // Scrolls only if the bank (now with the optional buy-letter button) is
+    // taller than the available space, so it never overflows on small screens.
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _AnswerSlots(filled: _filled, wordLengths: _wordLengths),
         SizedBox(
           height: 22,
           child: AnimatedOpacity(
@@ -148,10 +201,19 @@ class _LetterBankInputState extends State<LetterBankInput> {
         const SizedBox(height: 8),
         _HebrewKeyboard(enabled: enabled, onLetter: _tapLetter),
         const SizedBox(height: 8),
+        if (widget.showBuyLetter) ...[
+          _BuyLetterAction(
+            price: widget.nextLetterPrice,
+            enabled: enabled && widget.onBuyLetter != null,
+            onTap: widget.onBuyLetter,
+          ),
+          const SizedBox(height: 8),
+        ],
         _ClearAction(enabled: _canClear, onTap: _deleteOne),
         const SizedBox(height: 8),
         _SubmitAction(enabled: enabled && _isComplete, isSubmitting: _isSubmitting, onTap: _submit),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -324,6 +386,49 @@ class _ClearAction extends StatelessWidget {
           ),
         ),
       );
+}
+
+class _BuyLetterAction extends StatelessWidget {
+  final int price;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  const _BuyLetterAction({required this.price, required this.enabled, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    const cyan = Color(0xFF87CEEB);
+    return SizedBox(
+      width: 220,
+      height: 44,
+      child: OutlinedButton(
+        onPressed: enabled ? onTap : null,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: enabled ? cyan : Colors.white38,
+          disabledForegroundColor: Colors.white38,
+          side: BorderSide(
+            color: enabled ? cyan.withOpacity(0.8) : Colors.white.withOpacity(0.16),
+            width: 1.4,
+          ),
+          backgroundColor: const Color(0xFF07101F).withOpacity(0.52),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.lightbulb_outline_rounded, size: 18),
+            const SizedBox(width: 6),
+            const Text('קנה אות', textDirection: TextDirection.rtl),
+            const SizedBox(width: 8),
+            Text('$price', style: const TextStyle(fontWeight: FontWeight.w900)),
+            const SizedBox(width: 3),
+            CoinIcon(size: 15, color: enabled ? const Color(0xFFFFC107) : Colors.white38),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _SubmitAction extends StatelessWidget {

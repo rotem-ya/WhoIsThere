@@ -11,6 +11,11 @@ class GuessModeOverlay extends StatefulWidget {
   final int? deadlineMs;
   final String answer;
   final Future<bool> Function(String)? onSubmit;
+  // Bought-letter reveal, threaded down to the letter bank.
+  final int revealedLetterCount;
+  final VoidCallback? onBuyLetter;
+  final int nextLetterPrice;
+  final bool showBuyLetter;
 
   const GuessModeOverlay({
     super.key,
@@ -19,6 +24,10 @@ class GuessModeOverlay extends StatefulWidget {
     required this.deadlineMs,
     required this.answer,
     this.onSubmit,
+    this.revealedLetterCount = 0,
+    this.onBuyLetter,
+    this.nextLetterPrice = 0,
+    this.showBuyLetter = false,
   });
 
   @override
@@ -140,6 +149,10 @@ class _GuessModeOverlayState extends State<GuessModeOverlay>
                             answer: widget.answer,
                             enabled: widget.onSubmit != null,
                             onComplete: widget.onSubmit ?? (_) async => false,
+                            revealedLetterCount: widget.revealedLetterCount,
+                            onBuyLetter: widget.onBuyLetter,
+                            nextLetterPrice: widget.nextLetterPrice,
+                            showBuyLetter: widget.showBuyLetter,
                           ),
                         )
                       : _SpectatorBody(answer: widget.answer),

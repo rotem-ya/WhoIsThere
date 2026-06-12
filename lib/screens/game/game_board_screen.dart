@@ -100,6 +100,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   final Set<int> _personalRevealedTiles = {};
   static const int _maxPersonalReveals = 5;
 
+  // Bought answer letters this round — count of correct letters the player paid
+  // to reveal in the guess input. Up to 2 (50 then 100 coins). Client-local,
+  // reset when a new place loads.
+  int _lettersBought = 0;
+  static const int _maxLetterBuys = 2;
+
   // Guess-event banner
   int _lastShownGuessCount = -1;
   Map<String, dynamic>? _currentBanner;
@@ -963,6 +969,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _nextFactIndex = 0;
     _purchasedFacts = [];
     _personalRevealedTiles.clear();
+    _lettersBought = 0;
     try {
       final image = await ref.read(roomServiceProvider).getImage(imageId);
       if (mounted) setState(() => _image = image);
@@ -1322,6 +1329,29 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     final pick = hidden[Random().nextInt(hidden.length)];
     setState(() => _personalRevealedTiles.add(pick));
+  }
+
+  // First bought letter costs 50, second 100.
+  int _letterPriceFor(int count) => count == 0 ? 50 : 100;
+
+  /// Buys one answer letter: deducts coins, then bumps the bought-letter count
+  /// so the letter bank pre-fills one more correct letter for this player.
+  Future<void> _buyLetter(RoomModel room, String userId) async {
+    if (_lettersBought >= _maxLetterBuys) return;
+
+    final cost = _letterPriceFor(_lettersBought);
+    final wallet = ref.read(walletProvider).valueOrNull;
+    if (wallet == null || wallet.coins < cost) return;
+
+    final granted = await ref.read(hintEconomyGuardProvider).useHintWithCost(
+          uid: userId,
+          cost: cost,
+          wallet: wallet,
+          roomId: room.id,
+        );
+    if (!granted || !mounted) return;
+
+    setState(() => _lettersBought++);
   }
 
   Future<bool> _submitGuess(RoomModel room, String userId, String value) async {
@@ -1942,6 +1972,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     _revealWallet != null &&
                     _revealWallet.coins >= _revealBuyPrice;
 
+                // Bought-letter (answer hint) availability in the guess input.
+                // Capped so the word is never fully revealed (leave ≥1 letter).
+                final _answerSlots =
+                    ((_image?.answer ?? '').replaceAll(' ', '').length).clamp(0, 12);
+                final _letterBuyCap = (_answerSlots - 1).clamp(0, _maxLetterBuys);
+                final _nextLetterPrice = _letterPriceFor(_lettersBought);
+                final _showBuyLetter = _lettersBought < _letterBuyCap;
+                final _canBuyLetter = _showBuyLetter &&
+                    currentUserId != null &&
+                    _revealWallet != null &&
+                    _revealWallet.coins >= _nextLetterPrice;
+
                 // B9: One-shot QA logs
                 if (room.phase == GamePhase.playing) {
                   if (!_finalTileDramaLogged && room.availablePieceIndices.length == 1) {
@@ -2030,6 +2072,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   onBuyReveal: _canBuyReveal
                       ? () => _buyPersonalReveal(room, currentUserId!)
                       : null,
+                  revealedLetterCount: _lettersBought,
+                  onBuyLetter: _canBuyLetter
+                      ? () => _buyLetter(room, currentUserId!)
+                      : null,
+                  nextLetterPrice: _nextLetterPrice,
+                  showBuyLetter: _showBuyLetter,
                 );
               },
             ),
