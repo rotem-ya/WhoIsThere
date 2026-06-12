@@ -34,6 +34,11 @@ class GameActions extends ConsumerWidget {
   final bool canUseStunCard;
   final List<PlayerModel> stunTargets;
   final Future<void> Function(String targetId)? onStunCard;
+  // Personal tile reveal purchase (this-player-only). Disabled when null.
+  final VoidCallback? onBuyReveal;
+  final int revealBuyPrice;
+  final int revealBuyCount;
+  final int maxRevealBuys;
 
   const GameActions({
     required this.isMyTurn,
@@ -57,6 +62,10 @@ class GameActions extends ConsumerWidget {
     this.canUseStunCard = false,
     this.stunTargets = const [],
     this.onStunCard,
+    this.onBuyReveal,
+    this.revealBuyPrice = 0,
+    this.revealBuyCount = 0,
+    this.maxRevealBuys = 5,
   });
 
   @override
@@ -160,6 +169,19 @@ class GameActions extends ConsumerWidget {
                     onTap: canAffordSecondHint && !isBusy ? onBuySecondHint : null,
                   ),
                 ],
+              ],
+              // Personal tile reveal — uncovers one more tile for THIS player
+              // only (works solo and multiplayer). Shown until the per-round cap
+              // is reached; disabled (greyed) when the player can't afford it.
+              if (revealBuyCount < maxRevealBuys) ...[
+                const SizedBox(height: 6),
+                _HintButton(
+                  label: 'חשוף קלף לי ($revealBuyCount/$maxRevealBuys)',
+                  coinPrice: revealBuyPrice,
+                  canAfford: onBuyReveal != null && !isBusy,
+                  isBusy: false,
+                  onTap: (onBuyReveal != null && !isBusy) ? onBuyReveal : null,
+                ),
               ],
               // Stun card — only in multiplayer when user has cards
               if (canUseStunCard && onStunCard != null) ...[

@@ -93,6 +93,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int _nextFactIndex = 0;
   List<String> _purchasedFacts = [];
 
+  // Personal tile reveals — tiles this player paid to uncover for themselves
+  // only (never shared to Firestore, so opponents don't see them). Mirrors the
+  // client-local pattern used by _purchasedFacts. Up to 5 per round, escalating
+  // price (20/30/40/50/60). Reset when a new place loads.
+  final Set<int> _personalRevealedTiles = {};
+  static const int _maxPersonalReveals = 5;
+
   // Guess-event banner
   int _lastShownGuessCount = -1;
   Map<String, dynamic>? _currentBanner;
@@ -955,6 +962,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _loadedImageId = imageId;
     _nextFactIndex = 0;
     _purchasedFacts = [];
+    _personalRevealedTiles.clear();
     try {
       final image = await ref.read(roomServiceProvider).getImage(imageId);
       if (mounted) setState(() => _image = image);
@@ -1280,6 +1288,40 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       context: context,
       builder: (_) => _PurchasedHintsDialog(facts: _purchasedFacts),
     );
+  }
+
+  // Escalating price for the Nth personal reveal already owned: 20/30/40/50/60.
+  int _personalRevealPriceFor(int count) => 20 + 10 * count;
+
+  /// Buys one personal tile reveal: deducts coins, then uncovers a random
+  /// still-hidden tile for this player only (client-local, never written to the
+  /// shared board so opponents don't benefit).
+  Future<void> _buyPersonalReveal(RoomModel room, String userId) async {
+    if (_personalRevealedTiles.length >= _maxPersonalReveals) return;
+    if (room.phase != GamePhase.playing) return;
+
+    final total = room.gridSize * room.gridSize;
+    final shown = <int>{...room.revealedCells, ..._personalRevealedTiles};
+    final hidden = <int>[
+      for (var i = 0; i < total; i++)
+        if (!shown.contains(i)) i,
+    ];
+    if (hidden.isEmpty) return;
+
+    final cost = _personalRevealPriceFor(_personalRevealedTiles.length);
+    final wallet = ref.read(walletProvider).valueOrNull;
+    if (wallet == null || wallet.coins < cost) return;
+
+    final granted = await ref.read(hintEconomyGuardProvider).useHintWithCost(
+          uid: userId,
+          cost: cost,
+          wallet: wallet,
+          roomId: room.id,
+        );
+    if (!granted || !mounted) return;
+
+    final pick = hidden[Random().nextInt(hidden.length)];
+    setState(() => _personalRevealedTiles.add(pick));
   }
 
   Future<bool> _submitGuess(RoomModel room, String userId, String value) async {
@@ -1886,6 +1928,20 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 final _totalTiles = room.gridSize * room.gridSize;
                 final revealRatio = _totalTiles > 0 ? room.placedPieces.length / _totalTiles : 0.0;
 
+                // Personal reveal (paid, this-player-only) availability.
+                final _revealBuyCount = _personalRevealedTiles.length;
+                final _revealBuyPrice = _personalRevealPriceFor(_revealBuyCount);
+                final _revealWallet = ref.watch(walletProvider).valueOrNull;
+                final _revealHiddenLeft = _totalTiles -
+                    (<int>{...room.revealedCells, ..._personalRevealedTiles}.length);
+                final _canBuyReveal = !_isFinished &&
+                    currentUserId != null &&
+                    room.phase == GamePhase.playing &&
+                    _revealBuyCount < _maxPersonalReveals &&
+                    _revealHiddenLeft > 0 &&
+                    _revealWallet != null &&
+                    _revealWallet.coins >= _revealBuyPrice;
+
                 // B9: One-shot QA logs
                 if (room.phase == GamePhase.playing) {
                   if (!_finalTileDramaLogged && room.availablePieceIndices.length == 1) {
@@ -1967,6 +2023,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   blackoutCardCount: user?.blackoutCardCount ?? 0,
                   guessBlockedUntilMs: room.guessBlockedUntilMs,
                   blackoutActiveUntilMs: room.blackoutActiveUntilMs,
+                  personalRevealedCells: _personalRevealedTiles,
+                  revealBuyPrice: _revealBuyPrice,
+                  revealBuyCount: _revealBuyCount,
+                  maxRevealBuys: _maxPersonalReveals,
+                  onBuyReveal: _canBuyReveal
+                      ? () => _buyPersonalReveal(room, currentUserId!)
+                      : null,
                 );
               },
             ),

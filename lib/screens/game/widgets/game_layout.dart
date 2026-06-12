@@ -46,6 +46,12 @@ class GameLayout extends StatelessWidget {
   final int blackoutCardCount;
   final Map<String, int> guessBlockedUntilMs;
   final Map<String, int> blackoutActiveUntilMs;
+  // Personal (this-player-only) tile reveals + the buy action for one more.
+  final Set<int> personalRevealedCells;
+  final VoidCallback? onBuyReveal;
+  final int revealBuyPrice;
+  final int revealBuyCount;
+  final int maxRevealBuys;
 
   const GameLayout({
     required this.room,
@@ -79,6 +85,11 @@ class GameLayout extends StatelessWidget {
     this.blackoutCardCount = 0,
     this.guessBlockedUntilMs = const {},
     this.blackoutActiveUntilMs = const {},
+    this.personalRevealedCells = const {},
+    this.onBuyReveal,
+    this.revealBuyPrice = 0,
+    this.revealBuyCount = 0,
+    this.maxRevealBuys = 5,
   });
 
   @override
@@ -186,7 +197,12 @@ class GameLayout extends StatelessWidget {
                   children: [
                     GameBoardView(
                       gridSize: room.gridSize,
-                      revealedCells: room.revealedCells,
+                      // Merge shared reveals with this player's personal reveals
+                      // so paid tiles show only on the buyer's screen.
+                      revealedCells: personalRevealedCells.isEmpty
+                          ? room.revealedCells
+                          : <int>{...room.revealedCells, ...personalRevealedCells}
+                              .toList(),
                       availableCells: room.availablePieceIndices,
                       imageUrl: _isBlackedOut ? null : image?.imageUrl,
                       enabled: false,
@@ -260,6 +276,10 @@ class GameLayout extends StatelessWidget {
               canUseStunCard: canUseStunCard,
               stunTargets: stunTargets,
               onStunCard: onStunCard,
+              onBuyReveal: onBuyReveal,
+              revealBuyPrice: revealBuyPrice,
+              revealBuyCount: revealBuyCount,
+              maxRevealBuys: maxRevealBuys,
             ),
           ],
         ),
