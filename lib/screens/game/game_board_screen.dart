@@ -1842,6 +1842,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       winnerName: winnerName,
                       placeName: _image?.name,
                       trivia: trivia,
+                      imageUrl: _image?.imageUrl,
                       rewardBreakdown: _rewardBreakdown,
                       onHome: () {
                         QaLoggerService.instance.log('GAME', 'GAME_RETURN_HOME phase=finished_winner');

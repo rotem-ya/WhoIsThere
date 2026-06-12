@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 
@@ -11,6 +12,7 @@ class GameWinnerView extends StatefulWidget {
   final String winnerName;
   final String? placeName;
   final String? trivia;
+  final String? imageUrl;
   final MatchRewardBreakdown? rewardBreakdown;
   final VoidCallback onHome;
 
@@ -19,6 +21,7 @@ class GameWinnerView extends StatefulWidget {
     required this.winnerName,
     this.placeName,
     this.trivia,
+    this.imageUrl,
     this.rewardBreakdown,
     required this.onHome,
   });
@@ -72,26 +75,28 @@ class _GameWinnerViewState extends State<GameWinnerView> {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          // Centered normally (no scroll), but if the card is taller than the
-          // viewport (small screens + many reward rows + trivia) it scrolls
-          // instead of overflowing.
+          // Single compact screen, no scrolling: the card is laid out at the
+          // available width and scaled down (FittedBox) if it would be taller
+          // than the viewport, so everything fits without ever scrolling.
           child: LayoutBuilder(
             builder: (context, constraints) {
-              return SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: Center(
-                    child: AnimatedScale(
-                      scale: _showCard ? 1 : 0.86,
-                      duration: const Duration(milliseconds: 420),
-                      curve: Curves.easeOutBack,
-                      child: AnimatedOpacity(
-                        opacity: _showCard ? 1 : 0,
-                        duration: const Duration(milliseconds: 260),
+              return Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: AnimatedScale(
+                    scale: _showCard ? 1 : 0.86,
+                    duration: const Duration(milliseconds: 420),
+                    curve: Curves.easeOutBack,
+                    child: AnimatedOpacity(
+                      opacity: _showCard ? 1 : 0,
+                      duration: const Duration(milliseconds: 260),
+                      child: SizedBox(
+                        width: constraints.maxWidth,
                         child: _WinnerCard(
                           winnerName: widget.winnerName,
                           placeName: widget.placeName,
                           trivia: widget.trivia,
+                          imageUrl: widget.imageUrl,
                           rewardBreakdown: widget.rewardBreakdown,
                           showButton: _showButton,
                           onHome: widget.onHome,
@@ -126,6 +131,7 @@ class _WinnerCard extends StatelessWidget {
   final String winnerName;
   final String? placeName;
   final String? trivia;
+  final String? imageUrl;
   final MatchRewardBreakdown? rewardBreakdown;
   final bool showButton;
   final VoidCallback onHome;
@@ -134,6 +140,7 @@ class _WinnerCard extends StatelessWidget {
     required this.winnerName,
     this.placeName,
     this.trivia,
+    this.imageUrl,
     required this.rewardBreakdown,
     required this.showButton,
     required this.onHome,
@@ -164,7 +171,34 @@ class _WinnerCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🏆', style: TextStyle(fontSize: 56, height: 1)),
+          // The revealed place photo is the hero of the win screen.
+          if (imageUrl != null) ...[
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                    color: const Color(0xFFD4AF37).withOpacity(0.6), width: 1.5),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16.5),
+                child: SizedBox(
+                  width: 116,
+                  height: 116,
+                  child: imageUrl!.startsWith('assets/')
+                      ? Image.asset(imageUrl!, fit: BoxFit.cover)
+                      : CachedNetworkImage(
+                          imageUrl: imageUrl!,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => const Center(
+                            child: Text('🏆', style: TextStyle(fontSize: 40)),
+                          ),
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ] else
+            const Text('🏆', style: TextStyle(fontSize: 56, height: 1)),
           const SizedBox(height: 6),
           const Text(
             'ניצחון!',
