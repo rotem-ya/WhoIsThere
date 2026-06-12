@@ -169,14 +169,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             Row(
                               children: [
                                 Flexible(
-                                  child: Text(
-                                    user.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w900,
+                                  // Scale the nickname down to fit instead of
+                                  // truncating it, so the whole name stays visible.
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: AlignmentDirectional.centerStart,
+                                    child: Text(
+                                      user.name,
+                                      maxLines: 1,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                      ),
                                     ),
                                   ),
                                 ),

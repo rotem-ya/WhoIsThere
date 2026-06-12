@@ -413,19 +413,24 @@ class _BuyLetterAction extends StatelessWidget {
           ),
           backgroundColor: const Color(0xFF07101F).withOpacity(0.52),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.lightbulb_outline_rounded, size: 18),
-            const SizedBox(width: 6),
-            const Text('קנה אות', textDirection: TextDirection.rtl),
-            const SizedBox(width: 8),
-            Text('$price', style: const TextStyle(fontWeight: FontWeight.w900)),
-            const SizedBox(width: 3),
-            CoinIcon(size: 15, color: enabled ? const Color(0xFFFFC107) : Colors.white38),
-          ],
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            textDirection: TextDirection.rtl,
+            children: [
+              const Icon(Icons.lightbulb_outline_rounded, size: 18),
+              const SizedBox(width: 6),
+              const Text('קנה אות', textDirection: TextDirection.rtl),
+              const SizedBox(width: 8),
+              Text('$price', style: const TextStyle(fontWeight: FontWeight.w900)),
+              const SizedBox(width: 3),
+              CoinIcon(size: 15, color: enabled ? const Color(0xFFFFC107) : Colors.white38),
+            ],
+          ),
         ),
       ),
     );
