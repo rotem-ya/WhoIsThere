@@ -93,7 +93,8 @@ class _LetterBankInputState extends State<LetterBankInput> {
   /// Locks the first N slots to the correct answer letters. Always leaves at
   /// least one slot for the player (never fully reveals the word).
   void _applyRevealedLetters() {
-    final n = widget.revealedLetterCount.clamp(0, math.max(0, _filled.length - 1));
+    final int n =
+        widget.revealedLetterCount.clamp(0, math.max(0, _filled.length - 1)).toInt();
     for (var i = 0; i < n && i < _filled.length && i < _answerLetters.length; i++) {
       _filled[i] = _answerLetters[i];
     }
