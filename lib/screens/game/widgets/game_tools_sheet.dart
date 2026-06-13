@@ -37,7 +37,7 @@ void showGameToolsSheet(BuildContext context, List<DetectiveAction> tools) {
               ),
               const Padding(
                 padding: EdgeInsets.only(bottom: 8),
-                child: Text('כלים',
+                child: Text('תחבולות',
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 18,

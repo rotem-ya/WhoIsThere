@@ -252,7 +252,7 @@ class _ToolsButton extends StatelessWidget {
             const Text('🛠️', style: TextStyle(fontSize: 15)),
             const SizedBox(width: 7),
             const Text(
-              'כלים',
+              'תחבולות',
               textDirection: TextDirection.rtl,
               style: TextStyle(
                 color: Color(0xFF6FB0CF),

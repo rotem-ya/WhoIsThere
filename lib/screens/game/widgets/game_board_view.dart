@@ -304,7 +304,7 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
                     child: IgnorePointer(
                       child: AnimatedOpacity(
                         duration: const Duration(milliseconds: 220),
-                        opacity: 0.58,
+                        opacity: 0.38,
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             border: Border.all(
