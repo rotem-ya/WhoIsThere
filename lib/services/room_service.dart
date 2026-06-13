@@ -95,14 +95,16 @@ class RoomService {
 
   static const double _letterCardBonusChance = 0.12;
 
-  // Returns reveal countdown ring duration: fast early, slower as image becomes clearer.
+  // Returns reveal countdown ring duration. Tuned as an *accelerating* arc:
+  // slow while little is shown (gives the player room to attempt the high-value
+  // early guess), then progressively faster as the board fills — so the endgame
+  // tiles snap into place and pressure builds. This pairs with the shrinking
+  // guess-opportunity window (_guessOppTimerMs) for a clear slow→fast rhythm.
   static int _revealTimerMs(int revealedCount, int totalTiles) {
-    // Per-tile reveal countdown. Quick for the opening tiles (so the board
-    // builds up fast), slower once enough is showing. revealedCount counts all
-    // already-open tiles, including the ones opened at game start — so the 2s
-    // window covers the first 10 tiles on the board, 5s for every tile after.
-    if (revealedCount < 10) return 2000; // first 10 tiles: 2s each
-    return 5000; // remaining tiles: 5s each
+    final ratio = totalTiles > 0 ? revealedCount / totalTiles : 0.0;
+    if (ratio < 0.30) return 3500; // opening: savor + early-guess window
+    if (ratio < 0.65) return 2500; // building up
+    return 1700; // endgame: urgent, snappy reveals
   }
 
   // Returns guess-opportunity timer duration in ms based on board state after the latest reveal.

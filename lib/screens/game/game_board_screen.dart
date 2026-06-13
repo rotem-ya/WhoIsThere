@@ -3,7 +3,7 @@ import 'widgets/game_layout.dart';
 import 'widgets/game_winner_view.dart';
 import 'dart:async';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'dart:math' show Random, min, pi;
+import 'dart:math' show Random, min, pi, sin;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
@@ -76,7 +76,7 @@ class GameBoardScreen extends ConsumerStatefulWidget {
 }
 
 class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   final _random = Random();
   final _guessController = TextEditingController();
 
@@ -128,10 +128,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   double _lastMusicVolume = 0.44;
   static double _currentMusicBase = 0.44;
 
+  // Hero shake — a quick decaying camera shake played on YOUR correct guess,
+  // paired with a haptic burst, to make the win land with impact.
+  late final AnimationController _heroShake;
+
   // Bot typing simulation
   bool _showBotTyping = false;
   String _botTypingName = '';
   String _botTypingText = '';
+  // True when the bot is making an endgame guess attempt (≥75% revealed) — the
+  // typing banner escalates to a red "about to solve!" alarm so the player feels
+  // real pressure to guess first. Not tied to correctness (no tell), so every
+  // late-game bot attempt is a genuine threat the player must race.
+  bool _botTypingIsThreat = false;
 
   // Background music
   static final AudioPlayer _bgPlayer = AudioPlayer(playerId: 'studio-bg');
@@ -391,6 +400,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     super.initState();
     _confettiLeft = ConfettiController(duration: const Duration(seconds: 2));
     _confettiRight = ConfettiController(duration: const Duration(seconds: 2));
+    _heroShake = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    );
     WidgetsBinding.instance.addObserver(this);
     unawaited(WakelockPlus.enable());
     _musicShouldBePlaying = true;
@@ -953,6 +966,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
+    _heroShake.dispose();
     WidgetsBinding.instance.removeObserver(this);
     unawaited(WakelockPlus.disable());
     unawaited(_bgPlayer.stop());
@@ -1072,6 +1086,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final revealedCount = room.placedPieces.length;
     final ratio = totalTiles > 0 ? revealedCount / totalTiles : 0.0;
 
+    // Solo duel: when the human faces bots only, the single bot opponent is the
+    // whole challenge, so it plays as a sharper endgame "closer" — more accurate
+    // late and a touch faster to think — while still never guessing correctly
+    // before 60% fill, preserving the human's early-guess win path.
+    final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
+
     // Give the human player a guaranteed first-guess window on the first 2 tiles
     if (revealedCount <= 2) return;
 
@@ -1102,7 +1122,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       effectiveGuessChance = guessChance;
     }
 
-    final double delayMultiplier;
+    double delayMultiplier;
     if (isSuperEndgame) {
       delayMultiplier = 0.60; // B7 ×0.75 then B8 ×0.80
     } else if (isEndgameBotMode) {
@@ -1110,6 +1130,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     } else {
       delayMultiplier = 1.0;
     }
+    // Solo closer thinks a little faster once the board is filling, so the
+    // single opponent feels like it's actively racing you down the stretch.
+    if (isSolo && isEndgameBotMode) delayMultiplier *= 0.85;
 
     if (isSuperEndgame) {
       QaLoggerService.instance.log('BOT',
@@ -1142,20 +1165,26 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (snap.phase != GamePhase.playing) return;
       if (snap.isBlockedFromGuessing(botId)) return;
 
-      // Correct guess: ≥60% revealed → 20% base; 75%+ → 35%; 85%+ → 45%
+      // Correct guess: ≥60% revealed → 20% base; 75%+ → 35%; 85%+ → 45%.
+      // Solo duel sharpens the closer: 25% / 42% / 55% so the lone bot is a
+      // genuine endgame threat (still 0% before 60%, so early guesses stay safe).
       final double correctChance = ratio >= 0.60
-          ? (isSuperEndgame ? 0.45 : isEndgameBotMode ? 0.35 : 0.20)
+          ? (isSolo
+              ? (isSuperEndgame ? 0.55 : isEndgameBotMode ? 0.42 : 0.25)
+              : (isSuperEndgame ? 0.45 : isEndgameBotMode ? 0.35 : 0.20))
           : 0.0;
       await _performBotGuess(snap, botId, correctChance);
     });
   }
 
-  Future<void> _simulateBotTyping(String botName, String word) async {
+  Future<void> _simulateBotTyping(String botName, String word,
+      {bool isThreat = false}) async {
     if (!mounted) return;
     setState(() {
       _showBotTyping = true;
       _botTypingName = botName;
       _botTypingText = '';
+      _botTypingIsThreat = isThreat;
     });
 
     await Future.delayed(Duration(milliseconds: 1200 + _random.nextInt(801)));
@@ -1179,10 +1208,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     QaLoggerService.instance.log('BOT', 'BOT_SUBMIT_GUESS correct=$isCorrect');
 
     final botName = room.players[botId]?.name ?? 'בוט';
-    await _simulateBotTyping(botName, guess);
+    // Endgame threat: at ≥75% revealed the banner becomes a red alarm so the
+    // player feels the bot closing in (regardless of whether this guess is the
+    // correct one — keeps every late attempt tense).
+    final total = room.gridSize * room.gridSize;
+    final ratio = total > 0 ? room.placedPieces.length / total : 0.0;
+    await _simulateBotTyping(botName, guess, isThreat: ratio >= 0.75);
 
     if (!mounted) return;
-    setState(() => _showBotTyping = false);
+    setState(() {
+      _showBotTyping = false;
+      _botTypingIsThreat = false;
+    });
 
     await ref.read(roomServiceProvider).submitAnswer(
           roomId: room.id,
@@ -1626,6 +1663,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       _musicShouldBePlaying = false;
       unawaited(_bgPlayer.stop());
       setState(() => _showCorrectGuess = true);
+      _playHeroWin();
       _confettiLeft.play();
       _confettiRight.play();
       unawaited(_playVictorySound());
@@ -1635,6 +1673,30 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     }
     // Wrong guess: LetterBankInput shows its own inline error feedback
     return correct;
+  }
+
+  /// Hero win feedback: a short decaying camera shake plus a triple haptic
+  /// burst so YOUR correct guess lands with physical impact.
+  void _playHeroWin() {
+    _heroShake.forward(from: 0.0);
+    if (!SettingsService.instance.vibrationEnabled) return;
+    HapticFeedback.heavyImpact();
+    Future.delayed(const Duration(milliseconds: 90),
+        () => HapticFeedback.heavyImpact());
+    Future.delayed(const Duration(milliseconds: 200),
+        () => HapticFeedback.mediumImpact());
+  }
+
+  /// Current screen-shake translation while [_heroShake] is animating (a few
+  /// quick oscillations whose amplitude decays to zero).
+  Offset _heroShakeOffset() {
+    if (!_heroShake.isAnimating) return Offset.zero;
+    final t = _heroShake.value; // 0 → 1
+    final decay = 1.0 - t; // amplitude fades out
+    final amp = 9.0 * decay;
+    final dx = sin(t * pi * 8) * amp;
+    final dy = sin(t * pi * 6) * amp * 0.5;
+    return Offset(dx, dy);
   }
 
   void _handleGuessTap(RoomModel room, String userId, bool canGuessNow) {
@@ -1791,7 +1853,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppStyles.navyTop,
-        body: Stack(
+        body: AnimatedBuilder(
+          animation: _heroShake,
+          builder: (context, child) => Transform.translate(
+            offset: _heroShakeOffset(),
+            child: child,
+          ),
+          child: Stack(
           children: [
             DecoratedBox(
               decoration: const BoxDecoration(
@@ -2163,6 +2231,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       _currentBanner = event;
                       _showBanner = true;
                       _showBotTyping = false;
+                      _botTypingIsThreat = false;
                     });
                     if (isCorrect && !isLocalGuess) {
                       unawaited(_playCorrectDing());
@@ -2313,6 +2382,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   showBotTyping: _showBotTyping,
                   botTypingName: _botTypingName,
                   botTypingText: _botTypingText,
+                  botTypingIsThreat: _botTypingIsThreat,
                   onBack: () {
                     QaLoggerService.instance.log('GAME', 'GAME_BACK_BUTTON_TAPPED');
                     if (room.phase == GamePhase.playing) {
@@ -2464,6 +2534,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 ),
               ),
           ],
+          ),
         ),
       ),
     );

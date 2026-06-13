@@ -26,6 +26,7 @@ class GameLayout extends StatelessWidget {
   final bool showBotTyping;
   final String botTypingName;
   final String botTypingText;
+  final bool botTypingIsThreat;
   final VoidCallback onBack;
   final void Function(int)? onReveal;
   final VoidCallback? onTapRevealed;
@@ -75,6 +76,7 @@ class GameLayout extends StatelessWidget {
     required this.showBotTyping,
     required this.botTypingName,
     required this.botTypingText,
+    this.botTypingIsThreat = false,
     required this.onBack,
     required this.onReveal,
     this.onTapRevealed,
@@ -199,7 +201,11 @@ class GameLayout extends StatelessWidget {
                 currentUserId: currentUserId,
               ),
             if (showBotTyping)
-              BotTypingBanner(botName: botTypingName, typedSoFar: botTypingText)
+              BotTypingBanner(
+                botName: botTypingName,
+                typedSoFar: botTypingText,
+                isThreat: botTypingIsThreat,
+              )
             else if (showBanner && bannerEvent != null)
               GuessBanner(
                 key: ValueKey('${bannerEvent!['playerId']}-${bannerEvent!['guess']}-${bannerEvent!['isCorrect']}'),
@@ -263,6 +269,15 @@ class GameLayout extends StatelessWidget {
                               ],
                             ),
                           ),
+                        ),
+                      ),
+                    // Endgame escalation: a pulsing red vignette ramps up as the
+                    // board fills past 75% (and harder past 85%), making the race
+                    // to guess feel urgent. Suppressed while blacked out.
+                    if (!_isBlackedOut && revealRatio >= 0.75)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: _EndgameVignette(ratio: revealRatio),
                         ),
                       ),
                   ],
@@ -358,6 +373,83 @@ class _DebugPhaseBadge extends StatelessWidget {
         '[DBG] turnPhase=${turnPhase.name}$detail',
         style: const TextStyle(color: Color(0xFFFFE082), fontSize: 10, fontFamily: 'monospace'),
       ),
+    );
+  }
+}
+
+/// A pulsing red vignette drawn over the board during the endgame. Intensity
+/// scales from the 0.75 (endgame) threshold up to and beyond 0.85 (super-
+/// endgame), turning "almost solved" into visible, breathing pressure.
+class _EndgameVignette extends StatefulWidget {
+  final double ratio;
+
+  const _EndgameVignette({required this.ratio});
+
+  @override
+  State<_EndgameVignette> createState() => _EndgameVignetteState();
+}
+
+class _EndgameVignetteState extends State<_EndgameVignette>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_EndgameVignette oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Pulse faster the deeper into the endgame we are (down to ~640ms).
+    final superT = ((widget.ratio - 0.85) / 0.15).clamp(0.0, 1.0);
+    final ms = (1100 - 460 * superT).round();
+    if (ms != _pulse.duration?.inMilliseconds) {
+      _pulse.duration = Duration(milliseconds: ms);
+      _pulse
+        ..reset()
+        ..repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Base intensity from 0 at 0.75 to 1 at ~0.95.
+    final base = ((widget.ratio - 0.75) / 0.20).clamp(0.0, 1.0);
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (_, __) {
+        final pulse = 0.55 + 0.45 * _pulse.value; // 0.55 → 1.0
+        final strength = base * pulse;
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: RadialGradient(
+              radius: 0.95,
+              colors: [
+                Colors.transparent,
+                Colors.transparent,
+                const Color(0xFFE53935).withOpacity(0.06 + 0.30 * strength),
+              ],
+              stops: const [0.0, 0.62, 1.0],
+            ),
+            border: Border.all(
+              color: const Color(0xFFFF5252).withOpacity(0.18 + 0.55 * strength),
+              width: 1.5 + 1.5 * strength,
+            ),
+          ),
+        );
+      },
     );
   }
 }
