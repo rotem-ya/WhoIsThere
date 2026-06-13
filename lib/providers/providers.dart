@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/economy/user_economy_model.dart';
+import '../core/constants/admin_config.dart';
+import '../services/admin_service.dart';
 import '../services/auth_service.dart';
 import '../services/economy_service.dart';
 import '../services/hint_economy_guard.dart';
@@ -35,6 +37,25 @@ final economyServiceProvider = Provider<EconomyService>((ref) {
 final hintEconomyGuardProvider = Provider<HintEconomyGuard>(
   (ref) => HintEconomyGuard(ref.watch(economyServiceProvider)),
 );
+
+// Admin — per-user operations by email (coins, skins, cards).
+final adminServiceProvider = Provider<AdminService>(
+  (ref) => AdminService(FirebaseFirestore.instance),
+);
+
+/// True when the signed-in account is an admin: email in the allowlist OR the
+/// Firebase ID token carries the custom `admin` claim.
+final isAdminProvider = FutureProvider<bool>((ref) async {
+  final user = ref.watch(firebaseUserProvider).valueOrNull;
+  if (user == null) return false;
+  if (AdminConfig.isAdminEmail(user.email)) return true;
+  try {
+    final res = await user.getIdTokenResult();
+    return res.claims?['admin'] == true;
+  } catch (_) {
+    return false;
+  }
+});
 
 // Fires true exactly once when the onboarding wallet grant succeeds (first install).
 final firstTimeBonusProvider = StateProvider<bool>((ref) => false);
