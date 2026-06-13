@@ -32,6 +32,7 @@ import '../../widgets/game/animated_reward.dart';
 import '../../widgets/game/letter_bank_input.dart';
 import 'widgets/game_top_hud.dart';
 import 'widgets/game_board_view.dart';
+import 'widgets/detective_toolbar.dart';
 
 class GameBoardScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -99,6 +100,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   // price (20/30/40/50/60). Reset when a new place loads.
   final Set<int> _personalRevealedTiles = {};
   static const int _maxPersonalReveals = 5;
+
+  // Detective reveal tools — pay-per-use self-help actions. Like personal
+  // reveals these uncover tiles for THIS player only (client-local, never
+  // written to Firestore). Per-round usage counters cap each tool; all reset
+  // when a new place loads. Spotlight flashes a transient dim peek that auto-
+  // clears after EconomyConfig.spotlightDurationMs.
+  int _bombUses = 0;
+  int _spotlightUses = 0;
+  int _targetedUses = 0;
+  int _fastForwardUses = 0;
+  final Set<int> _spotlightCells = {};
+  Timer? _spotlightTimer;
 
   // Bought answer letters this round — count of correct letters the player paid
   // to reveal in the guess input. Up to 2 (50 then 100 coins). Client-local,
@@ -936,6 +949,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _bgPlayerStateSub?.cancel();
     _expiryTimer?.cancel();
     _localGuessTimer?.cancel();
+    _spotlightTimer?.cancel();
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
@@ -970,6 +984,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _purchasedFacts = [];
     _personalRevealedTiles.clear();
     _lettersBought = 0;
+    _bombUses = 0;
+    _spotlightUses = 0;
+    _targetedUses = 0;
+    _fastForwardUses = 0;
+    _spotlightTimer?.cancel();
+    _spotlightCells.clear();
     try {
       final image = await ref.read(roomServiceProvider).getImage(imageId);
       if (mounted) setState(() => _image = image);
@@ -1329,6 +1349,222 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     final pick = hidden[Random().nextInt(hidden.length)];
     setState(() => _personalRevealedTiles.add(pick));
+  }
+
+  // ── Detective reveal tools ───────────────────────────────────────────────
+  // All four tools uncover tiles for THIS player only (client-local, like
+  // _buyPersonalReveal) so they work identically in solo and never help
+  // opponents. Coins are charged via HintEconomyGuard; per-round caps apply.
+
+  /// Still-hidden tiles for the acting player (neither shared- nor self-revealed).
+  List<int> _hiddenTilesFor(RoomModel room) {
+    final total = room.gridSize * room.gridSize;
+    final shown = <int>{...room.revealedCells, ..._personalRevealedTiles};
+    return [for (var i = 0; i < total; i++) if (!shown.contains(i)) i];
+  }
+
+  /// Phase + affordability guard and coin spend shared by every tool.
+  /// Returns true only if coins were deducted and the widget is still mounted.
+  Future<bool> _spendForTool(RoomModel room, String userId, int cost) async {
+    if (room.phase != GamePhase.playing) return false;
+    final wallet = ref.read(walletProvider).valueOrNull;
+    if (wallet == null || wallet.coins < cost) return false;
+    final granted = await ref.read(hintEconomyGuardProvider).useHintWithCost(
+          uid: userId,
+          cost: cost,
+          wallet: wallet,
+          roomId: room.id,
+        );
+    return granted && mounted;
+  }
+
+  /// 💣 Bomb — uncovers a cluster of adjacent hidden tiles around a random seed.
+  Future<void> _useBomb(RoomModel room, String userId) async {
+    if (_bombUses >= EconomyConfig.maxBombUses) return;
+    final hidden = _hiddenTilesFor(room).toSet();
+    if (hidden.isEmpty) return;
+    if (!await _spendForTool(room, userId, EconomyConfig.bombRevealPrice)) return;
+
+    final grid = room.gridSize;
+    final seed = hidden.elementAt(Random().nextInt(hidden.length));
+    // BFS over adjacent hidden neighbours until the cluster is full.
+    final cluster = <int>{seed};
+    final queue = <int>[seed];
+    while (queue.isNotEmpty &&
+        cluster.length < EconomyConfig.bombRevealClusterSize) {
+      final cur = queue.removeAt(0);
+      final r = cur ~/ grid, c = cur % grid;
+      for (final n in [
+        if (r > 0) cur - grid,
+        if (r < grid - 1) cur + grid,
+        if (c > 0) cur - 1,
+        if (c < grid - 1) cur + 1,
+      ]) {
+        if (cluster.length >= EconomyConfig.bombRevealClusterSize) break;
+        if (hidden.contains(n) && cluster.add(n)) queue.add(n);
+      }
+    }
+    QaLoggerService.instance.log('GAME', 'TOOL_BOMB tiles=${cluster.length}');
+    setState(() {
+      _personalRevealedTiles.addAll(cluster);
+      _bombUses++;
+    });
+  }
+
+  /// ⚡ Fast-forward — instantly uncovers several scattered hidden tiles,
+  /// preferring isolated ones (checkerboard spread) over clustering.
+  Future<void> _useFastForward(RoomModel room, String userId) async {
+    if (_fastForwardUses >= EconomyConfig.maxFastForwardUses) return;
+    final hidden = _hiddenTilesFor(room);
+    if (hidden.isEmpty) return;
+    if (!await _spendForTool(room, userId, EconomyConfig.fastForwardPrice)) {
+      return;
+    }
+
+    final grid = room.gridSize;
+    final pool = [...hidden]..shuffle(Random());
+    final shown = <int>{...room.revealedCells, ..._personalRevealedTiles};
+    final picks = <int>{};
+    bool isolated(int i) {
+      final r = i ~/ grid, c = i % grid;
+      final nb = [
+        if (r > 0) i - grid,
+        if (r < grid - 1) i + grid,
+        if (c > 0) i - 1,
+        if (c < grid - 1) i + 1,
+      ];
+      return !nb.any((n) => shown.contains(n) || picks.contains(n));
+    }
+
+    for (final i in pool) {
+      if (picks.length >= EconomyConfig.fastForwardTiles) break;
+      if (isolated(i)) picks.add(i);
+    }
+    for (final i in pool) {
+      if (picks.length >= EconomyConfig.fastForwardTiles) break;
+      picks.add(i);
+    }
+    QaLoggerService.instance.log('GAME', 'TOOL_FASTFWD tiles=${picks.length}');
+    setState(() {
+      _personalRevealedTiles.addAll(picks);
+      _fastForwardUses++;
+    });
+  }
+
+  /// 🎯 Targeted reveal — player picks one specific still-hidden tile.
+  /// Coins are only charged after a tile is chosen (cancel costs nothing).
+  Future<void> _useTargetedReveal(RoomModel room, String userId) async {
+    if (_targetedUses >= EconomyConfig.maxTargetedUses) return;
+    final hidden = _hiddenTilesFor(room).toSet();
+    if (hidden.isEmpty) return;
+    final chosen = await _showTilePicker(room, hidden);
+    if (chosen == null || !mounted) return;
+    if (!await _spendForTool(
+        room, userId, EconomyConfig.targetedRevealPrice)) {
+      return;
+    }
+    QaLoggerService.instance.log('GAME', 'TOOL_TARGETED tile=$chosen');
+    setState(() {
+      _personalRevealedTiles.add(chosen);
+      _targetedUses++;
+    });
+  }
+
+  /// 🔦 Spotlight — flashes every hidden tile as a dim peek, then auto-hides
+  /// after EconomyConfig.spotlightDurationMs.
+  Future<void> _useSpotlight(RoomModel room, String userId) async {
+    if (_spotlightUses >= EconomyConfig.maxSpotlightUses) return;
+    if (_spotlightCells.isNotEmpty) return; // a flash is already running
+    final hidden = _hiddenTilesFor(room);
+    if (hidden.isEmpty) return;
+    if (!await _spendForTool(room, userId, EconomyConfig.spotlightPrice)) return;
+
+    QaLoggerService.instance.log('GAME', 'TOOL_SPOTLIGHT tiles=${hidden.length}');
+    setState(() {
+      _spotlightCells
+        ..clear()
+        ..addAll(hidden);
+      _spotlightUses++;
+    });
+    _spotlightTimer?.cancel();
+    _spotlightTimer = Timer(
+      const Duration(milliseconds: EconomyConfig.spotlightDurationMs),
+      () {
+        if (mounted) setState(() => _spotlightCells.clear());
+      },
+    );
+  }
+
+  /// Modal grid picker for the targeted-reveal tool. Hidden tiles are tappable;
+  /// already-shown tiles are inert. Returns the chosen index or null on cancel.
+  Future<int?> _showTilePicker(RoomModel room, Set<int> hidden) {
+    final grid = room.gridSize;
+    const cyan = Color(0xFF22D3EE);
+    return showDialog<int>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF0D1A2E),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text(
+            '🎯 בחר משבצת לחשיפה',
+            style: TextStyle(
+                color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900),
+          ),
+          content: SizedBox(
+            width: 280,
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: grid,
+                  mainAxisSpacing: 3,
+                  crossAxisSpacing: 3,
+                ),
+                itemCount: grid * grid,
+                itemBuilder: (_, i) {
+                  final isHidden = hidden.contains(i);
+                  return GestureDetector(
+                    onTap: isHidden ? () => Navigator.pop(ctx, i) : null,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isHidden
+                            ? const Color(0xFF13314F)
+                            : Colors.white10,
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                          color:
+                              isHidden ? cyan.withOpacity(0.6) : Colors.transparent,
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(
+                        isHidden
+                            ? Icons.help_outline_rounded
+                            : Icons.check_rounded,
+                        color: isHidden ? cyan : Colors.white24,
+                        size: 16,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child:
+                  const Text('ביטול', style: TextStyle(color: Colors.white54)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // First bought letter costs 50, second 100.
@@ -1973,6 +2209,61 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     _revealWallet != null &&
                     _revealWallet.coins >= _revealBuyPrice;
 
+                // Detective reveal tools — pay-per-use self-help actions shown as
+                // a toolbar above the guess button. Built only while actively
+                // playing (hidden during guess mode / after finish).
+                final List<DetectiveAction> _detectiveActions = [];
+                if (!_isFinished &&
+                    currentUserId != null &&
+                    room.phase == GamePhase.playing &&
+                    room.turnPhase != TurnPhase.guessMode) {
+                  final _coins = _revealWallet?.coins ?? 0;
+                  final _hiddenLeft = _revealHiddenLeft;
+                  _detectiveActions.addAll([
+                    DetectiveAction(
+                      emoji: '💣',
+                      label: 'פצצה',
+                      price: EconomyConfig.bombRevealPrice,
+                      color: const Color(0xFFFF8A65),
+                      enabled: _hiddenLeft > 0 &&
+                          _bombUses < EconomyConfig.maxBombUses &&
+                          _coins >= EconomyConfig.bombRevealPrice,
+                      onTap: () => _useBomb(room, currentUserId),
+                    ),
+                    DetectiveAction(
+                      emoji: '🔦',
+                      label: 'זרקור',
+                      price: EconomyConfig.spotlightPrice,
+                      color: const Color(0xFFFFD54F),
+                      enabled: _hiddenLeft > 0 &&
+                          _spotlightCells.isEmpty &&
+                          _spotlightUses < EconomyConfig.maxSpotlightUses &&
+                          _coins >= EconomyConfig.spotlightPrice,
+                      onTap: () => _useSpotlight(room, currentUserId),
+                    ),
+                    DetectiveAction(
+                      emoji: '🎯',
+                      label: 'ממוקד',
+                      price: EconomyConfig.targetedRevealPrice,
+                      color: const Color(0xFF4FC3F7),
+                      enabled: _hiddenLeft > 0 &&
+                          _targetedUses < EconomyConfig.maxTargetedUses &&
+                          _coins >= EconomyConfig.targetedRevealPrice,
+                      onTap: () => _useTargetedReveal(room, currentUserId),
+                    ),
+                    DetectiveAction(
+                      emoji: '⚡',
+                      label: 'האצה',
+                      price: EconomyConfig.fastForwardPrice,
+                      color: const Color(0xFFBA68C8),
+                      enabled: _hiddenLeft > 0 &&
+                          _fastForwardUses < EconomyConfig.maxFastForwardUses &&
+                          _coins >= EconomyConfig.fastForwardPrice,
+                      onTap: () => _useFastForward(room, currentUserId),
+                    ),
+                  ]);
+                }
+
                 // Bought-letter (answer hint) availability in the guess input.
                 // Capped so the word is never fully revealed (leave ≥1 letter).
                 final _answerSlots =
@@ -2073,6 +2364,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   onBuyReveal: _canBuyReveal
                       ? () => _buyPersonalReveal(room, currentUserId!)
                       : null,
+                  detectiveActions: _detectiveActions,
+                  spotlightCells: _spotlightCells,
                   revealedLetterCount: _lettersBought,
                   onBuyLetter: _canBuyLetter
                       ? () => _buyLetter(room, currentUserId!)

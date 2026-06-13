@@ -11,6 +11,7 @@ import '../../../services/feedback_service.dart';
 import '../../../services/reward_calculator.dart';
 import '../../../widgets/game/animated_reward.dart';
 import '../../../widgets/economy/coin_icon.dart';
+import 'detective_toolbar.dart';
 
 class GameActions extends ConsumerWidget {
   final bool isMyTurn;
@@ -39,6 +40,8 @@ class GameActions extends ConsumerWidget {
   final int revealBuyPrice;
   final int revealBuyCount;
   final int maxRevealBuys;
+  // Detective reveal tools (bomb / spotlight / targeted / fast-forward).
+  final List<DetectiveAction> detectiveActions;
 
   const GameActions({
     required this.isMyTurn,
@@ -66,6 +69,7 @@ class GameActions extends ConsumerWidget {
     this.revealBuyPrice = 0,
     this.revealBuyCount = 0,
     this.maxRevealBuys = 5,
+    this.detectiveActions = const [],
   });
 
   @override
@@ -140,6 +144,13 @@ class GameActions extends ConsumerWidget {
                   totalTiles: totalTiles,
                   bonus: earlyBonus,
                 ),
+              ],
+              // Detective reveal tools — pay-per-use self-help actions (bomb,
+              // spotlight, targeted reveal, fast-forward). A compact toolbar so
+              // the player always has something active to do, solo included.
+              if (detectiveActions.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                DetectiveToolbar(actions: detectiveActions),
               ],
               // Hint button — only in solo mode (shown regardless of turn state).
               // Gated behind GameConstants.hintsEnabled and only surfaces once

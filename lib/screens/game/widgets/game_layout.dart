@@ -6,6 +6,7 @@ import '../../../models/game_image_model.dart';
 import '../../../models/player_model.dart';
 import '../../../models/room_model.dart';
 import 'answer_slots.dart';
+import 'detective_toolbar.dart';
 import 'game_actions.dart';
 import 'game_banners.dart';
 import 'game_board_view.dart';
@@ -52,6 +53,9 @@ class GameLayout extends StatelessWidget {
   final int revealBuyPrice;
   final int revealBuyCount;
   final int maxRevealBuys;
+  // Detective reveal tools + transient spotlight peek cells (this-player-only).
+  final List<DetectiveAction> detectiveActions;
+  final Set<int> spotlightCells;
   // Bought-letter reveal in the guess overlay.
   final int revealedLetterCount;
   final VoidCallback? onBuyLetter;
@@ -95,6 +99,8 @@ class GameLayout extends StatelessWidget {
     this.revealBuyPrice = 0,
     this.revealBuyCount = 0,
     this.maxRevealBuys = 5,
+    this.detectiveActions = const [],
+    this.spotlightCells = const {},
     this.revealedLetterCount = 0,
     this.onBuyLetter,
     this.nextLetterPrice = 0,
@@ -221,6 +227,7 @@ class GameLayout extends StatelessWidget {
                       cardSkinId: room.cardSkinId,
                       pendingRevealTileIndex: room.pendingRevealTileIndex,
                       revealDeadlineMs: room.revealDeadlineMs,
+                      spotlightCells: _isBlackedOut ? const {} : spotlightCells,
                     ),
                     if (_isBlackedOut)
                       Positioned.fill(
@@ -289,6 +296,7 @@ class GameLayout extends StatelessWidget {
               revealBuyPrice: revealBuyPrice,
               revealBuyCount: revealBuyCount,
               maxRevealBuys: maxRevealBuys,
+              detectiveActions: detectiveActions,
             ),
           ],
         ),
