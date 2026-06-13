@@ -45,18 +45,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     QaLoggerService.instance.log('HOME', 'HOME_SCREEN_OPENED');
   }
 
-  Future<void> _startQuickGame(int targetPlayers) async {
+  Future<void> _startQuickGame(int targetPlayers, {bool bypassCoinCheck = false}) async {
     if (_isCreating) return;
     QaLoggerService.instance.log('HOME', 'TAP_QUICK_GAME players=$targetPlayers');
     FeedbackService.click();
 
-    // Block entry if insufficient coins
-    final wallet = ref.read(walletProvider).valueOrNull;
-    final coins = wallet?.coins ?? 0;
-    if (coins < EconomyConfig.gameEntryFee) {
-      QaLoggerService.instance.log('HOME', 'QUICK_GAME_BLOCKED_INSUFFICIENT_COINS coins=$coins');
-      if (mounted) _showInsufficientCoinsDialog();
-      return;
+    // Block entry if insufficient coins (skipped when re-entering after the
+    // insufficient-coins dialog already topped the wallet up).
+    if (!bypassCoinCheck) {
+      final wallet = ref.read(walletProvider).valueOrNull;
+      final coins = wallet?.coins ?? 0;
+      if (coins < EconomyConfig.gameEntryFee) {
+        QaLoggerService.instance.log('HOME', 'QUICK_GAME_BLOCKED_INSUFFICIENT_COINS coins=$coins');
+        if (mounted) _showInsufficientCoinsDialog(() => _startQuickGame(targetPlayers, bypassCoinCheck: true));
+        return;
+      }
     }
 
     setState(() {
@@ -201,17 +204,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Future<void> _createPrivateRoom() async {
+  Future<void> _createPrivateRoom({bool bypassCoinCheck = false}) async {
     if (_isCreating) return;
     QaLoggerService.instance.log('HOME', 'TAP_CREATE_ROOM');
     FeedbackService.click();
 
-    final wallet = ref.read(walletProvider).valueOrNull;
-    final coins = wallet?.coins ?? 0;
-    if (coins < EconomyConfig.gameEntryFee) {
-      QaLoggerService.instance.log('HOME', 'CREATE_ROOM_BLOCKED_INSUFFICIENT_COINS coins=$coins');
-      if (mounted) _showInsufficientCoinsDialog();
-      return;
+    if (!bypassCoinCheck) {
+      final wallet = ref.read(walletProvider).valueOrNull;
+      final coins = wallet?.coins ?? 0;
+      if (coins < EconomyConfig.gameEntryFee) {
+        QaLoggerService.instance.log('HOME', 'CREATE_ROOM_BLOCKED_INSUFFICIENT_COINS coins=$coins');
+        if (mounted) _showInsufficientCoinsDialog(() => _createPrivateRoom(bypassCoinCheck: true));
+        return;
+      }
     }
 
     setState(() {
@@ -252,68 +257,136 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  void _showInsufficientCoinsDialog() {
+  /// Out-of-coins recovery sheet. Offers the free, in-app ways to get back into
+  /// a game — daily reward, a rewarded ad, and one free game per day — plus the
+  /// store. [onProceed] re-attempts the blocked action once the wallet has been
+  /// topped up (it bypasses the coin check to avoid a stream-update race).
+  void _showInsufficientCoinsDialog(VoidCallback onProceed) {
     final navBarPadding = MediaQuery.paddingOf(context).bottom;
+    final wallet = ref.read(walletProvider).valueOrNull;
+    final coins = wallet?.coins ?? 0;
+    final nowUtc = DateTime.now().toUtc();
+
+    bool sameUtcDay(DateTime? d) =>
+        d != null && d.year == nowUtc.year && d.month == nowUtc.month && d.day == nowUtc.day;
+
+    final dailyAvailable = !sameUtcDay(wallet?.lastDailyRewardAt);
+    final adsUsedToday = sameUtcDay(wallet?.adRewardWindowStart) ? (wallet?.adRewardsTodayCount ?? 0) : 0;
+    final adsAvailable = adsUsedToday < EconomyConfig.maxAdRewardsPerDay;
+    final freeGameAvailable = !sameUtcDay(wallet?.lastFreeEntryAt);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + navBarPadding),
-        decoration: const BoxDecoration(
-          color: Color(0xFF0D1E30),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CoinIcon(size: 40),
-            const SizedBox(height: 12),
-            const Text(
-              'אין מספיק מטבעות',
-              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
-              textDirection: TextDirection.rtl,
-            ),
-            const SizedBox(height: 6),
-            Text.rich(
-              TextSpan(
-                text: 'כניסה למשחק עולה ${EconomyConfig.gameEntryFee} ',
-                children: [coinSpan(size: 14)],
-              ),
-              style: const TextStyle(color: Colors.white60, fontSize: 14),
-              textDirection: TextDirection.rtl,
-            ),
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: () {
-                Navigator.of(context).pop();
-                context.push('/store');
-              },
-              child: Container(
-                width: double.infinity,
-                height: 52,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF20A8E0), Color(0xFF0868A8)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Center(
-                  child: Text.rich(
-                    TextSpan(
-                      text: 'צפה בסרטון וקבל 20 ',
-                      children: [coinSpan(size: 16)],
+      isScrollControlled: true,
+      builder: (sheetCtx) {
+        bool busy = false;
+        return StatefulBuilder(
+          builder: (sheetCtx, setSheet) {
+            final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
+
+            Future<void> run(Future<bool> Function() action, {required bool proceed}) async {
+              if (busy || uid == null) return;
+              setSheet(() => busy = true);
+              bool ok = false;
+              try { ok = await action(); } catch (_) { ok = false; }
+              if (!mounted) return;
+              if (ok) {
+                if (Navigator.canPop(sheetCtx)) Navigator.of(sheetCtx).pop();
+                if (proceed) onProceed();
+              } else {
+                setSheet(() => busy = false);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('לא ניתן כרגע — נסה דרך אחרת')),
+                );
+              }
+            }
+
+            Widget optBtn(String label, List<Color> grad, VoidCallback onTap) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: GestureDetector(
+                  onTap: busy ? null : onTap,
+                  child: Opacity(
+                    opacity: busy ? 0.5 : 1,
+                    child: Container(
+                      width: double.infinity,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: grad, begin: Alignment.topCenter, end: Alignment.bottomCenter),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: Text(label,
+                            textDirection: TextDirection.rtl,
+                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
+                      ),
                     ),
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+                  ),
+                ),
+              );
+            }
+
+            final economy = ref.read(economyServiceProvider);
+
+            return Container(
+              padding: EdgeInsets.fromLTRB(24, 18, 24, 22 + navBarPadding),
+              decoration: const BoxDecoration(
+                color: Color(0xFF0D1E30),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CoinIcon(size: 38),
+                  const SizedBox(height: 10),
+                  const Text('אין מספיק מטבעות',
+                      style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+                      textDirection: TextDirection.rtl),
+                  const SizedBox(height: 4),
+                  Text.rich(
+                    TextSpan(text: 'יש לך $coins · כניסה עולה ${EconomyConfig.gameEntryFee} ', children: [coinSpan(size: 13)]),
+                    style: const TextStyle(color: Colors.white60, fontSize: 13.5),
                     textDirection: TextDirection.rtl,
                   ),
-                ),
+                  const SizedBox(height: 14),
+
+                  if (freeGameAvailable)
+                    optBtn('🎮 שחק עכשיו חינם (פעם ביום)', const [Color(0xFF2EBd6B), Color(0xFF1B8F4D)],
+                        () => run(() => economy.claimFreeEntry(uid!), proceed: true)),
+                  if (dailyAvailable)
+                    optBtn('🎁 קבל פרס יומי', const [Color(0xFFE0A020), Color(0xFFB47800)],
+                        () => run(() async => (await economy.claimDailyReward(uid!)) != null, proceed: true)),
+                  if (adsAvailable)
+                    optBtn('📺 צפה בפרסומת (+${EconomyConfig.adRewardCoins})', const [Color(0xFF20A8E0), Color(0xFF0868A8)],
+                        () => run(() => economy.applyAdReward(uid!), proceed: true)),
+
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: GestureDetector(
+                      onTap: () { if (Navigator.canPop(sheetCtx)) Navigator.of(sheetCtx).pop(); context.push('/store'); },
+                      child: Container(
+                        width: double.infinity,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.06),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        child: const Center(
+                          child: Text('💎 לחנות המטבעות',
+                              textDirection: TextDirection.rtl,
+                              style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 

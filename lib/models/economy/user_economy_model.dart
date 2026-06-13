@@ -14,6 +14,9 @@ class UserEconomyModel {
   final int adRewardsTodayCount;
   final DateTime? adRewardWindowStart; // start of the UTC day window
 
+  // Free-entry safety net (one free game/day when out of coins, all UTC)
+  final DateTime? lastFreeEntryAt;
+
   // Lifetime stats
   final int totalMatchesPlayed;
   final int totalMatchesWon;
@@ -28,6 +31,7 @@ class UserEconomyModel {
     required this.dailyStreak,
     required this.adRewardsTodayCount,
     this.adRewardWindowStart,
+    this.lastFreeEntryAt,
     required this.totalMatchesPlayed,
     required this.totalMatchesWon,
     required this.totalHintsUsed,
@@ -42,6 +46,7 @@ class UserEconomyModel {
         dailyStreak: 0,
         adRewardsTodayCount: 0,
         adRewardWindowStart: null,
+        lastFreeEntryAt: null,
         totalMatchesPlayed: 0,
         totalMatchesWon: 0,
         totalHintsUsed: 0,
@@ -59,6 +64,7 @@ class UserEconomyModel {
       adRewardsTodayCount: (d['adRewardsTodayCount'] as num? ?? 0).toInt(),
       adRewardWindowStart:
           (d['adRewardWindowStart'] as Timestamp?)?.toDate().toUtc(),
+      lastFreeEntryAt: (d['lastFreeEntryAt'] as Timestamp?)?.toDate().toUtc(),
       totalMatchesPlayed: (d['totalMatchesPlayed'] as num? ?? 0).toInt(),
       totalMatchesWon: (d['totalMatchesWon'] as num? ?? 0).toInt(),
       totalHintsUsed: (d['totalHintsUsed'] as num? ?? 0).toInt(),
@@ -75,6 +81,8 @@ class UserEconomyModel {
         'adRewardsTodayCount': adRewardsTodayCount,
         if (adRewardWindowStart != null)
           'adRewardWindowStart': Timestamp.fromDate(adRewardWindowStart!),
+        if (lastFreeEntryAt != null)
+          'lastFreeEntryAt': Timestamp.fromDate(lastFreeEntryAt!),
         'totalMatchesPlayed': totalMatchesPlayed,
         'totalMatchesWon': totalMatchesWon,
         'totalHintsUsed': totalHintsUsed,
@@ -88,6 +96,7 @@ class UserEconomyModel {
     int? dailyStreak,
     int? adRewardsTodayCount,
     DateTime? adRewardWindowStart,
+    DateTime? lastFreeEntryAt,
     int? totalMatchesPlayed,
     int? totalMatchesWon,
     int? totalHintsUsed,
@@ -101,6 +110,7 @@ class UserEconomyModel {
         dailyStreak: dailyStreak ?? this.dailyStreak,
         adRewardsTodayCount: adRewardsTodayCount ?? this.adRewardsTodayCount,
         adRewardWindowStart: adRewardWindowStart ?? this.adRewardWindowStart,
+        lastFreeEntryAt: lastFreeEntryAt ?? this.lastFreeEntryAt,
         totalMatchesPlayed: totalMatchesPlayed ?? this.totalMatchesPlayed,
         totalMatchesWon: totalMatchesWon ?? this.totalMatchesWon,
         totalHintsUsed: totalHintsUsed ?? this.totalHintsUsed,
