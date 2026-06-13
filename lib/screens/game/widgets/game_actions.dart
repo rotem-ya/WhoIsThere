@@ -104,6 +104,46 @@ class GameActions extends ConsumerWidget {
     // Show the decaying early-guess bonus always (hides itself when it hits 0)
     final showReward = earlyBonus > 0;
 
+    // Secondary self-help actions (hint / personal reveal) rendered as compact
+    // chips in a single wrapping row, so they take minimal vertical space and
+    // the board image stays large. (Detective tools have their own toolbar.)
+    final secondaryChips = <Widget>[];
+    final showHint = GameConstants.hintsEnabled &&
+        isSolo &&
+        onRevealHint != null &&
+        totalTiles > 0 &&
+        revealedCount >= totalTiles * GameConstants.hintRevealThreshold;
+    if (showHint) {
+      final canHint = purchasedHintCount >= 1 || (canAffordFirstHint && !isBusy);
+      secondaryChips.add(_MiniActionChip(
+        emoji: '💡',
+        label: purchasedHintCount >= 1 ? 'ראה רמז' : 'רמז',
+        price: purchasedHintCount >= 1 ? null : EconomyConfig.hintFirstPrice,
+        enabled: canHint,
+        onTap: canHint ? onRevealHint : null,
+      ));
+      if (onBuySecondHint != null) {
+        final canSecond = canAffordSecondHint && !isBusy;
+        secondaryChips.add(_MiniActionChip(
+          emoji: '💡',
+          label: 'רמז נוסף',
+          price: EconomyConfig.hintSecondPrice,
+          enabled: canSecond,
+          onTap: canSecond ? onBuySecondHint : null,
+        ));
+      }
+    }
+    if (revealBuyCount < maxRevealBuys) {
+      final canReveal = onBuyReveal != null && !isBusy;
+      secondaryChips.add(_MiniActionChip(
+        emoji: '🃏',
+        label: 'חשוף קלף ($revealBuyCount/$maxRevealBuys)',
+        price: revealBuyPrice,
+        enabled: canReveal,
+        onTap: canReveal ? onBuyReveal : null,
+      ));
+    }
+
     return SafeArea(
       top: false,
       child: Padding(
@@ -152,46 +192,15 @@ class GameActions extends ConsumerWidget {
                 const SizedBox(height: 8),
                 DetectiveToolbar(actions: detectiveActions),
               ],
-              // Hint button — only in solo mode (shown regardless of turn state).
-              // Gated behind GameConstants.hintsEnabled and only surfaces once
-              // 70% of the board is revealed, so it acts as a late rescue.
-              if (GameConstants.hintsEnabled &&
-                  isSolo &&
-                  onRevealHint != null &&
-                  totalTiles > 0 &&
-                  revealedCount >= totalTiles * GameConstants.hintRevealThreshold) ...[
-                const SizedBox(height: 6),
-                _HintButton(
-                  label: purchasedHintCount >= 1 ? 'ראה רמז' : 'רמז',
-                  coinPrice: purchasedHintCount >= 1 ? null : EconomyConfig.hintFirstPrice,
-                  canAfford: purchasedHintCount >= 1 || (canAffordFirstHint && !isBusy),
-                  isBusy: isBusy && purchasedHintCount == 0,
-                  onTap: (purchasedHintCount >= 1 || (canAffordFirstHint && !isBusy))
-                      ? onRevealHint
-                      : null,
-                ),
-                if (onBuySecondHint != null) ...[
-                  const SizedBox(height: 6),
-                  _HintButton(
-                    label: 'רמז נוסף',
-                    coinPrice: EconomyConfig.hintSecondPrice,
-                    canAfford: canAffordSecondHint && !isBusy,
-                    isBusy: isBusy,
-                    onTap: canAffordSecondHint && !isBusy ? onBuySecondHint : null,
-                  ),
-                ],
-              ],
-              // Personal tile reveal — uncovers one more tile for THIS player
-              // only (works solo and multiplayer). Shown until the per-round cap
-              // is reached; disabled (greyed) when the player can't afford it.
-              if (revealBuyCount < maxRevealBuys) ...[
-                const SizedBox(height: 6),
-                _HintButton(
-                  label: 'חשוף קלף לי ($revealBuyCount/$maxRevealBuys)',
-                  coinPrice: revealBuyPrice,
-                  canAfford: onBuyReveal != null && !isBusy,
-                  isBusy: false,
-                  onTap: (onBuyReveal != null && !isBusy) ? onBuyReveal : null,
+              // Hint + personal-reveal as a single compact chip row (small
+              // footprint; logic/gating built above into secondaryChips).
+              if (secondaryChips.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: secondaryChips,
                 ),
               ],
               // Stun card — only in multiplayer when user has cards
@@ -211,25 +220,28 @@ class GameActions extends ConsumerWidget {
   }
 }
 
-class _HintButton extends StatelessWidget {
+/// Compact pill for secondary self-help actions (hint / personal reveal). Much
+/// smaller than the old full-width buttons so several fit on one wrapping row,
+/// leaving the board image more room.
+class _MiniActionChip extends StatelessWidget {
+  final String emoji;
   final String label;
-  final int? coinPrice;
-  final bool canAfford;
-  final bool isBusy;
+  final int? price;
+  final bool enabled;
   final VoidCallback? onTap;
 
-  const _HintButton({
+  const _MiniActionChip({
+    required this.emoji,
     required this.label,
-    this.coinPrice,
-    required this.canAfford,
-    required this.isBusy,
+    required this.price,
+    required this.enabled,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap == null
+      onTap: (onTap == null || !enabled)
           ? null
           : () {
               FeedbackService.click();
@@ -237,49 +249,41 @@ class _HintButton extends StatelessWidget {
             },
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 180),
-        opacity: canAfford && !isBusy ? 1.0 : 0.42,
+        opacity: enabled ? 1.0 : 0.42,
         child: Container(
-          height: 42,
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: const Color(0xFF07101F).withOpacity(0.56),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: const Color(0xFF4A8BAA)
-                  .withOpacity(canAfford ? 0.32 : 0.14),
+              color: const Color(0xFF4A8BAA).withOpacity(enabled ? 0.32 : 0.14),
               width: 0.8,
             ),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.lightbulb_outline_rounded,
-                  color: Color(0xFF5A9BBB), size: 18),
-              const SizedBox(width: 6),
-              coinPrice == null
-                  ? Text(
-                      label,
-                      textDirection: TextDirection.rtl,
-                      style: const TextStyle(
-                        color: Color(0xFF5A9BBB),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    )
-                  : Text.rich(
-                      TextSpan(
-                        text: '$label  ($coinPrice ',
-                        children: [
-                          coinSpan(size: 14),
-                          const TextSpan(text: ')'),
+              Text(emoji, style: const TextStyle(fontSize: 13)),
+              const SizedBox(width: 5),
+              Text.rich(
+                TextSpan(
+                  text: price == null ? label : '$label ',
+                  children: price == null
+                      ? const []
+                      : [
+                          const TextSpan(text: '('),
+                          coinSpan(size: 12),
+                          TextSpan(text: ' $price)'),
                         ],
-                      ),
-                      textDirection: TextDirection.rtl,
-                      style: const TextStyle(
-                        color: Color(0xFF5A9BBB),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+                ),
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(
+                  color: Color(0xFF6FB0CF),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ],
           ),
         ),

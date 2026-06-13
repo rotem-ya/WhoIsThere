@@ -73,8 +73,8 @@ class _ToolChip extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         opacity: on ? 1.0 : 0.40,
         child: Container(
-          height: 58,
-          padding: const EdgeInsets.symmetric(vertical: 5),
+          height: 52,
+          padding: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
             color: const Color(0xFF07101F).withOpacity(0.56),
             borderRadius: BorderRadius.circular(13),
