@@ -1560,41 +1560,47 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             width: 280,
             child: AspectRatio(
               aspectRatio: 1,
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: grid,
-                  mainAxisSpacing: 3,
-                  crossAxisSpacing: 3,
-                ),
-                itemCount: grid * grid,
-                itemBuilder: (_, i) {
-                  final isHidden = hidden.contains(i);
-                  return GestureDetector(
-                    onTap: isHidden ? () => Navigator.pop(ctx, i) : null,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isHidden
-                            ? const Color(0xFF13314F)
-                            : Colors.white10,
-                        borderRadius: BorderRadius.circular(5),
-                        border: Border.all(
-                          color:
-                              isHidden ? cyan.withOpacity(0.6) : Colors.transparent,
-                          width: 1,
+              // LTR so the picker matches the board layout (index 0 = top-left).
+              // The dialog text stays RTL; without this the grid was mirrored.
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: grid,
+                    mainAxisSpacing: 3,
+                    crossAxisSpacing: 3,
+                  ),
+                  itemCount: grid * grid,
+                  itemBuilder: (_, i) {
+                    final isHidden = hidden.contains(i);
+                    return GestureDetector(
+                      onTap: isHidden ? () => Navigator.pop(ctx, i) : null,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isHidden
+                              ? const Color(0xFF13314F)
+                              : Colors.white10,
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(
+                            color: isHidden
+                                ? cyan.withOpacity(0.6)
+                                : Colors.transparent,
+                            width: 1,
+                          ),
+                        ),
+                        child: Icon(
+                          isHidden
+                              ? Icons.help_outline_rounded
+                              : Icons.check_rounded,
+                          color: isHidden ? cyan : Colors.white24,
+                          size: 16,
                         ),
                       ),
-                      child: Icon(
-                        isHidden
-                            ? Icons.help_outline_rounded
-                            : Icons.check_rounded,
-                        color: isHidden ? cyan : Colors.white24,
-                        size: 16,
-                      ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
           ),
