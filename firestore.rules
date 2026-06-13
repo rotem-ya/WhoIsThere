@@ -41,18 +41,18 @@ service cloud.firestore {
       allow read: if signedIn();
 
       // The owning user — or an admin — may write the profile doc.
-      // Admin writes power the in-app admin panel (grant coins/skins/cards).
+      // Admin writes power the separate admin app (grant coins/skins/cards).
       allow create, update: if signedIn() &&
         (request.auth.uid == userId || isAdmin());
       allow delete: if false;
 
-      // Economy wallet — own user or admin
+      // Economy wallet — own user or admin (read+write: coins/totalEarned/…)
       match /economy/{document} {
         allow read, write: if signedIn() &&
           (request.auth.uid == userId || isAdmin());
       }
 
-      // Economy transaction log — own user or admin
+      // Economy transaction log — own user or admin (admin writes adminAdjustment)
       match /economy_transactions/{txId} {
         allow read, write: if signedIn() &&
           (request.auth.uid == userId || isAdmin());
