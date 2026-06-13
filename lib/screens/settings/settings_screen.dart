@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/ui/app_scaffold.dart';
@@ -70,57 +69,10 @@ class SettingsScreen extends ConsumerWidget {
                       .read(settingsProvider.notifier)
                       .setVibrationEnabled(v),
                 ),
-                // Admin panel entry — only for admin accounts.
-                if (ref.watch(isAdminProvider).valueOrNull == true) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  _AdminTile(onTap: () => context.push('/admin')),
-                ],
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Admin entry tile (admins only) ───────────────────────────────────────────
-
-class _AdminTile extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _AdminTile({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        onTap();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF12283F),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF20A8E0).withOpacity(0.4)),
-        ),
-        child: Row(
-          children: const [
-            Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF20A8E0)),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'ניהול משתמשים (אדמין)',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800),
-              ),
-            ),
-            Icon(Icons.chevron_left_rounded, color: Colors.white38),
-          ],
-        ),
       ),
     );
   }

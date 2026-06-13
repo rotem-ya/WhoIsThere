@@ -14,7 +14,6 @@ import '../../screens/room/join_room_screen.dart';
 import '../../screens/room/finding_players_screen.dart';
 import '../../screens/room/lobby_screen.dart';
 import '../../screens/splash/splash_screen.dart';
-import '../../screens/admin/admin_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/store/store_screen.dart';
 import '../../screens/store/card_skins_screen.dart';
@@ -105,10 +104,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
-      ),
-      GoRoute(
-        path: '/admin',
-        builder: (context, state) => const AdminScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
