@@ -12,6 +12,7 @@ import '../../../services/reward_calculator.dart';
 import '../../../widgets/game/animated_reward.dart';
 import '../../../widgets/economy/coin_icon.dart';
 import 'detective_toolbar.dart';
+import 'game_tools_sheet.dart';
 
 class GameActions extends ConsumerWidget {
   final bool isMyTurn;
@@ -104,10 +105,11 @@ class GameActions extends ConsumerWidget {
     // Show the decaying early-guess bonus always (hides itself when it hits 0)
     final showReward = earlyBonus > 0;
 
-    // Secondary self-help actions (hint / personal reveal) rendered as compact
-    // chips in a single wrapping row, so they take minimal vertical space and
-    // the board image stays large. (Detective tools have their own toolbar.)
-    final secondaryChips = <Widget>[];
+    // All spend-to-help tools (detective reveals + hint + personal reveal) are
+    // consolidated into a single bottom sheet opened from one "כלים" button.
+    // This keeps the play screen tidy and the board image large.
+    final tools = <DetectiveAction>[...detectiveActions];
+    const _toolColor = Color(0xFF6FB0CF);
     final showHint = GameConstants.hintsEnabled &&
         isSolo &&
         onRevealHint != null &&
@@ -115,34 +117,38 @@ class GameActions extends ConsumerWidget {
         revealedCount >= totalTiles * GameConstants.hintRevealThreshold;
     if (showHint) {
       final canHint = purchasedHintCount >= 1 || (canAffordFirstHint && !isBusy);
-      secondaryChips.add(_MiniActionChip(
+      tools.add(DetectiveAction(
         emoji: '💡',
         label: purchasedHintCount >= 1 ? 'ראה רמז' : 'רמז',
-        price: purchasedHintCount >= 1 ? null : EconomyConfig.hintFirstPrice,
+        price: purchasedHintCount >= 1 ? 0 : EconomyConfig.hintFirstPrice,
+        color: _toolColor,
         enabled: canHint,
-        onTap: canHint ? onRevealHint : null,
+        onTap: onRevealHint ?? () {},
       ));
       if (onBuySecondHint != null) {
         final canSecond = canAffordSecondHint && !isBusy;
-        secondaryChips.add(_MiniActionChip(
+        tools.add(DetectiveAction(
           emoji: '💡',
           label: 'רמז נוסף',
           price: EconomyConfig.hintSecondPrice,
+          color: _toolColor,
           enabled: canSecond,
-          onTap: canSecond ? onBuySecondHint : null,
+          onTap: onBuySecondHint ?? () {},
         ));
       }
     }
     if (revealBuyCount < maxRevealBuys) {
       final canReveal = onBuyReveal != null && !isBusy;
-      secondaryChips.add(_MiniActionChip(
+      tools.add(DetectiveAction(
         emoji: '🃏',
         label: 'חשוף קלף ($revealBuyCount/$maxRevealBuys)',
         price: revealBuyPrice,
+        color: _toolColor,
         enabled: canReveal,
-        onTap: canReveal ? onBuyReveal : null,
+        onTap: onBuyReveal ?? () {},
       ));
     }
+    final enabledToolCount = tools.where((t) => t.enabled).length;
 
     return SafeArea(
       top: false,
@@ -185,22 +191,13 @@ class GameActions extends ConsumerWidget {
                   bonus: earlyBonus,
                 ),
               ],
-              // Detective reveal tools — pay-per-use self-help actions (bomb,
-              // spotlight, targeted reveal, fast-forward). A compact toolbar so
-              // the player always has something active to do, solo included.
-              if (detectiveActions.isNotEmpty) ...[
+              // All spend-to-help tools behind one compact button → opens a
+              // tidy sheet. Keeps the board large and the screen uncluttered.
+              if (tools.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                DetectiveToolbar(actions: detectiveActions),
-              ],
-              // Hint + personal-reveal as a single compact chip row (small
-              // footprint; logic/gating built above into secondaryChips).
-              if (secondaryChips.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: secondaryChips,
+                _ToolsButton(
+                  toolCount: enabledToolCount,
+                  onTap: () => showGameToolsSheet(context, tools),
                 ),
               ],
               // Stun card — only in multiplayer when user has cards
@@ -223,69 +220,65 @@ class GameActions extends ConsumerWidget {
 /// Compact pill for secondary self-help actions (hint / personal reveal). Much
 /// smaller than the old full-width buttons so several fit on one wrapping row,
 /// leaving the board image more room.
-class _MiniActionChip extends StatelessWidget {
-  final String emoji;
-  final String label;
-  final int? price;
-  final bool enabled;
-  final VoidCallback? onTap;
+/// Single compact button that opens the tools sheet (bomb / spotlight /
+/// targeted / fast-forward / hint / reveal). [toolCount] shows how many are
+/// currently affordable.
+class _ToolsButton extends StatelessWidget {
+  final int toolCount;
+  final VoidCallback onTap;
 
-  const _MiniActionChip({
-    required this.emoji,
-    required this.label,
-    required this.price,
-    required this.enabled,
-    required this.onTap,
-  });
+  const _ToolsButton({required this.toolCount, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: (onTap == null || !enabled)
-          ? null
-          : () {
-              FeedbackService.click();
-              onTap!();
-            },
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 180),
-        opacity: enabled ? 1.0 : 0.42,
-        child: Container(
-          height: 34,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF07101F).withOpacity(0.56),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFF4A8BAA).withOpacity(enabled ? 0.32 : 0.14),
-              width: 0.8,
-            ),
+      onTap: () {
+        FeedbackService.click();
+        onTap();
+      },
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFF07101F).withOpacity(0.56),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: const Color(0xFF4A8BAA).withOpacity(0.32),
+            width: 0.8,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 13)),
-              const SizedBox(width: 5),
-              Text.rich(
-                TextSpan(
-                  text: price == null ? label : '$label ',
-                  children: price == null
-                      ? const []
-                      : [
-                          const TextSpan(text: '('),
-                          coinSpan(size: 12),
-                          TextSpan(text: ' $price)'),
-                        ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('🛠️', style: TextStyle(fontSize: 15)),
+            const SizedBox(width: 7),
+            const Text(
+              'כלים',
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                color: Color(0xFF6FB0CF),
+                fontSize: 14.5,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            if (toolCount > 0) ...[
+              const SizedBox(width: 7),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF20A8E0).withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(9),
                 ),
-                textDirection: TextDirection.rtl,
-                style: const TextStyle(
-                  color: Color(0xFF6FB0CF),
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
+                child: Text(
+                  '$toolCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ],
-          ),
+          ],
         ),
       ),
     );

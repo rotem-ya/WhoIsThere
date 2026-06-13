@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/game_constants.dart';
 import '../../../models/game_image_model.dart';
-import '../../../models/player_model.dart';
 import '../../../models/room_model.dart';
 import 'answer_slots.dart';
 import 'detective_toolbar.dart';
