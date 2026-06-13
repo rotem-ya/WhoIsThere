@@ -38,12 +38,32 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
     super.dispose();
   }
 
+  // Resilient back: pop if there's something to pop (store was pushed),
+  // otherwise fall back to /home. The store can be reached via context.go
+  // (e.g. the "insufficient coins" dialog), which replaces the stack and leaves
+  // nothing to pop — Navigator.maybePop would then silently do nothing, trapping
+  // the user on the store screen.
+  void _handleBack() {
+    HapticFeedback.lightImpact();
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/home');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final walletAsync = ref.watch(walletProvider);
     final coins = walletAsync.valueOrNull?.coins ?? 0;
 
-    return AppScaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        _handleBack();
+      },
+      child: AppScaffold(
       backgroundGradient: AppColors.pageBackground,
       padding: EdgeInsets.zero,
       child: Column(
@@ -58,10 +78,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
                   IconButton(
                     icon: const Icon(Icons.arrow_back_rounded,
                         color: Colors.white),
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      Navigator.maybePop(context);
-                    },
+                    onPressed: _handleBack,
                   ),
                   const Expanded(
                     child: Text(
@@ -111,6 +128,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
             ),
           ),
         ],
+      ),
       ),
     );
   }

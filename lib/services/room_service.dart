@@ -15,6 +15,7 @@ import '../models/game_image_model.dart';
 import '../core/constants/economy_config.dart';
 import '../core/constants/game_constants.dart';
 import '../core/utils/room_code_generator.dart';
+import 'content_manifest_service.dart';
 import 'qa_logger_service.dart';
 
 const List<String> _botNames = [
@@ -95,11 +96,16 @@ class RoomService {
 
   static const double _letterCardBonusChance = 0.12;
 
-  // Returns reveal countdown ring duration: fast early, slower as image becomes clearer.
+  // Returns reveal countdown ring duration. Tuned as an *accelerating* arc:
+  // slow while little is shown (gives the player room to attempt the high-value
+  // early guess), then progressively faster as the board fills — so the endgame
+  // tiles snap into place and pressure builds. This pairs with the shrinking
+  // guess-opportunity window (_guessOppTimerMs) for a clear slow→fast rhythm.
   static int _revealTimerMs(int revealedCount, int totalTiles) {
-    if (revealedCount < 3) return 3000;
-    if (revealedCount < 13) return 6000;
-    return 9000;
+    final ratio = totalTiles > 0 ? revealedCount / totalTiles : 0.0;
+    if (ratio < 0.30) return 3500; // opening: savor + early-guess window
+    if (ratio < 0.65) return 2500; // building up
+    return 1700; // endgame: urgent, snappy reveals
   }
 
   // Returns guess-opportunity timer duration in ms based on board state after the latest reveal.
@@ -152,27 +158,64 @@ class RoomService {
     'yehiam',
     'jaffa_clock_tower',
     'rabin_square',
+    // Content pack 2026-06-13
+    'yarkon_river',
+    'mount_sodom',
+    'weizmann_institute',
+    'tel_hai',
   };
 
-  Future<List<GameImageModel>>? _localImagesFuture;
+  // The raw place catalogue (bundled JSON) is parsed once and memoized. The
+  // playable pool is re-derived on every call so it always reflects the live
+  // content manifest (admin active/inactive toggles + remote places) without a
+  // stale cache — the merge itself is cheap (a few dozen entries).
+  Future<List<Map<String, dynamic>>>? _rawPlacesFuture;
 
-  Future<List<GameImageModel>> _loadLocalImages() {
-    return _localImagesFuture ??= _readLocalImages();
+  Future<List<Map<String, dynamic>>> _loadRawPlaces() {
+    return _rawPlacesFuture ??= _readRawPlaces();
   }
 
-  Future<List<GameImageModel>> _readLocalImages() async {
-    final rawJson = await rootBundle.loadString('assets/game_places/data/israel_places.json');
+  Future<List<Map<String, dynamic>>> _readRawPlaces() async {
+    final rawJson =
+        await rootBundle.loadString('assets/game_places/data/israel_places.json');
     final decoded = jsonDecode(rawJson);
     final rawPlaces = decoded is List
         ? decoded
         : (decoded is Map<String, dynamic> ? decoded['places'] as List<dynamic>? : null);
-
     if (rawPlaces == null) return const [];
+    return rawPlaces.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
 
-    return rawPlaces
-        .whereType<Map<String, dynamic>>()
-        .where((place) => place['is_active'] == true)
+  /// The playable pool = bundled places (in the app's id allowlist, active per
+  /// the manifest override or the JSON's is_active flag) + active remote places
+  /// whose image is already cached. Safety net: if that yields nothing (bad or
+  /// empty manifest), fall back to bundled defaults so the game never runs dry.
+  Future<List<GameImageModel>> _loadLocalImages() async {
+    final raw = await _loadRawPlaces();
+    final manifest = ContentManifestService.instance;
+
+    final bundled = raw
         .where((place) => _availableLocalPlaceIds.contains(place['id']))
+        // Active/hidden state: the manifest is the source of truth when it lists
+        // the place; otherwise fall back to the JSON is_active flag (a
+        // missing/legacy field counts as active). Admin "hide" = data-only.
+        .where((place) => manifest.isActive(
+              (place['id'] ?? '').toString(),
+              localDefault: place['is_active'] != false,
+            ))
+        .map(_localPlaceToImage)
+        .toList(growable: false);
+
+    final merged = <GameImageModel>[
+      ...bundled,
+      ...manifest.availableRemoteImages(),
+    ];
+    if (merged.isNotEmpty) return merged;
+
+    // Safety net — ignore the manifest and return bundled defaults.
+    return raw
+        .where((place) => _availableLocalPlaceIds.contains(place['id']))
+        .where((place) => place['is_active'] != false)
         .map(_localPlaceToImage)
         .toList(growable: false);
   }
@@ -810,14 +853,35 @@ class RoomService {
     final totalCells = difficulty.gridSize * difficulty.gridSize;
     final allCells = List.generate(totalCells, (i) => i);
 
+    // Open a few non-adjacent tiles up front so the board isn't blank at the
+    // whistle. Reuses the checkerboard picker (same spacing rule as auto-reveal)
+    // and is clamped so we can never reveal the entire board on the smallest
+    // grid. These count as 'system' reveals — no points, no turn.
+    final startRng = Random();
+    final startOpenCount = min(3, totalCells - 1);
+    final startAvailable = List<int>.from(allCells);
+    final startRevealed = <int>{};
+    final initialPlaced = <String, String>{};
+    for (var i = 0; i < startOpenCount; i++) {
+      final idx = _pickCheckerboardTile(
+        startAvailable,
+        startRevealed,
+        difficulty.gridSize,
+        startRng,
+      );
+      startAvailable.remove(idx);
+      startRevealed.add(idx);
+      initialPlaced[idx.toString()] = 'system';
+    }
+
     await _rooms.doc(roomId).update({
       'phase': GamePhase.playing.name,
       'selectedDifficulty': difficulty.name,
       'turnOrder': playerIds,
       'currentTurnIndex': 0,
       'players': updatedPlayers.map((k, v) => MapEntry(k, v.toMap())),
-      'placedPieces': {},
-      'availablePieceIndices': allCells,
+      'placedPieces': initialPlaced,
+      'availablePieceIndices': startAvailable,
       'solvedLetters': [],
       'letterCardGrantedPlayerIds': [],
       'turnPhase': TurnPhase.revealTurn.name,

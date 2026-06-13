@@ -196,7 +196,7 @@ class GameConstants {
   static const bool hintsEnabled = true;
 
   // Fraction of tiles that must be revealed before the hint button appears.
-  static const double hintRevealThreshold = 0.70;
+  static const double hintRevealThreshold = 0.30;
 
   static const int maxPlayers = 8;
   static const int minPlayers = 2;

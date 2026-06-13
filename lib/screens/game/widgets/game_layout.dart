@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/game_constants.dart';
 import '../../../models/game_image_model.dart';
-import '../../../models/player_model.dart';
 import '../../../models/room_model.dart';
 import 'answer_slots.dart';
+import 'detective_toolbar.dart';
 import 'game_actions.dart';
 import 'game_banners.dart';
 import 'game_board_view.dart';
@@ -25,6 +25,7 @@ class GameLayout extends StatelessWidget {
   final bool showBotTyping;
   final String botTypingName;
   final String botTypingText;
+  final bool botTypingIsThreat;
   final VoidCallback onBack;
   final void Function(int)? onReveal;
   final VoidCallback? onTapRevealed;
@@ -46,6 +47,20 @@ class GameLayout extends StatelessWidget {
   final int blackoutCardCount;
   final Map<String, int> guessBlockedUntilMs;
   final Map<String, int> blackoutActiveUntilMs;
+  // Personal (this-player-only) tile reveals + the buy action for one more.
+  final Set<int> personalRevealedCells;
+  final VoidCallback? onBuyReveal;
+  final int revealBuyPrice;
+  final int revealBuyCount;
+  final int maxRevealBuys;
+  // Detective reveal tools + transient spotlight peek cells (this-player-only).
+  final List<DetectiveAction> detectiveActions;
+  final Set<int> spotlightCells;
+  // Bought-letter reveal in the guess overlay.
+  final int revealedLetterCount;
+  final VoidCallback? onBuyLetter;
+  final int nextLetterPrice;
+  final bool showBuyLetter;
 
   const GameLayout({
     required this.room,
@@ -60,6 +75,7 @@ class GameLayout extends StatelessWidget {
     required this.showBotTyping,
     required this.botTypingName,
     required this.botTypingText,
+    this.botTypingIsThreat = false,
     required this.onBack,
     required this.onReveal,
     this.onTapRevealed,
@@ -79,6 +95,17 @@ class GameLayout extends StatelessWidget {
     this.blackoutCardCount = 0,
     this.guessBlockedUntilMs = const {},
     this.blackoutActiveUntilMs = const {},
+    this.personalRevealedCells = const {},
+    this.onBuyReveal,
+    this.revealBuyPrice = 0,
+    this.revealBuyCount = 0,
+    this.maxRevealBuys = 5,
+    this.detectiveActions = const [],
+    this.spotlightCells = const {},
+    this.revealedLetterCount = 0,
+    this.onBuyLetter,
+    this.nextLetterPrice = 0,
+    this.showBuyLetter = false,
   });
 
   @override
@@ -173,7 +200,11 @@ class GameLayout extends StatelessWidget {
                 currentUserId: currentUserId,
               ),
             if (showBotTyping)
-              BotTypingBanner(botName: botTypingName, typedSoFar: botTypingText)
+              BotTypingBanner(
+                botName: botTypingName,
+                typedSoFar: botTypingText,
+                isThreat: botTypingIsThreat,
+              )
             else if (showBanner && bannerEvent != null)
               GuessBanner(
                 key: ValueKey('${bannerEvent!['playerId']}-${bannerEvent!['guess']}-${bannerEvent!['isCorrect']}'),
@@ -186,7 +217,12 @@ class GameLayout extends StatelessWidget {
                   children: [
                     GameBoardView(
                       gridSize: room.gridSize,
-                      revealedCells: room.revealedCells,
+                      // Merge shared reveals with this player's personal reveals
+                      // so paid tiles show only on the buyer's screen.
+                      revealedCells: personalRevealedCells.isEmpty
+                          ? room.revealedCells
+                          : <int>{...room.revealedCells, ...personalRevealedCells}
+                              .toList(),
                       availableCells: room.availablePieceIndices,
                       imageUrl: _isBlackedOut ? null : image?.imageUrl,
                       enabled: false,
@@ -196,6 +232,7 @@ class GameLayout extends StatelessWidget {
                       cardSkinId: room.cardSkinId,
                       pendingRevealTileIndex: room.pendingRevealTileIndex,
                       revealDeadlineMs: room.revealDeadlineMs,
+                      spotlightCells: _isBlackedOut ? const {} : spotlightCells,
                     ),
                     if (_isBlackedOut)
                       Positioned.fill(
@@ -233,6 +270,15 @@ class GameLayout extends StatelessWidget {
                           ),
                         ),
                       ),
+                    // Endgame escalation: a pulsing red vignette ramps up as the
+                    // board fills past 75% (and harder past 85%), making the race
+                    // to guess feel urgent. Suppressed while blacked out.
+                    if (!_isBlackedOut && revealRatio >= 0.75)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: _EndgameVignette(ratio: revealRatio),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -260,6 +306,11 @@ class GameLayout extends StatelessWidget {
               canUseStunCard: canUseStunCard,
               stunTargets: stunTargets,
               onStunCard: onStunCard,
+              onBuyReveal: onBuyReveal,
+              revealBuyPrice: revealBuyPrice,
+              revealBuyCount: revealBuyCount,
+              maxRevealBuys: maxRevealBuys,
+              detectiveActions: detectiveActions,
             ),
           ],
         ),
@@ -275,6 +326,10 @@ class GameLayout extends StatelessWidget {
             deadlineMs: localGuessDeadlineMs,
             answer: image?.answer ?? '',
             onSubmit: onGuessSubmit,
+            revealedLetterCount: revealedLetterCount,
+            onBuyLetter: onBuyLetter,
+            nextLetterPrice: nextLetterPrice,
+            showBuyLetter: showBuyLetter,
           ),
       ],
     );
@@ -317,6 +372,83 @@ class _DebugPhaseBadge extends StatelessWidget {
         '[DBG] turnPhase=${turnPhase.name}$detail',
         style: const TextStyle(color: Color(0xFFFFE082), fontSize: 10, fontFamily: 'monospace'),
       ),
+    );
+  }
+}
+
+/// A pulsing red vignette drawn over the board during the endgame. Intensity
+/// scales from the 0.75 (endgame) threshold up to and beyond 0.85 (super-
+/// endgame), turning "almost solved" into visible, breathing pressure.
+class _EndgameVignette extends StatefulWidget {
+  final double ratio;
+
+  const _EndgameVignette({required this.ratio});
+
+  @override
+  State<_EndgameVignette> createState() => _EndgameVignetteState();
+}
+
+class _EndgameVignetteState extends State<_EndgameVignette>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_EndgameVignette oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Pulse faster the deeper into the endgame we are (down to ~640ms).
+    final superT = ((widget.ratio - 0.85) / 0.15).clamp(0.0, 1.0);
+    final ms = (1100 - 460 * superT).round();
+    if (ms != _pulse.duration?.inMilliseconds) {
+      _pulse.duration = Duration(milliseconds: ms);
+      _pulse
+        ..reset()
+        ..repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Base intensity from 0 at 0.75 to 1 at ~0.95.
+    final base = ((widget.ratio - 0.75) / 0.20).clamp(0.0, 1.0);
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (_, __) {
+        final pulse = 0.55 + 0.45 * _pulse.value; // 0.55 → 1.0
+        final strength = base * pulse;
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: RadialGradient(
+              radius: 0.95,
+              colors: [
+                Colors.transparent,
+                Colors.transparent,
+                const Color(0xFFE53935).withOpacity(0.06 + 0.30 * strength),
+              ],
+              stops: const [0.0, 0.62, 1.0],
+            ),
+            border: Border.all(
+              color: const Color(0xFFFF5252).withOpacity(0.18 + 0.55 * strength),
+              width: 1.5 + 1.5 * strength,
+            ),
+          ),
+        );
+      },
     );
   }
 }

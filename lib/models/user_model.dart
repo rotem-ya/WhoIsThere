@@ -5,6 +5,9 @@ class UserModel extends Equatable {
   final String id;
   final String name;
   final String? photoUrl;
+  // Login email (lower-cased), persisted for non-anonymous accounts so admins
+  // can look users up by email. Null for guests.
+  final String? email;
   final String provider;
   final bool isGuest;
   final DateTime? createdAt;
@@ -24,6 +27,7 @@ class UserModel extends Equatable {
     required this.id,
     required this.name,
     this.photoUrl,
+    this.email,
     this.provider = 'anonymous',
     this.isGuest = true,
     this.createdAt,
@@ -46,6 +50,7 @@ class UserModel extends Equatable {
       id: doc.id,
       name: data['name'] ?? '',
       photoUrl: data['photoUrl'],
+      email: data['email'] as String?,
       provider: data['provider'] ?? 'anonymous',
       isGuest: data['isGuest'] ?? true,
       createdAt: _toDateTime(data['createdAt']),
@@ -84,6 +89,7 @@ class UserModel extends Equatable {
   UserModel copyWith({
     String? name,
     String? photoUrl,
+    String? email,
     String? provider,
     bool? isGuest,
     DateTime? createdAt,
@@ -103,6 +109,7 @@ class UserModel extends Equatable {
         id: id,
         name: name ?? this.name,
         photoUrl: photoUrl ?? this.photoUrl,
+        email: email ?? this.email,
         provider: provider ?? this.provider,
         isGuest: isGuest ?? this.isGuest,
         createdAt: createdAt ?? this.createdAt,
@@ -124,6 +131,7 @@ class UserModel extends Equatable {
         id,
         name,
         photoUrl,
+        email,
         provider,
         isGuest,
         totalPoints,

@@ -14,6 +14,7 @@ import 'core/theme/app_theme.dart';
 import 'core/utils/app_router.dart';
 import 'firebase_options.dart';
 import 'providers/providers.dart';
+import 'services/content_manifest_service.dart';
 import 'services/qa_logger_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'services/settings_service.dart';
@@ -98,6 +99,12 @@ void main() async {
   } catch (e) {
     QaLoggerService.instance.log('APP', 'FIRESTORE_SETTINGS_FAIL error=$e');
   }
+
+  // Hybrid content manifest — apply the last-known state instantly (offline-safe)
+  // then refresh from Firestore in the background. Best-effort: never blocks
+  // startup or game start; on any failure the game uses bundled content.
+  await ContentManifestService.instance.loadCached();
+  unawaited(ContentManifestService.instance.sync());
 
   runApp(const ProviderScope(child: GuessThePlaceApp()));
 }

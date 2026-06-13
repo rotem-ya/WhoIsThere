@@ -298,13 +298,15 @@ class AuthService {
         isGuest: isGuest,
       );
 
+      final email = firebaseUser.email?.trim().toLowerCase();
       await docRef.set({
         ...newUser.toMap(),
+        if (email != null && email.isNotEmpty) 'email': email,
         'createdAt': FieldValue.serverTimestamp(),
         'lastLoginAt': FieldValue.serverTimestamp(),
         'lastSeenAt': FieldValue.serverTimestamp(),
       });
-      return newUser;
+      return newUser.copyWith(email: email);
     }
 
     // Existing user — update login timestamps. Also apply preferredName if the
@@ -315,6 +317,10 @@ class AuthService {
       'provider': provider,
       'isGuest': isGuest,
     };
+    // Backfill / refresh the login email (lower-cased) so admins can look the
+    // user up by email. Only for accounts that actually carry one.
+    final email = firebaseUser.email?.trim().toLowerCase();
+    if (email != null && email.isNotEmpty) updates['email'] = email;
     if (preferredName != null) {
       final sanitized = DisplayNameSanitizer.sanitize(preferredName);
       if (sanitized != null) updates['name'] = sanitized;

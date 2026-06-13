@@ -103,7 +103,7 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 
 ### מטלות שהושלמו בסשן זה
 - [x] סאונד טיק של ספירת לאחור בחשיפת משבצת (reveal-tick player, per-second dedup)
-- [x] תזמון חשיפה פרוגרסיבי: 3s לראשונות, 6s ל-10 הבאות, 9s להמשך
+- [x] תזמון חשיפה מאיץ (קשת slow→fast): 3.5s עד 30% גילוי, 2.5s עד 65%, 1.7s באנדגיים (`_revealTimerMs` ב-`room_service.dart`). חלון הניחוש מתכווץ במקביל: 7s→5s→3.5s (`_guessOppTimerMs`).
 - [x] ניחוש מותר בכל שלב (לא רק ב-guessOpportunity)
 - [x] אין גישה לחנות תוך כדי משחק — הודעת snackbar
 - [x] ברירת מחדל מוזיקה 40% (היה 100%)

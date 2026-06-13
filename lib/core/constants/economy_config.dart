@@ -111,4 +111,29 @@ class EconomyConfig {
   // ── Blackout card ─────────────────────────────────────────────
   static const int blackoutCardPrice = 25;
   static const int blackoutDurationMs = 5000;
+
+  // ── In-game detective reveal tools (pay-per-use, personal/client-local) ─
+  // Self-help reveal actions used during a round. They uncover tiles for the
+  // acting player ONLY (never written to the shared board), so they work the
+  // same in solo and multiplayer and never help opponents. Coins are deducted
+  // per use via HintEconomyGuard; per-round caps keep rounds balanced.
+
+  // 💣 Bomb — reveals a small cluster of adjacent still-hidden tiles.
+  static const int bombRevealPrice = 60;
+  static const int bombRevealClusterSize = 4;
+  static const int maxBombUses = 2;
+
+  // 🔦 Spotlight — flashes the whole board (dim peek) for a moment, then hides.
+  static const int spotlightPrice = 50;
+  static const int spotlightDurationMs = 1500;
+  static const int maxSpotlightUses = 2;
+
+  // 🎯 Targeted reveal — player picks one specific tile to uncover.
+  static const int targetedRevealPrice = 35;
+  static const int maxTargetedUses = 3;
+
+  // ⚡ Fast-forward — instantly uncovers several scattered tiles (checkerboard).
+  static const int fastForwardPrice = 45;
+  static const int fastForwardTiles = 3;
+  static const int maxFastForwardUses = 2;
 }

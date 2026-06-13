@@ -3,7 +3,7 @@ import 'widgets/game_layout.dart';
 import 'widgets/game_winner_view.dart';
 import 'dart:async';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'dart:math' show Random, min, pi;
+import 'dart:math' show Random, min, pi, sin;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
@@ -32,6 +32,7 @@ import '../../widgets/game/animated_reward.dart';
 import '../../widgets/game/letter_bank_input.dart';
 import 'widgets/game_top_hud.dart';
 import 'widgets/game_board_view.dart';
+import 'widgets/detective_toolbar.dart';
 
 class GameBoardScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -75,7 +76,7 @@ class GameBoardScreen extends ConsumerStatefulWidget {
 }
 
 class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   final _random = Random();
   final _guessController = TextEditingController();
 
@@ -93,6 +94,31 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int _nextFactIndex = 0;
   List<String> _purchasedFacts = [];
 
+  // Personal tile reveals — tiles this player paid to uncover for themselves
+  // only (never shared to Firestore, so opponents don't see them). Mirrors the
+  // client-local pattern used by _purchasedFacts. Up to 5 per round, escalating
+  // price (20/30/40/50/60). Reset when a new place loads.
+  final Set<int> _personalRevealedTiles = {};
+  static const int _maxPersonalReveals = 5;
+
+  // Detective reveal tools — pay-per-use self-help actions. Like personal
+  // reveals these uncover tiles for THIS player only (client-local, never
+  // written to Firestore). Per-round usage counters cap each tool; all reset
+  // when a new place loads. Spotlight flashes a transient dim peek that auto-
+  // clears after EconomyConfig.spotlightDurationMs.
+  int _bombUses = 0;
+  int _spotlightUses = 0;
+  int _targetedUses = 0;
+  int _fastForwardUses = 0;
+  final Set<int> _spotlightCells = {};
+  Timer? _spotlightTimer;
+
+  // Bought answer letters this round — count of correct letters the player paid
+  // to reveal in the guess input. Up to 2 (50 then 100 coins). Client-local,
+  // reset when a new place loads.
+  int _lettersBought = 0;
+  static const int _maxLetterBuys = 2;
+
   // Guess-event banner
   int _lastShownGuessCount = -1;
   Map<String, dynamic>? _currentBanner;
@@ -102,10 +128,25 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   double _lastMusicVolume = 0.44;
   static double _currentMusicBase = 0.44;
 
+  // Hero shake — a quick decaying camera shake played on YOUR correct guess,
+  // paired with a haptic burst, to make the win land with impact.
+  late final AnimationController _heroShake;
+
+  // Round-start hype intro (היכון · 3 · 2 · 1 · גלו!) — shown once when this
+  // client first enters the playing phase. Purely cosmetic anticipation and
+  // non-blocking (input passes through); the reveal engine is server-driven.
+  bool _showRoundIntro = false;
+  bool _roundIntroTriggered = false;
+
   // Bot typing simulation
   bool _showBotTyping = false;
   String _botTypingName = '';
   String _botTypingText = '';
+  // True when the bot is making an endgame guess attempt (≥75% revealed) — the
+  // typing banner escalates to a red "about to solve!" alarm so the player feels
+  // real pressure to guess first. Not tied to correctness (no tell), so every
+  // late-game bot attempt is a genuine threat the player must race.
+  bool _botTypingIsThreat = false;
 
   // Background music
   static final AudioPlayer _bgPlayer = AudioPlayer(playerId: 'studio-bg');
@@ -365,6 +406,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     super.initState();
     _confettiLeft = ConfettiController(duration: const Duration(seconds: 2));
     _confettiRight = ConfettiController(duration: const Duration(seconds: 2));
+    _heroShake = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    );
     WidgetsBinding.instance.addObserver(this);
     unawaited(WakelockPlus.enable());
     _musicShouldBePlaying = true;
@@ -923,9 +968,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _bgPlayerStateSub?.cancel();
     _expiryTimer?.cancel();
     _localGuessTimer?.cancel();
+    _spotlightTimer?.cancel();
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
+    _heroShake.dispose();
     WidgetsBinding.instance.removeObserver(this);
     unawaited(WakelockPlus.disable());
     unawaited(_bgPlayer.stop());
@@ -955,6 +1002,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _loadedImageId = imageId;
     _nextFactIndex = 0;
     _purchasedFacts = [];
+    _personalRevealedTiles.clear();
+    _lettersBought = 0;
+    _bombUses = 0;
+    _spotlightUses = 0;
+    _targetedUses = 0;
+    _fastForwardUses = 0;
+    _spotlightTimer?.cancel();
+    _spotlightCells.clear();
     try {
       final image = await ref.read(roomServiceProvider).getImage(imageId);
       if (mounted) setState(() => _image = image);
@@ -1037,6 +1092,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final revealedCount = room.placedPieces.length;
     final ratio = totalTiles > 0 ? revealedCount / totalTiles : 0.0;
 
+    // Solo duel: when the human faces bots only, the single bot opponent is the
+    // whole challenge, so it plays as a sharper endgame "closer" — more accurate
+    // late and a touch faster to think — while still never guessing correctly
+    // before 60% fill, preserving the human's early-guess win path.
+    final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
+
     // Give the human player a guaranteed first-guess window on the first 2 tiles
     if (revealedCount <= 2) return;
 
@@ -1067,7 +1128,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       effectiveGuessChance = guessChance;
     }
 
-    final double delayMultiplier;
+    double delayMultiplier;
     if (isSuperEndgame) {
       delayMultiplier = 0.60; // B7 ×0.75 then B8 ×0.80
     } else if (isEndgameBotMode) {
@@ -1075,6 +1136,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     } else {
       delayMultiplier = 1.0;
     }
+    // Solo closer thinks a little faster once the board is filling, so the
+    // single opponent feels like it's actively racing you down the stretch.
+    if (isSolo && isEndgameBotMode) delayMultiplier *= 0.85;
 
     if (isSuperEndgame) {
       QaLoggerService.instance.log('BOT',
@@ -1107,20 +1171,26 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (snap.phase != GamePhase.playing) return;
       if (snap.isBlockedFromGuessing(botId)) return;
 
-      // Correct guess: ≥60% revealed → 20% base; 75%+ → 35%; 85%+ → 45%
+      // Correct guess: ≥60% revealed → 20% base; 75%+ → 35%; 85%+ → 45%.
+      // Solo duel sharpens the closer: 25% / 42% / 55% so the lone bot is a
+      // genuine endgame threat (still 0% before 60%, so early guesses stay safe).
       final double correctChance = ratio >= 0.60
-          ? (isSuperEndgame ? 0.45 : isEndgameBotMode ? 0.35 : 0.20)
+          ? (isSolo
+              ? (isSuperEndgame ? 0.55 : isEndgameBotMode ? 0.42 : 0.25)
+              : (isSuperEndgame ? 0.45 : isEndgameBotMode ? 0.35 : 0.20))
           : 0.0;
       await _performBotGuess(snap, botId, correctChance);
     });
   }
 
-  Future<void> _simulateBotTyping(String botName, String word) async {
+  Future<void> _simulateBotTyping(String botName, String word,
+      {bool isThreat = false}) async {
     if (!mounted) return;
     setState(() {
       _showBotTyping = true;
       _botTypingName = botName;
       _botTypingText = '';
+      _botTypingIsThreat = isThreat;
     });
 
     await Future.delayed(Duration(milliseconds: 1200 + _random.nextInt(801)));
@@ -1144,10 +1214,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     QaLoggerService.instance.log('BOT', 'BOT_SUBMIT_GUESS correct=$isCorrect');
 
     final botName = room.players[botId]?.name ?? 'בוט';
-    await _simulateBotTyping(botName, guess);
+    // Endgame threat: at ≥75% revealed the banner becomes a red alarm so the
+    // player feels the bot closing in (regardless of whether this guess is the
+    // correct one — keeps every late attempt tense).
+    final total = room.gridSize * room.gridSize;
+    final ratio = total > 0 ? room.placedPieces.length / total : 0.0;
+    await _simulateBotTyping(botName, guess, isThreat: ratio >= 0.75);
 
     if (!mounted) return;
-    setState(() => _showBotTyping = false);
+    setState(() {
+      _showBotTyping = false;
+      _botTypingIsThreat = false;
+    });
 
     await ref.read(roomServiceProvider).submitAnswer(
           roomId: room.id,
@@ -1282,6 +1360,285 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     );
   }
 
+  // Escalating price for the Nth personal reveal already owned: 20/30/40/50/60.
+  int _personalRevealPriceFor(int count) => 20 + 10 * count;
+
+  /// Buys one personal tile reveal: deducts coins, then uncovers a random
+  /// still-hidden tile for this player only (client-local, never written to the
+  /// shared board so opponents don't benefit).
+  Future<void> _buyPersonalReveal(RoomModel room, String userId) async {
+    if (_personalRevealedTiles.length >= _maxPersonalReveals) return;
+    if (room.phase != GamePhase.playing) return;
+
+    final total = room.gridSize * room.gridSize;
+    final shown = <int>{...room.revealedCells, ..._personalRevealedTiles};
+    final hidden = <int>[
+      for (var i = 0; i < total; i++)
+        if (!shown.contains(i)) i,
+    ];
+    if (hidden.isEmpty) return;
+
+    final cost = _personalRevealPriceFor(_personalRevealedTiles.length);
+    final wallet = ref.read(walletProvider).valueOrNull;
+    if (wallet == null || wallet.coins < cost) return;
+
+    final granted = await ref.read(hintEconomyGuardProvider).useHintWithCost(
+          uid: userId,
+          cost: cost,
+          wallet: wallet,
+          roomId: room.id,
+        );
+    if (!granted || !mounted) return;
+
+    final pick = hidden[Random().nextInt(hidden.length)];
+    setState(() => _personalRevealedTiles.add(pick));
+  }
+
+  // ── Detective reveal tools ───────────────────────────────────────────────
+  // All four tools uncover tiles for THIS player only (client-local, like
+  // _buyPersonalReveal) so they work identically in solo and never help
+  // opponents. Coins are charged via HintEconomyGuard; per-round caps apply.
+
+  /// Still-hidden tiles for the acting player (neither shared- nor self-revealed).
+  List<int> _hiddenTilesFor(RoomModel room) {
+    final total = room.gridSize * room.gridSize;
+    final shown = <int>{...room.revealedCells, ..._personalRevealedTiles};
+    return [for (var i = 0; i < total; i++) if (!shown.contains(i)) i];
+  }
+
+  /// Phase + affordability guard and coin spend shared by every tool.
+  /// Returns true only if coins were deducted and the widget is still mounted.
+  Future<bool> _spendForTool(RoomModel room, String userId, int cost) async {
+    if (room.phase != GamePhase.playing) return false;
+    final wallet = ref.read(walletProvider).valueOrNull;
+    if (wallet == null || wallet.coins < cost) return false;
+    final granted = await ref.read(hintEconomyGuardProvider).useHintWithCost(
+          uid: userId,
+          cost: cost,
+          wallet: wallet,
+          roomId: room.id,
+        );
+    return granted && mounted;
+  }
+
+  /// 💣 Bomb — uncovers a cluster of adjacent hidden tiles around a random seed.
+  Future<void> _useBomb(RoomModel room, String userId) async {
+    if (_bombUses >= EconomyConfig.maxBombUses) return;
+    final hidden = _hiddenTilesFor(room).toSet();
+    if (hidden.isEmpty) return;
+    if (!await _spendForTool(room, userId, EconomyConfig.bombRevealPrice)) return;
+
+    final grid = room.gridSize;
+    final seed = hidden.elementAt(Random().nextInt(hidden.length));
+    // BFS over adjacent hidden neighbours until the cluster is full.
+    final cluster = <int>{seed};
+    final queue = <int>[seed];
+    while (queue.isNotEmpty &&
+        cluster.length < EconomyConfig.bombRevealClusterSize) {
+      final cur = queue.removeAt(0);
+      final r = cur ~/ grid, c = cur % grid;
+      for (final n in [
+        if (r > 0) cur - grid,
+        if (r < grid - 1) cur + grid,
+        if (c > 0) cur - 1,
+        if (c < grid - 1) cur + 1,
+      ]) {
+        if (cluster.length >= EconomyConfig.bombRevealClusterSize) break;
+        if (hidden.contains(n) && cluster.add(n)) queue.add(n);
+      }
+    }
+    QaLoggerService.instance.log('GAME', 'TOOL_BOMB tiles=${cluster.length}');
+    setState(() {
+      _personalRevealedTiles.addAll(cluster);
+      _bombUses++;
+    });
+  }
+
+  /// ⚡ Fast-forward — instantly uncovers several scattered hidden tiles,
+  /// preferring isolated ones (checkerboard spread) over clustering.
+  Future<void> _useFastForward(RoomModel room, String userId) async {
+    if (_fastForwardUses >= EconomyConfig.maxFastForwardUses) return;
+    final hidden = _hiddenTilesFor(room);
+    if (hidden.isEmpty) return;
+    if (!await _spendForTool(room, userId, EconomyConfig.fastForwardPrice)) {
+      return;
+    }
+
+    final grid = room.gridSize;
+    final pool = [...hidden]..shuffle(Random());
+    final shown = <int>{...room.revealedCells, ..._personalRevealedTiles};
+    final picks = <int>{};
+    bool isolated(int i) {
+      final r = i ~/ grid, c = i % grid;
+      final nb = [
+        if (r > 0) i - grid,
+        if (r < grid - 1) i + grid,
+        if (c > 0) i - 1,
+        if (c < grid - 1) i + 1,
+      ];
+      return !nb.any((n) => shown.contains(n) || picks.contains(n));
+    }
+
+    for (final i in pool) {
+      if (picks.length >= EconomyConfig.fastForwardTiles) break;
+      if (isolated(i)) picks.add(i);
+    }
+    for (final i in pool) {
+      if (picks.length >= EconomyConfig.fastForwardTiles) break;
+      picks.add(i);
+    }
+    QaLoggerService.instance.log('GAME', 'TOOL_FASTFWD tiles=${picks.length}');
+    setState(() {
+      _personalRevealedTiles.addAll(picks);
+      _fastForwardUses++;
+    });
+  }
+
+  /// 🎯 Targeted reveal — player picks one specific still-hidden tile.
+  /// Coins are only charged after a tile is chosen (cancel costs nothing).
+  Future<void> _useTargetedReveal(RoomModel room, String userId) async {
+    if (_targetedUses >= EconomyConfig.maxTargetedUses) return;
+    final hidden = _hiddenTilesFor(room).toSet();
+    if (hidden.isEmpty) return;
+    final chosen = await _showTilePicker(room, hidden);
+    if (chosen == null || !mounted) return;
+    if (!await _spendForTool(
+        room, userId, EconomyConfig.targetedRevealPrice)) {
+      return;
+    }
+    QaLoggerService.instance.log('GAME', 'TOOL_TARGETED tile=$chosen');
+    setState(() {
+      _personalRevealedTiles.add(chosen);
+      _targetedUses++;
+    });
+  }
+
+  /// 🔦 Spotlight — flashes every hidden tile as a dim peek, then auto-hides
+  /// after EconomyConfig.spotlightDurationMs.
+  Future<void> _useSpotlight(RoomModel room, String userId) async {
+    if (_spotlightUses >= EconomyConfig.maxSpotlightUses) return;
+    if (_spotlightCells.isNotEmpty) return; // a flash is already running
+    final hidden = _hiddenTilesFor(room);
+    if (hidden.isEmpty) return;
+    if (!await _spendForTool(room, userId, EconomyConfig.spotlightPrice)) return;
+
+    QaLoggerService.instance.log('GAME', 'TOOL_SPOTLIGHT tiles=${hidden.length}');
+    setState(() {
+      _spotlightCells
+        ..clear()
+        ..addAll(hidden);
+      _spotlightUses++;
+    });
+    _spotlightTimer?.cancel();
+    _spotlightTimer = Timer(
+      const Duration(milliseconds: EconomyConfig.spotlightDurationMs),
+      () {
+        if (mounted) setState(() => _spotlightCells.clear());
+      },
+    );
+  }
+
+  /// Modal grid picker for the targeted-reveal tool. Hidden tiles are tappable;
+  /// already-shown tiles are inert. Returns the chosen index or null on cancel.
+  Future<int?> _showTilePicker(RoomModel room, Set<int> hidden) {
+    final grid = room.gridSize;
+    const cyan = Color(0xFF22D3EE);
+    return showDialog<int>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF0D1A2E),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text(
+            '🎯 בחר משבצת לחשיפה',
+            style: TextStyle(
+                color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900),
+          ),
+          content: SizedBox(
+            width: 280,
+            child: AspectRatio(
+              aspectRatio: 1,
+              // LTR so the picker matches the board layout (index 0 = top-left).
+              // The dialog text stays RTL; without this the grid was mirrored.
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: grid,
+                    mainAxisSpacing: 3,
+                    crossAxisSpacing: 3,
+                  ),
+                  itemCount: grid * grid,
+                  itemBuilder: (_, i) {
+                    final isHidden = hidden.contains(i);
+                    return GestureDetector(
+                      onTap: isHidden ? () => Navigator.pop(ctx, i) : null,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isHidden
+                              ? const Color(0xFF13314F)
+                              : Colors.white10,
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(
+                            color: isHidden
+                                ? cyan.withOpacity(0.6)
+                                : Colors.transparent,
+                            width: 1,
+                          ),
+                        ),
+                        child: Icon(
+                          isHidden
+                              ? Icons.help_outline_rounded
+                              : Icons.check_rounded,
+                          color: isHidden ? cyan : Colors.white24,
+                          size: 16,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child:
+                  const Text('ביטול', style: TextStyle(color: Colors.white54)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // First bought letter costs 50, second 100.
+  int _letterPriceFor(int count) => count == 0 ? 50 : 100;
+
+  /// Buys one answer letter: deducts coins, then bumps the bought-letter count
+  /// so the letter bank pre-fills one more correct letter for this player.
+  Future<void> _buyLetter(RoomModel room, String userId) async {
+    if (_lettersBought >= _maxLetterBuys) return;
+
+    final cost = _letterPriceFor(_lettersBought);
+    final wallet = ref.read(walletProvider).valueOrNull;
+    if (wallet == null || wallet.coins < cost) return;
+
+    final granted = await ref.read(hintEconomyGuardProvider).useHintWithCost(
+          uid: userId,
+          cost: cost,
+          wallet: wallet,
+          roomId: room.id,
+        );
+    if (!granted || !mounted) return;
+
+    setState(() => _lettersBought++);
+  }
+
   Future<bool> _submitGuess(RoomModel room, String userId, String value) async {
     final image = _image;
     if (image == null || value.trim().isEmpty) return false;
@@ -1318,6 +1675,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       _musicShouldBePlaying = false;
       unawaited(_bgPlayer.stop());
       setState(() => _showCorrectGuess = true);
+      _playHeroWin();
       _confettiLeft.play();
       _confettiRight.play();
       unawaited(_playVictorySound());
@@ -1327,6 +1685,30 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     }
     // Wrong guess: LetterBankInput shows its own inline error feedback
     return correct;
+  }
+
+  /// Hero win feedback: a short decaying camera shake plus a triple haptic
+  /// burst so YOUR correct guess lands with physical impact.
+  void _playHeroWin() {
+    _heroShake.forward(from: 0.0);
+    if (!SettingsService.instance.vibrationEnabled) return;
+    HapticFeedback.heavyImpact();
+    Future.delayed(const Duration(milliseconds: 90),
+        () => HapticFeedback.heavyImpact());
+    Future.delayed(const Duration(milliseconds: 200),
+        () => HapticFeedback.mediumImpact());
+  }
+
+  /// Current screen-shake translation while [_heroShake] is animating (a few
+  /// quick oscillations whose amplitude decays to zero).
+  Offset _heroShakeOffset() {
+    if (!_heroShake.isAnimating) return Offset.zero;
+    final t = _heroShake.value; // 0 → 1
+    final decay = 1.0 - t; // amplitude fades out
+    final amp = 9.0 * decay;
+    final dx = sin(t * pi * 8) * amp;
+    final dy = sin(t * pi * 6) * amp * 0.5;
+    return Offset(dx, dy);
   }
 
   void _handleGuessTap(RoomModel room, String userId, bool canGuessNow) {
@@ -1483,7 +1865,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppStyles.navyTop,
-        body: Stack(
+        body: AnimatedBuilder(
+          animation: _heroShake,
+          builder: (context, child) => Transform.translate(
+            offset: _heroShakeOffset(),
+            child: child,
+          ),
+          child: Stack(
           children: [
             DecoratedBox(
               decoration: const BoxDecoration(
@@ -1530,6 +1918,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   QaLoggerService.instance.log('GAME', 'GAME_PHASE_CHANGED from=${_lastKnownPhase!.name} to=${room.phase.name}');
                 }
                 _lastKnownPhase = room.phase;
+
+                // Fire the round-start hype intro once, when this client first
+                // sees the playing phase.
+                if (room.phase == GamePhase.playing && !_roundIntroTriggered) {
+                  _roundIntroTriggered = true;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) setState(() => _showRoundIntro = true);
+                  });
+                }
 
                 // TurnPhase change detection — fires on every stream update after first
                 // Suppress stale phase changes when game is already finished
@@ -1759,9 +2156,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   if (hasWinner) {
                     final rawName = room.players[room.winnerId]?.name ?? '';
                     final winnerName = rawName.isEmpty ? 'שחקן' : rawName;
+                    // Pick a fact to show as post-win trivia. Deterministic by
+                    // place id so it stays stable across snapshot rebuilds (a
+                    // Random() here would flicker on every Firestore update).
+                    final winFacts = _image?.facts ?? const <String>[];
+                    final trivia = winFacts.isEmpty
+                        ? null
+                        : winFacts[(_image!.id.hashCode & 0x7fffffff) % winFacts.length];
                     return GameWinnerView(
                       winnerName: winnerName,
                       placeName: _image?.name,
+                      trivia: trivia,
+                      imageUrl: _image?.imageUrl,
                       rewardBreakdown: _rewardBreakdown,
                       onHome: () {
                         QaLoggerService.instance.log('GAME', 'GAME_RETURN_HOME phase=finished_winner');
@@ -1846,6 +2252,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       _currentBanner = event;
                       _showBanner = true;
                       _showBotTyping = false;
+                      _botTypingIsThreat = false;
                     });
                     if (isCorrect && !isLocalGuess) {
                       unawaited(_playCorrectDing());
@@ -1877,6 +2284,87 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
                 final _totalTiles = room.gridSize * room.gridSize;
                 final revealRatio = _totalTiles > 0 ? room.placedPieces.length / _totalTiles : 0.0;
+
+                // Personal reveal (paid, this-player-only) availability.
+                final _revealBuyCount = _personalRevealedTiles.length;
+                final _revealBuyPrice = _personalRevealPriceFor(_revealBuyCount);
+                final _revealWallet = ref.watch(walletProvider).valueOrNull;
+                final _revealHiddenLeft = _totalTiles -
+                    (<int>{...room.revealedCells, ..._personalRevealedTiles}.length);
+                final _canBuyReveal = !_isFinished &&
+                    currentUserId != null &&
+                    room.phase == GamePhase.playing &&
+                    _revealBuyCount < _maxPersonalReveals &&
+                    _revealHiddenLeft > 0 &&
+                    _revealWallet != null &&
+                    _revealWallet.coins >= _revealBuyPrice;
+
+                // Detective reveal tools — pay-per-use self-help actions shown as
+                // a toolbar above the guess button. Built only while actively
+                // playing (hidden during guess mode / after finish).
+                final List<DetectiveAction> _detectiveActions = [];
+                if (!_isFinished &&
+                    currentUserId != null &&
+                    room.phase == GamePhase.playing &&
+                    room.turnPhase != TurnPhase.guessMode) {
+                  final _coins = _revealWallet?.coins ?? 0;
+                  final _hiddenLeft = _revealHiddenLeft;
+                  _detectiveActions.addAll([
+                    DetectiveAction(
+                      emoji: '💣',
+                      label: 'פצצה',
+                      price: EconomyConfig.bombRevealPrice,
+                      color: const Color(0xFFFF8A65),
+                      enabled: _hiddenLeft > 0 &&
+                          _bombUses < EconomyConfig.maxBombUses &&
+                          _coins >= EconomyConfig.bombRevealPrice,
+                      onTap: () => _useBomb(room, currentUserId),
+                    ),
+                    DetectiveAction(
+                      emoji: '🔦',
+                      label: 'זרקור',
+                      price: EconomyConfig.spotlightPrice,
+                      color: const Color(0xFFFFD54F),
+                      enabled: _hiddenLeft > 0 &&
+                          _spotlightCells.isEmpty &&
+                          _spotlightUses < EconomyConfig.maxSpotlightUses &&
+                          _coins >= EconomyConfig.spotlightPrice,
+                      onTap: () => _useSpotlight(room, currentUserId),
+                    ),
+                    DetectiveAction(
+                      emoji: '🎯',
+                      label: 'ממוקד',
+                      price: EconomyConfig.targetedRevealPrice,
+                      color: const Color(0xFF4FC3F7),
+                      enabled: _hiddenLeft > 0 &&
+                          _targetedUses < EconomyConfig.maxTargetedUses &&
+                          _coins >= EconomyConfig.targetedRevealPrice,
+                      onTap: () => _useTargetedReveal(room, currentUserId),
+                    ),
+                    DetectiveAction(
+                      emoji: '⚡',
+                      label: 'האצה',
+                      price: EconomyConfig.fastForwardPrice,
+                      color: const Color(0xFFBA68C8),
+                      enabled: _hiddenLeft > 0 &&
+                          _fastForwardUses < EconomyConfig.maxFastForwardUses &&
+                          _coins >= EconomyConfig.fastForwardPrice,
+                      onTap: () => _useFastForward(room, currentUserId),
+                    ),
+                  ]);
+                }
+
+                // Bought-letter (answer hint) availability in the guess input.
+                // Capped so the word is never fully revealed (leave ≥1 letter).
+                final _answerSlots =
+                    ((_image?.answer ?? '').replaceAll(' ', '').length).clamp(0, 12);
+                final _letterBuyCap = (_answerSlots - 1).clamp(0, _maxLetterBuys);
+                final _nextLetterPrice = _letterPriceFor(_lettersBought);
+                final _showBuyLetter = _lettersBought < _letterBuyCap;
+                final _canBuyLetter = _showBuyLetter &&
+                    currentUserId != null &&
+                    _revealWallet != null &&
+                    _revealWallet.coins >= _nextLetterPrice;
 
                 // B9: One-shot QA logs
                 if (room.phase == GamePhase.playing) {
@@ -1915,6 +2403,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   showBotTyping: _showBotTyping,
                   botTypingName: _botTypingName,
                   botTypingText: _botTypingText,
+                  botTypingIsThreat: _botTypingIsThreat,
                   onBack: () {
                     QaLoggerService.instance.log('GAME', 'GAME_BACK_BUTTON_TAPPED');
                     if (room.phase == GamePhase.playing) {
@@ -1959,11 +2448,32 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   blackoutCardCount: user?.blackoutCardCount ?? 0,
                   guessBlockedUntilMs: room.guessBlockedUntilMs,
                   blackoutActiveUntilMs: room.blackoutActiveUntilMs,
+                  personalRevealedCells: _personalRevealedTiles,
+                  revealBuyPrice: _revealBuyPrice,
+                  revealBuyCount: _revealBuyCount,
+                  maxRevealBuys: _maxPersonalReveals,
+                  onBuyReveal: _canBuyReveal
+                      ? () => _buyPersonalReveal(room, currentUserId!)
+                      : null,
+                  detectiveActions: _detectiveActions,
+                  spotlightCells: _spotlightCells,
+                  revealedLetterCount: _lettersBought,
+                  onBuyLetter: _canBuyLetter
+                      ? () => _buyLetter(room, currentUserId!)
+                      : null,
+                  nextLetterPrice: _nextLetterPrice,
+                  showBuyLetter: _showBuyLetter,
                 );
               },
             ),
           ),
             ),
+            if (_showRoundIntro)
+              _RoundStartOverlay(
+                onDone: () {
+                  if (mounted) setState(() => _showRoundIntro = false);
+                },
+              ),
             if (_showCorrectGuess) ...[
               Align(
                 alignment: Alignment.topLeft,
@@ -2051,6 +2561,102 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 ),
               ),
           ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Round-start hype intro: a non-blocking "היכון · 3 · 2 · 1 · גלו!" sequence
+/// that pops over the board for ~2.5s when the round begins, building
+/// anticipation. Input passes through (the server-driven reveal engine keeps
+/// running underneath); this is purely a focus/hype flourish.
+class _RoundStartOverlay extends StatefulWidget {
+  final VoidCallback onDone;
+
+  const _RoundStartOverlay({required this.onDone});
+
+  @override
+  State<_RoundStartOverlay> createState() => _RoundStartOverlayState();
+}
+
+class _RoundStartOverlayState extends State<_RoundStartOverlay> {
+  static const _labels = ['היכון', '3', '2', '1', 'גלו! 🔍'];
+  int _step = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _tickHaptic();
+    _advance();
+  }
+
+  void _tickHaptic() {
+    if (SettingsService.instance.vibrationEnabled) {
+      HapticFeedback.selectionClick();
+    }
+  }
+
+  void _advance() {
+    final ms = _step == 0 ? 600 : 480;
+    _timer = Timer(Duration(milliseconds: ms), () {
+      if (!mounted) return;
+      if (_step >= _labels.length - 1) {
+        widget.onDone();
+        return;
+      }
+      setState(() => _step++);
+      _tickHaptic();
+      _advance();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _labels[_step];
+    final isGo = _step == _labels.length - 1;
+    final isReady = _step == 0;
+    final color = isGo
+        ? const Color(0xFF34D399)
+        : isReady
+            ? Colors.white
+            : const Color(0xFF22D3EE);
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Container(
+          color: Colors.black.withOpacity(0.45),
+          alignment: Alignment.center,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 240),
+            transitionBuilder: (child, anim) => ScaleTransition(
+              scale: Tween<double>(begin: 0.4, end: 1.0).animate(
+                CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+              ),
+              child: FadeTransition(opacity: anim, child: child),
+            ),
+            child: Text(
+              label,
+              key: ValueKey(_step),
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                color: color,
+                fontSize: isReady || isGo ? 52 : 80,
+                fontWeight: FontWeight.w900,
+                shadows: [
+                  Shadow(color: color.withOpacity(0.6), blurRadius: 24),
+                  const Shadow(color: Colors.black87, blurRadius: 8),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
