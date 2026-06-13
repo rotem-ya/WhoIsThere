@@ -157,6 +157,11 @@ class RoomService {
     'yehiam',
     'jaffa_clock_tower',
     'rabin_square',
+    // Content pack 2026-06-13
+    'yarkon_river',
+    'mount_sodom',
+    'weizmann_institute',
+    'tel_hai',
   };
 
   Future<List<GameImageModel>>? _localImagesFuture;
