@@ -132,6 +132,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   // paired with a haptic burst, to make the win land with impact.
   late final AnimationController _heroShake;
 
+  // Round-start hype intro (היכון · 3 · 2 · 1 · גלו!) — shown once when this
+  // client first enters the playing phase. Purely cosmetic anticipation and
+  // non-blocking (input passes through); the reveal engine is server-driven.
+  bool _showRoundIntro = false;
+  bool _roundIntroTriggered = false;
+
   // Bot typing simulation
   bool _showBotTyping = false;
   String _botTypingName = '';
@@ -1907,6 +1913,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 }
                 _lastKnownPhase = room.phase;
 
+                // Fire the round-start hype intro once, when this client first
+                // sees the playing phase.
+                if (room.phase == GamePhase.playing && !_roundIntroTriggered) {
+                  _roundIntroTriggered = true;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) setState(() => _showRoundIntro = true);
+                  });
+                }
+
                 // TurnPhase change detection — fires on every stream update after first
                 // Suppress stale phase changes when game is already finished
                 if (_lastKnownTurnPhase != null && _lastKnownTurnPhase != room.turnPhase &&
@@ -2447,6 +2462,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             ),
           ),
             ),
+            if (_showRoundIntro)
+              _RoundStartOverlay(
+                onDone: () {
+                  if (mounted) setState(() => _showRoundIntro = false);
+                },
+              ),
             if (_showCorrectGuess) ...[
               Align(
                 alignment: Alignment.topLeft,
@@ -2534,6 +2555,101 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 ),
               ),
           ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Round-start hype intro: a non-blocking "היכון · 3 · 2 · 1 · גלו!" sequence
+/// that pops over the board for ~2.5s when the round begins, building
+/// anticipation. Input passes through (the server-driven reveal engine keeps
+/// running underneath); this is purely a focus/hype flourish.
+class _RoundStartOverlay extends StatefulWidget {
+  final VoidCallback onDone;
+
+  const _RoundStartOverlay({required this.onDone});
+
+  @override
+  State<_RoundStartOverlay> createState() => _RoundStartOverlayState();
+}
+
+class _RoundStartOverlayState extends State<_RoundStartOverlay> {
+  static const _labels = ['היכון', '3', '2', '1', 'גלו! 🔍'];
+  int _step = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _tickHaptic();
+    _advance();
+  }
+
+  void _tickHaptic() {
+    if (SettingsService.instance.vibrationEnabled) {
+      HapticFeedback.selectionClick();
+    }
+  }
+
+  void _advance() {
+    final ms = _step == 0 ? 600 : 480;
+    _timer = Timer(Duration(milliseconds: ms), () {
+      if (!mounted) return;
+      if (_step >= _labels.length - 1) {
+        widget.onDone();
+        return;
+      }
+      setState(() => _step++);
+      _tickHaptic();
+      _advance();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _labels[_step];
+    final isGo = _step == _labels.length - 1;
+    final isReady = _step == 0;
+    final color = isGo
+        ? const Color(0xFF34D399)
+        : isReady
+            ? Colors.white
+            : const Color(0xFF22D3EE);
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Container(
+          color: Colors.black.withOpacity(0.45),
+          alignment: Alignment.center,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 240),
+            transitionBuilder: (child, anim) => ScaleTransition(
+              scale: Tween<double>(begin: 0.4, end: 1.0).animate(
+                CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+              ),
+              child: FadeTransition(opacity: anim, child: child),
+            ),
+            child: Text(
+              label,
+              key: ValueKey(_step),
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                color: color,
+                fontSize: isReady || isGo ? 52 : 80,
+                fontWeight: FontWeight.w900,
+                shadows: [
+                  Shadow(color: color.withOpacity(0.6), blurRadius: 24),
+                  const Shadow(color: Colors.black87, blurRadius: 8),
+                ],
+              ),
+            ),
           ),
         ),
       ),
