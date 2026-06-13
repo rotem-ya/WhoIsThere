@@ -286,7 +286,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             GestureDetector(
               onTap: () {
                 Navigator.of(context).pop();
-                context.go('/store');
+                context.push('/store');
               },
               child: Container(
                 width: double.infinity,
