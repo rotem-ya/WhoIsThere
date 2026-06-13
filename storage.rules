@@ -10,7 +10,12 @@ service firebase.storage {
   match /b/{bucket}/o {
 
     function isAdmin() {
-      return request.auth != null && request.auth.token.admin == true;
+      // Custom claim { admin: true } OR an allow-listed login email.
+      // Keep the email list in sync with firestore.rules / admin_config.
+      return request.auth != null && (
+        request.auth.token.admin == true ||
+        request.auth.token.email in ['rot4735@gmail.com']
+      );
     }
 
     function isImageUpload() {

@@ -78,6 +78,15 @@ service cloud.firestore {
       allow write: if signedIn() && request.auth.token.admin == true;
     }
 
+    // ── Content manifest ──────────────────────────────────────────────────────
+    // Read: any signed-in player — fetched once at startup to decide which places
+    // are active and to discover new remote places. Write: admins only (the
+    // separate admin app toggles active/inactive and adds remote places).
+    match /content_manifest/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
     // ── Deny everything else ─────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

@@ -15,6 +15,7 @@ import '../models/game_image_model.dart';
 import '../core/constants/economy_config.dart';
 import '../core/constants/game_constants.dart';
 import '../core/utils/room_code_generator.dart';
+import 'content_manifest_service.dart';
 import 'qa_logger_service.dart';
 
 const List<String> _botNames = [
@@ -164,30 +165,57 @@ class RoomService {
     'tel_hai',
   };
 
-  Future<List<GameImageModel>>? _localImagesFuture;
+  // The raw place catalogue (bundled JSON) is parsed once and memoized. The
+  // playable pool is re-derived on every call so it always reflects the live
+  // content manifest (admin active/inactive toggles + remote places) without a
+  // stale cache — the merge itself is cheap (a few dozen entries).
+  Future<List<Map<String, dynamic>>>? _rawPlacesFuture;
 
-  Future<List<GameImageModel>> _loadLocalImages() {
-    return _localImagesFuture ??= _readLocalImages();
+  Future<List<Map<String, dynamic>>> _loadRawPlaces() {
+    return _rawPlacesFuture ??= _readRawPlaces();
   }
 
-  Future<List<GameImageModel>> _readLocalImages() async {
-    final rawJson = await rootBundle.loadString('assets/game_places/data/israel_places.json');
+  Future<List<Map<String, dynamic>>> _readRawPlaces() async {
+    final rawJson =
+        await rootBundle.loadString('assets/game_places/data/israel_places.json');
     final decoded = jsonDecode(rawJson);
     final rawPlaces = decoded is List
         ? decoded
         : (decoded is Map<String, dynamic> ? decoded['places'] as List<dynamic>? : null);
-
     if (rawPlaces == null) return const [];
+    return rawPlaces.whereType<Map<String, dynamic>>().toList(growable: false);
+  }
 
-    return rawPlaces
-        .whereType<Map<String, dynamic>>()
-        // Active/hidden state is the source of truth for what enters the game.
-        // Back-compat: a place is active UNLESS it is explicitly disabled
-        // (is_active == false). A missing/legacy field counts as active, so
-        // older data is never silently dropped. Admin "hide" = set is_active
-        // to false (data-only, fully reversible — no code change required).
-        .where((place) => place['is_active'] != false)
+  /// The playable pool = bundled places (in the app's id allowlist, active per
+  /// the manifest override or the JSON's is_active flag) + active remote places
+  /// whose image is already cached. Safety net: if that yields nothing (bad or
+  /// empty manifest), fall back to bundled defaults so the game never runs dry.
+  Future<List<GameImageModel>> _loadLocalImages() async {
+    final raw = await _loadRawPlaces();
+    final manifest = ContentManifestService.instance;
+
+    final bundled = raw
         .where((place) => _availableLocalPlaceIds.contains(place['id']))
+        // Active/hidden state: the manifest is the source of truth when it lists
+        // the place; otherwise fall back to the JSON is_active flag (a
+        // missing/legacy field counts as active). Admin "hide" = data-only.
+        .where((place) => manifest.isActive(
+              (place['id'] ?? '').toString(),
+              localDefault: place['is_active'] != false,
+            ))
+        .map(_localPlaceToImage)
+        .toList(growable: false);
+
+    final merged = <GameImageModel>[
+      ...bundled,
+      ...manifest.availableRemoteImages(),
+    ];
+    if (merged.isNotEmpty) return merged;
+
+    // Safety net — ignore the manifest and return bundled defaults.
+    return raw
+        .where((place) => _availableLocalPlaceIds.contains(place['id']))
+        .where((place) => place['is_active'] != false)
         .map(_localPlaceToImage)
         .toList(growable: false);
   }
