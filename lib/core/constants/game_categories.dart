@@ -32,6 +32,8 @@ class GameCategories {
 
   static const String israelPlaces = 'israel_places';
   static const String animals = 'animals';
+  static const String plants = 'plants';
+  static const String objects = 'objects';
   static const String worldSites = 'world_sites';
   static const String israelFigures = 'israel_figures';
   static const String worldFigures = 'world_figures';
@@ -52,6 +54,20 @@ class GameCategories {
       emoji: '🐾',
       assetPath: '$_dataDir/animals.json',
       hasHints: false, // animals play without hints
+    ),
+    GameCategory(
+      id: plants,
+      nameHe: 'צומח',
+      emoji: '🌿',
+      assetPath: '$_dataDir/plants.json',
+      hasHints: false,
+    ),
+    GameCategory(
+      id: objects,
+      nameHe: 'דומם',
+      emoji: '🪑',
+      assetPath: '$_dataDir/objects.json',
+      hasHints: false,
     ),
     GameCategory(
       id: worldSites,
