@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../core/constants/game_categories.dart';
 import '../core/constants/game_constants.dart';
 import 'player_model.dart';
 
@@ -13,6 +14,7 @@ class RoomModel extends Equatable {
   final Map<String, int> difficultyVotes;
   final String? selectedImageId;
   final Difficulty? selectedDifficulty;
+  final String selectedCategory;
   final List<String> turnOrder;
   final int currentTurnIndex;
   final Map<int, String> placedPieces; // pieceIndex -> userId
@@ -59,6 +61,7 @@ class RoomModel extends Equatable {
     this.difficultyVotes = const {},
     this.selectedImageId,
     this.selectedDifficulty,
+    this.selectedCategory = GameCategories.israelPlaces,
     this.turnOrder = const [],
     this.currentTurnIndex = 0,
     this.placedPieces = const {},
@@ -160,6 +163,8 @@ class RoomModel extends Equatable {
       imageVotes: Map<String, String>.from(data['imageVotes'] ?? {}),
       difficultyVotes: Map<String, int>.from(data['difficultyVotes'] ?? {}),
       selectedImageId: data['selectedImageId'],
+      selectedCategory:
+          (data['selectedCategory'] as String?) ?? GameCategories.israelPlaces,
       selectedDifficulty: data['selectedDifficulty'] != null
           ? Difficulty.values.firstWhere(
               (e) => e.name == data['selectedDifficulty'],
@@ -218,6 +223,7 @@ class RoomModel extends Equatable {
         'imageVotes': imageVotes,
         'difficultyVotes': difficultyVotes,
         'selectedImageId': selectedImageId,
+        'selectedCategory': selectedCategory,
         'selectedDifficulty': selectedDifficulty?.name,
         'turnOrder': turnOrder,
         'currentTurnIndex': currentTurnIndex,
@@ -260,6 +266,7 @@ class RoomModel extends Equatable {
     Map<String, int>? difficultyVotes,
     String? selectedImageId,
     Difficulty? selectedDifficulty,
+    String? selectedCategory,
     List<String>? turnOrder,
     int? currentTurnIndex,
     Map<int, String>? placedPieces,
@@ -302,6 +309,7 @@ class RoomModel extends Equatable {
         difficultyVotes: difficultyVotes ?? this.difficultyVotes,
         selectedImageId: selectedImageId ?? this.selectedImageId,
         selectedDifficulty: selectedDifficulty ?? this.selectedDifficulty,
+        selectedCategory: selectedCategory ?? this.selectedCategory,
         turnOrder: turnOrder ?? this.turnOrder,
         currentTurnIndex: currentTurnIndex ?? this.currentTurnIndex,
         placedPieces: placedPieces ?? this.placedPieces,
@@ -351,6 +359,7 @@ class RoomModel extends Equatable {
         difficultyVotes,
         selectedImageId,
         selectedDifficulty,
+        selectedCategory,
         turnOrder,
         currentTurnIndex,
         placedPieces,

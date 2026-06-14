@@ -13,6 +13,7 @@ import '../models/room_model.dart';
 import '../models/player_model.dart';
 import '../models/game_image_model.dart';
 import '../core/constants/economy_config.dart';
+import '../core/constants/game_categories.dart';
 import '../core/constants/game_constants.dart';
 import '../core/utils/room_code_generator.dart';
 import 'content_manifest_service.dart';
@@ -165,37 +166,48 @@ class RoomService {
     'tel_hai',
   };
 
-  // The raw place catalogue (bundled JSON) is parsed once and memoized. The
-  // playable pool is re-derived on every call so it always reflects the live
-  // content manifest (admin active/inactive toggles + remote places) without a
-  // stale cache — the merge itself is cheap (a few dozen entries).
-  Future<List<Map<String, dynamic>>>? _rawPlacesFuture;
+  // Raw catalogues (bundled JSON) are parsed once and memoized PER category
+  // asset. The playable pool is re-derived on every call so it always reflects
+  // the live content manifest (admin active/inactive + remote places) — the
+  // merge itself is cheap (a few dozen entries).
+  final Map<String, Future<List<Map<String, dynamic>>>> _rawByAsset = {};
 
-  Future<List<Map<String, dynamic>>> _loadRawPlaces() {
-    return _rawPlacesFuture ??= _readRawPlaces();
+  Future<List<Map<String, dynamic>>> _loadRawPlaces(String assetPath) {
+    return _rawByAsset[assetPath] ??= _readRawPlaces(assetPath);
   }
 
-  Future<List<Map<String, dynamic>>> _readRawPlaces() async {
-    final rawJson =
-        await rootBundle.loadString('assets/game_places/data/israel_places.json');
-    final decoded = jsonDecode(rawJson);
-    final rawPlaces = decoded is List
-        ? decoded
-        : (decoded is Map<String, dynamic> ? decoded['places'] as List<dynamic>? : null);
-    if (rawPlaces == null) return const [];
-    return rawPlaces.whereType<Map<String, dynamic>>().toList(growable: false);
+  Future<List<Map<String, dynamic>>> _readRawPlaces(String assetPath) async {
+    try {
+      final rawJson = await rootBundle.loadString(assetPath);
+      final decoded = jsonDecode(rawJson);
+      final rawPlaces = decoded is List
+          ? decoded
+          : (decoded is Map<String, dynamic> ? decoded['places'] as List<dynamic>? : null);
+      if (rawPlaces == null) return const [];
+      return rawPlaces.whereType<Map<String, dynamic>>().toList(growable: false);
+    } catch (e) {
+      QaLoggerService.instance.log('CONTENT', 'RAW_PLACES_LOAD_ERROR asset=$assetPath $e');
+      return const [];
+    }
   }
 
-  /// The playable pool = bundled places (in the app's id allowlist, active per
-  /// the manifest override or the JSON's is_active flag) + active remote places
+  /// The playable pool for [categoryId] = bundled places (active per the manifest
+  /// override or the JSON is_active flag; the Israel-places catalogue is also
+  /// gated by the in-app id allowlist) + active remote places of that category
   /// whose image is already cached. Safety net: if that yields nothing (bad or
   /// empty manifest), fall back to bundled defaults so the game never runs dry.
-  Future<List<GameImageModel>> _loadLocalImages() async {
-    final raw = await _loadRawPlaces();
+  Future<List<GameImageModel>> _loadLocalImages({
+    String categoryId = GameCategories.israelPlaces,
+  }) async {
+    final category = GameCategories.byId(categoryId);
+    final raw = await _loadRawPlaces(category.assetPath);
     final manifest = ContentManifestService.instance;
 
+    bool inAllowlist(Map<String, dynamic> p) =>
+        !category.useAllowlist || _availableLocalPlaceIds.contains(p['id']);
+
     final bundled = raw
-        .where((place) => _availableLocalPlaceIds.contains(place['id']))
+        .where(inAllowlist)
         // Active/hidden state: the manifest is the source of truth when it lists
         // the place; otherwise fall back to the JSON is_active flag (a
         // missing/legacy field counts as active). Admin "hide" = data-only.
@@ -208,13 +220,13 @@ class RoomService {
 
     final merged = <GameImageModel>[
       ...bundled,
-      ...manifest.availableRemoteImages(),
+      ...manifest.availableRemoteImages(category.id),
     ];
     if (merged.isNotEmpty) return merged;
 
     // Safety net — ignore the manifest and return bundled defaults.
     return raw
-        .where((place) => _availableLocalPlaceIds.contains(place['id']))
+        .where(inAllowlist)
         .where((place) => place['is_active'] != false)
         .map(_localPlaceToImage)
         .toList(growable: false);
@@ -246,6 +258,7 @@ class RoomService {
     int entryFee = EconomyConfig.gameEntryFee,
     bool isPublicRoom = false,
     Difficulty difficulty = Difficulty.easy,
+    String category = GameCategories.israelPlaces,
   }) async {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
@@ -317,7 +330,7 @@ class RoomService {
     String? preImageId;
     int matchExposure = 0;
     if (isPublicRoom) {
-      final images = await _loadLocalImages();
+      final images = await _loadLocalImages(categoryId: category);
       if (images.isNotEmpty) {
         final img = await _pickSmartImage(images, players);
         preImageId = img.id;
@@ -341,6 +354,7 @@ class RoomService {
       selectedImageId: preImageId,
       matchExposureCount: matchExposure,
       selectedDifficulty: difficulty,
+      selectedCategory: category,
     );
 
     QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_WRITE id=${docRef.id}');
@@ -522,7 +536,7 @@ class RoomService {
   Future<void> startGameDirectly(String roomId) async {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
-    final images = await _loadLocalImages();
+    final images = await _loadLocalImages(categoryId: room.selectedCategory);
     if (images.isEmpty) return;
     // Reuse the image pre-picked at room creation (public quick-match rooms) so
     // the game image matches the one matchmaking paired players on. Falls back to
@@ -561,7 +575,7 @@ class RoomService {
   Future<void> resolveImageVote(String roomId, String hostId) async {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
-    final images = await _loadLocalImages();
+    final images = await _loadLocalImages(categoryId: room.selectedCategory);
     if (images.isEmpty) return;
 
     final image = await _pickSmartImage(images, room.players);
@@ -2120,8 +2134,17 @@ class RoomService {
   Future<List<GameImageModel>> getAllImages() => _loadLocalImages();
 
   Future<GameImageModel?> getImage(String imageId) async {
-    final images = await _loadLocalImages();
-    return images.where((image) => image.id == imageId).cast<GameImageModel?>().firstOrNull ??
-        (images.isNotEmpty ? images.first : null);
+    // Search every category so an image from any catalogue resolves regardless
+    // of the room's category. Falls back to the Israel-places pool's first entry.
+    for (final cat in GameCategories.all) {
+      final images = await _loadLocalImages(categoryId: cat.id);
+      final found = images
+          .where((image) => image.id == imageId)
+          .cast<GameImageModel?>()
+          .firstOrNull;
+      if (found != null) return found;
+    }
+    final fallback = await _loadLocalImages();
+    return fallback.isNotEmpty ? fallback.first : null;
   }
 }
