@@ -1316,6 +1316,37 @@ class RoomService {
 
           final totalTiles = room.gridSize * room.gridSize;
           final revealedAfter = totalTiles - newHidden.length;
+
+          // Giant 15×15 test mode: a steady 1-card-per-second metronome. Reveal
+          // this tile AND queue the next one in the same transaction, staying in
+          // revealTurn with a 1000ms deadline — no guess-opportunity gap between
+          // openings. (Players can still guess any time via the guess button.)
+          if (totalTiles >= 200 && newHidden.isNotEmpty) {
+            final revealedSet = room.placedPieces.keys.toSet()..add(pieceIndex);
+            final nextTile = _pickCheckerboardTile(
+              newHidden,
+              revealedSet,
+              room.gridSize,
+              Random(),
+            );
+            tx.update(_rooms.doc(roomId), {
+              'placedPieces.${pieceIndex.toString()}': 'system',
+              'availablePieceIndices': newHidden,
+              'pendingRevealTileIndex': nextTile,
+              'revealDeadlineMs': now + 1000,
+              'turnPhase': TurnPhase.revealTurn.name,
+              'guessOpportunityPlayerId': null,
+              'guessOpportunityDeadlineMs': null,
+              'lastRevealedByPlayerId': null,
+              'revealCount': newRevealCount,
+              'revealCycleId': FieldValue.increment(1),
+            });
+            QaLoggerService.instance.log('REVEAL',
+                'AUTO_REVEAL_GIANT_CHAIN piece=$pieceIndex next=$nextTile count=$newRevealCount');
+            committed = true;
+            return;
+          }
+
           final guessOppMs = _guessOppTimerMs(revealedAfter, totalTiles);
 
           tx.update(_rooms.doc(roomId), {
