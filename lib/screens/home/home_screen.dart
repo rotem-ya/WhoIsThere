@@ -50,10 +50,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// Test-branch difficulty picker. Returns the chosen difficulty, or null if
   /// the player dismissed the sheet.
   Future<Difficulty?> _pickDifficulty() {
+    // Two game types only: regular 6×6, and fast 15×15 (1 card/sec).
     const options = [
       Difficulty.easy,
-      Difficulty.medium,
-      Difficulty.hard,
       Difficulty.giant,
     ];
     return showModalBottomSheet<Difficulty>(
@@ -93,16 +92,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       child: Row(
                         children: [
-                          Text(d.emoji, style: const TextStyle(fontSize: 22)),
+                          Text(d == Difficulty.giant ? '⚡' : '🟦',
+                              style: const TextStyle(fontSize: 22)),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(d.label,
+                            child: Text(
+                                d == Difficulty.giant ? '15×15 מהיר' : 'רגיל',
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
                                     fontWeight: FontWeight.w800)),
                           ),
-                          Text('${d.gridSize}×${d.gridSize}',
+                          Text(
+                              d == Difficulty.giant
+                                  ? 'קלף/שנייה'
+                                  : '${d.gridSize}×${d.gridSize}',
                               style: const TextStyle(
                                   color: Colors.white54,
                                   fontSize: 14,
