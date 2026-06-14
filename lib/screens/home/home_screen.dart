@@ -97,7 +97,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                                d == Difficulty.giant ? '15×15 מהיר' : 'רגיל',
+                                d == Difficulty.giant ? 'מהיר 10×10' : 'רגיל',
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,

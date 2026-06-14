@@ -12,7 +12,7 @@ extension DifficultyExtension on Difficulty {
       case Difficulty.hard:
         return 'קשה';
       case Difficulty.giant:
-        return 'ענק';
+        return 'מהיר';
     }
   }
 
@@ -27,7 +27,7 @@ extension DifficultyExtension on Difficulty {
       case Difficulty.hard:
         return 100;
       case Difficulty.giant:
-        return 225; // 15x15 — test tier
+        return 100; // 10x10 — fast 1-card/sec mode (gated by difficulty, not size)
     }
   }
 
@@ -42,7 +42,7 @@ extension DifficultyExtension on Difficulty {
       case Difficulty.hard:
         return 10;
       case Difficulty.giant:
-        return 15;
+        return 10;
     }
   }
 

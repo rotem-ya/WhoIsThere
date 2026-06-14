@@ -102,8 +102,6 @@ class RoomService {
   // tiles snap into place and pressure builds. This pairs with the shrinking
   // guess-opportunity window (_guessOppTimerMs) for a clear slow→fast rhythm.
   static int _revealTimerMs(int revealedCount, int totalTiles) {
-    // Giant 15×15 test tier (225 tiles): a steady 1-card-per-second reveal.
-    if (totalTiles >= 200) return 1000;
     final ratio = totalTiles > 0 ? revealedCount / totalTiles : 0.0;
     if (ratio < 0.30) return 3500; // opening: savor + early-guess window
     if (ratio < 0.65) return 2500; // building up
@@ -112,9 +110,6 @@ class RoomService {
 
   // Returns guess-opportunity timer duration in ms based on board state after the latest reveal.
   static int _guessOppTimerMs(int revealedCount, int totalTiles) {
-    // Giant 15×15: keep the per-tile guess window short so the 1/sec reveal
-    // cadence stays brisk (players can still guess any time via the button).
-    if (totalTiles >= 200) return 1000;
     final ratio = totalTiles > 0 ? revealedCount / totalTiles : 0.0;
     if (ratio <= 0.50) return 7000;
     if (ratio <= 0.75) return 5000;
@@ -1317,11 +1312,13 @@ class RoomService {
           final totalTiles = room.gridSize * room.gridSize;
           final revealedAfter = totalTiles - newHidden.length;
 
-          // Giant 15×15 test mode: a steady 1-card-per-second metronome. Reveal
-          // this tile AND queue the next one in the same transaction, staying in
-          // revealTurn with a 1000ms deadline — no guess-opportunity gap between
-          // openings. (Players can still guess any time via the guess button.)
-          if (totalTiles >= 200 && newHidden.isNotEmpty) {
+          // Fast mode (Difficulty.giant, 10×10): a steady 1-card-per-second
+          // metronome. Reveal this tile AND queue the next one in the same
+          // transaction, staying in revealTurn with a 1000ms deadline — no
+          // guess-opportunity gap. (Players can still guess any time via the
+          // guess button.) Gated by difficulty, not size, so the normal 10×10
+          // "hard" tier is unaffected.
+          if (room.selectedDifficulty == Difficulty.giant && newHidden.isNotEmpty) {
             final revealedSet = room.placedPieces.keys.toSet()..add(pieceIndex);
             final nextTile = _pickCheckerboardTile(
               newHidden,
@@ -1378,7 +1375,10 @@ class RoomService {
           room.gridSize,
           rng,
         );
-        final ringMs = _revealTimerMs(room.placedPieces.length, room.gridSize * room.gridSize);
+        // Fast mode: a fixed 1s countdown per card; otherwise the accelerating arc.
+        final ringMs = room.selectedDifficulty == Difficulty.giant
+            ? 1000
+            : _revealTimerMs(room.placedPieces.length, room.gridSize * room.gridSize);
 
         tx.update(_rooms.doc(roomId), {
           'pendingRevealTileIndex': pieceIndex,
