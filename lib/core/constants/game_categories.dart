@@ -14,6 +14,8 @@ class GameCategory {
   // (legacy behavior for the original Israel-places catalogue). Other categories
   // simply use every active entry in their JSON file.
   final bool useAllowlist;
+  // When false, the in-game hint feature is suppressed for this category.
+  final bool hasHints;
 
   const GameCategory({
     required this.id,
@@ -21,6 +23,7 @@ class GameCategory {
     required this.emoji,
     required this.assetPath,
     this.useAllowlist = false,
+    this.hasHints = true,
   });
 }
 
@@ -48,6 +51,7 @@ class GameCategories {
       nameHe: 'חיות',
       emoji: '🐾',
       assetPath: '$_dataDir/animals.json',
+      hasHints: false, // animals play without hints
     ),
     GameCategory(
       id: worldSites,

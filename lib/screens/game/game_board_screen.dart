@@ -18,6 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/economy_config.dart';
+import '../../core/constants/game_categories.dart';
 import '../../core/constants/game_constants.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
@@ -2415,11 +2416,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   },
                   onReveal: null,
                   onTapRevealed: () => unawaited(_playTapRevealedSound()),
-                  onRevealHint: currentUserId == null
+                  onRevealHint: (currentUserId == null ||
+                          !GameCategories.byId(room.selectedCategory).hasHints)
                       ? null
                       : () => _useRevealHint(room, currentUserId),
                   purchasedHintCount: _purchasedFacts.length,
-                  onBuySecondHint: (isSolo && currentUserId != null && _purchasedFacts.length == 1 && (_image?.facts.length ?? 0) > 1)
+                  onBuySecondHint: (isSolo &&
+                          currentUserId != null &&
+                          GameCategories.byId(room.selectedCategory).hasHints &&
+                          _purchasedFacts.length == 1 &&
+                          (_image?.facts.length ?? 0) > 1)
                       ? () => _buySecondHint(room, currentUserId!)
                       : null,
                   onGuess: (!_isFinished && currentUserId != null)

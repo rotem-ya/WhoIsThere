@@ -97,20 +97,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                                d == Difficulty.giant ? 'מהיר 10×10' : 'רגיל',
+                                d == Difficulty.giant ? 'מהיר' : 'רגיל',
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
                                     fontWeight: FontWeight.w800)),
                           ),
-                          Text(
-                              d == Difficulty.giant
-                                  ? 'קלף/שנייה'
-                                  : '${d.gridSize}×${d.gridSize}',
-                              style: const TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700)),
                         ],
                       ),
                     ),
