@@ -1,1 +1,630 @@
-[]
+[
+  {
+    "id": "lion",
+    "name_he": "אריה",
+    "answer_he": "אריה",
+    "aliases_he": [
+      "ליש",
+      "כפיר",
+      "לביא"
+    ],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/lion.jpg"
+  },
+  {
+    "id": "elephant",
+    "name_he": "פיל",
+    "answer_he": "פיל",
+    "aliases_he": [
+      "פילים"
+    ],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/elephant.jpg"
+  },
+  {
+    "id": "giraffe",
+    "name_he": "ג'ירפה",
+    "answer_he": "ג'ירפה",
+    "aliases_he": [
+      "גירפה",
+      "ג׳ירף"
+    ],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/giraffe.jpg"
+  },
+  {
+    "id": "zebra",
+    "name_he": "זברה",
+    "answer_he": "זברה",
+    "aliases_he": [
+      "זברות"
+    ],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/zebra.jpg"
+  },
+  {
+    "id": "kangaroo",
+    "name_he": "קנגורו",
+    "answer_he": "קנגורו",
+    "aliases_he": [
+      "קנגרו"
+    ],
+    "category": "animal",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/kangaroo.jpg"
+  },
+  {
+    "id": "penguin",
+    "name_he": "פינגווין",
+    "answer_he": "פינגווין",
+    "aliases_he": [
+      "פנגווין",
+      "פינגווינים"
+    ],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/penguin.jpg"
+  },
+  {
+    "id": "polar_bear",
+    "name_he": "דוב קוטב",
+    "answer_he": "דוב קוטב",
+    "aliases_he": [
+      "דוב הקוטב",
+      "דוב לבן"
+    ],
+    "category": "animal",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/polar_bear.jpg"
+  },
+  {
+    "id": "tiger",
+    "name_he": "טיגריס",
+    "answer_he": "טיגריס",
+    "aliases_he": [
+      "טייגר",
+      "נמר מנומר"
+    ],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/tiger.jpg"
+  },
+  {
+    "id": "dolphin",
+    "name_he": "דולפין",
+    "answer_he": "דולפין",
+    "aliases_he": [
+      "דולפינים"
+    ],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/dolphin.jpg"
+  },
+  {
+    "id": "owl",
+    "name_he": "ינשוף",
+    "answer_he": "ינשוף",
+    "aliases_he": [
+      "ינשופים",
+      "כוס",
+      "תנשמת"
+    ],
+    "category": "animal",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/owl.jpg"
+  },
+  {
+    "id": "dog",
+    "name_he": "כלב",
+    "answer_he": "כלב",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/dog.jpg"
+  },
+  {
+    "id": "cat",
+    "name_he": "חתול",
+    "answer_he": "חתול",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/cat.jpg"
+  },
+  {
+    "id": "horse",
+    "name_he": "סוס",
+    "answer_he": "סוס",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/horse.jpg"
+  },
+  {
+    "id": "cow",
+    "name_he": "פרה",
+    "answer_he": "פרה",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/cow.jpg"
+  },
+  {
+    "id": "sheep",
+    "name_he": "כבשה",
+    "answer_he": "כבשה",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sheep.jpg"
+  },
+  {
+    "id": "goat",
+    "name_he": "עז",
+    "answer_he": "עז",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/goat.jpg"
+  },
+  {
+    "id": "pig",
+    "name_he": "חזיר",
+    "answer_he": "חזיר",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/pig.jpg"
+  },
+  {
+    "id": "rabbit",
+    "name_he": "ארנב",
+    "answer_he": "ארנב",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/rabbit.jpg"
+  },
+  {
+    "id": "chicken",
+    "name_he": "תרנגולת",
+    "answer_he": "תרנגולת",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/chicken.jpg"
+  },
+  {
+    "id": "duck",
+    "name_he": "ברווז",
+    "answer_he": "ברווז",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/duck.jpg"
+  },
+  {
+    "id": "goose",
+    "name_he": "אווז",
+    "answer_he": "אווז",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/goose.jpg"
+  },
+  {
+    "id": "monkey",
+    "name_he": "קוף",
+    "answer_he": "קוף",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/monkey.jpg"
+  },
+  {
+    "id": "gorilla",
+    "name_he": "גורילה",
+    "answer_he": "גורילה",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/gorilla.jpg"
+  },
+  {
+    "id": "chimpanzee",
+    "name_he": "שימפנזה",
+    "answer_he": "שימפנזה",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/chimpanzee.jpg"
+  },
+  {
+    "id": "bear",
+    "name_he": "דוב",
+    "answer_he": "דוב",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/bear.jpg"
+  },
+  {
+    "id": "panda",
+    "name_he": "פנדה",
+    "answer_he": "פנדה",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/panda.jpg"
+  },
+  {
+    "id": "wolf",
+    "name_he": "זאב",
+    "answer_he": "זאב",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/wolf.jpg"
+  },
+  {
+    "id": "fox",
+    "name_he": "שועל",
+    "answer_he": "שועל",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/fox.jpg"
+  },
+  {
+    "id": "deer",
+    "name_he": "אייל",
+    "answer_he": "אייל",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/deer.jpg"
+  },
+  {
+    "id": "rhinoceros",
+    "name_he": "קרנף",
+    "answer_he": "קרנף",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/rhinoceros.jpg"
+  },
+  {
+    "id": "hippopotamus",
+    "name_he": "היפופוטם",
+    "answer_he": "היפופוטם",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/hippopotamus.jpg"
+  },
+  {
+    "id": "crocodile",
+    "name_he": "תנין",
+    "answer_he": "תנין",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/crocodile.jpg"
+  },
+  {
+    "id": "snake",
+    "name_he": "נחש",
+    "answer_he": "נחש",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/snake.jpg"
+  },
+  {
+    "id": "turtle",
+    "name_he": "צב",
+    "answer_he": "צב",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/turtle.jpg"
+  },
+  {
+    "id": "frog",
+    "name_he": "צפרדע",
+    "answer_he": "צפרדע",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/frog.jpg"
+  },
+  {
+    "id": "camel",
+    "name_he": "גמל",
+    "answer_he": "גמל",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/camel.jpg"
+  },
+  {
+    "id": "eagle",
+    "name_he": "נשר",
+    "answer_he": "נשר",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/eagle.jpg"
+  },
+  {
+    "id": "peacock",
+    "name_he": "טווס",
+    "answer_he": "טווס",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/peacock.jpg"
+  },
+  {
+    "id": "parrot",
+    "name_he": "תוכי",
+    "answer_he": "תוכי",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/parrot.jpg"
+  },
+  {
+    "id": "flamingo",
+    "name_he": "פלמינגו",
+    "answer_he": "פלמינגו",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flamingo.jpg"
+  },
+  {
+    "id": "ostrich",
+    "name_he": "יען",
+    "answer_he": "יען",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/ostrich.jpg"
+  },
+  {
+    "id": "swan",
+    "name_he": "ברבור",
+    "answer_he": "ברבור",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/swan.jpg"
+  },
+  {
+    "id": "shark",
+    "name_he": "כריש",
+    "answer_he": "כריש",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/shark.jpg"
+  },
+  {
+    "id": "whale",
+    "name_he": "לווייתן",
+    "answer_he": "לווייתן",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/whale.jpg"
+  },
+  {
+    "id": "octopus",
+    "name_he": "תמנון",
+    "answer_he": "תמנון",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/octopus.jpg"
+  },
+  {
+    "id": "crab",
+    "name_he": "סרטן",
+    "answer_he": "סרטן",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/crab.jpg"
+  },
+  {
+    "id": "seahorse",
+    "name_he": "סוסון ים",
+    "answer_he": "סוסון ים",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/seahorse.jpg"
+  },
+  {
+    "id": "jellyfish",
+    "name_he": "מדוזה",
+    "answer_he": "מדוזה",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/jellyfish.jpg"
+  },
+  {
+    "id": "butterfly",
+    "name_he": "פרפר",
+    "answer_he": "פרפר",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/butterfly.jpg"
+  },
+  {
+    "id": "bee",
+    "name_he": "דבורה",
+    "answer_he": "דבורה",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/bee.jpg"
+  },
+  {
+    "id": "koala",
+    "name_he": "קואלה",
+    "answer_he": "קואלה",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/koala.jpg"
+  },
+  {
+    "id": "cheetah",
+    "name_he": "ברדלס",
+    "answer_he": "ברדלס",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/cheetah.jpg"
+  },
+  {
+    "id": "leopard",
+    "name_he": "נמר",
+    "answer_he": "נמר",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/leopard.jpg"
+  },
+  {
+    "id": "squirrel",
+    "name_he": "סנאי",
+    "answer_he": "סנאי",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/squirrel.jpg"
+  },
+  {
+    "id": "mouse",
+    "name_he": "עכבר",
+    "answer_he": "עכבר",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/mouse.jpg"
+  },
+  {
+    "id": "bat",
+    "name_he": "עטלף",
+    "answer_he": "עטלף",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/bat.jpg"
+  },
+  {
+    "id": "ant",
+    "name_he": "נמלה",
+    "answer_he": "נמלה",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/ant.jpg"
+  },
+  {
+    "id": "spider",
+    "name_he": "עכביש",
+    "answer_he": "עכביש",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/spider.jpg"
+  },
+  {
+    "id": "snail",
+    "name_he": "חילזון",
+    "answer_he": "חילזון",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/snail.jpg"
+  },
+  {
+    "id": "donkey",
+    "name_he": "חמור",
+    "answer_he": "חמור",
+    "aliases_he": [],
+    "category": "animal",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/donkey.jpg"
+  }
+]
