@@ -88,7 +88,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
         final isHost = currentUser.id == room.hostId;
         final allVoted = room.difficultyVotes.length >= room.players.length;
         final myVote = room.difficultyVotes[currentUser.id];
-        const choices = [Difficulty.easy, Difficulty.medium, Difficulty.hard];
+        const choices = [Difficulty.easy, Difficulty.medium, Difficulty.hard, Difficulty.giant];
 
         return PopScope(
           canPop: false,
@@ -211,6 +211,8 @@ class _DifficultyCard extends StatelessWidget {
         return 9;
       case Difficulty.veryEasy:
         return 5;
+      case Difficulty.giant:
+        return 15;
     }
   }
 

@@ -1,4 +1,4 @@
-enum Difficulty { veryEasy, easy, medium, hard }
+enum Difficulty { veryEasy, easy, medium, hard, giant }
 
 extension DifficultyExtension on Difficulty {
   String get label {
@@ -11,6 +11,8 @@ extension DifficultyExtension on Difficulty {
         return 'בינוני';
       case Difficulty.hard:
         return 'קשה';
+      case Difficulty.giant:
+        return 'ענק';
     }
   }
 
@@ -24,6 +26,8 @@ extension DifficultyExtension on Difficulty {
         return 50;
       case Difficulty.hard:
         return 100;
+      case Difficulty.giant:
+        return 225; // 15x15 — test tier
     }
   }
 
@@ -37,6 +41,8 @@ extension DifficultyExtension on Difficulty {
         return 7; // 7x7 = 49, rounded to 50 logically
       case Difficulty.hard:
         return 10;
+      case Difficulty.giant:
+        return 15;
     }
   }
 
@@ -50,6 +56,8 @@ extension DifficultyExtension on Difficulty {
         return 20;
       case Difficulty.hard:
         return 25;
+      case Difficulty.giant:
+        return 30;
     }
   }
 
@@ -63,6 +71,8 @@ extension DifficultyExtension on Difficulty {
         return 3;
       case Difficulty.hard:
         return 4;
+      case Difficulty.giant:
+        return 5;
     }
   }
 
@@ -76,6 +86,8 @@ extension DifficultyExtension on Difficulty {
         return 3;
       case Difficulty.hard:
         return 4;
+      case Difficulty.giant:
+        return 5;
     }
   }
 
@@ -89,6 +101,8 @@ extension DifficultyExtension on Difficulty {
         return 30;
       case Difficulty.hard:
         return 40;
+      case Difficulty.giant:
+        return 60;
     }
   }
 
@@ -102,6 +116,8 @@ extension DifficultyExtension on Difficulty {
         return '🟠';
       case Difficulty.hard:
         return '🔴';
+      case Difficulty.giant:
+        return '⬛';
     }
   }
 
@@ -117,6 +133,8 @@ extension DifficultyExtension on Difficulty {
         return 20;
       case Difficulty.hard:
         return 40; // 10x10 / Expert tier
+      case Difficulty.giant:
+        return 60;
     }
   }
 }
