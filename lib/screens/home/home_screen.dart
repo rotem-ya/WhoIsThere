@@ -36,6 +36,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isCreating = false;
   int? _loadingPlayers;
   DateTime? _lastBackPressedAt;
+  // Test branch: difficulty chosen for the next quick game (picker below).
+  Difficulty _quickDifficulty = Difficulty.easy;
 
   @override
   void initState() {
@@ -45,10 +47,90 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     QaLoggerService.instance.log('HOME', 'HOME_SCREEN_OPENED');
   }
 
+  /// Test-branch difficulty picker. Returns the chosen difficulty, or null if
+  /// the player dismissed the sheet.
+  Future<Difficulty?> _pickDifficulty() {
+    const options = [
+      Difficulty.easy,
+      Difficulty.medium,
+      Difficulty.hard,
+      Difficulty.giant,
+    ];
+    return showModalBottomSheet<Difficulty>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Container(
+          padding: EdgeInsets.fromLTRB(
+              20, 16, 20, 20 + MediaQuery.paddingOf(ctx).bottom),
+          decoration: const BoxDecoration(
+            color: Color(0xFF0D1E30),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('בחר רמת קושי',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w900)),
+              const SizedBox(height: 14),
+              for (final d in options)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(ctx, d),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white.withOpacity(0.12)),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(d.emoji, style: const TextStyle(fontSize: 22)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(d.label,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800)),
+                          ),
+                          Text('${d.gridSize}×${d.gridSize}',
+                              style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _startQuickGame(int targetPlayers, {bool bypassCoinCheck = false}) async {
     if (_isCreating) return;
     QaLoggerService.instance.log('HOME', 'TAP_QUICK_GAME players=$targetPlayers');
     FeedbackService.click();
+
+    // Test branch: let the player pick the difficulty before a quick game
+    // (shown once; the insufficient-coins re-entry reuses the choice).
+    if (!bypassCoinCheck) {
+      final picked = await _pickDifficulty();
+      if (picked == null) return; // cancelled
+      _quickDifficulty = picked;
+    }
 
     // Block entry if insufficient coins (skipped when re-entering after the
     // insufficient-coins dialog already topped the wallet up).
@@ -107,6 +189,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           hostPhotoUrl: user.photoUrl,
           playerCount: 1,
           isPublicRoom: true,
+          difficulty: _quickDifficulty,
         );
         roomId = room.id;
         QaLoggerService.instance.log('HOME', 'QUICK_GAME_SUCCESS code=${room.code}');

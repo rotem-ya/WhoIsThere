@@ -250,6 +250,7 @@ class RoomService {
     int playerCount = 1,
     int entryFee = EconomyConfig.gameEntryFee,
     bool isPublicRoom = false,
+    Difficulty difficulty = Difficulty.easy,
   }) async {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
@@ -344,6 +345,7 @@ class RoomService {
       playerRound: hostRound,
       selectedImageId: preImageId,
       matchExposureCount: matchExposure,
+      selectedDifficulty: difficulty,
     );
 
     QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_WRITE id=${docRef.id}');
@@ -537,7 +539,8 @@ class RoomService {
     await _rooms.doc(roomId).update({'selectedImageId': image.id});
     // Start the game first (it rewrites the whole players map), THEN record
     // priorExposureCount via field-path so it isn't clobbered by _startGame.
-    await _startGame(roomId, room, Difficulty.easy);
+    // Honor the difficulty chosen at room creation (defaults to easy).
+    await _startGame(roomId, room, room.selectedDifficulty ?? Difficulty.easy);
     await _recordPriorExposure(roomId, room.players, image.id);
     await _recordExposureForAll(room.players, image.id);
   }
