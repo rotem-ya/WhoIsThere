@@ -23,7 +23,9 @@ import '../../core/constants/game_constants.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
 import '../../models/room_model.dart';
+import '../../models/chat_message.dart';
 import '../../models/economy/match_reward_breakdown.dart';
+import '../../core/utils/chat_filter.dart';
 import '../../providers/providers.dart';
 import '../../services/settings_service.dart';
 import '../../services/hint_economy_guard.dart';
@@ -93,6 +95,26 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   Timer? _botReactionTimer;
   RoomModel? _lastRoom;
   static const List<String> _reactionEmojis = ['😂', '😮', '👏', '🔥', '❤️', '😱'];
+
+  // ── Text chat ──────────────────────────────────────────────────────────────
+  StreamSubscription<List<ChatMessage>>? _chatSub;
+  int _lastChatTs = 0; // newest ts already seen (suppresses backlog toasts)
+  bool _chatSubReady = false; // first snapshot baselines _lastChatTs
+  bool _chatOpen = false; // chat sheet currently visible → no toasts
+  int _unreadChat = 0; // badge on the 💬 button
+  Timer? _botChatTimer;
+  int _chatToastSeq = 0;
+  final List<({int id, String name, String text})> _floatingChats = [];
+  static const List<String> _botChatLines = [
+    'בהצלחה לכולם!',
+    'אני יודע את זה!',
+    'רגע, כמעט…',
+    'איזה קל 😎',
+    'מי איתי?',
+    'הפעם אני מנצח',
+    'וואו קשה',
+    'יאללה מהר',
+  ];
   bool _isBusy = false;
 
   // Turn-reveal tracking for human guess gate
@@ -980,6 +1002,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _localGuessTimer?.cancel();
     _spotlightTimer?.cancel();
     _botReactionTimer?.cancel();
+    _botChatTimer?.cancel();
+    _chatSub?.cancel();
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
@@ -1275,6 +1299,97 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       final bot = bots[_random.nextInt(bots.length)];
       final emoji = _reactionEmojis[_random.nextInt(_reactionEmojis.length)];
       unawaited(ref.read(roomServiceProvider).sendReaction(r.id, bot.id, emoji));
+    });
+  }
+
+  // ── Text chat ─────────────────────────────────────────────────────────────
+
+  /// Subscribes (once) to the room's chat stream. New messages from others pop a
+  /// floating toast when the sheet is closed, and bump the unread badge.
+  void _ensureChatSub(String roomId) {
+    if (_chatSub != null) return;
+    _chatSub =
+        ref.read(roomServiceProvider).chatMessagesStream(roomId).listen((msgs) {
+      if (!mounted || msgs.isEmpty) return;
+      final myUid = ref.read(firebaseUserProvider).valueOrNull?.uid;
+      // First snapshot: baseline so existing backlog doesn't toast.
+      if (!_chatSubReady) {
+        _chatSubReady = true;
+        _lastChatTs = msgs.last.ts;
+        return;
+      }
+      for (final m in msgs) {
+        if (m.ts <= _lastChatTs) continue;
+        _lastChatTs = m.ts;
+        if (m.senderId == myUid) continue;
+        if (_chatOpen) continue;
+        _spawnChatToast(m.senderName, m.text);
+        setState(() => _unreadChat++);
+        if (SettingsService.instance.vibrationEnabled) {
+          HapticFeedback.selectionClick();
+        }
+      }
+    });
+  }
+
+  void _spawnChatToast(String name, String text) {
+    if (!mounted) return;
+    final id = _chatToastSeq++;
+    setState(() => _floatingChats.add((id: id, name: name, text: text)));
+  }
+
+  void _removeChatToast(int id) {
+    if (!mounted) return;
+    setState(() => _floatingChats.removeWhere((c) => c.id == id));
+  }
+
+  void _sendChat(RoomModel room, String raw) {
+    final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
+    if (uid == null) return;
+    final clean = ChatFilter.clean(raw);
+    if (clean.isEmpty) return;
+    final name = room.players[uid]?.name ?? 'אני';
+    unawaited(
+        ref.read(roomServiceProvider).sendChatMessage(room.id, uid, name, clean));
+  }
+
+  void _openChat(RoomModel room) {
+    setState(() {
+      _chatOpen = true;
+      _unreadChat = 0;
+    });
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _ChatSheet(
+        stream: ref.read(roomServiceProvider).chatMessagesStream(room.id),
+        myUid: ref.read(firebaseUserProvider).valueOrNull?.uid ?? '',
+        emojis: _reactionEmojis,
+        onSend: (text) => _sendChat(room, text),
+        onReact: (e) => _sendReaction(room, e),
+      ),
+    ).whenComplete(() {
+      if (mounted) setState(() => _chatOpen = false);
+    });
+  }
+
+  /// Ambient life: the host's client makes a random bot send a canned line now
+  /// and then, so the chat feels alive even in a solo/bot game.
+  void _maybeStartBotChat(RoomModel room) {
+    final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
+    if (uid == null || room.hostId != uid) return;
+    _botChatTimer ??= Timer.periodic(const Duration(seconds: 12), (_) {
+      final r = _lastRoom;
+      if (!mounted || r == null || r.phase != GamePhase.playing) return;
+      if (_random.nextDouble() > 0.35) return;
+      final bots = r.players.values.where((p) => p.isBot).toList();
+      if (bots.isEmpty) return;
+      final bot = bots[_random.nextInt(bots.length)];
+      final line = _botChatLines[_random.nextInt(_botChatLines.length)];
+      unawaited(ref
+          .read(roomServiceProvider)
+          .sendChatMessage(r.id, bot.id, bot.name, line));
     });
   }
 
@@ -2361,6 +2476,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 _scheduleHeatBotTurn(room);
                 _consumeReaction(room);
                 _maybeStartBotReactions(room);
+                _ensureChatSub(room.id);
+                _maybeStartBotChat(room);
                 _syncMusicVolume(room);
 
                 if (room.currentTurnIndex != _revealedAtTurnIndex &&
@@ -2628,16 +2745,23 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 name: r.name,
                 onDone: () => _removeReaction(r.id),
               ),
-            // Reaction bar (send an emoji) — shown while playing.
-            // Chat launcher (💬) — opens the emoji row on demand so nothing
-            // obscures the board by default.
+            // Floating chat toasts — incoming messages while the sheet is closed.
+            for (final c in _floatingChats)
+              _ChatToastWidget(
+                key: ValueKey('chat_${c.id}'),
+                name: c.name,
+                text: c.text,
+                onDone: () => _removeChatToast(c.id),
+              ),
+            // Chat launcher (💬) — opens the text chat sheet on demand so the
+            // board isn't covered by a permanent bar.
             if (_lastRoom != null && _lastRoom!.phase == GamePhase.playing)
               Positioned(
                 left: 8,
                 bottom: 150,
                 child: _ChatLauncher(
-                  emojis: _reactionEmojis,
-                  onReact: (e) => _sendReaction(_lastRoom!, e),
+                  unread: _unreadChat,
+                  onTap: () => _openChat(_lastRoom!),
                 ),
               ),
             if (_showCorrectGuess) ...[
@@ -2829,88 +2953,352 @@ class _RoundStartOverlayState extends State<_RoundStartOverlay> {
   }
 }
 
-/// Chat launcher: a small 💬 button that opens the emoji row on demand, so the
-/// board isn't covered by a permanent bar. Picking an emoji sends it and closes.
-class _ChatLauncher extends StatefulWidget {
-  final List<String> emojis;
-  final void Function(String) onReact;
+/// Chat launcher: a small 💬 button (with an unread badge) that opens the text
+/// chat sheet on demand, so the board isn't covered by a permanent bar.
+class _ChatLauncher extends StatelessWidget {
+  final int unread;
+  final VoidCallback onTap;
 
-  const _ChatLauncher({required this.emojis, required this.onReact});
-
-  @override
-  State<_ChatLauncher> createState() => _ChatLauncherState();
-}
-
-class _ChatLauncherState extends State<_ChatLauncher> {
-  bool _open = false;
+  const _ChatLauncher({required this.unread, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    if (!_open) {
-      return GestureDetector(
-        onTap: () => setState(() => _open = true),
-        child: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: const Color(0xFF07101F).withOpacity(0.55),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withOpacity(0.14)),
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: const Color(0xFF07101F).withOpacity(0.55),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withOpacity(0.14)),
+            ),
+            child:
+                const Center(child: Text('💬', style: TextStyle(fontSize: 20))),
           ),
-          child: const Center(child: Text('💬', style: TextStyle(fontSize: 20))),
-        ),
-      );
-    }
-    return _ReactionBar(
-      emojis: widget.emojis,
-      onReact: (e) {
-        widget.onReact(e);
-        setState(() => _open = false);
-      },
-      onClose: () => setState(() => _open = false),
+          if (unread > 0)
+            Positioned(
+              right: -2,
+              top: -2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF3B30),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: const Color(0xFF07101F), width: 1.5),
+                ),
+                child: Center(
+                  child: Text(
+                    unread > 9 ? '9+' : '$unread',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      height: 1.0,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
 
-/// Compact emoji reaction bar — tap to broadcast a reaction to the room.
-class _ReactionBar extends StatelessWidget {
+/// Bottom-sheet text chat: a live message feed, a quick emoji-reaction row, and
+/// a free-text input. Lives only while the sheet is open.
+class _ChatSheet extends StatefulWidget {
+  final Stream<List<ChatMessage>> stream;
+  final String myUid;
   final List<String> emojis;
-  final void Function(String) onReact;
-  final VoidCallback? onClose;
+  final void Function(String text) onSend;
+  final void Function(String emoji) onReact;
 
-  const _ReactionBar({required this.emojis, required this.onReact, this.onClose});
+  const _ChatSheet({
+    required this.stream,
+    required this.myUid,
+    required this.emojis,
+    required this.onSend,
+    required this.onReact,
+  });
+
+  @override
+  State<_ChatSheet> createState() => _ChatSheetState();
+}
+
+class _ChatSheetState extends State<_ChatSheet> {
+  final _controller = TextEditingController();
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    widget.onSend(text);
+    _controller.clear();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      decoration: BoxDecoration(
-        color: const Color(0xFF07101F).withOpacity(0.7),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(0.14)),
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.55,
+        decoration: const BoxDecoration(
+          color: Color(0xFF0B1422),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('צ׳אט',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15)),
+            ),
+            const Divider(height: 1, color: Colors.white10),
+            Expanded(
+              child: StreamBuilder<List<ChatMessage>>(
+                stream: widget.stream,
+                builder: (context, snap) {
+                  final msgs = snap.data ?? const <ChatMessage>[];
+                  if (msgs.isEmpty) {
+                    return const Center(
+                      child: Text('אין הודעות עדיין · כתבו משהו!',
+                          style:
+                              TextStyle(color: Colors.white38, fontSize: 13)),
+                    );
+                  }
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (_scroll.hasClients) {
+                      _scroll.jumpTo(_scroll.position.maxScrollExtent);
+                    }
+                  });
+                  return ListView.builder(
+                    controller: _scroll,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    itemCount: msgs.length,
+                    itemBuilder: (_, i) {
+                      final m = msgs[i];
+                      final mine = m.senderId == widget.myUid;
+                      return Align(
+                        alignment:
+                            mine ? Alignment.centerLeft : Alignment.centerRight,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 7),
+                          constraints: BoxConstraints(
+                              maxWidth:
+                                  MediaQuery.of(context).size.width * 0.7),
+                          decoration: BoxDecoration(
+                            color: mine
+                                ? const Color(0xFF1E4D6B)
+                                : const Color(0xFF18202E),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (!mine)
+                                Text(m.senderName,
+                                    style: const TextStyle(
+                                        color: Color(0xFF6BC6FF),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700)),
+                              Text(m.text,
+                                  textDirection: TextDirection.rtl,
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            // Quick emoji reactions (broadcast a floating emoji to the board).
+            SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                children: [
+                  for (final e in widget.emojis)
+                    GestureDetector(
+                      onTap: () => widget.onReact(e),
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        child: Text(e, style: const TextStyle(fontSize: 24)),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      textDirection: TextDirection.rtl,
+                      maxLength: 120,
+                      minLines: 1,
+                      maxLines: 3,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _send(),
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: InputDecoration(
+                        counterText: '',
+                        hintText: 'כתבו הודעה…',
+                        hintStyle: const TextStyle(color: Colors.white38),
+                        filled: true,
+                        fillColor: const Color(0xFF18202E),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(22),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _send,
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF22D3EE),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.send_rounded,
+                          color: Color(0xFF06121F), size: 22),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final e in emojis)
-            GestureDetector(
-              onTap: () => onReact(e),
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                child: Text(e, style: const TextStyle(fontSize: 20)),
+    );
+  }
+}
+
+/// A floating incoming-chat toast (name + text) that slides up, holds, fades.
+class _ChatToastWidget extends StatefulWidget {
+  final String name;
+  final String text;
+  final VoidCallback onDone;
+
+  const _ChatToastWidget({
+    super.key,
+    required this.name,
+    required this.text,
+    required this.onDone,
+  });
+
+  @override
+  State<_ChatToastWidget> createState() => _ChatToastWidgetState();
+}
+
+class _ChatToastWidgetState extends State<_ChatToastWidget> {
+  bool _shown = false;
+  Timer? _hideTimer;
+  Timer? _doneTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _shown = true);
+    });
+    _hideTimer = Timer(const Duration(milliseconds: 3200), () {
+      if (mounted) setState(() => _shown = false);
+    });
+    _doneTimer = Timer(const Duration(milliseconds: 3600), widget.onDone);
+  }
+
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    _doneTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: 12,
+      bottom: 200,
+      child: IgnorePointer(
+        child: AnimatedOpacity(
+          opacity: _shown ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 350),
+          child: AnimatedSlide(
+            offset: _shown ? Offset.zero : const Offset(0, 0.3),
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOut,
+            child: Container(
+              constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.7),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0B1422).withOpacity(0.95),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withOpacity(0.12)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.name,
+                      style: const TextStyle(
+                          color: Color(0xFF6BC6FF),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700)),
+                  Text(widget.text,
+                      textDirection: TextDirection.rtl,
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 13)),
+                ],
               ),
             ),
-          if (onClose != null)
-            GestureDetector(
-              onTap: onClose,
-              behavior: HitTestBehavior.opaque,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Icon(Icons.close_rounded, color: Colors.white54, size: 18),
-              ),
-            ),
-        ],
+          ),
+        ),
       ),
     );
   }

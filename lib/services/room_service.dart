@@ -11,6 +11,7 @@ import '../models/economy/economy_transaction_model.dart';
 import '../models/economy/user_economy_model.dart';
 import '../models/room_model.dart';
 import '../models/player_model.dart';
+import '../models/chat_message.dart';
 import '../models/game_image_model.dart';
 import '../core/constants/economy_config.dart';
 import '../core/constants/game_categories.dart';
@@ -2299,6 +2300,39 @@ class RoomService {
         },
       });
     } catch (_) {}
+  }
+
+  /// Posts a text chat message to the room's `messages` subcollection. Text is
+  /// expected to be already cleaned by the caller (ChatFilter); trimmed/capped
+  /// here as a safety net. Fire-and-forget.
+  Future<void> sendChatMessage(
+      String roomId, String userId, String name, String text) async {
+    var body = text.trim();
+    if (body.isEmpty) return;
+    if (body.length > 120) body = body.substring(0, 120);
+    try {
+      await _rooms.doc(roomId).collection('messages').add({
+        'senderId': userId,
+        'senderName': name,
+        'text': body,
+        'ts': DateTime.now().millisecondsSinceEpoch,
+      });
+    } catch (_) {}
+  }
+
+  /// Streams the most recent chat messages (oldest→newest) for the room.
+  Stream<List<ChatMessage>> chatMessagesStream(String roomId) {
+    return _rooms
+        .doc(roomId)
+        .collection('messages')
+        .orderBy('ts', descending: true)
+        .limit(40)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => ChatMessage.fromMap(d.id, d.data()))
+            .toList()
+            .reversed
+            .toList());
   }
 
   /// Answer names for a category (used by bots to pick same-topic wrong guesses).
