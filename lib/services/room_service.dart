@@ -2287,6 +2287,20 @@ class RoomService {
     }
   }
 
+  /// Broadcasts an emoji reaction to the room (everyone animates it). Cheap,
+  /// fire-and-forget; ts makes each reaction distinct for the listeners.
+  Future<void> sendReaction(String roomId, String userId, String emoji) async {
+    try {
+      await _rooms.doc(roomId).update({
+        'lastReaction': {
+          'playerId': userId,
+          'emoji': emoji,
+          'ts': DateTime.now().millisecondsSinceEpoch,
+        },
+      });
+    } catch (_) {}
+  }
+
   /// Answer names for a category (used by bots to pick same-topic wrong guesses).
   Future<List<String>> categoryAnswerNames(String categoryId) async {
     final imgs = await _loadLocalImages(categoryId: categoryId);

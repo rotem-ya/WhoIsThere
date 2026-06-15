@@ -23,6 +23,7 @@ class RoomModel extends Equatable {
   final List<String> letterCardGrantedPlayerIds;
   final String? winnerId;
   final Map<String, dynamic>? lastGuessEvent;
+  final Map<String, dynamic>? lastReaction; // {playerId, emoji, ts}
   final int guessCount;
   final DateTime createdAt;
   final TurnPhase turnPhase;
@@ -75,6 +76,7 @@ class RoomModel extends Equatable {
     this.letterCardGrantedPlayerIds = const [],
     this.winnerId,
     this.lastGuessEvent,
+    this.lastReaction,
     this.guessCount = 0,
     required this.createdAt,
     this.turnPhase = TurnPhase.revealTurn,
@@ -192,6 +194,7 @@ class RoomModel extends Equatable {
           List<String>.from(data['letterCardGrantedPlayerIds'] ?? []),
       winnerId: data['winnerId'],
       lastGuessEvent: data['lastGuessEvent'] as Map<String, dynamic>?,
+      lastReaction: data['lastReaction'] as Map<String, dynamic>?,
       guessCount: data['guessCount'] as int? ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       turnPhase: TurnPhase.values.firstWhere(
@@ -248,6 +251,7 @@ class RoomModel extends Equatable {
         'letterCardGrantedPlayerIds': letterCardGrantedPlayerIds,
         'winnerId': winnerId,
         'lastGuessEvent': lastGuessEvent,
+        'lastReaction': lastReaction,
         'guessCount': guessCount,
         'createdAt': Timestamp.fromDate(createdAt),
         'turnPhase': turnPhase.name,
@@ -293,6 +297,7 @@ class RoomModel extends Equatable {
     List<String>? letterCardGrantedPlayerIds,
     String? winnerId,
     Map<String, dynamic>? lastGuessEvent,
+    Map<String, dynamic>? lastReaction,
     int? guessCount,
     TurnPhase? turnPhase,
     String? guessOpportunityPlayerId,
@@ -340,6 +345,7 @@ class RoomModel extends Equatable {
             letterCardGrantedPlayerIds ?? this.letterCardGrantedPlayerIds,
         winnerId: winnerId ?? this.winnerId,
         lastGuessEvent: lastGuessEvent ?? this.lastGuessEvent,
+        lastReaction: lastReaction ?? this.lastReaction,
         guessCount: guessCount ?? this.guessCount,
         createdAt: createdAt,
         turnPhase: turnPhase ?? this.turnPhase,
@@ -392,6 +398,7 @@ class RoomModel extends Equatable {
         letterCardGrantedPlayerIds,
         winnerId,
         lastGuessEvent,
+        lastReaction,
         guessCount,
         turnPhase,
         guessOpportunityPlayerId,

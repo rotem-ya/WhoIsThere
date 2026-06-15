@@ -86,6 +86,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   String _lastBotTurnKey = '';
   // One bot guess attempt per heat round (keyed by round + image).
   String _lastHeatBotKey = '';
+  // Emoji reactions ("chat") — floating bubbles + ambient bot reactions.
+  int _lastReactionTs = 0;
+  int _reactionSeq = 0;
+  final List<({int id, String emoji, String name})> _floatingReactions = [];
+  Timer? _botReactionTimer;
+  RoomModel? _lastRoom;
+  static const List<String> _reactionEmojis = ['😂', '😮', '👏', '🔥', '❤️', '😱'];
   bool _isBusy = false;
 
   // Turn-reveal tracking for human guess gate
@@ -972,6 +979,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _expiryTimer?.cancel();
     _localGuessTimer?.cancel();
     _spotlightTimer?.cancel();
+    _botReactionTimer?.cancel();
     _guessController.dispose();
     _confettiLeft.dispose();
     _confettiRight.dispose();
@@ -1215,6 +1223,58 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
               : (isSuperEndgame ? 0.45 : isEndgameBotMode ? 0.35 : 0.20))
           : 0.0;
       await _performBotGuess(snap, botId, correctChance);
+    });
+  }
+
+  // ── Emoji reactions ("chat") ─────────────────────────────────────────────
+
+  /// Sends my reaction to the room (everyone, including me, animates it via the
+  /// snapshot listener — no optimistic double-spawn).
+  void _sendReaction(RoomModel room, String emoji) {
+    final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
+    if (uid == null) return;
+    if (SettingsService.instance.vibrationEnabled) HapticFeedback.lightImpact();
+    unawaited(ref.read(roomServiceProvider).sendReaction(room.id, uid, emoji));
+  }
+
+  /// Spawns a floating reaction bubble that self-removes when its animation ends.
+  void _spawnReaction(String emoji, String name) {
+    if (!mounted) return;
+    final id = _reactionSeq++;
+    setState(() => _floatingReactions.add((id: id, emoji: emoji, name: name)));
+  }
+
+  void _removeReaction(int id) {
+    if (!mounted) return;
+    setState(() => _floatingReactions.removeWhere((r) => r.id == id));
+  }
+
+  /// Reads room.lastReaction on each snapshot; animates any new one.
+  void _consumeReaction(RoomModel room) {
+    final r = room.lastReaction;
+    if (r == null) return;
+    final ts = (r['ts'] as num?)?.toInt() ?? 0;
+    if (ts <= _lastReactionTs) return;
+    _lastReactionTs = ts;
+    final emoji = (r['emoji'] as String?) ?? '👍';
+    final pid = (r['playerId'] as String?) ?? '';
+    final name = room.players[pid]?.name ?? '';
+    _spawnReaction(emoji, name);
+  }
+
+  /// Ambient life: the host's client makes a random bot react now and then.
+  void _maybeStartBotReactions(RoomModel room) {
+    final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
+    if (uid == null || room.hostId != uid) return;
+    _botReactionTimer ??= Timer.periodic(const Duration(seconds: 7), (_) {
+      final r = _lastRoom;
+      if (!mounted || r == null || r.phase != GamePhase.playing) return;
+      if (_random.nextDouble() > 0.5) return; // ~every other tick
+      final bots = r.players.values.where((p) => p.isBot).toList();
+      if (bots.isEmpty) return;
+      final bot = bots[_random.nextInt(bots.length)];
+      final emoji = _reactionEmojis[_random.nextInt(_reactionEmojis.length)];
+      unawaited(ref.read(roomServiceProvider).sendReaction(r.id, bot.id, emoji));
     });
   }
 
@@ -2296,8 +2356,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   ));
                 }
 
+                _lastRoom = room;
                 _scheduleBotTurn(room);
                 _scheduleHeatBotTurn(room);
+                _consumeReaction(room);
+                _maybeStartBotReactions(room);
                 _syncMusicVolume(room);
 
                 if (room.currentTurnIndex != _revealedAtTurnIndex &&
@@ -2329,6 +2392,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       unawaited(_playCorrectDing());
                     } else if (!isCorrect) {
                       unawaited(_playWrongBuzz());
+                    }
+                    // Small touch: a correct guess floats a 🎉 with the scorer's
+                    // name — makes "someone scored" feel alive.
+                    if (isCorrect) {
+                      final pid = event['playerId'] as String? ?? '';
+                      _spawnReaction('🎉', room.players[pid]?.name ?? '');
                     }
                     Future.delayed(const Duration(milliseconds: 1800), () {
                       if (mounted) setState(() => _showBanner = false);
@@ -2551,6 +2620,24 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   if (mounted) setState(() => _showRoundIntro = false);
                 },
               ),
+            // Emoji reactions — floating bubbles (everyone's reactions rise here).
+            for (final r in _floatingReactions)
+              _FloatingReactionWidget(
+                key: ValueKey(r.id),
+                emoji: r.emoji,
+                name: r.name,
+                onDone: () => _removeReaction(r.id),
+              ),
+            // Reaction bar (send an emoji) — shown while playing.
+            if (_lastRoom != null && _lastRoom!.phase == GamePhase.playing)
+              Positioned(
+                left: 8,
+                bottom: 150,
+                child: _ReactionBar(
+                  emojis: _reactionEmojis,
+                  onReact: (e) => _sendReaction(_lastRoom!, e),
+                ),
+              ),
             if (_showCorrectGuess) ...[
               Align(
                 alignment: Alignment.topLeft,
@@ -2734,6 +2821,125 @@ class _RoundStartOverlayState extends State<_RoundStartOverlay> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact emoji reaction bar — tap to broadcast a reaction to the room.
+class _ReactionBar extends StatelessWidget {
+  final List<String> emojis;
+  final void Function(String) onReact;
+
+  const _ReactionBar({required this.emojis, required this.onReact});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFF07101F).withOpacity(0.55),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final e in emojis)
+            GestureDetector(
+              onTap: () => onReact(e),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                child: Text(e, style: const TextStyle(fontSize: 20)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A single emoji reaction that rises and fades, then removes itself.
+class _FloatingReactionWidget extends StatefulWidget {
+  final String emoji;
+  final String name;
+  final VoidCallback onDone;
+
+  const _FloatingReactionWidget({
+    super.key,
+    required this.emoji,
+    required this.name,
+    required this.onDone,
+  });
+
+  @override
+  State<_FloatingReactionWidget> createState() => _FloatingReactionWidgetState();
+}
+
+class _FloatingReactionWidgetState extends State<_FloatingReactionWidget>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+  late final double _dx;
+
+  @override
+  void initState() {
+    super.initState();
+    _dx = (Random().nextDouble() * 120) - 10;
+    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1700))
+      ..addStatusListener((s) {
+        if (s == AnimationStatus.completed) widget.onDone();
+      })
+      ..forward();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (_, __) {
+            final t = _c.value;
+            final opacity = (t < 0.15 ? t / 0.15 : (1 - (t - 0.15) / 0.85)).clamp(0.0, 1.0);
+            return Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: EdgeInsets.only(left: 24 + _dx, bottom: 175),
+                child: Opacity(
+                  opacity: opacity,
+                  child: Transform.translate(
+                    offset: Offset(0, -t * 170),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(widget.emoji, style: const TextStyle(fontSize: 38)),
+                        if (widget.name.isNotEmpty)
+                          Text(
+                            widget.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/avatar_util.dart';
 
 class PlayerAvatar extends StatelessWidget {
   final String name;
@@ -8,6 +9,8 @@ class PlayerAvatar extends StatelessWidget {
   final double radius;
   final bool isCurrentTurn;
   final bool isEliminated;
+  // Stable seed for the generated emoji face (defaults to the name).
+  final String? seed;
 
   const PlayerAvatar({
     super.key,
@@ -16,10 +19,12 @@ class PlayerAvatar extends StatelessWidget {
     this.radius = 24,
     this.isCurrentTurn = false,
     this.isEliminated = false,
+    this.seed,
   });
 
   @override
   Widget build(BuildContext context) {
+    final style = avatarFor(seed ?? name);
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -41,17 +46,15 @@ class PlayerAvatar extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: radius,
-            backgroundColor: AppColors.primary.withOpacity(0.2),
+            backgroundColor: photoUrl != null
+                ? AppColors.primary.withOpacity(0.2)
+                : style.color.withOpacity(0.30),
             backgroundImage:
                 photoUrl != null ? CachedNetworkImageProvider(photoUrl!) : null,
             child: photoUrl == null
                 ? Text(
-                    name.isNotEmpty ? name[0].toUpperCase() : '?',
-                    style: TextStyle(
-                      fontSize: radius * 0.8,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
-                    ),
+                    style.emoji,
+                    style: TextStyle(fontSize: radius * 1.0, height: 1.0),
                   )
                 : null,
           ),
