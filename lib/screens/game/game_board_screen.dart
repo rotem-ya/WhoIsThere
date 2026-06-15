@@ -2629,11 +2629,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 onDone: () => _removeReaction(r.id),
               ),
             // Reaction bar (send an emoji) — shown while playing.
+            // Chat launcher (💬) — opens the emoji row on demand so nothing
+            // obscures the board by default.
             if (_lastRoom != null && _lastRoom!.phase == GamePhase.playing)
               Positioned(
                 left: 8,
                 bottom: 150,
-                child: _ReactionBar(
+                child: _ChatLauncher(
                   emojis: _reactionEmojis,
                   onReact: (e) => _sendReaction(_lastRoom!, e),
                 ),
@@ -2827,21 +2829,65 @@ class _RoundStartOverlayState extends State<_RoundStartOverlay> {
   }
 }
 
+/// Chat launcher: a small 💬 button that opens the emoji row on demand, so the
+/// board isn't covered by a permanent bar. Picking an emoji sends it and closes.
+class _ChatLauncher extends StatefulWidget {
+  final List<String> emojis;
+  final void Function(String) onReact;
+
+  const _ChatLauncher({required this.emojis, required this.onReact});
+
+  @override
+  State<_ChatLauncher> createState() => _ChatLauncherState();
+}
+
+class _ChatLauncherState extends State<_ChatLauncher> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_open) {
+      return GestureDetector(
+        onTap: () => setState(() => _open = true),
+        child: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: const Color(0xFF07101F).withOpacity(0.55),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withOpacity(0.14)),
+          ),
+          child: const Center(child: Text('💬', style: TextStyle(fontSize: 20))),
+        ),
+      );
+    }
+    return _ReactionBar(
+      emojis: widget.emojis,
+      onReact: (e) {
+        widget.onReact(e);
+        setState(() => _open = false);
+      },
+      onClose: () => setState(() => _open = false),
+    );
+  }
+}
+
 /// Compact emoji reaction bar — tap to broadcast a reaction to the room.
 class _ReactionBar extends StatelessWidget {
   final List<String> emojis;
   final void Function(String) onReact;
+  final VoidCallback? onClose;
 
-  const _ReactionBar({required this.emojis, required this.onReact});
+  const _ReactionBar({required this.emojis, required this.onReact, this.onClose});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(
-        color: const Color(0xFF07101F).withOpacity(0.55),
+        color: const Color(0xFF07101F).withOpacity(0.7),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withOpacity(0.14)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2853,6 +2899,15 @@ class _ReactionBar extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
                 child: Text(e, style: const TextStyle(fontSize: 20)),
+              ),
+            ),
+          if (onClose != null)
+            GestureDetector(
+              onTap: onClose,
+              behavior: HitTestBehavior.opaque,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Icon(Icons.close_rounded, color: Colors.white54, size: 18),
               ),
             ),
         ],
