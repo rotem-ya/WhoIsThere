@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/game_categories.dart';
 import '../../../core/constants/game_constants.dart';
 import '../../../models/game_image_model.dart';
 import '../../../models/room_model.dart';
@@ -192,6 +193,9 @@ class GameLayout extends StatelessWidget {
               guessBlock10Count: guessBlock10Count,
               blackoutCardCount: blackoutCardCount,
             ),
+            // חי/צומח/דומם: always show the current topic + round, so the player
+            // knows what they're guessing at every stage.
+            if (room.isHeat) _HeatTopicChip(room: room),
             if (kDebugMode)
               _DebugPhaseBadge(
                 turnPhase: room.turnPhase,
@@ -454,3 +458,39 @@ class _EndgameVignetteState extends State<_EndgameVignette>
 }
 
 
+
+/// Persistent topic chip for the חי/צומח/דומם heat — shows the current category
+/// (with emoji) and the round position, visible at every stage of the round.
+class _HeatTopicChip extends StatelessWidget {
+  final RoomModel room;
+  const _HeatTopicChip({required this.room});
+
+  @override
+  Widget build(BuildContext context) {
+    final cat = GameCategories.byId(room.selectedCategory);
+    final total = room.heatImageIds.length;
+    final round = (room.heatRoundIndex + 1).clamp(1, total == 0 ? 1 : total);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 2),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFF07101F).withOpacity(0.72),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFF20A8E0).withOpacity(0.45)),
+          ),
+          child: Text(
+            '${cat.emoji}  ${cat.nameHe}   ·   סבב $round/$total',
+            textDirection: TextDirection.rtl,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

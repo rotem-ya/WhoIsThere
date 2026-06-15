@@ -70,7 +70,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('בחר רמת קושי',
+              const Text('בחר סוג משחק',
                   style: TextStyle(
                       color: Colors.white,
                       fontSize: 19,
@@ -92,12 +92,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       child: Row(
                         children: [
-                          Text(d == Difficulty.giant ? '⚡' : '🟦',
+                          Text(d == Difficulty.giant ? '⚡' : '📍',
                               style: const TextStyle(fontSize: 22)),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                                d == Difficulty.giant ? 'מהיר' : 'רגיל',
+                                d == Difficulty.giant ? 'חי צומח דומם' : 'זיהוי מקומות',
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,

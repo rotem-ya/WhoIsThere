@@ -2322,6 +2322,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 final List<DetectiveAction> _detectiveActions = [];
                 if (!_isFinished &&
                     currentUserId != null &&
+                    !room.isHeat && // חי/צומח/דומם plays without tools
                     room.phase == GamePhase.playing &&
                     room.turnPhase != TurnPhase.guessMode) {
                   final _coins = _revealWallet?.coins ?? 0;
@@ -2452,8 +2453,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   onGuessSubmit: (currentUserId != null && _localGuessOpen)
                       ? (value) => _submitGuess(room, currentUserId!, value)
                       : null,
-                  stunCardCount: user?.stunCardCount ?? 0,
-                  onStunCard: currentUserId == null ? null : (targetId) async {
+                  stunCardCount: room.isHeat ? 0 : (user?.stunCardCount ?? 0),
+                  onStunCard: (currentUserId == null || room.isHeat) ? null : (targetId) async {
                     final success = await ref.read(roomServiceProvider).applyStunCard(
                       roomId: room.id,
                       actorUid: currentUserId,
@@ -2465,16 +2466,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       );
                     }
                   },
-                  guessBlock5Count: user?.guessBlock5Count ?? 0,
-                  guessBlock10Count: user?.guessBlock10Count ?? 0,
-                  blackoutCardCount: user?.blackoutCardCount ?? 0,
+                  guessBlock5Count: room.isHeat ? 0 : (user?.guessBlock5Count ?? 0),
+                  guessBlock10Count: room.isHeat ? 0 : (user?.guessBlock10Count ?? 0),
+                  blackoutCardCount: room.isHeat ? 0 : (user?.blackoutCardCount ?? 0),
                   guessBlockedUntilMs: room.guessBlockedUntilMs,
                   blackoutActiveUntilMs: room.blackoutActiveUntilMs,
                   personalRevealedCells: _personalRevealedTiles,
                   revealBuyPrice: _revealBuyPrice,
                   revealBuyCount: _revealBuyCount,
-                  maxRevealBuys: _maxPersonalReveals,
-                  onBuyReveal: _canBuyReveal
+                  maxRevealBuys: room.isHeat ? 0 : _maxPersonalReveals,
+                  onBuyReveal: (_canBuyReveal && !room.isHeat)
                       ? () => _buyPersonalReveal(room, currentUserId!)
                       : null,
                   detectiveActions: _detectiveActions,
