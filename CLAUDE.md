@@ -129,6 +129,26 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 
 ---
 
+## פלטפורמה אחידה — שני סוגי המשחק (ומשחקים עתידיים)
+
+**עיקרון:** כל סוגי המשחק רוכבים על אותה תשתית. פיצ'ר רוחבי (תוכן ענן, צ'אט, אווטרים…) מתווסף ב**נקודת חנק משותפת אחת** ולכן עובד אוטומטית בכל הסוגים — אין להעתיק לוגיקה לכל מסך בנפרד.
+
+### תוכן מהענן + אדמין (פעיל/לא-פעיל + מקומות חדשים) — אחיד לכל הקטגוריות
+- נקודת חנק יחידה: `RoomService._loadLocalImages({categoryId})` → ממזג מוטמע (`assets/.../<id>.json`) + תמונות remote מהמניפסט **לפי קטגוריה** (`ContentManifestService.availableRemoteImages(categoryId)`), עם רשת ביטחון לברירות מחדל מוטמעות.
+- סנכרון בהפעלה (`loadCached` + `sync`) ב-`main.dart` — תשתית משותפת, רצה פעם אחת לכל המצבים.
+- **המשחק הרגיל** (זיהוי מקומות) משתמש בקטגוריה `israel_places`. **חי צומח דומם** (מקצה) משתמש ב-`animals`/`plants`/`objects` דרך `_buildHeat` → אותו `_loadLocalImages(categoryId)`. לכן הוספת/השבתת תמונה מהאדמין עובדת **גם** בחי צומח דומם, ללא קוד נוסף.
+- **חוזה אדמין (קריטי לאחידות):** כל מקום remote במניפסט חייב לשאת שדה `category` עם אחד מה-ids: `israel_places` / `animals` / `plants` / `objects` (וגם `world_sites` / `israel_figures` / `world_figures` לעתיד). ברירת מחדל בהיעדר השדה = `israel_places` (כלומר ייכנס רק למשחק הרגיל). ids חייבים להיות זהים בדיוק ל-`GameCategories` ב-`lib/core/constants/game_categories.dart`.
+
+### צ'אט (טקסט חופשי + אימוג'ים) — אחיד לכל המצבים
+- `RoomService.sendChatMessage` / `chatMessagesStream` על תת-אוסף `rooms/{id}/messages` (rules מכוסה ב-`{document=**}`).
+- ה-UI (כפתור 💬, גיליון הצ'אט, טוסטים, בוטים) ב-`game_board_screen.dart` מגודר רק על `phase == GamePhase.playing` — **לא** על `isHeat`. לכן הצ'אט קיים גם במשחק הרגיל וגם בחי צומח דומם.
+
+### כשמוסיפים סוג משחק חדש
+- הוסף קטגוריה ב-`GameCategories` (id חדש + JSON). השתמש ב-`_loadLocalImages(categoryId)` לבחירת תמונות → תוכן הענן והאדמין מגיעים בחינם.
+- אל תגדר פיצ'רים רוחביים (צ'אט/אווטרים/תוכן) ב-`isHeat`/id ספציפי — גדר רק על `phase`/יכולת, כדי שיישארו אחידים.
+
+---
+
 ## הזמנה ל-Play Store — QA Launch Prep
 
 ### סטטוס: ✅ נפתר (מסלול A — נמצא מפתח ההעלאה הנכון EA:3B)
