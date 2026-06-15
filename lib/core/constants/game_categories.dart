@@ -50,7 +50,7 @@ class GameCategories {
     ),
     GameCategory(
       id: animals,
-      nameHe: 'חיות',
+      nameHe: 'חי',
       emoji: '🐾',
       assetPath: '$_dataDir/animals.json',
       hasHints: false, // animals play without hints
