@@ -1,0 +1,1652 @@
+{
+  "version": 1,
+  "_comment": "Seed snapshot of WhoIsThere BUNDLED content (baked into the app). Import once into the admin's catalog, then keep isActive in sync via content_manifest/places_v1. 'remote' places (added by admin, image in Storage) are appended on top of these. Regenerate from the game repo when bundled content changes.",
+  "counts": {
+    "israel_places": 45,
+    "animals": 60,
+    "plants": 50,
+    "objects": 50
+  },
+  "places": [
+    {
+      "id": "western_wall",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "הכותל המערבי",
+      "answerHe": "הכותל"
+    },
+    {
+      "id": "dome_of_the_rock",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "כיפת הסלע",
+      "answerHe": "כיפת הסלע"
+    },
+    {
+      "id": "tower_of_david",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "מגדל דוד",
+      "answerHe": "מגדל דוד"
+    },
+    {
+      "id": "mahane_yehuda_market",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "שוק מחנה יהודה",
+      "answerHe": "מחנה יהודה"
+    },
+    {
+      "id": "knesset",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "הכנסת",
+      "answerHe": "הכנסת"
+    },
+    {
+      "id": "israel_museum",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "מוזיאון ישראל",
+      "answerHe": "מוזיאון ישראל"
+    },
+    {
+      "id": "yad_vashem",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "יד ושם",
+      "answerHe": "יד ושם"
+    },
+    {
+      "id": "masada",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "מצדה",
+      "answerHe": "מצדה"
+    },
+    {
+      "id": "dead_sea",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "ים המלח",
+      "answerHe": "ים המלח"
+    },
+    {
+      "id": "ein_gedi",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "עין גדי",
+      "answerHe": "עין גדי"
+    },
+    {
+      "id": "ramon_crater",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "מכתש רמון",
+      "answerHe": "מכתש רמון"
+    },
+    {
+      "id": "timna_park",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "פארק תמנע",
+      "answerHe": "תמנע"
+    },
+    {
+      "id": "dolphin_reef",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "ריף הדולפינים",
+      "answerHe": "ריף הדולפינים"
+    },
+    {
+      "id": "mount_hermon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "החרמון",
+      "answerHe": "החרמון"
+    },
+    {
+      "id": "sea_of_galilee",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "הכנרת",
+      "answerHe": "הכנרת"
+    },
+    {
+      "id": "old_acre",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "עכו העתיקה",
+      "answerHe": "עכו"
+    },
+    {
+      "id": "bahai_gardens",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "הגנים הבהאיים",
+      "answerHe": "הגנים הבהאיים"
+    },
+    {
+      "id": "haifa_port",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "נמל חיפה",
+      "answerHe": "נמל חיפה"
+    },
+    {
+      "id": "old_jaffa",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "יפו העתיקה",
+      "answerHe": "יפו"
+    },
+    {
+      "id": "azrieli_towers",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "מגדלי עזריאלי",
+      "answerHe": "עזריאלי"
+    },
+    {
+      "id": "stalactite_cave",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "מערת הנטיפים",
+      "answerHe": "מערת הנטיפים"
+    },
+    {
+      "id": "gan_hashlosha",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "גן השלושה",
+      "answerHe": "גן השלושה"
+    },
+    {
+      "id": "banias_waterfall",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "מפל הבניאס",
+      "answerHe": "הבניאס"
+    },
+    {
+      "id": "rosh_hanikra",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "ראש הנקרה",
+      "answerHe": "ראש הנקרה"
+    },
+    {
+      "id": "caesarea",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "אמפי קיסריה",
+      "answerHe": "אמפי קיסריה"
+    },
+    {
+      "id": "tel_aviv_port",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "נמל תל אביב",
+      "answerHe": "נמל תל אביב"
+    },
+    {
+      "id": "cave_of_the_patriarchs",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "מערת המכפלה",
+      "answerHe": "מערת המכפלה"
+    },
+    {
+      "id": "mount_tabor",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "הר תבור",
+      "answerHe": "הר תבור"
+    },
+    {
+      "id": "hexagon_pool",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "בריכת המשושים",
+      "answerHe": "בריכת המשושים"
+    },
+    {
+      "id": "agamon_hahula",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "אגמון החולה",
+      "answerHe": "אגמון החולה"
+    },
+    {
+      "id": "mount_meron",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "הר מירון",
+      "answerHe": "הר מירון"
+    },
+    {
+      "id": "montfort",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "מבצר מונפור",
+      "answerHe": "מונפור"
+    },
+    {
+      "id": "mini_israel",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "מיני ישראל",
+      "answerHe": "מיני ישראל"
+    },
+    {
+      "id": "Ben_Gurion",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "שדה התעופה בן גוריון",
+      "answerHe": "בן גוריון"
+    },
+    {
+      "id": "ben_gurion_hut",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "צריף בן גוריון",
+      "answerHe": "צריף בן גוריון"
+    },
+    {
+      "id": "lions_gate",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "שער האריות",
+      "answerHe": "שער האריות"
+    },
+    {
+      "id": "coral_beach",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "חוף האלמוגים",
+      "answerHe": "חוף האלמוגים"
+    },
+    {
+      "id": "ein_bokek",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "עין בוקק",
+      "answerHe": "עין בוקק"
+    },
+    {
+      "id": "yehiam",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "מבצר יחיעם",
+      "answerHe": "מבצר יחיעם"
+    },
+    {
+      "id": "jaffa_clock_tower",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "מגדל השעון",
+      "answerHe": "מגדל השעון"
+    },
+    {
+      "id": "rabin_square",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "כיכר רבין",
+      "answerHe": "כיכר רבין"
+    },
+    {
+      "id": "yarkon_river",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "נהר הירקון",
+      "answerHe": "נהר הירקון"
+    },
+    {
+      "id": "mount_sodom",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "אשת לוט",
+      "answerHe": "אשת לוט"
+    },
+    {
+      "id": "weizmann_institute",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "מכון ויצמן",
+      "answerHe": "מכון ויצמן"
+    },
+    {
+      "id": "tel_hai",
+      "isActive": true,
+      "source": "bundled",
+      "category": "israel_places",
+      "nameHe": "תל חי",
+      "answerHe": "תל חי"
+    },
+    {
+      "id": "lion",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "אריה",
+      "answerHe": "אריה"
+    },
+    {
+      "id": "elephant",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "פיל",
+      "answerHe": "פיל"
+    },
+    {
+      "id": "giraffe",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "ג'ירפה",
+      "answerHe": "ג'ירפה"
+    },
+    {
+      "id": "zebra",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "זברה",
+      "answerHe": "זברה"
+    },
+    {
+      "id": "kangaroo",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "קנגורו",
+      "answerHe": "קנגורו"
+    },
+    {
+      "id": "penguin",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "פינגווין",
+      "answerHe": "פינגווין"
+    },
+    {
+      "id": "polar_bear",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "דוב קוטב",
+      "answerHe": "דוב קוטב"
+    },
+    {
+      "id": "tiger",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "טיגריס",
+      "answerHe": "טיגריס"
+    },
+    {
+      "id": "dolphin",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "דולפין",
+      "answerHe": "דולפין"
+    },
+    {
+      "id": "owl",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "ינשוף",
+      "answerHe": "ינשוף"
+    },
+    {
+      "id": "dog",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "כלב",
+      "answerHe": "כלב"
+    },
+    {
+      "id": "cat",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "חתול",
+      "answerHe": "חתול"
+    },
+    {
+      "id": "horse",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "סוס",
+      "answerHe": "סוס"
+    },
+    {
+      "id": "cow",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "פרה",
+      "answerHe": "פרה"
+    },
+    {
+      "id": "sheep",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "כבשה",
+      "answerHe": "כבשה"
+    },
+    {
+      "id": "goat",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "עז",
+      "answerHe": "עז"
+    },
+    {
+      "id": "pig",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "חזיר",
+      "answerHe": "חזיר"
+    },
+    {
+      "id": "rabbit",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "ארנב",
+      "answerHe": "ארנב"
+    },
+    {
+      "id": "chicken",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "תרנגולת",
+      "answerHe": "תרנגולת"
+    },
+    {
+      "id": "duck",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "ברווז",
+      "answerHe": "ברווז"
+    },
+    {
+      "id": "goose",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "אווז",
+      "answerHe": "אווז"
+    },
+    {
+      "id": "monkey",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "קוף",
+      "answerHe": "קוף"
+    },
+    {
+      "id": "gorilla",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "גורילה",
+      "answerHe": "גורילה"
+    },
+    {
+      "id": "chimpanzee",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "שימפנזה",
+      "answerHe": "שימפנזה"
+    },
+    {
+      "id": "bear",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "דוב",
+      "answerHe": "דוב"
+    },
+    {
+      "id": "panda",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "פנדה",
+      "answerHe": "פנדה"
+    },
+    {
+      "id": "wolf",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "זאב",
+      "answerHe": "זאב"
+    },
+    {
+      "id": "fox",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "שועל",
+      "answerHe": "שועל"
+    },
+    {
+      "id": "deer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "אייל",
+      "answerHe": "אייל"
+    },
+    {
+      "id": "rhinoceros",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "קרנף",
+      "answerHe": "קרנף"
+    },
+    {
+      "id": "hippopotamus",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "היפופוטם",
+      "answerHe": "היפופוטם"
+    },
+    {
+      "id": "crocodile",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "תנין",
+      "answerHe": "תנין"
+    },
+    {
+      "id": "snake",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "נחש",
+      "answerHe": "נחש"
+    },
+    {
+      "id": "turtle",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "צב",
+      "answerHe": "צב"
+    },
+    {
+      "id": "frog",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "צפרדע",
+      "answerHe": "צפרדע"
+    },
+    {
+      "id": "camel",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "גמל",
+      "answerHe": "גמל"
+    },
+    {
+      "id": "eagle",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "נשר",
+      "answerHe": "נשר"
+    },
+    {
+      "id": "peacock",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "טווס",
+      "answerHe": "טווס"
+    },
+    {
+      "id": "parrot",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "תוכי",
+      "answerHe": "תוכי"
+    },
+    {
+      "id": "flamingo",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "פלמינגו",
+      "answerHe": "פלמינגו"
+    },
+    {
+      "id": "ostrich",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "יען",
+      "answerHe": "יען"
+    },
+    {
+      "id": "swan",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "ברבור",
+      "answerHe": "ברבור"
+    },
+    {
+      "id": "shark",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "כריש",
+      "answerHe": "כריש"
+    },
+    {
+      "id": "whale",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "לווייתן",
+      "answerHe": "לווייתן"
+    },
+    {
+      "id": "octopus",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "תמנון",
+      "answerHe": "תמנון"
+    },
+    {
+      "id": "crab",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "סרטן",
+      "answerHe": "סרטן"
+    },
+    {
+      "id": "seahorse",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "סוסון ים",
+      "answerHe": "סוסון ים"
+    },
+    {
+      "id": "jellyfish",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "מדוזה",
+      "answerHe": "מדוזה"
+    },
+    {
+      "id": "butterfly",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "פרפר",
+      "answerHe": "פרפר"
+    },
+    {
+      "id": "bee",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "דבורה",
+      "answerHe": "דבורה"
+    },
+    {
+      "id": "koala",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "קואלה",
+      "answerHe": "קואלה"
+    },
+    {
+      "id": "cheetah",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "ברדלס",
+      "answerHe": "ברדלס"
+    },
+    {
+      "id": "leopard",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "נמר",
+      "answerHe": "נמר"
+    },
+    {
+      "id": "squirrel",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "סנאי",
+      "answerHe": "סנאי"
+    },
+    {
+      "id": "mouse",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "עכבר",
+      "answerHe": "עכבר"
+    },
+    {
+      "id": "bat",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "עטלף",
+      "answerHe": "עטלף"
+    },
+    {
+      "id": "ant",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "נמלה",
+      "answerHe": "נמלה"
+    },
+    {
+      "id": "spider",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "עכביש",
+      "answerHe": "עכביש"
+    },
+    {
+      "id": "snail",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "חילזון",
+      "answerHe": "חילזון"
+    },
+    {
+      "id": "donkey",
+      "isActive": true,
+      "source": "bundled",
+      "category": "animals",
+      "nameHe": "חמור",
+      "answerHe": "חמור"
+    },
+    {
+      "id": "apple",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "תפוח",
+      "answerHe": "תפוח"
+    },
+    {
+      "id": "banana",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "בננה",
+      "answerHe": "בננה"
+    },
+    {
+      "id": "orange",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "תפוז",
+      "answerHe": "תפוז"
+    },
+    {
+      "id": "grape",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "ענבים",
+      "answerHe": "ענבים"
+    },
+    {
+      "id": "strawberry",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "תות שדה",
+      "answerHe": "תות שדה"
+    },
+    {
+      "id": "watermelon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "אבטיח",
+      "answerHe": "אבטיח"
+    },
+    {
+      "id": "melon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "מלון",
+      "answerHe": "מלון"
+    },
+    {
+      "id": "pear",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "אגס",
+      "answerHe": "אגס"
+    },
+    {
+      "id": "peach",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "אפרסק",
+      "answerHe": "אפרסק"
+    },
+    {
+      "id": "plum",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "שזיף",
+      "answerHe": "שזיף"
+    },
+    {
+      "id": "cherry",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "דובדבן",
+      "answerHe": "דובדבן"
+    },
+    {
+      "id": "pineapple",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "אננס",
+      "answerHe": "אננס"
+    },
+    {
+      "id": "mango",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "מנגו",
+      "answerHe": "מנגו"
+    },
+    {
+      "id": "kiwi",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "קיווי",
+      "answerHe": "קיווי"
+    },
+    {
+      "id": "lemon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "לימון",
+      "answerHe": "לימון"
+    },
+    {
+      "id": "pomegranate",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "רימון",
+      "answerHe": "רימון"
+    },
+    {
+      "id": "fig",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "תאנה",
+      "answerHe": "תאנה"
+    },
+    {
+      "id": "avocado",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "אבוקדו",
+      "answerHe": "אבוקדו"
+    },
+    {
+      "id": "apricot",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "משמש",
+      "answerHe": "משמש"
+    },
+    {
+      "id": "raspberry",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "פטל",
+      "answerHe": "פטל"
+    },
+    {
+      "id": "blueberry",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "אוכמנית",
+      "answerHe": "אוכמנית"
+    },
+    {
+      "id": "coconut",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "קוקוס",
+      "answerHe": "קוקוס"
+    },
+    {
+      "id": "papaya",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "פפאיה",
+      "answerHe": "פפאיה"
+    },
+    {
+      "id": "grapefruit",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "אשכולית",
+      "answerHe": "אשכולית"
+    },
+    {
+      "id": "lime",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "ליים",
+      "answerHe": "ליים"
+    },
+    {
+      "id": "tomato",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "עגבנייה",
+      "answerHe": "עגבנייה"
+    },
+    {
+      "id": "cucumber",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "מלפפון",
+      "answerHe": "מלפפון"
+    },
+    {
+      "id": "carrot",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "גזר",
+      "answerHe": "גזר"
+    },
+    {
+      "id": "potato",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "תפוח אדמה",
+      "answerHe": "תפוח אדמה"
+    },
+    {
+      "id": "onion",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "בצל",
+      "answerHe": "בצל"
+    },
+    {
+      "id": "garlic",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "שום",
+      "answerHe": "שום"
+    },
+    {
+      "id": "pepper",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "פלפל",
+      "answerHe": "פלפל"
+    },
+    {
+      "id": "eggplant",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "חציל",
+      "answerHe": "חציל"
+    },
+    {
+      "id": "lettuce",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "חסה",
+      "answerHe": "חסה"
+    },
+    {
+      "id": "cabbage",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "כרוב",
+      "answerHe": "כרוב"
+    },
+    {
+      "id": "broccoli",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "ברוקולי",
+      "answerHe": "ברוקולי"
+    },
+    {
+      "id": "cauliflower",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "כרובית",
+      "answerHe": "כרובית"
+    },
+    {
+      "id": "corn",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "תירס",
+      "answerHe": "תירס"
+    },
+    {
+      "id": "pumpkin",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "דלעת",
+      "answerHe": "דלעת"
+    },
+    {
+      "id": "zucchini",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "קישוא",
+      "answerHe": "קישוא"
+    },
+    {
+      "id": "spinach",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "תרד",
+      "answerHe": "תרד"
+    },
+    {
+      "id": "mushroom",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "פטרייה",
+      "answerHe": "פטרייה"
+    },
+    {
+      "id": "peas",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "אפונה",
+      "answerHe": "אפונה"
+    },
+    {
+      "id": "beet",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "סלק",
+      "answerHe": "סלק"
+    },
+    {
+      "id": "radish",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "צנונית",
+      "answerHe": "צנונית"
+    },
+    {
+      "id": "sweet_potato",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "בטטה",
+      "answerHe": "בטטה"
+    },
+    {
+      "id": "celery",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "סלרי",
+      "answerHe": "סלרי"
+    },
+    {
+      "id": "ginger",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "ג'ינג'ר",
+      "answerHe": "ג'ינג'ר"
+    },
+    {
+      "id": "chili",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "פלפל חריף",
+      "answerHe": "פלפל חריף"
+    },
+    {
+      "id": "asparagus",
+      "isActive": true,
+      "source": "bundled",
+      "category": "plants",
+      "nameHe": "אספרגוס",
+      "answerHe": "אספרגוס"
+    },
+    {
+      "id": "chair",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "כיסא",
+      "answerHe": "כיסא"
+    },
+    {
+      "id": "table",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "שולחן",
+      "answerHe": "שולחן"
+    },
+    {
+      "id": "bed",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "מיטה",
+      "answerHe": "מיטה"
+    },
+    {
+      "id": "clock",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "שעון",
+      "answerHe": "שעון"
+    },
+    {
+      "id": "book",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "ספר",
+      "answerHe": "ספר"
+    },
+    {
+      "id": "pencil",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "עיפרון",
+      "answerHe": "עיפרון"
+    },
+    {
+      "id": "pen",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "עט",
+      "answerHe": "עט"
+    },
+    {
+      "id": "scissors",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "מספריים",
+      "answerHe": "מספריים"
+    },
+    {
+      "id": "hammer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "פטיש",
+      "answerHe": "פטיש"
+    },
+    {
+      "id": "key",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "מפתח",
+      "answerHe": "מפתח"
+    },
+    {
+      "id": "umbrella",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "מטרייה",
+      "answerHe": "מטרייה"
+    },
+    {
+      "id": "bottle",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "בקבוק",
+      "answerHe": "בקבוק"
+    },
+    {
+      "id": "cup",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "ספל",
+      "answerHe": "ספל"
+    },
+    {
+      "id": "plate",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "צלחת",
+      "answerHe": "צלחת"
+    },
+    {
+      "id": "fork",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "מזלג",
+      "answerHe": "מזלג"
+    },
+    {
+      "id": "spoon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "כף",
+      "answerHe": "כף"
+    },
+    {
+      "id": "knife",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "סכין",
+      "answerHe": "סכין"
+    },
+    {
+      "id": "glasses",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "משקפיים",
+      "answerHe": "משקפיים"
+    },
+    {
+      "id": "watch",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "שעון יד",
+      "answerHe": "שעון יד"
+    },
+    {
+      "id": "phone",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "טלפון",
+      "answerHe": "טלפון"
+    },
+    {
+      "id": "computer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "מחשב",
+      "answerHe": "מחשב"
+    },
+    {
+      "id": "keyboard",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "מקלדת",
+      "answerHe": "מקלדת"
+    },
+    {
+      "id": "television",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "טלוויזיה",
+      "answerHe": "טלוויזיה"
+    },
+    {
+      "id": "camera",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "מצלמה",
+      "answerHe": "מצלמה"
+    },
+    {
+      "id": "guitar",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "גיטרה",
+      "answerHe": "גיטרה"
+    },
+    {
+      "id": "piano",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "פסנתר",
+      "answerHe": "פסנתר"
+    },
+    {
+      "id": "drum",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "תוף",
+      "answerHe": "תוף"
+    },
+    {
+      "id": "ball",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "כדור",
+      "answerHe": "כדור"
+    },
+    {
+      "id": "bicycle",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "אופניים",
+      "answerHe": "אופניים"
+    },
+    {
+      "id": "car",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "מכונית",
+      "answerHe": "מכונית"
+    },
+    {
+      "id": "bus",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "אוטובוס",
+      "answerHe": "אוטובוס"
+    },
+    {
+      "id": "train",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "רכבת",
+      "answerHe": "רכבת"
+    },
+    {
+      "id": "airplane",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "מטוס",
+      "answerHe": "מטוס"
+    },
+    {
+      "id": "boat",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "סירה",
+      "answerHe": "סירה"
+    },
+    {
+      "id": "ship",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "אונייה",
+      "answerHe": "אונייה"
+    },
+    {
+      "id": "rocket",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "טיל",
+      "answerHe": "טיל"
+    },
+    {
+      "id": "anchor",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "עוגן",
+      "answerHe": "עוגן"
+    },
+    {
+      "id": "ladder",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "סולם",
+      "answerHe": "סולם"
+    },
+    {
+      "id": "broom",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "מטאטא",
+      "answerHe": "מטאטא"
+    },
+    {
+      "id": "bucket",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "דלי",
+      "answerHe": "דלי"
+    },
+    {
+      "id": "candle",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "נר",
+      "answerHe": "נר"
+    },
+    {
+      "id": "balloon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "בלון",
+      "answerHe": "בלון"
+    },
+    {
+      "id": "kite",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "עפיפון",
+      "answerHe": "עפיפון"
+    },
+    {
+      "id": "shoe",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "נעל",
+      "answerHe": "נעל"
+    },
+    {
+      "id": "hat",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "כובע",
+      "answerHe": "כובע"
+    },
+    {
+      "id": "shirt",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "חולצה",
+      "answerHe": "חולצה"
+    },
+    {
+      "id": "backpack",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "תיק גב",
+      "answerHe": "תיק גב"
+    },
+    {
+      "id": "ring",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "טבעת",
+      "answerHe": "טבעת"
+    },
+    {
+      "id": "crown",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "כתר",
+      "answerHe": "כתר"
+    },
+    {
+      "id": "mirror",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "מראה",
+      "answerHe": "מראה"
+    }
+  ]
+}
