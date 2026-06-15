@@ -50,6 +50,11 @@ class RoomModel extends Equatable {
   /// player is only matched into this room if THEIR exposure to the same image
   /// equals this value (same-exposure matchmaking).
   final int matchExposureCount;
+  // Fast-game "heat": a sequence of quick rounds (one image per category). Empty
+  // for the normal single-round game. [heatRoundIndex] is the 0-based current round.
+  final List<String> heatCategories;
+  final List<String> heatImageIds;
+  final int heatRoundIndex;
 
   const RoomModel({
     required this.id,
@@ -94,7 +99,14 @@ class RoomModel extends Equatable {
     this.isPublicRoom = false,
     this.playerRound = 0,
     this.matchExposureCount = 0,
+    this.heatCategories = const [],
+    this.heatImageIds = const [],
+    this.heatRoundIndex = 0,
   });
+
+  // True when this room is a fast-game heat (more than one queued round).
+  bool get isHeat => heatImageIds.length > 1;
+  bool get isLastHeatRound => heatRoundIndex >= heatImageIds.length - 1;
 
   bool isBlockedFromGuessing(String userId) {
     final blockedUntil = blockedGuessers[userId];
@@ -212,6 +224,9 @@ class RoomModel extends Equatable {
       isPublicRoom: data['isPublicRoom'] as bool? ?? false,
       playerRound: (data['playerRound'] as num?)?.toInt() ?? 0,
       matchExposureCount: (data['matchExposureCount'] as num?)?.toInt() ?? 0,
+      heatCategories: List<String>.from(data['heatCategories'] ?? []),
+      heatImageIds: List<String>.from(data['heatImageIds'] ?? []),
+      heatRoundIndex: (data['heatRoundIndex'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -257,6 +272,9 @@ class RoomModel extends Equatable {
         'isPublicRoom': isPublicRoom,
         'playerRound': playerRound,
         'matchExposureCount': matchExposureCount,
+        'heatCategories': heatCategories,
+        'heatImageIds': heatImageIds,
+        'heatRoundIndex': heatRoundIndex,
       };
 
   RoomModel copyWith({
@@ -298,6 +316,9 @@ class RoomModel extends Equatable {
     bool? isPublicRoom,
     int? playerRound,
     int? matchExposureCount,
+    List<String>? heatCategories,
+    List<String>? heatImageIds,
+    int? heatRoundIndex,
   }) =>
       RoomModel(
         id: id,
@@ -346,6 +367,9 @@ class RoomModel extends Equatable {
         isPublicRoom: isPublicRoom ?? this.isPublicRoom,
         playerRound: playerRound ?? this.playerRound,
         matchExposureCount: matchExposureCount ?? this.matchExposureCount,
+        heatCategories: heatCategories ?? this.heatCategories,
+        heatImageIds: heatImageIds ?? this.heatImageIds,
+        heatRoundIndex: heatRoundIndex ?? this.heatRoundIndex,
       );
 
   @override
@@ -391,5 +415,8 @@ class RoomModel extends Equatable {
         isPublicRoom,
         playerRound,
         matchExposureCount,
+        heatCategories,
+        heatImageIds,
+        heatRoundIndex,
       ];
 }

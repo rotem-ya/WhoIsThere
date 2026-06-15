@@ -1,0 +1,54 @@
+WhoIsThere — קטגוריית פירות וירקות: ייחוס תמונות
+מקור כל התמונות: Wikimedia Commons (רישיונות חופשיים / נחלת הכלל).
+לפני פרסום ציבורי ודאו את הרישיון בדף הקובץ ב-Commons וכללו ייחוס לפי דרישת הרישיון.
+
+apple	תפוח	https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Pink_lady_and_cross_section.jpg/500px-Pink_lady_and_cross_section.jpg
+banana	בננה	https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Bananavarieties.jpg/500px-Bananavarieties.jpg
+orange	תפוז	https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Oranges_-_whole-halved-segment.jpg/500px-Oranges_-_whole-halved-segment.jpg
+grape	ענבים	https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Grapes%2C_Rostov-on-Don%2C_Russia.jpg/500px-Grapes%2C_Rostov-on-Don%2C_Russia.jpg
+strawberry	תות שדה	https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Garden_strawberry_%28Fragaria_%C3%97_ananassa%29_single2.jpg/500px-Garden_strawberry_%28Fragaria_%C3%97_ananassa%29_single2.jpg
+watermelon	אבטיח	https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Taiwan_2009_Tainan_City_Organic_Farm_Watermelon_FRD_7962.jpg/500px-Taiwan_2009_Tainan_City_Organic_Farm_Watermelon_FRD_7962.jpg
+melon	מלון	https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Cantaloupe_and_canary_melon.jpg/500px-Cantaloupe_and_canary_melon.jpg
+pear	אגס	https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Pears.jpg/500px-Pears.jpg
+peach	אפרסק	https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Illustration_Prunus_persica_clean_no_descr.jpg/500px-Illustration_Prunus_persica_clean_no_descr.jpg
+plum	שזיף	https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Plums_African_Rose_-_whole%2C_halved_and_slice.jpg/500px-Plums_African_Rose_-_whole%2C_halved_and_slice.jpg
+cherry	דובדבן	https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Cherry_season_%2848216568227%29.jpg/500px-Cherry_season_%2848216568227%29.jpg
+pineapple	אננס	https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/%E0%B4%95%E0%B5%88%E0%B4%A4%E0%B4%9A%E0%B5%8D%E0%B4%9A%E0%B4%95%E0%B5%8D%E0%B4%95.jpg/500px-%E0%B4%95%E0%B5%88%E0%B4%A4%E0%B4%9A%E0%B5%8D%E0%B4%9A%E0%B4%95%E0%B5%8D%E0%B4%95.jpg
+mango	מנגו	https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Mangos_-_single_and_halved.jpg/500px-Mangos_-_single_and_halved.jpg
+kiwi	קיווי	https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Actinidia_fruits.jpg/500px-Actinidia_fruits.jpg
+lemon	לימון	https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/P1030323.JPG/500px-P1030323.JPG
+pomegranate	רימון	https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Pomegranate_Juice_%282019%29.jpg/500px-Pomegranate_Juice_%282019%29.jpg
+fig	תאנה	https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Ficus_carica_L%2C_1771.jpg/500px-Ficus_carica_L%2C_1771.jpg
+avocado	אבוקדו	https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Persea_americana_fruit_2.JPG/500px-Persea_americana_fruit_2.JPG
+apricot	משמש	https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Apricot_and_cross_section.jpg/500px-Apricot_and_cross_section.jpg
+raspberry	פטל	https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Raspberry_-_halved_%28Rubus_idaeus%29.jpg/500px-Raspberry_-_halved_%28Rubus_idaeus%29.jpg
+blueberry	אוכמנית	https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Blueberries.jpg/500px-Blueberries.jpg
+coconut	קוקוס	https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Cocos_nucifera_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-187.jpg/500px-Cocos_nucifera_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-187.jpg
+papaya	פפאיה	https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Carica_papaya_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-029.jpg/500px-Carica_papaya_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-029.jpg
+grapefruit	אשכולית	https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Grapefruits_-_whole-halved-segments.jpg/500px-Grapefruits_-_whole-halved-segments.jpg
+lime	ליים	https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Lime_Blossom.jpg/500px-Lime_Blossom.jpg
+tomato	עגבנייה	https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Tomato_je.jpg/500px-Tomato_je.jpg
+cucumber	מלפפון	https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/ARS_cucumber.jpg/500px-ARS_cucumber.jpg
+carrot	גזר	https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Vegetable-Carrot-Bundle-wStalks.jpg/500px-Vegetable-Carrot-Bundle-wStalks.jpg
+potato	תפוח אדמה	https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Patates.jpg/500px-Patates.jpg
+onion	בצל	https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Mixed_onions.jpg/500px-Mixed_onions.jpg
+garlic	שום	https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Allium_sativum_Woodwill_1793.jpg/500px-Allium_sativum_Woodwill_1793.jpg
+pepper	פלפל	https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Green-Yellow-Red-Pepper-2009.jpg/500px-Green-Yellow-Red-Pepper-2009.jpg
+eggplant	חציל	https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Solanum_melongena_24_08_2012_%281%29.JPG/500px-Solanum_melongena_24_08_2012_%281%29.JPG
+lettuce	חסה	https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Iceberg_lettuce_in_SB.jpg/500px-Iceberg_lettuce_in_SB.jpg
+cabbage	כרוב	https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Cabbage_and_cross_section_on_white.jpg/500px-Cabbage_and_cross_section_on_white.jpg
+broccoli	ברוקולי	https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Broccoli_and_cross_section_edit.jpg/500px-Broccoli_and_cross_section_edit.jpg
+cauliflower	כרובית	https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Chou-fleur_02.jpg/500px-Chou-fleur_02.jpg
+corn	תירס	https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Zea_mays_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-283.jpg/500px-Zea_mays_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-283.jpg
+pumpkin	דלעת	https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/FrenchMarketPumpkinsB.jpg/500px-FrenchMarketPumpkinsB.jpg
+zucchini	קישוא	https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/CSA-Striped-Zucchini.jpg/500px-CSA-Striped-Zucchini.jpg
+spinach	תרד	https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Spinacia_oleracea_Spinazie_bloeiend.jpg/500px-Spinacia_oleracea_Spinazie_bloeiend.jpg
+mushroom	פטרייה	https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Sparrige_Sch%C3%BCppling_%28Pholiota_squarrosa%29.jpg/500px-Sparrige_Sch%C3%BCppling_%28Pholiota_squarrosa%29.jpg
+peas	אפונה	https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Peas_in_pods_-_Studio.jpg/500px-Peas_in_pods_-_Studio.jpg
+beet	סלק	https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Beetroots_in_a_basket.jpg/500px-Beetroots_in_a_basket.jpg
+radish	צנונית	https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Radish_3371103037_4ab07db0bf_o.jpg/500px-Radish_3371103037_4ab07db0bf_o.jpg
+sweet_potato	בטטה	https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Ipomoea_batatas_006.JPG/500px-Ipomoea_batatas_006.JPG
+celery	סלרי	https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Celery_1.jpg/500px-Celery_1.jpg
+ginger	ג'ינג'ר	https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Koeh-146-no_text.jpg/500px-Koeh-146-no_text.jpg
+chili	פלפל חריף	https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Madame_Jeanette_and_other_chillies.jpg/500px-Madame_Jeanette_and_other_chillies.jpg
+asparagus	אספרגוס	https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Asparagus-Bundle.jpg/500px-Asparagus-Bundle.jpg

@@ -329,7 +329,24 @@ class RoomService {
     // image; only same-exposure real players will be matched into this room.
     String? preImageId;
     int matchExposure = 0;
-    if (isPublicRoom) {
+    var effectiveCategory = category;
+    List<String> heatCategories = const [];
+    List<String> heatImageIds = const [];
+
+    // Fast game (giant) → build a 3-round heat (חי / צומח / דומם).
+    if (difficulty == Difficulty.giant) {
+      final heat = await _buildHeat(players);
+      if (heat.imageIds.isNotEmpty) {
+        heatCategories = heat.categories;
+        heatImageIds = heat.imageIds;
+        preImageId = heat.imageIds.first;
+        effectiveCategory = heat.categories.first;
+        final hostExp = await _getExposureCounts(effectiveHostId);
+        matchExposure = hostExp[preImageId] ?? 0;
+        QaLoggerService.instance.log('MATCH',
+            'CREATE_HEAT rounds=${heat.imageIds.length} cats=${heat.categories.join(",")}');
+      }
+    } else if (isPublicRoom) {
       final images = await _loadLocalImages(categoryId: category);
       if (images.isNotEmpty) {
         final img = await _pickSmartImage(images, players);
@@ -354,7 +371,10 @@ class RoomService {
       selectedImageId: preImageId,
       matchExposureCount: matchExposure,
       selectedDifficulty: difficulty,
-      selectedCategory: category,
+      selectedCategory: effectiveCategory,
+      heatCategories: heatCategories,
+      heatImageIds: heatImageIds,
+      heatRoundIndex: 0,
     );
 
     QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_WRITE id=${docRef.id}');
@@ -919,6 +939,104 @@ class RoomService {
     });
   }
 
+  // ── Fast-game "heat" (sequence of quick rounds: חי / צומח / דומם) ──────────
+
+  /// Picks the heat: one image per non-empty fast-heat category, in order.
+  /// If fewer than 3 categories have content yet, tops up with more distinct
+  /// images from the categories that do — so the heat still has up to 3 rounds.
+  Future<({List<String> categories, List<String> imageIds})> _buildHeat(
+      Map<String, PlayerModel> players) async {
+    final cats = <String>[];
+    final ids = <String>[];
+    final used = <String>{};
+    for (final catId in GameCategories.fastHeat) {
+      final pool = await _loadLocalImages(categoryId: catId);
+      final fresh = pool.where((i) => !used.contains(i.id)).toList();
+      if (fresh.isEmpty) continue;
+      final img = await _pickSmartImage(fresh, players);
+      cats.add(catId);
+      ids.add(img.id);
+      used.add(img.id);
+    }
+    if (ids.length < 3) {
+      for (final catId in GameCategories.fastHeat) {
+        if (ids.length >= 3) break;
+        final pool = await _loadLocalImages(categoryId: catId);
+        for (final img in pool) {
+          if (ids.length >= 3) break;
+          if (used.add(img.id)) {
+            cats.add(catId);
+            ids.add(img.id);
+          }
+        }
+      }
+    }
+    return (categories: cats, imageIds: ids);
+  }
+
+  /// Board-reset fields for a fresh round (new image), KEEPING scores, pot and
+  /// entry-fee state. Shared by the heat-advance logic.
+  Map<String, dynamic> _roundResetUpdates(int gridSize, int nowMs) {
+    final totalCells = gridSize * gridSize;
+    final allCells = List.generate(totalCells, (i) => i);
+    final rng = Random();
+    final openCount = min(3, totalCells - 1);
+    final available = List<int>.from(allCells);
+    final revealed = <int>{};
+    final initialPlaced = <String, String>{};
+    for (var i = 0; i < openCount; i++) {
+      final idx = _pickCheckerboardTile(available, revealed, gridSize, rng);
+      available.remove(idx);
+      revealed.add(idx);
+      initialPlaced[idx.toString()] = 'system';
+    }
+    return {
+      'placedPieces': initialPlaced,
+      'availablePieceIndices': available,
+      'solvedLetters': <String>[],
+      'turnPhase': TurnPhase.revealTurn.name,
+      'revealDeadlineMs': nowMs + EconomyConfig.autoRevealIntervalMs,
+      'pendingRevealTileIndex': FieldValue.delete(),
+      'guessOpportunityPlayerId': null,
+      'guessModePlayerId': null,
+      'guessOpportunityDeadlineMs': null,
+      'guessModeDeadlineMs': null,
+      'lastRevealedByPlayerId': null,
+      'wrongGuessCounts': <String, dynamic>{},
+      'guessClaimCounts': <String, dynamic>{},
+      'blockedGuessers': <String, dynamic>{},
+      'revealCount': 0,
+      'revealCycleId': FieldValue.increment(1),
+      'winnerId': null,
+    };
+  }
+
+  /// Update map that advances a heat to its next round (next image/category).
+  Map<String, dynamic> _heatAdvanceUpdates(RoomModel room, int nowMs) {
+    final next = room.heatRoundIndex + 1;
+    return {
+      ..._roundResetUpdates(room.gridSize, nowMs),
+      'phase': GamePhase.playing.name,
+      'heatRoundIndex': next,
+      'selectedImageId': room.heatImageIds[next],
+      'selectedCategory': room.heatCategories[next],
+    };
+  }
+
+  /// Heat winner = highest cumulative score (with [bonusUid] credited [bonus]).
+  String _heatWinnerId(RoomModel room, {String? bonusUid, int bonus = 0}) {
+    String winner = room.players.keys.isEmpty ? '' : room.players.keys.first;
+    int best = -1 << 31;
+    room.players.forEach((id, p) {
+      final s = p.score + (id == bonusUid ? bonus : 0);
+      if (s > best) {
+        best = s;
+        winner = id;
+      }
+    });
+    return winner;
+  }
+
   Future<void> _collectEntryFees(
     String roomId,
     Map<String, PlayerModel> players,
@@ -1260,6 +1378,7 @@ class RoomService {
     final txStartMs = now;
     bool committed = false;
     bool noWinner = false;
+    bool heatAdvanceNoWinner = false;
     List<String>? playerIdsForRefund;
     Map<String, PlayerModel>? noWinnerPlayers;
     String? noWinnerImageId;
@@ -1300,6 +1419,19 @@ class RoomService {
           final newRevealCount = room.revealCount + 1;
 
           if (newHidden.isEmpty) {
+            // Heat mid-round: board filled with no correct guess → advance to the
+            // next round (no pot refund; the image still counts as discovered).
+            if (room.isHeat && !room.isLastHeatRound) {
+              tx.update(_rooms.doc(roomId),
+                  _heatAdvanceUpdates(room, DateTime.now().millisecondsSinceEpoch));
+              QaLoggerService.instance.log('GAME',
+                  'HEAT_ROUND_ADVANCE_NO_WINNER round=${room.heatRoundIndex}->${room.heatRoundIndex + 1}');
+              committed = true;
+              heatAdvanceNoWinner = true;
+              noWinnerPlayers = room.players;
+              noWinnerImageId = room.selectedImageId;
+              return;
+            }
             tx.update(_rooms.doc(roomId), {
               'placedPieces.${pieceIndex.toString()}': 'system',
               'availablePieceIndices': newHidden,
@@ -1410,6 +1542,12 @@ class RoomService {
 
     if (noWinner && playerIdsForRefund != null) {
       unawaited(refundPot(roomId));
+      if (noWinnerPlayers != null && noWinnerImageId != null && noWinnerImageId!.isNotEmpty) {
+        _recordDiscoveredForAll(noWinnerPlayers!, noWinnerImageId!);
+      }
+    } else if (heatAdvanceNoWinner) {
+      // No refund mid-heat (pot carries to the heat's end); just record the
+      // discovered image for the round that filled.
       if (noWinnerPlayers != null && noWinnerImageId != null && noWinnerImageId!.isNotEmpty) {
         _recordDiscoveredForAll(noWinnerPlayers!, noWinnerImageId!);
       }
@@ -1854,6 +1992,10 @@ class RoomService {
     final txStartMs = nowMs;
     bool isCorrect = false;
     bool needsEliminationCheck = false;
+    // Heat (fast game) bookkeeping for the post-transaction step.
+    bool heatAdvanced = false;
+    String? finishWinnerId;
+    Map<String, PlayerModel>? roundPlayers;
 
     try {
     await _firestore.runTransaction((tx) async {
@@ -1884,9 +2026,28 @@ class RoomService {
       isCorrect = image.isCorrectAnswer(guess);
 
       if (isCorrect) {
+        roundPlayers = room.players;
+        // Heat mid-round: award score, then advance to the next round (board
+        // reset) instead of finishing. Cumulative score persists.
+        if (room.isHeat && !room.isLastHeatRound) {
+          final adv = _heatAdvanceUpdates(room, DateTime.now().millisecondsSinceEpoch);
+          adv['players.$userId.score'] = FieldValue.increment(difficulty.winReward);
+          adv['lastGuessEvent'] = {'playerId': userId, 'guess': guess, 'isCorrect': true};
+          adv['guessCount'] = FieldValue.increment(1);
+          tx.update(_rooms.doc(roomId), adv);
+          heatAdvanced = true;
+          QaLoggerService.instance.log('GUESS',
+              'HEAT_ROUND_ADVANCE round=${room.heatRoundIndex}->${room.heatRoundIndex + 1} guesser=${_short(userId)}');
+          return;
+        }
+        // Finish: normal game, or the heat's final round. The heat winner is the
+        // highest cumulative score (with this guess's winReward credited).
+        finishWinnerId = room.isHeat
+            ? _heatWinnerId(room, bonusUid: userId, bonus: difficulty.winReward)
+            : userId;
         tx.update(_rooms.doc(roomId), {
           'phase': GamePhase.finished.name,
-          'winnerId': userId,
+          'winnerId': finishWinnerId,
           'players.$userId.score': FieldValue.increment(difficulty.winReward),
           'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': true},
           'guessCount': FieldValue.increment(1),
@@ -1987,16 +2148,13 @@ class RoomService {
       if (e is FirebaseException && e.code == 'unavailable') rethrow;
     }
 
-    if (isCorrect) {
-      unawaited(distributePot(roomId, userId));
-      // Record discovered image for all players only when game ends with a correct answer
-      final roomSnap = await _rooms.doc(roomId).get();
-      if (roomSnap.exists) {
-        final endRoom = RoomModel.fromFirestore(roomSnap);
-        if (endRoom.selectedImageId != null && endRoom.selectedImageId!.isNotEmpty) {
-          _recordDiscoveredForAll(endRoom.players, endRoom.selectedImageId!);
-        }
-      }
+    if (heatAdvanced) {
+      // Mid-heat: the guessed image counts as discovered; no pot payout yet.
+      if (roundPlayers != null) _recordDiscoveredForAll(roundPlayers!, image.id);
+    } else if (isCorrect) {
+      // Finish (normal game or heat's last round): pot to the (cumulative) winner.
+      unawaited(distributePot(roomId, finishWinnerId ?? userId));
+      if (roundPlayers != null) _recordDiscoveredForAll(roundPlayers!, image.id);
     } else if (needsEliminationCheck) {
       await _checkLastPlayerStanding(roomId);
     }

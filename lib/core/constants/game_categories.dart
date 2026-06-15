@@ -95,4 +95,9 @@ class GameCategories {
         (c) => c.id == id,
         orElse: () => all.first,
       );
+
+  /// The fast game ("מקצה") plays one quick round per category, in this order:
+  /// animal → plant → inanimate (חי / צומח / דומם). Categories without content
+  /// are skipped, so the heat fills as content lands.
+  static const List<String> fastHeat = [animals, plants, objects];
 }

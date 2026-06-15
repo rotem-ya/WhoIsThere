@@ -1669,20 +1669,36 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     if (!mounted) return correct;
     if (correct) {
-      // Duck the looping background music before the victory fanfare. Two
-      // simultaneous mp3 streams through separate AudioPlayer instances is a
-      // known native-crash trigger on iOS (audioplayers); the game is ending,
-      // so the music does not need to resume.
-      _musicShouldBePlaying = false;
-      unawaited(_bgPlayer.stop());
-      setState(() => _showCorrectGuess = true);
-      _playHeroWin();
-      _confettiLeft.play();
-      _confettiRight.play();
-      unawaited(_playVictorySound());
-      Future.delayed(const Duration(milliseconds: 2500), () {
-        if (mounted) setState(() => _showCorrectGuess = false);
-      });
+      // In a heat, a correct guess that ISN'T the final round just advances to
+      // the next round — keep the music playing and show a short celebration
+      // rather than the game-over fanfare.
+      final endsGame = !room.isHeat || room.isLastHeatRound;
+      if (endsGame) {
+        // Duck the looping background music before the victory fanfare. Two
+        // simultaneous mp3 streams through separate AudioPlayer instances is a
+        // known native-crash trigger on iOS (audioplayers); the game is ending,
+        // so the music does not need to resume.
+        _musicShouldBePlaying = false;
+        unawaited(_bgPlayer.stop());
+        setState(() => _showCorrectGuess = true);
+        _playHeroWin();
+        _confettiLeft.play();
+        _confettiRight.play();
+        unawaited(_playVictorySound());
+        Future.delayed(const Duration(milliseconds: 2500), () {
+          if (mounted) setState(() => _showCorrectGuess = false);
+        });
+      } else {
+        // Mid-heat: brief "correct → next round" feedback, music keeps playing.
+        setState(() => _showCorrectGuess = true);
+        _playHeroWin();
+        _confettiLeft.play();
+        _confettiRight.play();
+        unawaited(_playCorrectDing());
+        Future.delayed(const Duration(milliseconds: 1300), () {
+          if (mounted) setState(() => _showCorrectGuess = false);
+        });
+      }
     }
     // Wrong guess: LetterBankInput shows its own inline error feedback
     return correct;
