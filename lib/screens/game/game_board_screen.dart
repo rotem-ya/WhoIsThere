@@ -84,6 +84,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   GameImageModel? _image;
   String _loadedImageId = '';
   String _lastBotTurnKey = '';
+  // One bot guess attempt per heat round (keyed by round + image).
+  String _lastHeatBotKey = '';
   bool _isBusy = false;
 
   // Turn-reveal tracking for human guess gate
@@ -1088,6 +1090,38 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _scheduleBotGuessOpportunityDecision(room, botEntry.key);
   }
 
+  /// Fast game (חי/צומח/דומם) has no guess-opportunity phase, so the normal bot
+  /// scheduler never fires — leaving the player feeling alone. This schedules
+  /// ONE bot guess attempt per round, mid-reveal, so a bot visibly races you
+  /// (types, guesses, scores). Slow enough that a quick human still wins.
+  void _scheduleHeatBotTurn(RoomModel room) {
+    if (!room.isHeat) return;
+    if (room.phase != GamePhase.playing) return;
+    if (room.turnPhase != TurnPhase.revealTurn) return;
+
+    final key = '${room.id}-heat-${room.heatRoundIndex}-${room.selectedImageId}';
+    if (_lastHeatBotKey == key) return;
+
+    final botEntries = room.players.entries
+        .where((e) => e.value.isBot && !room.isBlockedFromGuessing(e.key))
+        .toList();
+    if (botEntries.isEmpty) return;
+    _lastHeatBotKey = key;
+
+    final botId = botEntries[_random.nextInt(botEntries.length)].key;
+    final delayMs = 5000 + _random.nextInt(6001); // ~5–11s into the round
+    Future.delayed(Duration(milliseconds: delayMs), () async {
+      if (!mounted) return;
+      final snap = await ref.read(roomServiceProvider).watchRoom(room.id).first;
+      if (snap == null || snap.phase != GamePhase.playing) return;
+      // Bail if the round already moved on (someone guessed / board filled).
+      if (snap.heatRoundIndex != room.heatRoundIndex) return;
+      if (snap.selectedImageId != room.selectedImageId) return;
+      if (snap.isBlockedFromGuessing(botId)) return;
+      await _performBotGuess(snap, botId, 0.5);
+    });
+  }
+
   void _scheduleBotGuessOpportunityDecision(RoomModel room, String botId) {
     final totalTiles = room.gridSize * room.gridSize;
     final revealedCount = room.placedPieces.length;
@@ -1210,7 +1244,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (image == null) return;
 
     final isCorrect = _random.nextDouble() < correctChance;
-    final guess = isCorrect ? image.answer : _realisticWrongGuess(image.answer);
+    final guess = isCorrect ? image.answer : await _botWrongGuess(room, image.answer);
 
     QaLoggerService.instance.log('BOT', 'BOT_SUBMIT_GUESS correct=$isCorrect');
 
@@ -1254,6 +1288,25 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     'חיפה',
     'הכנרת',
   ];
+
+  /// A plausible wrong guess for a bot. In a heat the wrong answer is drawn from
+  /// the SAME topic (so a bot never guesses a place name for an animal); the
+  /// normal place game keeps the Israeli-places pool.
+  Future<String> _botWrongGuess(RoomModel room, String answer) async {
+    if (room.isHeat) {
+      try {
+        final names = await ref
+            .read(roomServiceProvider)
+            .categoryAnswerNames(room.selectedCategory);
+        final norm = normalizeHebrewFinals(answer.trim());
+        final cands = names
+            .where((n) => n.trim().isNotEmpty && normalizeHebrewFinals(n) != norm)
+            .toList();
+        if (cands.isNotEmpty) return cands[_random.nextInt(cands.length)];
+      } catch (_) {}
+    }
+    return _realisticWrongGuess(answer);
+  }
 
   String _realisticWrongGuess(String correctAnswer) {
     final norm = normalizeHebrewFinals(correctAnswer.trim());
@@ -2244,6 +2297,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 }
 
                 _scheduleBotTurn(room);
+                _scheduleHeatBotTurn(room);
                 _syncMusicVolume(room);
 
                 if (room.currentTurnIndex != _revealedAtTurnIndex &&

@@ -2287,6 +2287,12 @@ class RoomService {
     }
   }
 
+  /// Answer names for a category (used by bots to pick same-topic wrong guesses).
+  Future<List<String>> categoryAnswerNames(String categoryId) async {
+    final imgs = await _loadLocalImages(categoryId: categoryId);
+    return imgs.map((i) => i.answer).where((a) => a.isNotEmpty).toList();
+  }
+
   Future<List<GameImageModel>> getPublicImages() => _loadLocalImages();
 
   Future<List<GameImageModel>> getAllImages() => _loadLocalImages();
