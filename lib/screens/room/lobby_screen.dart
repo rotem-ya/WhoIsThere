@@ -338,13 +338,19 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
                     const SizedBox(height: 6),
 
-                    // ── Players grid (2 × 4 = 8 fixed slots) ──────────
-                    _PlayerGrid(
-                      players: room.players.values.toList(),
-                      currentUserId: currentUser?.id,
+                    // ── Players grid (flexible + scrollable so the topic
+                    //    picker and start button stay pinned above the
+                    //    Android system bar) ──────────────────────────────
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: _PlayerGrid(
+                          players: room.players.values.toList(),
+                          currentUserId: currentUser?.id,
+                        ),
+                      ),
                     ),
 
-                    const Spacer(),
+                    const SizedBox(height: 8),
 
                     // ── Heat topic picker (חי צומח דומם friends game) ──
                     if (room.selectedDifficulty == Difficulty.giant)
