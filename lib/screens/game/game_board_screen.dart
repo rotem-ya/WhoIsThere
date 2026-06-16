@@ -102,19 +102,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   bool _chatSubReady = false; // first snapshot baselines _lastChatTs
   bool _chatOpen = false; // chat sheet currently visible → no toasts
   int _unreadChat = 0; // badge on the 💬 button
-  Timer? _botChatTimer;
   int _chatToastSeq = 0;
   final List<({int id, String name, String text})> _floatingChats = [];
-  static const List<String> _botChatLines = [
-    'בהצלחה לכולם!',
-    'אני יודע את זה!',
-    'רגע, כמעט…',
-    'איזה קל 😎',
-    'מי איתי?',
-    'הפעם אני מנצח',
-    'וואו קשה',
-    'יאללה מהר',
-  ];
   bool _isBusy = false;
 
   // Turn-reveal tracking for human guess gate
@@ -1002,7 +991,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _localGuessTimer?.cancel();
     _spotlightTimer?.cancel();
     _botReactionTimer?.cancel();
-    _botChatTimer?.cancel();
     _chatSub?.cancel();
     _guessController.dispose();
     _confettiLeft.dispose();
@@ -1371,25 +1359,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       ),
     ).whenComplete(() {
       if (mounted) setState(() => _chatOpen = false);
-    });
-  }
-
-  /// Ambient life: the host's client makes a random bot send a canned line now
-  /// and then, so the chat feels alive even in a solo/bot game.
-  void _maybeStartBotChat(RoomModel room) {
-    final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
-    if (uid == null || room.hostId != uid) return;
-    _botChatTimer ??= Timer.periodic(const Duration(seconds: 12), (_) {
-      final r = _lastRoom;
-      if (!mounted || r == null || r.phase != GamePhase.playing) return;
-      if (_random.nextDouble() > 0.35) return;
-      final bots = r.players.values.where((p) => p.isBot).toList();
-      if (bots.isEmpty) return;
-      final bot = bots[_random.nextInt(bots.length)];
-      final line = _botChatLines[_random.nextInt(_botChatLines.length)];
-      unawaited(ref
-          .read(roomServiceProvider)
-          .sendChatMessage(r.id, bot.id, bot.name, line));
     });
   }
 
@@ -2477,7 +2446,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 _consumeReaction(room);
                 _maybeStartBotReactions(room);
                 _ensureChatSub(room.id);
-                _maybeStartBotChat(room);
                 _syncMusicVolume(room);
 
                 if (room.currentTurnIndex != _revealedAtTurnIndex &&
