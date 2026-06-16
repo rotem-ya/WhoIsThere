@@ -59,6 +59,9 @@ class RoomModel extends Equatable {
   // Friends-mode heat topic picks: playerId → chosen categoryId. Resolved into
   // [heatCategories] when the host starts. Empty for quick-match (random topics).
   final Map<String, String> topicChoices;
+  // Friends games: player ids that have already claimed their placement reward
+  // (idempotency guard so the 20/5 coin gift is paid at most once each).
+  final List<String> placementPaidPlayerIds;
 
   const RoomModel({
     required this.id,
@@ -108,11 +111,16 @@ class RoomModel extends Equatable {
     this.heatImageIds = const [],
     this.heatRoundIndex = 0,
     this.topicChoices = const {},
+    this.placementPaidPlayerIds = const [],
   });
 
   // True when this room is a fast-game heat (more than one queued round).
   bool get isHeat => heatImageIds.length > 1;
   bool get isLastHeatRound => heatRoundIndex >= heatImageIds.length - 1;
+
+  // Friends games are private (not public quick-match): free entry, per-game
+  // scoring (not added to lifetime totalPoints), top-2 placement coin rewards.
+  bool get isFriendsGame => !isPublicRoom;
 
   bool isBlockedFromGuessing(String userId) {
     final blockedUntil = blockedGuessers[userId];
@@ -235,6 +243,8 @@ class RoomModel extends Equatable {
       heatImageIds: List<String>.from(data['heatImageIds'] ?? []),
       heatRoundIndex: (data['heatRoundIndex'] as num?)?.toInt() ?? 0,
       topicChoices: Map<String, String>.from(data['topicChoices'] ?? const {}),
+      placementPaidPlayerIds:
+          List<String>.from(data['placementPaidPlayerIds'] ?? const []),
     );
   }
 
@@ -285,6 +295,7 @@ class RoomModel extends Equatable {
         'heatImageIds': heatImageIds,
         'heatRoundIndex': heatRoundIndex,
         'topicChoices': topicChoices,
+        'placementPaidPlayerIds': placementPaidPlayerIds,
       };
 
   RoomModel copyWith({
@@ -331,6 +342,7 @@ class RoomModel extends Equatable {
     List<String>? heatImageIds,
     int? heatRoundIndex,
     Map<String, String>? topicChoices,
+    List<String>? placementPaidPlayerIds,
   }) =>
       RoomModel(
         id: id,
@@ -384,6 +396,8 @@ class RoomModel extends Equatable {
         heatImageIds: heatImageIds ?? this.heatImageIds,
         heatRoundIndex: heatRoundIndex ?? this.heatRoundIndex,
         topicChoices: topicChoices ?? this.topicChoices,
+        placementPaidPlayerIds:
+            placementPaidPlayerIds ?? this.placementPaidPlayerIds,
       );
 
   @override
@@ -434,5 +448,6 @@ class RoomModel extends Equatable {
         heatImageIds,
         heatRoundIndex,
         topicChoices,
+        placementPaidPlayerIds,
       ];
 }

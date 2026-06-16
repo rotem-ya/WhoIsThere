@@ -259,7 +259,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 icon: Icons.add_circle_outline_rounded,
                 iconColor: const Color(0xFF87CEEB),
                 title: 'פתח חדר',
-                subtitle: 'צור חדר וזמן חברים בקוד',
+                subtitle: 'חינם · צור חדר וזמן חברים בקוד',
                 onTap: () {
                   Navigator.of(ctx).pop();
                   _createPrivateRoom();
@@ -283,29 +283,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Future<void> _createPrivateRoom(
-      {bool bypassCoinCheck = false, Difficulty? gameType}) async {
+  Future<void> _createPrivateRoom({Difficulty? gameType}) async {
     if (_isCreating) return;
     QaLoggerService.instance.log('HOME', 'TAP_CREATE_ROOM');
     FeedbackService.click();
 
-    // Pick the game type once (זיהוי מקומות / חי צומח דומם). Re-entry from the
-    // insufficient-coins flow carries the prior pick so we don't ask twice.
+    // Pick the game type once (זיהוי מקומות / חי צומח דומם).
+    // Friends games are FREE — no entry fee, no coin check.
     final difficulty = gameType ?? await _pickDifficulty();
     if (difficulty == null) return; // dismissed
-
-    if (!bypassCoinCheck) {
-      final wallet = ref.read(walletProvider).valueOrNull;
-      final coins = wallet?.coins ?? 0;
-      if (coins < EconomyConfig.gameEntryFee) {
-        QaLoggerService.instance.log('HOME', 'CREATE_ROOM_BLOCKED_INSUFFICIENT_COINS coins=$coins');
-        if (mounted) {
-          _showInsufficientCoinsDialog(() => _createPrivateRoom(
-              bypassCoinCheck: true, gameType: difficulty));
-        }
-        return;
-      }
-    }
 
     setState(() {
       _isCreating = true;
@@ -321,6 +307,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             hostId: user.id,
             hostName: user.name,
             hostPhotoUrl: user.photoUrl,
+            entryFee: 0,
             difficulty: difficulty,
           );
 

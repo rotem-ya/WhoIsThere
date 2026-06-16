@@ -9,6 +9,7 @@ import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../core/constants/game_constants.dart';
+import '../../core/constants/economy_config.dart';
 import '../../providers/providers.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
@@ -30,6 +31,8 @@ class _WinScreenState extends ConsumerState<WinScreen>
   late final AnimationController _counterController;
   late final AnimationController _shineController;
   GameImageModel? _gameImage;
+  // Friends games: coins gifted for placing 1st (20) / 2nd (5). null until resolved.
+  int? _placementReward;
 
   @override
   void initState() {
@@ -66,7 +69,15 @@ class _WinScreenState extends ConsumerState<WinScreen>
     final currentUser = ref.read(currentUserProvider).value;
     if (room == null || currentUser == null) return;
     final myPlayer = room.players[currentUser.id];
-    if (myPlayer != null) {
+    if (myPlayer == null) return;
+    if (room.isFriendsGame) {
+      // Friends games are per-match: score is NOT added to lifetime points.
+      // Instead, the top-2 finishers receive a coin gift (20 / 5).
+      final reward = await ref
+          .read(roomServiceProvider)
+          .claimPlacementReward(widget.roomId, currentUser.id);
+      if (mounted) setState(() => _placementReward = reward);
+    } else {
       await ref
           .read(authServiceProvider)
           .updateTotalPoints(currentUser.id, myPlayer.score);
@@ -236,6 +247,12 @@ class _WinScreenState extends ConsumerState<WinScreen>
                       counterController: _counterController,
                       shineController: _shineController,
                     ),
+                  ],
+
+                  // ── Friends placement coin gift (1st = 20, 2nd = 5) ────
+                  if (room.isFriendsGame && (_placementReward ?? 0) > 0) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    _PlacementRewardBox(coins: _placementReward!),
                   ],
 
                   const SizedBox(height: AppSpacing.sm),
@@ -463,6 +480,72 @@ class _TotalRewardBox extends StatelessWidget {
             begin: 8,
             end: 0,
             delay: 520.ms,
+            duration: 300.ms,
+            curve: Curves.easeOut);
+  }
+}
+
+// ── Friends placement coin gift box (1st place = 20, 2nd place = 5) ────────
+
+class _PlacementRewardBox extends StatelessWidget {
+  final int coins;
+
+  const _PlacementRewardBox({required this.coins});
+
+  @override
+  Widget build(BuildContext context) {
+    // 1st place gets the larger gift; anything else shown here is 2nd place.
+    final isFirst = coins >= EconomyConfig.friendsFirstPlaceReward;
+    final label = isFirst ? '🥇 מקום ראשון' : '🥈 מקום שני';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A1A12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: const Color(0xFF34D399).withOpacity(0.40), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF34D399).withOpacity(0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('🎁', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 8),
+          Text(
+            '$label · פרס:',
+            style: AppTextStyles.body.copyWith(
+              color: const Color(0xFF34D399),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '+$coins',
+            style: const TextStyle(
+              color: Color(0xFF34D399),
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.monetization_on_rounded,
+              color: Color(0xFFFFD54F), size: 20),
+        ],
+      ),
+    )
+        .animate()
+        .fadeIn(delay: 560.ms, duration: 300.ms, curve: Curves.easeOut)
+        .moveY(
+            begin: 8,
+            end: 0,
+            delay: 560.ms,
             duration: 300.ms,
             curve: Curves.easeOut);
   }

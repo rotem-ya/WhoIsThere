@@ -1245,6 +1245,67 @@ class RoomService {
     }
   }
 
+  /// Friends-game placement reward: gifts coins to the top finishers
+  /// (1st = friendsFirstPlaceReward, 2nd = friendsSecondPlaceReward). Each
+  /// player claims their own, idempotently via placementPaidPlayerIds. Returns
+  /// the coins awarded (0 if none / already claimed / not eligible).
+  Future<int> claimPlacementReward(String roomId, String userId) async {
+    if (userId.startsWith('virtual_')) return 0;
+    try {
+      return await _firestore.runTransaction<int>((tx) async {
+        final roomDoc = await tx.get(_rooms.doc(roomId));
+        if (!roomDoc.exists) return 0;
+        final room = RoomModel.fromFirestore(roomDoc);
+        if (!room.isFriendsGame) return 0; // friends games only
+        if (room.phase != GamePhase.finished) return 0;
+        if (room.placementPaidPlayerIds.contains(userId)) return 0;
+
+        final sorted = room.sortedPlayers;
+        final rank = sorted.indexWhere((p) => p.id == userId);
+        var reward = 0;
+        if (rank == 0) {
+          reward = EconomyConfig.friendsFirstPlaceReward;
+        } else if (rank == 1) {
+          reward = EconomyConfig.friendsSecondPlaceReward;
+        }
+
+        // All reads before any write (Firestore tx ordering).
+        final walletDoc = await tx.get(_walletRef(userId));
+
+        // Mark claimed regardless of rank so it's never re-evaluated.
+        tx.update(_rooms.doc(roomId), {
+          'placementPaidPlayerIds': FieldValue.arrayUnion([userId]),
+        });
+        if (reward <= 0) return 0;
+
+        final wallet = walletDoc.exists
+            ? UserEconomyModel.fromFirestore(
+                userId, walletDoc.data() as Map<String, dynamic>)
+            : null;
+        final before = wallet?.coins ?? 0;
+        final after = before + reward;
+        tx.set(_walletRef(userId), {'coins': after}, SetOptions(merge: true));
+        final txId = _uuid.v4();
+        tx.set(
+            _txRef(userId, txId),
+            EconomyTransactionModel(
+              id: txId,
+              type: TransactionType.matchWin,
+              delta: reward,
+              balanceAfter: after,
+              roomId: roomId,
+              createdAt: DateTime.now().toUtc(),
+              meta: {'placementRank': rank + 1},
+            ).toFirestore());
+        return reward;
+      });
+    } catch (e) {
+      QaLoggerService.instance
+          .log('ECONOMY', 'PLACEMENT_REWARD_ERROR error=$e');
+      return 0;
+    }
+  }
+
   Future<void> refundPot(String roomId) async {
     try {
       final doc = await _rooms.doc(roomId).get();

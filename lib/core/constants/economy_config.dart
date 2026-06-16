@@ -7,6 +7,11 @@ class EconomyConfig {
   // ── Game entry & pot ─────────────────────────────────────────
   static const int gameEntryFee = 20;
 
+  // ── Friends-game placement rewards (free game, per-match scoring) ──
+  // Gift coins to the top finishers of a friends game (1st = 20, 2nd = 5).
+  static const int friendsFirstPlaceReward = 20;
+  static const int friendsSecondPlaceReward = 5;
+
   // ── Guess-claim cost (pressing the guess button) ─────────────
   // 1st press = 2, 2nd = 4, 3rd = 6 … all goes to the pot
   static const int baseGuessClaimCost = 2;

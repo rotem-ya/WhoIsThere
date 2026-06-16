@@ -4,6 +4,17 @@
 
 ---
 
+## משחק עם חברים — בחירת נושאים + טבלת ניקוד פר-משחק
+- **בחירת נושאים (חי צומח דומם):**
+  - **גלובלי (משחק מהיר):** 3 נושאים אקראיים מהמאגר הזמין (`_buildHeat` → `_availableHeatTopics` + shuffle).
+  - **חברים:** כל שחקן בוחר נושא בלובי (`room.topicChoices[uid]`). מס׳ סבבים = `max(שחקנים, 3)`; המארח/הגרלה ממלאים סבבים חסרים/עודפים (`_buildFriendsHeat`). ההיט נבנה ב-`startGameDirectly` (לא ביצירת החדר).
+  - דיאלוג בלובי כשלא כולם בחרו: "בחר אקראית והתחל" / "המתן".
+- **משחק עם חברים = חינם:** `_createPrivateRoom` יוצר עם `entryFee: 0`, ללא בדיקת מטבעות.
+- **ניקוד פר-משחק (לא מצטבר):** במשחק חברים (`room.isFriendsGame == !isPublicRoom`) הניקוד **לא** נוסף ל-`totalPoints`. טבלת הניקוד + הכרזת הזוכה מוצגות במסך הניצחון (קיים).
+- **פרסי דירוג חברים:** מקום 1 = 20🪙, מקום 2 = 5🪙 (`EconomyConfig.friendsFirstPlaceReward`/`friendsSecondPlaceReward`). מוענק ב-`RoomService.claimPlacementReward` (אידמפוטנטי דרך `placementPaidPlayerIds`), נקרא ממסך הניצחון לכל שחקן על עצמו.
+
+---
+
 ## כללי פיתוח
 - **ענף פיתוח / השקה (מאוחד):** `claude/qa-launch-prep-EXqLn`
   - זהו הענף המאוחד והיחיד לבנייה (iOS + Android). מכיל: 36 מקומות + טקסט עברי מבוקר, Apple Sign-in entitlement, תיקון קריסת "משחק מהיר" (ניטרול Firestore cache), חתימת AAB עם מפתח EA:3B דרך Secrets, וכל הקו הראשי (parallel guessing, quick-match, פרסומות, מפת גילויים).
