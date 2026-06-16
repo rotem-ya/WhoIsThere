@@ -56,6 +56,9 @@ class RoomModel extends Equatable {
   final List<String> heatCategories;
   final List<String> heatImageIds;
   final int heatRoundIndex;
+  // Friends-mode heat topic picks: playerId → chosen categoryId. Resolved into
+  // [heatCategories] when the host starts. Empty for quick-match (random topics).
+  final Map<String, String> topicChoices;
 
   const RoomModel({
     required this.id,
@@ -104,6 +107,7 @@ class RoomModel extends Equatable {
     this.heatCategories = const [],
     this.heatImageIds = const [],
     this.heatRoundIndex = 0,
+    this.topicChoices = const {},
   });
 
   // True when this room is a fast-game heat (more than one queued round).
@@ -230,6 +234,7 @@ class RoomModel extends Equatable {
       heatCategories: List<String>.from(data['heatCategories'] ?? []),
       heatImageIds: List<String>.from(data['heatImageIds'] ?? []),
       heatRoundIndex: (data['heatRoundIndex'] as num?)?.toInt() ?? 0,
+      topicChoices: Map<String, String>.from(data['topicChoices'] ?? const {}),
     );
   }
 
@@ -279,6 +284,7 @@ class RoomModel extends Equatable {
         'heatCategories': heatCategories,
         'heatImageIds': heatImageIds,
         'heatRoundIndex': heatRoundIndex,
+        'topicChoices': topicChoices,
       };
 
   RoomModel copyWith({
@@ -324,6 +330,7 @@ class RoomModel extends Equatable {
     List<String>? heatCategories,
     List<String>? heatImageIds,
     int? heatRoundIndex,
+    Map<String, String>? topicChoices,
   }) =>
       RoomModel(
         id: id,
@@ -376,6 +383,7 @@ class RoomModel extends Equatable {
         heatCategories: heatCategories ?? this.heatCategories,
         heatImageIds: heatImageIds ?? this.heatImageIds,
         heatRoundIndex: heatRoundIndex ?? this.heatRoundIndex,
+        topicChoices: topicChoices ?? this.topicChoices,
       );
 
   @override
@@ -425,5 +433,6 @@ class RoomModel extends Equatable {
         heatCategories,
         heatImageIds,
         heatRoundIndex,
+        topicChoices,
       ];
 }

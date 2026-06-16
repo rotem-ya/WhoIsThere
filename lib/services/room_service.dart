@@ -334,8 +334,11 @@ class RoomService {
     List<String> heatCategories = const [];
     List<String> heatImageIds = const [];
 
-    // Fast game (giant) → build a 3-round heat (חי / צומח / דומם).
-    if (difficulty == Difficulty.giant) {
+    // Fast game (giant): quick-match builds a 3 random-topic heat now (so the
+    // waiting room is matchable by exposure). Friends rooms DEFER the heat to
+    // start time — it's built from the players' lobby topic picks in
+    // startGameDirectly (heatImageIds stays empty until then).
+    if (difficulty == Difficulty.giant && isPublicRoom) {
       final heat = await _buildHeat(players);
       if (heat.imageIds.isNotEmpty) {
         heatCategories = heat.categories;
@@ -555,8 +558,29 @@ class RoomService {
   }
 
   Future<void> startGameDirectly(String roomId) async {
-    final doc = await _rooms.doc(roomId).get();
-    final room = RoomModel.fromFirestore(doc);
+    var doc = await _rooms.doc(roomId).get();
+    var room = RoomModel.fromFirestore(doc);
+
+    // Friends fast-game: the heat was deferred at room creation. Build it now
+    // from the players' lobby topic picks (rounds = max(players, 3); missing
+    // picks + min-3 filler are random). Quick-match rooms already have a heat.
+    if (room.selectedDifficulty == Difficulty.giant && room.heatImageIds.isEmpty) {
+      final heat = await _buildFriendsHeat(room);
+      if (heat.imageIds.isNotEmpty) {
+        await _rooms.doc(roomId).update({
+          'heatCategories': heat.categories,
+          'heatImageIds': heat.imageIds,
+          'heatRoundIndex': 0,
+          'selectedImageId': heat.imageIds.first,
+          'selectedCategory': heat.categories.first,
+        });
+        doc = await _rooms.doc(roomId).get();
+        room = RoomModel.fromFirestore(doc);
+        QaLoggerService.instance.log('MATCH',
+            'START_FRIENDS_HEAT rounds=${heat.imageIds.length} cats=${heat.categories.join(",")}');
+      }
+    }
+
     final images = await _loadLocalImages(categoryId: room.selectedCategory);
     if (images.isEmpty) return;
     // Reuse the image pre-picked at room creation (public quick-match rooms) so
@@ -942,37 +966,86 @@ class RoomService {
 
   // ── Fast-game "heat" (sequence of quick rounds: חי / צומח / דומם) ──────────
 
-  /// Picks the heat: one image per non-empty fast-heat category, in order.
-  /// If fewer than 3 categories have content yet, tops up with more distinct
-  /// images from the categories that do — so the heat still has up to 3 rounds.
-  Future<({List<String> categories, List<String> imageIds})> _buildHeat(
-      Map<String, PlayerModel> players) async {
+  /// Records a friends-lobby topic pick (playerId → categoryId).
+  Future<void> setTopicChoice(
+      String roomId, String userId, String categoryId) async {
+    try {
+      await _rooms.doc(roomId).update({'topicChoices.$userId': categoryId});
+    } catch (_) {}
+  }
+
+  /// Heat topic ids that actually have playable content right now.
+  Future<List<String>> _availableHeatTopics() async {
+    final avail = <String>[];
+    for (final c in GameCategories.fastHeat) {
+      final pool = await _loadLocalImages(categoryId: c);
+      if (pool.isNotEmpty) avail.add(c);
+    }
+    return avail;
+  }
+
+  /// Builds a heat plan (one image per topic slot) for the ordered [topics].
+  /// Topics MAY repeat (e.g. two players picked the same one) — a different
+  /// image is chosen per slot while the topic's pool allows it.
+  Future<({List<String> categories, List<String> imageIds})> _buildHeatForTopics(
+      List<String> topics, Map<String, PlayerModel> players) async {
     final cats = <String>[];
     final ids = <String>[];
     final used = <String>{};
-    for (final catId in GameCategories.fastHeat) {
+    for (final catId in topics) {
       final pool = await _loadLocalImages(categoryId: catId);
+      if (pool.isEmpty) continue; // topic has no content yet → skip slot
       final fresh = pool.where((i) => !used.contains(i.id)).toList();
-      if (fresh.isEmpty) continue;
-      final img = await _pickSmartImage(fresh, players);
+      final source = fresh.isNotEmpty ? fresh : pool;
+      final img = await _pickSmartImage(source, players);
       cats.add(catId);
       ids.add(img.id);
       used.add(img.id);
     }
-    if (ids.length < 3) {
-      for (final catId in GameCategories.fastHeat) {
-        if (ids.length >= 3) break;
-        final pool = await _loadLocalImages(categoryId: catId);
-        for (final img in pool) {
-          if (ids.length >= 3) break;
-          if (used.add(img.id)) {
-            cats.add(catId);
-            ids.add(img.id);
-          }
-        }
-      }
-    }
     return (categories: cats, imageIds: ids);
+  }
+
+  /// Quick-match heat: [count] random topics (repeats only if fewer distinct
+  /// topics have content than the requested round count).
+  Future<({List<String> categories, List<String> imageIds})> _buildHeat(
+      Map<String, PlayerModel> players, {int count = 3}) async {
+    final avail = await _availableHeatTopics();
+    if (avail.isEmpty) {
+      return (categories: <String>[], imageIds: <String>[]);
+    }
+    final shuffled = [...avail]..shuffle(Random());
+    final topics = [
+      for (var i = 0; i < count; i++) shuffled[i % shuffled.length],
+    ];
+    return _buildHeatForTopics(topics, players);
+  }
+
+  /// Friends heat: rounds = max(playerCount, 3). Each player contributes their
+  /// chosen topic (room.topicChoices); any missing pick — and the min-3 filler
+  /// slots — are filled randomly from the available topics (the host's "fill").
+  Future<({List<String> categories, List<String> imageIds})> _buildFriendsHeat(
+      RoomModel room) async {
+    final avail = await _availableHeatTopics();
+    if (avail.isEmpty) {
+      return (categories: <String>[], imageIds: <String>[]);
+    }
+    final rng = Random();
+    String randTopic() => avail[rng.nextInt(avail.length)];
+
+    final playerIds = room.players.keys.toList();
+    final rounds = max(playerIds.length, 3);
+    final topics = <String>[];
+    // One slot per player: their choice, or a random fill if they didn't pick.
+    for (final pid in playerIds) {
+      final choice = room.topicChoices[pid];
+      topics.add(
+          (choice != null && avail.contains(choice)) ? choice : randTopic());
+    }
+    // Min-3 (or beyond) filler slots.
+    while (topics.length < rounds) {
+      topics.add(randTopic());
+    }
+    return _buildHeatForTopics(topics, room.players);
   }
 
   /// Board-reset fields for a fresh round (new image), KEEPING scores, pot and
