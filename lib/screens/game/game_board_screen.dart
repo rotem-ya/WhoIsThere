@@ -3052,7 +3052,11 @@ class _ChatSheetState extends State<_ChatSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final mq = MediaQuery.of(context);
+    // Lift the sheet above the keyboard when open, otherwise above the system
+    // navigation bar / gesture area (so the input + emoji row aren't hidden).
+    final bottomInset =
+        mq.viewInsets.bottom > 0 ? mq.viewInsets.bottom : mq.viewPadding.bottom;
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: Container(
