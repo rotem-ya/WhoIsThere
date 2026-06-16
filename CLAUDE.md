@@ -175,3 +175,30 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 - [ ] `build-apk.yml` עדיין מכיל את המפתח הישן `25:C3` + סיסמה בקוד — להעביר גם אותו ל-Secrets.
 - [ ] לנקות קבצים שלא נחוצים יותר: `android/upload_certificate.pem` + תיעוד מסלול B.
 - [ ] שקול keystore עם סיסמה חזקה (כרגע `123456`).
+
+
+---
+
+## העלאה ל-App Store (iOS / TestFlight)
+
+בנייה והעלאה ל-TestFlight רצות **כולן ב-CI** (GitHub Actions, runner macOS) — אין צורך לפתוח Xcode במחשב. ה-workflow הוא `.github/workflows/build-ios.yml`, שמריץ את fastlane lane `beta` (קבצים: `ios/fastlane/Fastfile`, `ios/fastlane/Appfile`, `ios/ExportOptions.plist`). מספר ה-build נלקח אוטומטית ממספר ריצת ה-workflow, והאימות מול App Store Connect הוא דרך App Store Connect API Key (ולא סיסמת Apple ID).
+
+### 7 ה-Secrets הנדרשים
+יש להוסיף אותם ב-**Settings → Secrets and variables → Actions → New repository secret**:
+- `APPSTORE_API_KEY_ID` — ה-Key ID של מפתח App Store Connect API
+- `APPSTORE_API_ISSUER_ID` — ה-Issuer ID של מפתח App Store Connect API
+- `APPSTORE_API_KEY_P8` — קובץ ה-.p8 של המפתח, מקודד base64
+- `IOS_DIST_CERT_P12` — תעודת ההפצה (Distribution) כקובץ .p12, מקודד base64
+- `IOS_DIST_CERT_PASSWORD` — הסיסמה של קובץ ה-.p12
+- `IOS_PROVISION_PROFILE` — פרופיל ה-Provisioning (App Store) כקובץ .mobileprovision, מקודד base64
+- `APPLE_TEAM_ID` — מזהה ה-Team של חשבון Apple Developer
+
+### צעדים חד-פעמיים (ידני, ע"י אדם — לא ב-CI)
+1. הרשמה ל-**Apple Developer Program** (חשבון בתשלום).
+2. יצירת רשומת אפליקציה ב-**App Store Connect** עם bundle id `com.rotem.whoisthere`.
+3. יצירת **App Store Connect API Key** (Users and Access → Integrations / Keys) — שמירת קובץ ה-.p8, ה-Key ID וה-Issuer ID.
+4. יצירת/ייצוא **תעודת Distribution** (קובץ .p12 עם סיסמה) ו-**פרופיל Provisioning** מסוג App Store עבור `com.rotem.whoisthere`.
+5. קידוד הקבצים ל-base64 והדבקתם ב-Secrets המתאימים (לדוגמה: `base64 -i AuthKey.p8 | pbcopy`).
+
+### איך מריצים
+Actions tab → בוחרים את ה-workflow **Build iOS (TestFlight)** → **Run workflow** (טריגר `workflow_dispatch` בלבד). ה-workflow מפענח את ה-secrets לקבצים, מייבא תעודה + פרופיל ל-keychain זמני, ממלא את `ExportOptions.plist` (Team ID + שם הפרופיל), בונה IPA חתום ומעלה אותו ל-TestFlight דרך pilot. מספר ה-build נקבע אוטומטית מ-`GITHUB_RUN_NUMBER`.
