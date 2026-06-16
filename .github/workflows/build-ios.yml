@@ -1,0 +1,96 @@
+name: Build iOS (TestFlight)
+
+# Builds a signed iOS IPA and uploads it to TestFlight via fastlane.
+#
+# Run manually from the Actions tab (workflow_dispatch). Mirrors the Android
+# build-aab.yml conventions: Flutter 3.27.4 stable, build number taken from the
+# workflow run number, and every credential decoded from a base64 GitHub Secret
+# at run time — nothing sensitive is stored in the repo.
+#
+# Required GitHub Secrets (Settings -> Secrets and variables -> Actions):
+#   APPSTORE_API_KEY_ID     - App Store Connect API Key ID
+#   APPSTORE_API_ISSUER_ID  - App Store Connect API Issuer ID
+#   APPSTORE_API_KEY_P8     - App Store Connect API key (.p8), base64-encoded
+#   IOS_DIST_CERT_P12       - Apple distribution certificate (.p12), base64-encoded
+#   IOS_DIST_CERT_PASSWORD  - password for the .p12 certificate
+#   IOS_PROVISION_PROFILE   - App Store provisioning profile (.mobileprovision), base64-encoded
+#   APPLE_TEAM_ID           - Apple Developer Team ID
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.4'
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: CocoaPods install
+        run: |
+          cd ios
+          pod install
+
+      - name: Import distribution certificate into a temporary keychain
+        env:
+          IOS_DIST_CERT_P12: ${{ secrets.IOS_DIST_CERT_P12 }}
+          IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          echo "$IOS_DIST_CERT_P12" | base64 -d > "$RUNNER_TEMP/dist_cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$RUNNER_TEMP/dist_cert.p12" -P "$IOS_DIST_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH" login.keychain-db
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+      - name: Install provisioning profile
+        env:
+          IOS_PROVISION_PROFILE: ${{ secrets.IOS_PROVISION_PROFILE }}
+        run: |
+          PROFILE_PATH="$RUNNER_TEMP/profile.mobileprovision"
+          echo "$IOS_PROVISION_PROFILE" | base64 -d > "$PROFILE_PATH"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          PLIST="$(security cms -D -i "$PROFILE_PATH")"
+          PROFILE_UUID="$(echo "$PLIST" | plutil -extract UUID raw -)"
+          PROFILE_NAME="$(echo "$PLIST" | plutil -extract Name raw -)"
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+
+      - name: Write App Store Connect API key (.p8)
+        env:
+          APPSTORE_API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+        run: |
+          API_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
+          echo "$APPSTORE_API_KEY_P8" | base64 -d > "$API_KEY_PATH"
+          echo "APPSTORE_API_KEY_PATH=$API_KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Fill in ExportOptions.plist (team id + profile name)
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          sed -i '' "s/__APPLE_TEAM_ID__/$APPLE_TEAM_ID/g" ios/ExportOptions.plist
+          sed -i '' "s/__PROVISIONING_PROFILE_NAME__/$PROFILE_NAME/g" ios/ExportOptions.plist
+          cat ios/ExportOptions.plist
+
+      - name: Build IPA and upload to TestFlight
+        env:
+          APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          APPSTORE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          cd ios
+          fastlane beta
