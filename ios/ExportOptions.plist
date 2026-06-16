@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ExportOptions.plist for WhoIsThere (com.rotem.whoisthere) App Store export.
+
+  This is a template. The CI workflow (.github/workflows/build-ios.yml)
+  substitutes the two placeholders at build time:
+    __APPLE_TEAM_ID__             -> value of the APPLE_TEAM_ID secret
+    __PROVISIONING_PROFILE_NAME__ -> name read from the decoded provisioning profile
+  No real team id, profile, or secret value is stored in this file.
+-->
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store</string>
+    <key>signingStyle</key>
+    <string>manual</string>
+    <key>teamID</key>
+    <string>__APPLE_TEAM_ID__</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.rotem.whoisthere</key>
+        <string>__PROVISIONING_PROFILE_NAME__</string>
+    </dict>
+    <key>uploadSymbols</key>
+    <true/>
+    <key>uploadBitcode</key>
+    <false/>
+    <key>destination</key>
+    <string>export</string>
+</dict>
+</plist>
