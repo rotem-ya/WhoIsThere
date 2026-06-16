@@ -11,6 +11,8 @@ import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/player_model.dart';
+import '../../core/utils/chat_filter.dart';
+import '../../widgets/chat/chat_sheet.dart';
 import '../../services/qa_logger_service.dart';
 import '../../services/settings_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -50,6 +52,28 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     setState(() => _codeCopied = true);
     await Future.delayed(const Duration(milliseconds: 1500));
     if (mounted) setState(() => _codeCopied = false);
+  }
+
+  void _openChat() {
+    final user = ref.read(currentUserProvider).value;
+    QaLoggerService.instance.log('LOBBY', 'LOBBY_CHAT_OPENED');
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ChatSheet(
+        stream: ref.read(roomServiceProvider).chatMessagesStream(widget.roomId),
+        myUid: user?.id ?? '',
+        onSend: (text) {
+          final uid = user?.id;
+          if (uid == null) return;
+          final clean = ChatFilter.clean(text);
+          if (clean.isEmpty) return;
+          ref.read(roomServiceProvider).sendChatMessage(
+              widget.roomId, uid, user?.name ?? 'אני', clean);
+        },
+      ),
+    );
   }
 
   void _shareToWhatsApp(String code) {
@@ -311,7 +335,22 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         ),
 
         const SizedBox(width: 8),
-        const SizedBox(width: 36),
+
+        // Chat button — opens the room chat from the lobby (balances the back
+        // button so the title stays centered).
+        GestureDetector(
+          onTap: _openChat,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white38),
+              boxShadow: AppStyles.cyanGlowShadow(intensity: 0.3),
+            ),
+            child: const Text('💬', style: TextStyle(fontSize: 18)),
+          ),
+        ),
       ],
     );
   }
