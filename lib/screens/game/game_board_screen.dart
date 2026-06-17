@@ -1131,8 +1131,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     final botId = botEntries[_random.nextInt(botEntries.length)].key;
     // Slower than a snap reaction so a human who recognises the image still
-    // gets the first guess. ~9–16s into the round.
-    final delayMs = 9000 + _random.nextInt(7001);
+    // gets the first guess. ~12–20s into the round.
+    final delayMs = 12000 + _random.nextInt(8001);
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
       final snap = await ref.read(roomServiceProvider).watchRoom(room.id).first;
@@ -1141,17 +1141,21 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (snap.heatRoundIndex != room.heatRoundIndex) return;
       if (snap.selectedImageId != room.selectedImageId) return;
       if (snap.isBlockedFromGuessing(botId)) return;
-      // Correct chance scales with how much is actually revealed. Heat grids
-      // fill slowly, so this keys off the absolute tile count (not a ratio): the
-      // bot must NOT be an instant know-it-all when barely anything is shown.
-      // When it's wrong it submits a same-topic wrong guess and gets blocked for
-      // the round, so a human can win.
+      // Correct chance scales with how much is actually revealed (as a ratio so
+      // it's grid-size agnostic). The bot must NOT be an instant know-it-all:
+      // below ~8% it can never be right, so a human who recognises the image
+      // early always owns the win. When it's wrong it submits a same-topic wrong
+      // guess and gets blocked for the round, leaving the human a clear path.
+      final total = snap.gridSize * snap.gridSize;
       final revealed = snap.placedPieces.length;
-      final double correctChance = revealed < 6
-          ? 0.10
-          : revealed < 14
-              ? 0.28
-              : 0.45;
+      final ratio = total > 0 ? revealed / total : 0.0;
+      final double correctChance = ratio < 0.08
+          ? 0.0
+          : ratio < 0.16
+              ? 0.12
+              : ratio < 0.28
+                  ? 0.28
+                  : 0.42;
       await _performBotGuess(snap, botId, correctChance);
     });
   }
