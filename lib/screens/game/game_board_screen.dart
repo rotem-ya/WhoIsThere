@@ -1130,7 +1130,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _lastHeatBotKey = key;
 
     final botId = botEntries[_random.nextInt(botEntries.length)].key;
-    final delayMs = 5000 + _random.nextInt(6001); // ~5–11s into the round
+    // Slower than a snap reaction so a human who recognises the image still
+    // gets the first guess. ~9–16s into the round.
+    final delayMs = 9000 + _random.nextInt(7001);
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
       final snap = await ref.read(roomServiceProvider).watchRoom(room.id).first;
@@ -1139,7 +1141,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (snap.heatRoundIndex != room.heatRoundIndex) return;
       if (snap.selectedImageId != room.selectedImageId) return;
       if (snap.isBlockedFromGuessing(botId)) return;
-      await _performBotGuess(snap, botId, 0.5);
+      // Correct chance scales with how much is actually revealed. Heat grids
+      // fill slowly, so this keys off the absolute tile count (not a ratio): the
+      // bot must NOT be an instant know-it-all when barely anything is shown.
+      // When it's wrong it submits a same-topic wrong guess and gets blocked for
+      // the round, so a human can win.
+      final revealed = snap.placedPieces.length;
+      final double correctChance = revealed < 6
+          ? 0.10
+          : revealed < 14
+              ? 0.28
+              : 0.45;
+      await _performBotGuess(snap, botId, correctChance);
     });
   }
 
