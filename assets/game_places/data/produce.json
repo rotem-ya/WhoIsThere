@@ -1,0 +1,502 @@
+[
+  {
+    "id": "produce_apple",
+    "name_he": "תפוח",
+    "answer_he": "תפוח",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_apple.jpg"
+  },
+  {
+    "id": "produce_banana",
+    "name_he": "בננה",
+    "answer_he": "בננה",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_banana.jpg"
+  },
+  {
+    "id": "produce_orange",
+    "name_he": "תפוז",
+    "answer_he": "תפוז",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_orange.jpg"
+  },
+  {
+    "id": "produce_grape",
+    "name_he": "ענבים",
+    "answer_he": "ענבים",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_grape.jpg"
+  },
+  {
+    "id": "produce_strawberry",
+    "name_he": "תות שדה",
+    "answer_he": "תות שדה",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_strawberry.jpg"
+  },
+  {
+    "id": "produce_watermelon",
+    "name_he": "אבטיח",
+    "answer_he": "אבטיח",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_watermelon.jpg"
+  },
+  {
+    "id": "produce_melon",
+    "name_he": "מלון",
+    "answer_he": "מלון",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_melon.jpg"
+  },
+  {
+    "id": "produce_pear",
+    "name_he": "אגס",
+    "answer_he": "אגס",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_pear.jpg"
+  },
+  {
+    "id": "produce_peach",
+    "name_he": "אפרסק",
+    "answer_he": "אפרסק",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_peach.jpg"
+  },
+  {
+    "id": "produce_plum",
+    "name_he": "שזיף",
+    "answer_he": "שזיף",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_plum.jpg"
+  },
+  {
+    "id": "produce_cherry",
+    "name_he": "דובדבן",
+    "answer_he": "דובדבן",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_cherry.jpg"
+  },
+  {
+    "id": "produce_pineapple",
+    "name_he": "אננס",
+    "answer_he": "אננס",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_pineapple.jpg"
+  },
+  {
+    "id": "produce_mango",
+    "name_he": "מנגו",
+    "answer_he": "מנגו",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_mango.jpg"
+  },
+  {
+    "id": "produce_kiwi",
+    "name_he": "קיווי",
+    "answer_he": "קיווי",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_kiwi.jpg"
+  },
+  {
+    "id": "produce_lemon",
+    "name_he": "לימון",
+    "answer_he": "לימון",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_lemon.jpg"
+  },
+  {
+    "id": "produce_pomegranate",
+    "name_he": "רימון",
+    "answer_he": "רימון",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_pomegranate.jpg"
+  },
+  {
+    "id": "produce_fig",
+    "name_he": "תאנה",
+    "answer_he": "תאנה",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_fig.jpg"
+  },
+  {
+    "id": "produce_avocado",
+    "name_he": "אבוקדו",
+    "answer_he": "אבוקדו",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_avocado.jpg"
+  },
+  {
+    "id": "produce_apricot",
+    "name_he": "משמש",
+    "answer_he": "משמש",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_apricot.jpg"
+  },
+  {
+    "id": "produce_raspberry",
+    "name_he": "פטל",
+    "answer_he": "פטל",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_raspberry.jpg"
+  },
+  {
+    "id": "produce_blueberry",
+    "name_he": "אוכמנית",
+    "answer_he": "אוכמנית",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_blueberry.jpg"
+  },
+  {
+    "id": "produce_coconut",
+    "name_he": "קוקוס",
+    "answer_he": "קוקוס",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_coconut.jpg"
+  },
+  {
+    "id": "produce_papaya",
+    "name_he": "פפאיה",
+    "answer_he": "פפאיה",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_papaya.jpg"
+  },
+  {
+    "id": "produce_grapefruit",
+    "name_he": "אשכולית",
+    "answer_he": "אשכולית",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_grapefruit.jpg"
+  },
+  {
+    "id": "produce_lime",
+    "name_he": "ליים",
+    "answer_he": "ליים",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_lime.jpg"
+  },
+  {
+    "id": "produce_tomato",
+    "name_he": "עגבנייה",
+    "answer_he": "עגבנייה",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_tomato.jpg"
+  },
+  {
+    "id": "produce_cucumber",
+    "name_he": "מלפפון",
+    "answer_he": "מלפפון",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_cucumber.jpg"
+  },
+  {
+    "id": "produce_carrot",
+    "name_he": "גזר",
+    "answer_he": "גזר",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_carrot.jpg"
+  },
+  {
+    "id": "produce_potato",
+    "name_he": "תפוח אדמה",
+    "answer_he": "תפוח אדמה",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_potato.jpg"
+  },
+  {
+    "id": "produce_onion",
+    "name_he": "בצל",
+    "answer_he": "בצל",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_onion.jpg"
+  },
+  {
+    "id": "produce_garlic",
+    "name_he": "שום",
+    "answer_he": "שום",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_garlic.jpg"
+  },
+  {
+    "id": "produce_pepper",
+    "name_he": "פלפל",
+    "answer_he": "פלפל",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_pepper.jpg"
+  },
+  {
+    "id": "produce_eggplant",
+    "name_he": "חציל",
+    "answer_he": "חציל",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_eggplant.jpg"
+  },
+  {
+    "id": "produce_lettuce",
+    "name_he": "חסה",
+    "answer_he": "חסה",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_lettuce.jpg"
+  },
+  {
+    "id": "produce_cabbage",
+    "name_he": "כרוב",
+    "answer_he": "כרוב",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_cabbage.jpg"
+  },
+  {
+    "id": "produce_broccoli",
+    "name_he": "ברוקולי",
+    "answer_he": "ברוקולי",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_broccoli.jpg"
+  },
+  {
+    "id": "produce_cauliflower",
+    "name_he": "כרובית",
+    "answer_he": "כרובית",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_cauliflower.jpg"
+  },
+  {
+    "id": "produce_corn",
+    "name_he": "תירס",
+    "answer_he": "תירס",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_corn.jpg"
+  },
+  {
+    "id": "produce_pumpkin",
+    "name_he": "דלעת",
+    "answer_he": "דלעת",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_pumpkin.jpg"
+  },
+  {
+    "id": "produce_zucchini",
+    "name_he": "קישוא",
+    "answer_he": "קישוא",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_zucchini.jpg"
+  },
+  {
+    "id": "produce_spinach",
+    "name_he": "תרד",
+    "answer_he": "תרד",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_spinach.jpg"
+  },
+  {
+    "id": "produce_mushroom",
+    "name_he": "פטרייה",
+    "answer_he": "פטרייה",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_mushroom.jpg"
+  },
+  {
+    "id": "produce_peas",
+    "name_he": "אפונה",
+    "answer_he": "אפונה",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_peas.jpg"
+  },
+  {
+    "id": "produce_beet",
+    "name_he": "סלק",
+    "answer_he": "סלק",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_beet.jpg"
+  },
+  {
+    "id": "produce_radish",
+    "name_he": "צנונית",
+    "answer_he": "צנונית",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_radish.jpg"
+  },
+  {
+    "id": "produce_sweet_potato",
+    "name_he": "בטטה",
+    "answer_he": "בטטה",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_sweet_potato.jpg"
+  },
+  {
+    "id": "produce_celery",
+    "name_he": "סלרי",
+    "answer_he": "סלרי",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_celery.jpg"
+  },
+  {
+    "id": "produce_ginger",
+    "name_he": "ג'ינג'ר",
+    "answer_he": "ג'ינג'ר",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_ginger.jpg"
+  },
+  {
+    "id": "produce_chili",
+    "name_he": "פלפל חריף",
+    "answer_he": "פלפל חריף",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_chili.jpg"
+  },
+  {
+    "id": "produce_asparagus",
+    "name_he": "אספרגוס",
+    "answer_he": "אספרגוס",
+    "aliases_he": [],
+    "category": "produce",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/produce_asparagus.jpg"
+  }
+]

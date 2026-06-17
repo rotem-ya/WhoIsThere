@@ -5,10 +5,12 @@
 ---
 
 ## משחק עם חברים — בחירת נושאים + טבלת ניקוד פר-משחק
-- **בחירת נושאים (חי צומח דומם):**
-  - **גלובלי (משחק מהיר):** 3 נושאים אקראיים מהמאגר הזמין (`_buildHeat` → `_availableHeatTopics` + shuffle).
-  - **חברים:** כל שחקן בוחר נושא בלובי (`room.topicChoices[uid]`). מס׳ סבבים = `max(שחקנים, 3)`; המארח/הגרלה ממלאים סבבים חסרים/עודפים (`_buildFriendsHeat`). ההיט נבנה ב-`startGameDirectly` (לא ביצירת החדר).
-  - דיאלוג בלובי כשלא כולם בחרו: "בחר אקראית והתחל" / "המתן".
+- **מאגר נושאים (חי-צומח-דומם):** 11 קטגוריות ב-`GameCategories.fastHeat`: חיות, פרחים(=plants), דומם(=objects), ציפורים, כלי תחבורה, מקצועות, דגלים, כלי נגינה, פירות וירקות, בגדים, ספורט. כל קטגוריה = `assets/game_places/data/<id>.json` + תמונות ב-`assets/game_places/images/<id>_<name>.jpg` (id+שם קובץ ממורחבים בשם הקטגוריה כדי למנוע התנגשות בתיקייה השטוחה). תוכן מוטמע, `hasHints:false`.
+- **מס׳ סבבים = `max(שחקנים, 3)`** בשני המצבים.
+- **בחירת נושאים:**
+  - **גלובלי (משחק מהיר):** אקראי אוטומטי, `count = max(targetPlayers, 3)` (4 שחקנים → 4 נושאים). נבנה ב-`createRoom` (`heatRounds` param → `_buildHeat`).
+  - **חברים:** כל שחקן בוחר נושא; **המארח בוחר את העודף** כשפחות מ-3 שחקנים (2 שחקנים → מארח בוחר 2). `topicChoices: Map<playerId, List<categoryId>>`, מכסה לכל שחקן ב-`_topicQuota` (מארח = `rounds-(n-1)`). ההיט נבנה ב-`startGameDirectly` מ-`_buildFriendsHeat` (מארח ראשון, ואז השאר; סלוטים חסרים → אקראי).
+  - דיאלוג בלובי כשלא כולם השלימו מכסה: "בחר אקראית והתחל" / "המתן".
 - **משחק עם חברים = חינם:** `_createPrivateRoom` יוצר עם `entryFee: 0`, ללא בדיקת מטבעות.
 - **ניקוד פר-משחק (לא מצטבר):** במשחק חברים (`room.isFriendsGame == !isPublicRoom`) הניקוד **לא** נוסף ל-`totalPoints`. טבלת הניקוד + הכרזת הזוכה מוצגות במסך הניצחון (קיים).
 - **פרסי דירוג חברים:** מקום 1 = 20🪙, מקום 2 = 5🪙 (`EconomyConfig.friendsFirstPlaceReward`/`friendsSecondPlaceReward`). מוענק ב-`RoomService.claimPlacementReward` (אידמפוטנטי דרך `placementPaidPlayerIds`), נקרא ממסך הניצחון לכל שחקן על עצמו.

@@ -175,12 +175,19 @@ class _WinScreenState extends ConsumerState<WinScreen>
                           ClipRRect(
                             borderRadius: const BorderRadius.vertical(
                                 top: Radius.circular(24)),
-                            child: CachedNetworkImage(
-                              imageUrl: _gameImage!.imageUrl,
-                              height: 140,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            ),
+                            child: _gameImage!.imageUrl.startsWith('assets/')
+                                ? Image.asset(
+                                    _gameImage!.imageUrl,
+                                    height: 140,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  )
+                                : CachedNetworkImage(
+                                    imageUrl: _gameImage!.imageUrl,
+                                    height: 140,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(

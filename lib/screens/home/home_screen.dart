@@ -186,6 +186,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           playerCount: 1,
           isPublicRoom: true,
           difficulty: _quickDifficulty,
+          // Fast game: rounds = max(players, 3), so a 4-player quick game has 4
+          // topics. Only matters for the giant (חי-צומח-דומם) heat.
+          heatRounds: targetPlayers,
         );
         roomId = room.id;
         QaLoggerService.instance.log('HOME', 'QUICK_GAME_SUCCESS code=${room.code}');

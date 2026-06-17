@@ -56,9 +56,11 @@ class RoomModel extends Equatable {
   final List<String> heatCategories;
   final List<String> heatImageIds;
   final int heatRoundIndex;
-  // Friends-mode heat topic picks: playerId → chosen categoryId. Resolved into
-  // [heatCategories] when the host starts. Empty for quick-match (random topics).
-  final Map<String, String> topicChoices;
+  // Friends-mode heat topic picks: playerId → list of chosen categoryIds.
+  // Each player picks 1; when there are <3 players the host picks the extra
+  // topics so the heat still has ≥3 rounds. Resolved into [heatCategories] when
+  // the host starts. Empty for quick-match (random topics).
+  final Map<String, List<String>> topicChoices;
   // Friends games: player ids that have already claimed their placement reward
   // (idempotency guard so the 20/5 coin gift is paid at most once each).
   final List<String> placementPaidPlayerIds;
@@ -242,7 +244,10 @@ class RoomModel extends Equatable {
       heatCategories: List<String>.from(data['heatCategories'] ?? []),
       heatImageIds: List<String>.from(data['heatImageIds'] ?? []),
       heatRoundIndex: (data['heatRoundIndex'] as num?)?.toInt() ?? 0,
-      topicChoices: Map<String, String>.from(data['topicChoices'] ?? const {}),
+      topicChoices: (data['topicChoices'] as Map?)?.map(
+            (k, v) => MapEntry(k.toString(), List<String>.from(v as List? ?? const [])),
+          ) ??
+          const {},
       placementPaidPlayerIds:
           List<String>.from(data['placementPaidPlayerIds'] ?? const []),
     );
@@ -341,7 +346,7 @@ class RoomModel extends Equatable {
     List<String>? heatCategories,
     List<String>? heatImageIds,
     int? heatRoundIndex,
-    Map<String, String>? topicChoices,
+    Map<String, List<String>>? topicChoices,
     List<String>? placementPaidPlayerIds,
   }) =>
       RoomModel(

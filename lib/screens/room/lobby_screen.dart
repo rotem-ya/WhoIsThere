@@ -80,9 +80,26 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
   // ── Heat topic picker (חי צומח דומם friends game) ──────────────────────────
 
+  /// Rounds for the heat = max(players, 3).
+  int _heatRounds(RoomModel room) =>
+      room.players.length < 3 ? 3 : room.players.length;
+
+  /// How many topics a player must pick. Everyone picks 1; the host covers the
+  /// remainder when there are <3 players (e.g. 2 players → host picks 2).
+  int _topicQuota(RoomModel room, String playerId) {
+    if (playerId != room.hostId) return 1;
+    final remainder = _heatRounds(room) - (room.players.length - 1);
+    return remainder < 1 ? 1 : remainder;
+  }
+
   Widget _buildHeatSetup(RoomModel room, dynamic currentUser) {
     final myId = currentUser?.id as String?;
-    final myChoice = myId == null ? null : room.topicChoices[myId];
+    final myList = myId == null
+        ? const <String>[]
+        : (room.topicChoices[myId] ?? const <String>[]);
+    final myQuota = myId == null ? 1 : _topicQuota(room, myId);
+    final title =
+        myQuota > 1 ? 'בחרו $myQuota נושאים למקצה' : 'בחרו נושא למקצה';
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 8),
@@ -91,9 +108,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('בחרו נושא למקצה',
+          Text(title,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
                   fontSize: 14)),
@@ -104,7 +121,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             runSpacing: 8,
             children: [
               for (final catId in GameCategories.fastHeat)
-                _topicChip(catId, selected: myChoice == catId),
+                _topicChip(catId,
+                    selected: myList.contains(catId), myQuota: myQuota),
             ],
           ),
           const SizedBox(height: 8),
@@ -114,7 +132,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             runSpacing: 4,
             children: [
               for (final p in room.players.values)
-                _pickStatusChip(p, room.topicChoices[p.id]),
+                _pickStatusChip(p, room.topicChoices[p.id] ?? const [],
+                    _topicQuota(room, p.id)),
             ],
           ),
         ],
@@ -122,14 +141,27 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     );
   }
 
-  Widget _topicChip(String catId, {required bool selected}) {
+  Widget _topicChip(String catId,
+      {required bool selected, required int myQuota}) {
     final cat = GameCategories.byId(catId);
     return GestureDetector(
       onTap: () {
         final uid = ref.read(currentUserProvider).value?.id;
         if (uid == null) return;
         HapticFeedback.selectionClick();
-        ref.read(roomServiceProvider).setTopicChoice(widget.roomId, uid, catId);
+        final room = ref.read(roomStreamProvider(widget.roomId)).valueOrNull;
+        final current = [...?room?.topicChoices[uid]];
+        if (current.contains(catId)) {
+          current.remove(catId);
+        } else {
+          if (current.length >= myQuota && current.isNotEmpty) {
+            current.removeAt(0); // make room (replace oldest)
+          }
+          current.add(catId);
+        }
+        ref
+            .read(roomServiceProvider)
+            .setTopicChoices(widget.roomId, uid, current);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -161,21 +193,23 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     );
   }
 
-  Widget _pickStatusChip(PlayerModel p, String? choice) {
+  Widget _pickStatusChip(PlayerModel p, List<String> choices, int quota) {
     final name = p.name.isNotEmpty ? p.name : 'שחקן';
-    final chosen = choice != null;
-    final label = chosen
-        ? '$name ${GameCategories.byId(choice).emoji}'
+    final complete = choices.length >= quota;
+    final emojis =
+        choices.map((c) => GameCategories.byId(c).emoji).join(' ');
+    final label = choices.isNotEmpty
+        ? '$name $emojis${complete ? '' : ' …'}'
         : (p.isBot ? '$name 🎲' : '$name …');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: chosen
+        color: complete
             ? Colors.greenAccent.withOpacity(0.12)
             : Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: chosen
+          color: complete
               ? Colors.greenAccent.withOpacity(0.4)
               : Colors.white.withOpacity(0.12),
           width: 0.8,
@@ -183,7 +217,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
       ),
       child: Text(label,
           style: TextStyle(
-              color: chosen ? Colors.greenAccent : Colors.white54,
+              color: complete ? Colors.greenAccent : Colors.white54,
               fontSize: 11,
               fontWeight: FontWeight.w600)),
     );
@@ -392,7 +426,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                   final unchosen = room.players.values
                                       .where((p) =>
                                           !p.isBot &&
-                                          !room.topicChoices.containsKey(p.id))
+                                          (room.topicChoices[p.id]?.length ??
+                                                  0) <
+                                              _topicQuota(room, p.id))
                                       .toList();
                                   if (unchosen.isNotEmpty) {
                                     final proceed =

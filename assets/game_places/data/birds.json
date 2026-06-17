@@ -1,0 +1,482 @@
+[
+  {
+    "id": "birds_sparrow",
+    "name_he": "דרור",
+    "answer_he": "דרור",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_sparrow.jpg"
+  },
+  {
+    "id": "birds_robin",
+    "name_he": "אדום החזה",
+    "answer_he": "אדום החזה",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_robin.jpg"
+  },
+  {
+    "id": "birds_pigeon",
+    "name_he": "יונה",
+    "answer_he": "יונה",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_pigeon.jpg"
+  },
+  {
+    "id": "birds_crow",
+    "name_he": "עורב",
+    "answer_he": "עורב",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_crow.jpg"
+  },
+  {
+    "id": "birds_raven",
+    "name_he": "עורב שחור",
+    "answer_he": "עורב שחור",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_raven.jpg"
+  },
+  {
+    "id": "birds_parrot",
+    "name_he": "תוכי",
+    "answer_he": "תוכי",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_parrot.jpg"
+  },
+  {
+    "id": "birds_peacock",
+    "name_he": "טווס",
+    "answer_he": "טווס",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_peacock.jpg"
+  },
+  {
+    "id": "birds_ostrich",
+    "name_he": "יען",
+    "answer_he": "יען",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_ostrich.jpg"
+  },
+  {
+    "id": "birds_swan",
+    "name_he": "ברבור",
+    "answer_he": "ברבור",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_swan.jpg"
+  },
+  {
+    "id": "birds_woodpecker",
+    "name_he": "נקר",
+    "answer_he": "נקר",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_woodpecker.jpg"
+  },
+  {
+    "id": "birds_hummingbird",
+    "name_he": "יונק הדבש",
+    "answer_he": "יונק הדבש",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_hummingbird.jpg"
+  },
+  {
+    "id": "birds_kingfisher",
+    "name_he": "שלדג",
+    "answer_he": "שלדג",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_kingfisher.jpg"
+  },
+  {
+    "id": "birds_stork",
+    "name_he": "חסידה",
+    "answer_he": "חסידה",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_stork.jpg"
+  },
+  {
+    "id": "birds_heron",
+    "name_he": "אנפה",
+    "answer_he": "אנפה",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_heron.jpg"
+  },
+  {
+    "id": "birds_crane_bird",
+    "name_he": "עגור",
+    "answer_he": "עגור",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_crane_bird.jpg"
+  },
+  {
+    "id": "birds_seagull",
+    "name_he": "שחף",
+    "answer_he": "שחף",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_seagull.jpg"
+  },
+  {
+    "id": "birds_albatross",
+    "name_he": "אלבטרוס",
+    "answer_he": "אלבטרוס",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_albatross.jpg"
+  },
+  {
+    "id": "birds_falcon",
+    "name_he": "בז",
+    "answer_he": "בז",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_falcon.jpg"
+  },
+  {
+    "id": "birds_hawk",
+    "name_he": "נץ",
+    "answer_he": "נץ",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_hawk.jpg"
+  },
+  {
+    "id": "birds_vulture",
+    "name_he": "נשר",
+    "answer_he": "נשר",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_vulture.jpg"
+  },
+  {
+    "id": "birds_toucan",
+    "name_he": "טוקאן",
+    "answer_he": "טוקאן",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_toucan.jpg"
+  },
+  {
+    "id": "birds_cockatoo",
+    "name_he": "קקדו",
+    "answer_he": "קקדו",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_cockatoo.jpg"
+  },
+  {
+    "id": "birds_canary",
+    "name_he": "כנרית",
+    "answer_he": "כנרית",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_canary.jpg"
+  },
+  {
+    "id": "birds_finch",
+    "name_he": "פרוש",
+    "answer_he": "פרוש",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_finch.jpg"
+  },
+  {
+    "id": "birds_cardinal",
+    "name_he": "קרדינל",
+    "answer_he": "קרדינל",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_cardinal.jpg"
+  },
+  {
+    "id": "birds_swallow",
+    "name_he": "סנונית",
+    "answer_he": "סנונית",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_swallow.jpg"
+  },
+  {
+    "id": "birds_magpie",
+    "name_he": "עקעק",
+    "answer_he": "עקעק",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_magpie.jpg"
+  },
+  {
+    "id": "birds_nightingale",
+    "name_he": "זמיר",
+    "answer_he": "זמיר",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_nightingale.jpg"
+  },
+  {
+    "id": "birds_emu",
+    "name_he": "אמו",
+    "answer_he": "אמו",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_emu.jpg"
+  },
+  {
+    "id": "birds_cassowary",
+    "name_he": "קזואר",
+    "answer_he": "קזואר",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_cassowary.jpg"
+  },
+  {
+    "id": "birds_puffin",
+    "name_he": "פפין",
+    "answer_he": "פפין",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_puffin.jpg"
+  },
+  {
+    "id": "birds_quail",
+    "name_he": "שליו",
+    "answer_he": "שליו",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_quail.jpg"
+  },
+  {
+    "id": "birds_pheasant",
+    "name_he": "פסיון",
+    "answer_he": "פסיון",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_pheasant.jpg"
+  },
+  {
+    "id": "birds_partridge",
+    "name_he": "חוגלה",
+    "answer_he": "חוגלה",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_partridge.jpg"
+  },
+  {
+    "id": "birds_dove",
+    "name_he": "יונת בר",
+    "answer_he": "יונת בר",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_dove.jpg"
+  },
+  {
+    "id": "birds_goose",
+    "name_he": "אווז",
+    "answer_he": "אווז",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_goose.jpg"
+  },
+  {
+    "id": "birds_duck",
+    "name_he": "ברווז",
+    "answer_he": "ברווז",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_duck.jpg"
+  },
+  {
+    "id": "birds_rooster",
+    "name_he": "תרנגול",
+    "answer_he": "תרנגול",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_rooster.jpg"
+  },
+  {
+    "id": "birds_parakeet",
+    "name_he": "תוכון",
+    "answer_he": "תוכון",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_parakeet.jpg"
+  },
+  {
+    "id": "birds_lovebird",
+    "name_he": "תוכי אהבה",
+    "answer_he": "תוכי אהבה",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_lovebird.jpg"
+  },
+  {
+    "id": "birds_macaw",
+    "name_he": "מקאו",
+    "answer_he": "מקאו",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_macaw.jpg"
+  },
+  {
+    "id": "birds_budgerigar",
+    "name_he": "תוכון מצוי",
+    "answer_he": "תוכון מצוי",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_budgerigar.jpg"
+  },
+  {
+    "id": "birds_sparrowhawk",
+    "name_he": "נץ מצוי",
+    "answer_he": "נץ מצוי",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_sparrowhawk.jpg"
+  },
+  {
+    "id": "birds_seabird",
+    "name_he": "שחף ים",
+    "answer_he": "שחף ים",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_seabird.jpg"
+  },
+  {
+    "id": "birds_lark",
+    "name_he": "עפרוני",
+    "answer_he": "עפרוני",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_lark.jpg"
+  },
+  {
+    "id": "birds_wren",
+    "name_he": "גדרון",
+    "answer_he": "גדרון",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_wren.jpg"
+  },
+  {
+    "id": "birds_starling",
+    "name_he": "זרזיר",
+    "answer_he": "זרזיר",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_starling.jpg"
+  },
+  {
+    "id": "birds_hoopoe",
+    "name_he": "דוכיפת",
+    "answer_he": "דוכיפת",
+    "aliases_he": [],
+    "category": "birds",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/birds_hoopoe.jpg"
+  }
+]

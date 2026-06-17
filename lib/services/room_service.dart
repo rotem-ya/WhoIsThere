@@ -260,6 +260,7 @@ class RoomService {
     bool isPublicRoom = false,
     Difficulty difficulty = Difficulty.easy,
     String category = GameCategories.israelPlaces,
+    int heatRounds = 3,
   }) async {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
@@ -339,7 +340,7 @@ class RoomService {
     // start time — it's built from the players' lobby topic picks in
     // startGameDirectly (heatImageIds stays empty until then).
     if (difficulty == Difficulty.giant && isPublicRoom) {
-      final heat = await _buildHeat(players);
+      final heat = await _buildHeat(players, count: max(heatRounds, 3));
       if (heat.imageIds.isNotEmpty) {
         heatCategories = heat.categories;
         heatImageIds = heat.imageIds;
@@ -966,11 +967,13 @@ class RoomService {
 
   // ── Fast-game "heat" (sequence of quick rounds: חי / צומח / דומם) ──────────
 
-  /// Records a friends-lobby topic pick (playerId → categoryId).
-  Future<void> setTopicChoice(
-      String roomId, String userId, String categoryId) async {
+  /// Records a friends-lobby topic pick (playerId → list of categoryIds). A
+  /// regular player picks one; the host may pick several when there are fewer
+  /// than 3 players (so the heat still has ≥3 rounds).
+  Future<void> setTopicChoices(
+      String roomId, String userId, List<String> categoryIds) async {
     try {
-      await _rooms.doc(roomId).update({'topicChoices.$userId': categoryId});
+      await _rooms.doc(roomId).update({'topicChoices.$userId': categoryIds});
     } catch (_) {}
   }
 
@@ -1021,8 +1024,10 @@ class RoomService {
   }
 
   /// Friends heat: rounds = max(playerCount, 3). Each player contributes their
-  /// chosen topic (room.topicChoices); any missing pick — and the min-3 filler
-  /// slots — are filled randomly from the available topics (the host's "fill").
+  /// chosen topic(s) from room.topicChoices — a regular player picks one, the
+  /// host picks the extras when there are <3 players. Any slots still missing
+  /// (a player never picked, or the host pressed "start anyway") are filled
+  /// randomly from the available topics.
   Future<({List<String> categories, List<String> imageIds})> _buildFriendsHeat(
       RoomModel room) async {
     final avail = await _availableHeatTopics();
@@ -1032,16 +1037,20 @@ class RoomService {
     final rng = Random();
     String randTopic() => avail[rng.nextInt(avail.length)];
 
-    final playerIds = room.players.keys.toList();
-    final rounds = max(playerIds.length, 3);
+    final rounds = max(room.players.length, 3);
     final topics = <String>[];
-    // One slot per player: their choice, or a random fill if they didn't pick.
-    for (final pid in playerIds) {
-      final choice = room.topicChoices[pid];
-      topics.add(
-          (choice != null && avail.contains(choice)) ? choice : randTopic());
+    // Gather every player's picks (host first, then the rest), keeping only
+    // topics that have content.
+    final orderedIds = [
+      if (room.players.containsKey(room.hostId)) room.hostId,
+      ...room.players.keys.where((id) => id != room.hostId),
+    ];
+    for (final pid in orderedIds) {
+      for (final c in room.topicChoices[pid] ?? const <String>[]) {
+        if (avail.contains(c) && topics.length < rounds) topics.add(c);
+      }
     }
-    // Min-3 (or beyond) filler slots.
+    // Fill any remaining slots randomly (min-3 / unchosen).
     while (topics.length < rounds) {
       topics.add(randTopic());
     }

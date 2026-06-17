@@ -34,6 +34,15 @@ class GameCategories {
   static const String animals = 'animals';
   static const String plants = 'plants';
   static const String objects = 'objects';
+  // חי-צומח-דומם topic packs (each is a selectable heat topic).
+  static const String birds = 'birds';
+  static const String vehicles = 'vehicles';
+  static const String professions = 'professions';
+  static const String flags = 'flags';
+  static const String instruments = 'instruments';
+  static const String produce = 'produce';
+  static const String clothing = 'clothing';
+  static const String sports = 'sports';
   static const String worldSites = 'world_sites';
   static const String israelFigures = 'israel_figures';
   static const String worldFigures = 'world_figures';
@@ -50,15 +59,15 @@ class GameCategories {
     ),
     GameCategory(
       id: animals,
-      nameHe: 'חי',
+      nameHe: 'חיות',
       emoji: '🐾',
       assetPath: '$_dataDir/animals.json',
-      hasHints: false, // animals play without hints
+      hasHints: false, // heat topics play without hints
     ),
     GameCategory(
       id: plants,
-      nameHe: 'צומח',
-      emoji: '🌿',
+      nameHe: 'פרחים',
+      emoji: '🌸',
       assetPath: '$_dataDir/plants.json',
       hasHints: false,
     ),
@@ -67,6 +76,62 @@ class GameCategories {
       nameHe: 'דומם',
       emoji: '🪑',
       assetPath: '$_dataDir/objects.json',
+      hasHints: false,
+    ),
+    GameCategory(
+      id: birds,
+      nameHe: 'ציפורים',
+      emoji: '🐦',
+      assetPath: '$_dataDir/birds.json',
+      hasHints: false,
+    ),
+    GameCategory(
+      id: vehicles,
+      nameHe: 'כלי תחבורה',
+      emoji: '🚗',
+      assetPath: '$_dataDir/vehicles.json',
+      hasHints: false,
+    ),
+    GameCategory(
+      id: professions,
+      nameHe: 'מקצועות',
+      emoji: '👷',
+      assetPath: '$_dataDir/professions.json',
+      hasHints: false,
+    ),
+    GameCategory(
+      id: flags,
+      nameHe: 'דגלים',
+      emoji: '🚩',
+      assetPath: '$_dataDir/flags.json',
+      hasHints: false,
+    ),
+    GameCategory(
+      id: instruments,
+      nameHe: 'כלי נגינה',
+      emoji: '🎺',
+      assetPath: '$_dataDir/instruments.json',
+      hasHints: false,
+    ),
+    GameCategory(
+      id: produce,
+      nameHe: 'פירות וירקות',
+      emoji: '🍎',
+      assetPath: '$_dataDir/produce.json',
+      hasHints: false,
+    ),
+    GameCategory(
+      id: clothing,
+      nameHe: 'בגדים',
+      emoji: '👕',
+      assetPath: '$_dataDir/clothing.json',
+      hasHints: false,
+    ),
+    GameCategory(
+      id: sports,
+      nameHe: 'ספורט',
+      emoji: '⚽',
+      assetPath: '$_dataDir/sports.json',
       hasHints: false,
     ),
     GameCategory(
@@ -96,8 +161,20 @@ class GameCategories {
         orElse: () => all.first,
       );
 
-  /// The fast game ("מקצה") plays one quick round per category, in this order:
-  /// animal → plant → inanimate (חי / צומח / דומם). Categories without content
-  /// are skipped, so the heat fills as content lands.
-  static const List<String> fastHeat = [animals, plants, objects];
+  /// The fast game ("מקצה") topic pool. Quick-match draws random topics from
+  /// here; the friends lobby lets each player pick from these. Categories
+  /// without content are skipped, so the pool fills as content lands.
+  static const List<String> fastHeat = [
+    animals,
+    plants,
+    objects,
+    birds,
+    vehicles,
+    professions,
+    flags,
+    instruments,
+    produce,
+    clothing,
+    sports,
+  ];
 }

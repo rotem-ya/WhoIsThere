@@ -1,0 +1,432 @@
+[
+  {
+    "id": "clothing_shirt",
+    "name_he": "חולצה",
+    "answer_he": "חולצה",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_shirt.jpg"
+  },
+  {
+    "id": "clothing_tshirt",
+    "name_he": "חולצת טי",
+    "answer_he": "חולצת טי",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_tshirt.jpg"
+  },
+  {
+    "id": "clothing_pants",
+    "name_he": "מכנסיים",
+    "answer_he": "מכנסיים",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_pants.jpg"
+  },
+  {
+    "id": "clothing_jeans",
+    "name_he": "ג'ינס",
+    "answer_he": "ג'ינס",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_jeans.jpg"
+  },
+  {
+    "id": "clothing_shorts",
+    "name_he": "מכנסיים קצרים",
+    "answer_he": "מכנסיים קצרים",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_shorts.jpg"
+  },
+  {
+    "id": "clothing_dress",
+    "name_he": "שמלה",
+    "answer_he": "שמלה",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_dress.jpg"
+  },
+  {
+    "id": "clothing_skirt",
+    "name_he": "חצאית",
+    "answer_he": "חצאית",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_skirt.jpg"
+  },
+  {
+    "id": "clothing_coat",
+    "name_he": "מעיל",
+    "answer_he": "מעיל",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_coat.jpg"
+  },
+  {
+    "id": "clothing_sweater",
+    "name_he": "סוודר",
+    "answer_he": "סוודר",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_sweater.jpg"
+  },
+  {
+    "id": "clothing_hoodie",
+    "name_he": "קפוצ'ון",
+    "answer_he": "קפוצ'ון",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_hoodie.jpg"
+  },
+  {
+    "id": "clothing_suit",
+    "name_he": "חליפה",
+    "answer_he": "חליפה",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_suit.jpg"
+  },
+  {
+    "id": "clothing_vest",
+    "name_he": "וסט",
+    "answer_he": "וסט",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_vest.jpg"
+  },
+  {
+    "id": "clothing_socks",
+    "name_he": "גרביים",
+    "answer_he": "גרביים",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_socks.jpg"
+  },
+  {
+    "id": "clothing_shoes",
+    "name_he": "נעליים",
+    "answer_he": "נעליים",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_shoes.jpg"
+  },
+  {
+    "id": "clothing_boots",
+    "name_he": "מגפיים",
+    "answer_he": "מגפיים",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_boots.jpg"
+  },
+  {
+    "id": "clothing_sneakers",
+    "name_he": "נעלי ספורט",
+    "answer_he": "נעלי ספורט",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_sneakers.jpg"
+  },
+  {
+    "id": "clothing_hat",
+    "name_he": "כובע",
+    "answer_he": "כובע",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_hat.jpg"
+  },
+  {
+    "id": "clothing_cap",
+    "name_he": "כובע מצחייה",
+    "answer_he": "כובע מצחייה",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_cap.jpg"
+  },
+  {
+    "id": "clothing_scarf",
+    "name_he": "צעיף",
+    "answer_he": "צעיף",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_scarf.jpg"
+  },
+  {
+    "id": "clothing_gloves",
+    "name_he": "כפפות",
+    "answer_he": "כפפות",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_gloves.jpg"
+  },
+  {
+    "id": "clothing_tie",
+    "name_he": "עניבה",
+    "answer_he": "עניבה",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_tie.jpg"
+  },
+  {
+    "id": "clothing_bowtie",
+    "name_he": "עניבת פרפר",
+    "answer_he": "עניבת פרפר",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_bowtie.jpg"
+  },
+  {
+    "id": "clothing_raincoat",
+    "name_he": "מעיל גשם",
+    "answer_he": "מעיל גשם",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_raincoat.jpg"
+  },
+  {
+    "id": "clothing_swimsuit",
+    "name_he": "בגד ים",
+    "answer_he": "בגד ים",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_swimsuit.jpg"
+  },
+  {
+    "id": "clothing_underwear",
+    "name_he": "תחתונים",
+    "answer_he": "תחתונים",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_underwear.jpg"
+  },
+  {
+    "id": "clothing_bra",
+    "name_he": "חזייה",
+    "answer_he": "חזייה",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_bra.jpg"
+  },
+  {
+    "id": "clothing_blouse",
+    "name_he": "חולצת נשים",
+    "answer_he": "חולצת נשים",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_blouse.jpg"
+  },
+  {
+    "id": "clothing_cardigan",
+    "name_he": "קרדיגן",
+    "answer_he": "קרדיגן",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_cardigan.jpg"
+  },
+  {
+    "id": "clothing_jumpsuit",
+    "name_he": "אוברול",
+    "answer_he": "אוברול",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_jumpsuit.jpg"
+  },
+  {
+    "id": "clothing_leggings",
+    "name_he": "טייץ",
+    "answer_he": "טייץ",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_leggings.jpg"
+  },
+  {
+    "id": "clothing_apron",
+    "name_he": "סינר",
+    "answer_he": "סינר",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_apron.jpg"
+  },
+  {
+    "id": "clothing_overalls",
+    "name_he": "סרבל",
+    "answer_he": "סרבל",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_overalls.jpg"
+  },
+  {
+    "id": "clothing_mittens",
+    "name_he": "כפפות אצבע",
+    "answer_he": "כפפות אצבע",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_mittens.jpg"
+  },
+  {
+    "id": "clothing_beanie",
+    "name_he": "כובע גרב",
+    "answer_he": "כובע גרב",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_beanie.jpg"
+  },
+  {
+    "id": "clothing_heels",
+    "name_he": "עקבים",
+    "answer_he": "עקבים",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_heels.jpg"
+  },
+  {
+    "id": "clothing_flip_flops",
+    "name_he": "כפכפים",
+    "answer_he": "כפכפים",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_flip_flops.jpg"
+  },
+  {
+    "id": "clothing_kimono",
+    "name_he": "קימונו",
+    "answer_he": "קימונו",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_kimono.jpg"
+  },
+  {
+    "id": "clothing_hoodie_jacket",
+    "name_he": "מעיל קפוצ'ון",
+    "answer_he": "מעיל קפוצ'ון",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_hoodie_jacket.jpg"
+  },
+  {
+    "id": "clothing_turtleneck",
+    "name_he": "גולף",
+    "answer_he": "גולף",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_turtleneck.jpg"
+  },
+  {
+    "id": "clothing_tank_top",
+    "name_he": "גופייה",
+    "answer_he": "גופייה",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_tank_top.jpg"
+  },
+  {
+    "id": "clothing_sunglasses",
+    "name_he": "משקפי שמש",
+    "answer_he": "משקפי שמש",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_sunglasses.jpg"
+  },
+  {
+    "id": "clothing_helmet",
+    "name_he": "קסדה",
+    "answer_he": "קסדה",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_helmet.jpg"
+  },
+  {
+    "id": "clothing_scarf_winter",
+    "name_he": "צעיף חורף",
+    "answer_he": "צעיף חורף",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_scarf_winter.jpg"
+  }
+]

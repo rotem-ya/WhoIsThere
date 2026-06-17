@@ -1,0 +1,482 @@
+[
+  {
+    "id": "professions_doctor",
+    "name_he": "רופא",
+    "answer_he": "רופא",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_doctor.jpg"
+  },
+  {
+    "id": "professions_nurse",
+    "name_he": "אחות",
+    "answer_he": "אחות",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_nurse.jpg"
+  },
+  {
+    "id": "professions_teacher",
+    "name_he": "מורה",
+    "answer_he": "מורה",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_teacher.jpg"
+  },
+  {
+    "id": "professions_firefighter",
+    "name_he": "כבאי",
+    "answer_he": "כבאי",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_firefighter.jpg"
+  },
+  {
+    "id": "professions_police_officer",
+    "name_he": "שוטר",
+    "answer_he": "שוטר",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_police_officer.jpg"
+  },
+  {
+    "id": "professions_chef",
+    "name_he": "שף",
+    "answer_he": "שף",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_chef.jpg"
+  },
+  {
+    "id": "professions_baker",
+    "name_he": "אופה",
+    "answer_he": "אופה",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_baker.jpg"
+  },
+  {
+    "id": "professions_farmer",
+    "name_he": "חקלאי",
+    "answer_he": "חקלאי",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_farmer.jpg"
+  },
+  {
+    "id": "professions_fisherman",
+    "name_he": "דייג",
+    "answer_he": "דייג",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_fisherman.jpg"
+  },
+  {
+    "id": "professions_pilot",
+    "name_he": "טייס",
+    "answer_he": "טייס",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_pilot.jpg"
+  },
+  {
+    "id": "professions_sailor",
+    "name_he": "מלח",
+    "answer_he": "מלח",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_sailor.jpg"
+  },
+  {
+    "id": "professions_soldier",
+    "name_he": "חייל",
+    "answer_he": "חייל",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_soldier.jpg"
+  },
+  {
+    "id": "professions_judge",
+    "name_he": "שופט",
+    "answer_he": "שופט",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_judge.jpg"
+  },
+  {
+    "id": "professions_lawyer",
+    "name_he": "עורך דין",
+    "answer_he": "עורך דין",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_lawyer.jpg"
+  },
+  {
+    "id": "professions_scientist",
+    "name_he": "מדען",
+    "answer_he": "מדען",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_scientist.jpg"
+  },
+  {
+    "id": "professions_engineer",
+    "name_he": "מהנדס",
+    "answer_he": "מהנדס",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_engineer.jpg"
+  },
+  {
+    "id": "professions_architect",
+    "name_he": "אדריכל",
+    "answer_he": "אדריכל",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_architect.jpg"
+  },
+  {
+    "id": "professions_programmer",
+    "name_he": "מתכנת",
+    "answer_he": "מתכנת",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_programmer.jpg"
+  },
+  {
+    "id": "professions_accountant",
+    "name_he": "רואה חשבון",
+    "answer_he": "רואה חשבון",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_accountant.jpg"
+  },
+  {
+    "id": "professions_electrician",
+    "name_he": "חשמלאי",
+    "answer_he": "חשמלאי",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_electrician.jpg"
+  },
+  {
+    "id": "professions_plumber",
+    "name_he": "שרברב",
+    "answer_he": "שרברב",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_plumber.jpg"
+  },
+  {
+    "id": "professions_carpenter",
+    "name_he": "נגר",
+    "answer_he": "נגר",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_carpenter.jpg"
+  },
+  {
+    "id": "professions_mechanic",
+    "name_he": "מכונאי",
+    "answer_he": "מכונאי",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_mechanic.jpg"
+  },
+  {
+    "id": "professions_painter_art",
+    "name_he": "צייר",
+    "answer_he": "צייר",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_painter_art.jpg"
+  },
+  {
+    "id": "professions_musician",
+    "name_he": "מוזיקאי",
+    "answer_he": "מוזיקאי",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_musician.jpg"
+  },
+  {
+    "id": "professions_singer",
+    "name_he": "זמר",
+    "answer_he": "זמר",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_singer.jpg"
+  },
+  {
+    "id": "professions_dancer",
+    "name_he": "רקדן",
+    "answer_he": "רקדן",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_dancer.jpg"
+  },
+  {
+    "id": "professions_actor",
+    "name_he": "שחקן",
+    "answer_he": "שחקן",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_actor.jpg"
+  },
+  {
+    "id": "professions_photographer",
+    "name_he": "צלם",
+    "answer_he": "צלם",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_photographer.jpg"
+  },
+  {
+    "id": "professions_journalist",
+    "name_he": "עיתונאי",
+    "answer_he": "עיתונאי",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_journalist.jpg"
+  },
+  {
+    "id": "professions_writer",
+    "name_he": "סופר",
+    "answer_he": "סופר",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_writer.jpg"
+  },
+  {
+    "id": "professions_librarian",
+    "name_he": "ספרן",
+    "answer_he": "ספרן",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_librarian.jpg"
+  },
+  {
+    "id": "professions_dentist",
+    "name_he": "רופא שיניים",
+    "answer_he": "רופא שיניים",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_dentist.jpg"
+  },
+  {
+    "id": "professions_veterinarian",
+    "name_he": "וטרינר",
+    "answer_he": "וטרינר",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_veterinarian.jpg"
+  },
+  {
+    "id": "professions_pharmacist",
+    "name_he": "רוקח",
+    "answer_he": "רוקח",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_pharmacist.jpg"
+  },
+  {
+    "id": "professions_tailor",
+    "name_he": "חייט",
+    "answer_he": "חייט",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_tailor.jpg"
+  },
+  {
+    "id": "professions_butcher",
+    "name_he": "קצב",
+    "answer_he": "קצב",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_butcher.jpg"
+  },
+  {
+    "id": "professions_waiter",
+    "name_he": "מלצר",
+    "answer_he": "מלצר",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_waiter.jpg"
+  },
+  {
+    "id": "professions_cashier",
+    "name_he": "קופאי",
+    "answer_he": "קופאי",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_cashier.jpg"
+  },
+  {
+    "id": "professions_driver",
+    "name_he": "נהג",
+    "answer_he": "נהג",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_driver.jpg"
+  },
+  {
+    "id": "professions_astronaut",
+    "name_he": "אסטרונאוט",
+    "answer_he": "אסטרונאוט",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_astronaut.jpg"
+  },
+  {
+    "id": "professions_miner",
+    "name_he": "כורה",
+    "answer_he": "כורה",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_miner.jpg"
+  },
+  {
+    "id": "professions_blacksmith",
+    "name_he": "נפח",
+    "answer_he": "נפח",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_blacksmith.jpg"
+  },
+  {
+    "id": "professions_postman",
+    "name_he": "דוור",
+    "answer_he": "דוור",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_postman.jpg"
+  },
+  {
+    "id": "professions_cleaner",
+    "name_he": "מנקה",
+    "answer_he": "מנקה",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_cleaner.jpg"
+  },
+  {
+    "id": "professions_construction_worker",
+    "name_he": "פועל בניין",
+    "answer_he": "פועל בניין",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_construction_worker.jpg"
+  },
+  {
+    "id": "professions_surgeon",
+    "name_he": "מנתח",
+    "answer_he": "מנתח",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_surgeon.jpg"
+  },
+  {
+    "id": "professions_referee",
+    "name_he": "שופט ספורט",
+    "answer_he": "שופט ספורט",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_referee.jpg"
+  }
+]
