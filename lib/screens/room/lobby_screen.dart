@@ -82,25 +82,19 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   // ── Heat topic picker (חי צומח דומם friends game) ──────────────────────────
 
   /// Rounds for the heat = max(players, 3).
-  int _heatRounds(RoomModel room) =>
-      room.players.length < 3 ? 3 : room.players.length;
-
-  /// How many topics a player must pick. Everyone picks 1; the host covers the
-  /// remainder when there are <3 players (e.g. 2 players → host picks 2).
-  int _topicQuota(RoomModel room, String playerId) {
-    if (playerId != room.hostId) return 1;
-    final remainder = _heatRounds(room) - (room.players.length - 1);
-    return remainder < 1 ? 1 : remainder;
-  }
+  /// Minimum topics a participant must pick to be "ready": exactly one — for
+  /// everyone. The host may pick MORE (see [_topicChip]) to add heat rounds;
+  /// the extra picks are optional, so the required count stays 1.
+  int _topicQuota(RoomModel room, String playerId) => 1;
 
   Widget _buildHeatSetup(RoomModel room, dynamic currentUser) {
     final myId = currentUser?.id as String?;
     final myList = myId == null
         ? const <String>[]
         : (room.topicChoices[myId] ?? const <String>[]);
-    final myQuota = myId == null ? 1 : _topicQuota(room, myId);
-    final title =
-        myQuota > 1 ? 'בחרו $myQuota נושאים למקצה' : 'בחרו נושא למקצה';
+    final isHost = myId != null && myId == room.hostId;
+    // Non-host picks exactly one; the host may pick several to lengthen the heat.
+    final title = isHost ? 'בחרו נושא — אפשר כמה שתרצו' : 'בחרו נושא למקצה';
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 8),
@@ -126,7 +120,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
               for (final catId in GameCategories.fastHeat)
                 if (ContentManifestService.instance.isCategoryActive(catId))
                   _topicChip(catId,
-                      selected: myList.contains(catId), myQuota: myQuota),
+                      selected: myList.contains(catId), isHost: isHost),
             ],
           ),
           const SizedBox(height: 8),
@@ -146,7 +140,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 
   Widget _topicChip(String catId,
-      {required bool selected, required int myQuota}) {
+      {required bool selected, required bool isHost}) {
     final cat = GameCategories.byId(catId);
     return GestureDetector(
       onTap: () {
@@ -158,9 +152,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         if (current.contains(catId)) {
           current.remove(catId);
         } else {
-          if (current.length >= myQuota && current.isNotEmpty) {
-            current.removeAt(0); // make room (replace oldest)
-          }
+          // Non-host picks exactly one (replace previous); host may add many.
+          if (!isHost) current.clear();
           current.add(catId);
         }
         ref

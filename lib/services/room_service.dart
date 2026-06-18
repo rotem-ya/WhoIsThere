@@ -967,9 +967,9 @@ class RoomService {
 
   // ── Fast-game "heat" (sequence of quick rounds: חי / צומח / דומם) ──────────
 
-  /// Records a friends-lobby topic pick (playerId → list of categoryIds). A
-  /// regular player picks one; the host may pick several when there are fewer
-  /// than 3 players (so the heat still has ≥3 rounds).
+  /// Records a friends-lobby topic pick (playerId → list of categoryIds). Every
+  /// participant picks exactly one; the host may pick as many as they like, and
+  /// each extra adds a heat round (see [_buildFriendsHeat]).
   Future<void> setTopicChoices(
       String roomId, String userId, List<String> categoryIds) async {
     try {
@@ -1025,11 +1025,11 @@ class RoomService {
     return _buildHeatForTopics(topics, players);
   }
 
-  /// Friends heat: rounds = max(playerCount, 3). Each player contributes their
-  /// chosen topic(s) from room.topicChoices — a regular player picks one, the
-  /// host picks the extras when there are <3 players. Any slots still missing
-  /// (a player never picked, or the host pressed "start anyway") are filled
-  /// randomly from the available topics.
+  /// Friends heat: each participant contributes ONE topic; the host may
+  /// contribute as many as they picked, which lengthens the heat. Round count =
+  /// max(max(playerCount, 3), totalPicks) — the host's extra picks add rounds,
+  /// while the ≥3 / ≥players floor is preserved. Any remaining slots (a player
+  /// never picked, or the host pressed "start anyway") are filled randomly.
   Future<({List<String> categories, List<String> imageIds})> _buildFriendsHeat(
       RoomModel room) async {
     final avail = await _availableHeatTopics();
@@ -1039,20 +1039,21 @@ class RoomService {
     final rng = Random();
     String randTopic() => avail[rng.nextInt(avail.length)];
 
-    final rounds = max(room.players.length, 3);
     final topics = <String>[];
-    // Gather every player's picks (host first, then the rest), keeping only
-    // topics that have content.
+    // Gather picks host-first: the host keeps all of theirs, every other player
+    // contributes at most one. Only topics with content are counted.
     final orderedIds = [
       if (room.players.containsKey(room.hostId)) room.hostId,
       ...room.players.keys.where((id) => id != room.hostId),
     ];
     for (final pid in orderedIds) {
-      for (final c in room.topicChoices[pid] ?? const <String>[]) {
-        if (avail.contains(c) && topics.length < rounds) topics.add(c);
-      }
+      final picks =
+          (room.topicChoices[pid] ?? const <String>[]).where(avail.contains);
+      topics.addAll(pid == room.hostId ? picks : picks.take(1));
     }
-    // Fill any remaining slots randomly (min-3 / unchosen).
+    // Round count grows with the host's picks, but never below 3 / players.
+    final rounds = max(max(room.players.length, 3), topics.length);
+    // Fill any remaining slots randomly (min floor / unchosen players).
     while (topics.length < rounds) {
       topics.add(randTopic());
     }
