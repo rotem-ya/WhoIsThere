@@ -1,11 +1,19 @@
 {
-  "version": 1,
-  "_comment": "Seed snapshot of WhoIsThere BUNDLED content (baked into the app). Import once into the admin's catalog, then keep isActive in sync via content_manifest/places_v1. 'remote' places (added by admin, image in Storage) are appended on top of these. Regenerate from the game repo when bundled content changes.",
+  "version": 2,
+  "_comment": "Seed snapshot of WhoIsThere BUNDLED content (baked into the app). Import once into the admin's catalog, then keep isActive in sync via content_manifest/places_v1. To hide a whole topic use the manifest's top-level topicsActive map (categoryId -> bool). 'remote' places (added by admin, image in Storage) are appended on top of these. 'category' is the GAME category id (= source filename), NOT the per-item sub-type. Regenerate from the game repo when bundled content changes.",
   "counts": {
     "israel_places": 45,
-    "animals": 60,
-    "plants": 50,
-    "objects": 50
+    "animals": 59,
+    "plants": 40,
+    "objects": 47,
+    "birds": 48,
+    "vehicles": 47,
+    "professions": 48,
+    "flags": 28,
+    "instruments": 48,
+    "produce": 50,
+    "clothing": 43,
+    "sports": 43
   },
   "places": [
     {
@@ -369,7 +377,7 @@
       "answerHe": "תל חי"
     },
     {
-      "id": "lion",
+      "id": "animals_lion",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -377,7 +385,7 @@
       "answerHe": "אריה"
     },
     {
-      "id": "elephant",
+      "id": "animals_elephant",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -385,7 +393,7 @@
       "answerHe": "פיל"
     },
     {
-      "id": "giraffe",
+      "id": "animals_giraffe",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -393,7 +401,7 @@
       "answerHe": "ג'ירפה"
     },
     {
-      "id": "zebra",
+      "id": "animals_zebra",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -401,7 +409,7 @@
       "answerHe": "זברה"
     },
     {
-      "id": "kangaroo",
+      "id": "animals_kangaroo",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -409,7 +417,7 @@
       "answerHe": "קנגורו"
     },
     {
-      "id": "penguin",
+      "id": "animals_penguin",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -417,7 +425,7 @@
       "answerHe": "פינגווין"
     },
     {
-      "id": "polar_bear",
+      "id": "animals_polar_bear",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -425,7 +433,7 @@
       "answerHe": "דוב קוטב"
     },
     {
-      "id": "tiger",
+      "id": "animals_tiger",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -433,7 +441,7 @@
       "answerHe": "טיגריס"
     },
     {
-      "id": "dolphin",
+      "id": "animals_dolphin",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -441,7 +449,7 @@
       "answerHe": "דולפין"
     },
     {
-      "id": "owl",
+      "id": "animals_owl",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -449,7 +457,7 @@
       "answerHe": "ינשוף"
     },
     {
-      "id": "dog",
+      "id": "animals_dog",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -457,7 +465,7 @@
       "answerHe": "כלב"
     },
     {
-      "id": "cat",
+      "id": "animals_cat",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -465,7 +473,7 @@
       "answerHe": "חתול"
     },
     {
-      "id": "horse",
+      "id": "animals_horse",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -473,7 +481,7 @@
       "answerHe": "סוס"
     },
     {
-      "id": "cow",
+      "id": "animals_cow",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -481,7 +489,7 @@
       "answerHe": "פרה"
     },
     {
-      "id": "sheep",
+      "id": "animals_sheep",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -489,7 +497,7 @@
       "answerHe": "כבשה"
     },
     {
-      "id": "goat",
+      "id": "animals_goat",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -497,7 +505,7 @@
       "answerHe": "עז"
     },
     {
-      "id": "pig",
+      "id": "animals_pig",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -505,7 +513,7 @@
       "answerHe": "חזיר"
     },
     {
-      "id": "rabbit",
+      "id": "animals_rabbit",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -513,7 +521,7 @@
       "answerHe": "ארנב"
     },
     {
-      "id": "chicken",
+      "id": "animals_chicken",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -521,7 +529,7 @@
       "answerHe": "תרנגולת"
     },
     {
-      "id": "duck",
+      "id": "animals_duck",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -529,7 +537,7 @@
       "answerHe": "ברווז"
     },
     {
-      "id": "goose",
+      "id": "animals_goose",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -537,7 +545,7 @@
       "answerHe": "אווז"
     },
     {
-      "id": "monkey",
+      "id": "animals_monkey",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -545,7 +553,7 @@
       "answerHe": "קוף"
     },
     {
-      "id": "gorilla",
+      "id": "animals_gorilla",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -553,7 +561,7 @@
       "answerHe": "גורילה"
     },
     {
-      "id": "chimpanzee",
+      "id": "animals_chimpanzee",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -561,7 +569,7 @@
       "answerHe": "שימפנזה"
     },
     {
-      "id": "bear",
+      "id": "animals_bear",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -569,7 +577,7 @@
       "answerHe": "דוב"
     },
     {
-      "id": "panda",
+      "id": "animals_panda",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -577,7 +585,7 @@
       "answerHe": "פנדה"
     },
     {
-      "id": "wolf",
+      "id": "animals_wolf",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -585,7 +593,7 @@
       "answerHe": "זאב"
     },
     {
-      "id": "fox",
+      "id": "animals_fox",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -593,7 +601,7 @@
       "answerHe": "שועל"
     },
     {
-      "id": "deer",
+      "id": "animals_deer",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -601,7 +609,7 @@
       "answerHe": "אייל"
     },
     {
-      "id": "rhinoceros",
+      "id": "animals_rhinoceros",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -609,7 +617,7 @@
       "answerHe": "קרנף"
     },
     {
-      "id": "hippopotamus",
+      "id": "animals_hippopotamus",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -617,7 +625,7 @@
       "answerHe": "היפופוטם"
     },
     {
-      "id": "crocodile",
+      "id": "animals_crocodile",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -625,7 +633,7 @@
       "answerHe": "תנין"
     },
     {
-      "id": "snake",
+      "id": "animals_snake",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -633,7 +641,7 @@
       "answerHe": "נחש"
     },
     {
-      "id": "turtle",
+      "id": "animals_turtle",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -641,7 +649,7 @@
       "answerHe": "צב"
     },
     {
-      "id": "frog",
+      "id": "animals_frog",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -649,7 +657,7 @@
       "answerHe": "צפרדע"
     },
     {
-      "id": "camel",
+      "id": "animals_camel",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -657,7 +665,7 @@
       "answerHe": "גמל"
     },
     {
-      "id": "eagle",
+      "id": "animals_eagle",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -665,7 +673,7 @@
       "answerHe": "נשר"
     },
     {
-      "id": "peacock",
+      "id": "animals_peacock",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -673,7 +681,7 @@
       "answerHe": "טווס"
     },
     {
-      "id": "parrot",
+      "id": "animals_parrot",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -681,7 +689,7 @@
       "answerHe": "תוכי"
     },
     {
-      "id": "flamingo",
+      "id": "animals_flamingo",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -689,7 +697,7 @@
       "answerHe": "פלמינגו"
     },
     {
-      "id": "ostrich",
+      "id": "animals_ostrich",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -697,7 +705,7 @@
       "answerHe": "יען"
     },
     {
-      "id": "swan",
+      "id": "animals_swan",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -705,7 +713,7 @@
       "answerHe": "ברבור"
     },
     {
-      "id": "shark",
+      "id": "animals_shark",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -713,7 +721,7 @@
       "answerHe": "כריש"
     },
     {
-      "id": "whale",
+      "id": "animals_whale",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -721,7 +729,7 @@
       "answerHe": "לווייתן"
     },
     {
-      "id": "octopus",
+      "id": "animals_octopus",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -729,7 +737,7 @@
       "answerHe": "תמנון"
     },
     {
-      "id": "crab",
+      "id": "animals_crab",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -737,7 +745,7 @@
       "answerHe": "סרטן"
     },
     {
-      "id": "seahorse",
+      "id": "animals_seahorse",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -745,7 +753,7 @@
       "answerHe": "סוסון ים"
     },
     {
-      "id": "jellyfish",
+      "id": "animals_jellyfish",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -753,7 +761,7 @@
       "answerHe": "מדוזה"
     },
     {
-      "id": "butterfly",
+      "id": "animals_butterfly",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -761,7 +769,7 @@
       "answerHe": "פרפר"
     },
     {
-      "id": "bee",
+      "id": "animals_bee",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -769,7 +777,7 @@
       "answerHe": "דבורה"
     },
     {
-      "id": "koala",
+      "id": "animals_koala",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -777,7 +785,7 @@
       "answerHe": "קואלה"
     },
     {
-      "id": "cheetah",
+      "id": "animals_cheetah",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -785,7 +793,7 @@
       "answerHe": "ברדלס"
     },
     {
-      "id": "leopard",
+      "id": "animals_leopard",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -793,7 +801,7 @@
       "answerHe": "נמר"
     },
     {
-      "id": "squirrel",
+      "id": "animals_squirrel",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -801,15 +809,7 @@
       "answerHe": "סנאי"
     },
     {
-      "id": "mouse",
-      "isActive": true,
-      "source": "bundled",
-      "category": "animals",
-      "nameHe": "עכבר",
-      "answerHe": "עכבר"
-    },
-    {
-      "id": "bat",
+      "id": "animals_bat",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -817,7 +817,7 @@
       "answerHe": "עטלף"
     },
     {
-      "id": "ant",
+      "id": "animals_ant",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -825,7 +825,7 @@
       "answerHe": "נמלה"
     },
     {
-      "id": "spider",
+      "id": "animals_spider",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -833,7 +833,7 @@
       "answerHe": "עכביש"
     },
     {
-      "id": "snail",
+      "id": "animals_snail",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -841,7 +841,7 @@
       "answerHe": "חילזון"
     },
     {
-      "id": "donkey",
+      "id": "animals_donkey",
       "isActive": true,
       "source": "bundled",
       "category": "animals",
@@ -849,407 +849,327 @@
       "answerHe": "חמור"
     },
     {
-      "id": "apple",
+      "id": "plants_rose",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "תפוח",
-      "answerHe": "תפוח"
+      "nameHe": "ורד",
+      "answerHe": "ורד"
     },
     {
-      "id": "banana",
+      "id": "plants_tulip",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "בננה",
-      "answerHe": "בננה"
+      "nameHe": "צבעוני",
+      "answerHe": "צבעוני"
     },
     {
-      "id": "orange",
+      "id": "plants_sunflower",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "תפוז",
-      "answerHe": "תפוז"
+      "nameHe": "חמנית",
+      "answerHe": "חמנית"
     },
     {
-      "id": "grape",
+      "id": "plants_daisy",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "ענבים",
-      "answerHe": "ענבים"
+      "nameHe": "חיננית",
+      "answerHe": "חיננית"
     },
     {
-      "id": "strawberry",
+      "id": "plants_orchid",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "תות שדה",
-      "answerHe": "תות שדה"
+      "nameHe": "סחלב",
+      "answerHe": "סחלב"
     },
     {
-      "id": "watermelon",
+      "id": "plants_lotus",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "אבטיח",
-      "answerHe": "אבטיח"
+      "nameHe": "לוטוס",
+      "answerHe": "לוטוס"
     },
     {
-      "id": "melon",
+      "id": "plants_daffodil",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "מלון",
-      "answerHe": "מלון"
+      "nameHe": "נרקיס חצוצרתי",
+      "answerHe": "נרקיס חצוצרתי"
     },
     {
-      "id": "pear",
+      "id": "plants_lavender",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "אגס",
-      "answerHe": "אגס"
+      "nameHe": "לבנדר",
+      "answerHe": "לבנדר"
     },
     {
-      "id": "peach",
+      "id": "plants_poppy",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "אפרסק",
-      "answerHe": "אפרסק"
+      "nameHe": "פרג",
+      "answerHe": "פרג"
     },
     {
-      "id": "plum",
+      "id": "plants_iris",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "שזיף",
-      "answerHe": "שזיף"
+      "nameHe": "איריס",
+      "answerHe": "איריס"
     },
     {
-      "id": "cherry",
+      "id": "plants_jasmine",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "דובדבן",
-      "answerHe": "דובדבן"
+      "nameHe": "יסמין",
+      "answerHe": "יסמין"
     },
     {
-      "id": "pineapple",
+      "id": "plants_hibiscus",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "אננס",
-      "answerHe": "אננס"
+      "nameHe": "היביסקוס",
+      "answerHe": "היביסקוס"
     },
     {
-      "id": "mango",
+      "id": "plants_marigold",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "מנגו",
-      "answerHe": "מנגו"
+      "nameHe": "ציפורן חתול",
+      "answerHe": "ציפורן חתול"
     },
     {
-      "id": "kiwi",
+      "id": "plants_chrysanthemum",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "קיווי",
-      "answerHe": "קיווי"
+      "nameHe": "חרצית",
+      "answerHe": "חרצית"
     },
     {
-      "id": "lemon",
+      "id": "plants_carnation",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "לימון",
-      "answerHe": "לימון"
+      "nameHe": "ציפורן",
+      "answerHe": "ציפורן"
     },
     {
-      "id": "pomegranate",
+      "id": "plants_peony",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "רימון",
-      "answerHe": "רימון"
+      "nameHe": "אדמונית",
+      "answerHe": "אדמונית"
     },
     {
-      "id": "fig",
+      "id": "plants_dahlia",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "תאנה",
-      "answerHe": "תאנה"
+      "nameHe": "דליה",
+      "answerHe": "דליה"
     },
     {
-      "id": "avocado",
+      "id": "plants_violet",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "אבוקדו",
-      "answerHe": "אבוקדו"
+      "nameHe": "סיגלית",
+      "answerHe": "סיגלית"
     },
     {
-      "id": "apricot",
+      "id": "plants_anemone",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "משמש",
-      "answerHe": "משמש"
+      "nameHe": "כלנית",
+      "answerHe": "כלנית"
     },
     {
-      "id": "raspberry",
+      "id": "plants_cyclamen",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "פטל",
-      "answerHe": "פטל"
+      "nameHe": "רקפת",
+      "answerHe": "רקפת"
     },
     {
-      "id": "blueberry",
+      "id": "plants_narcissus",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "אוכמנית",
-      "answerHe": "אוכמנית"
+      "nameHe": "נרקיס",
+      "answerHe": "נרקיס"
     },
     {
-      "id": "coconut",
+      "id": "plants_gerbera",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "קוקוס",
-      "answerHe": "קוקוס"
+      "nameHe": "גרברה",
+      "answerHe": "גרברה"
     },
     {
-      "id": "papaya",
+      "id": "plants_magnolia",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "פפאיה",
-      "answerHe": "פפאיה"
+      "nameHe": "מגנוליה",
+      "answerHe": "מגנוליה"
     },
     {
-      "id": "grapefruit",
+      "id": "plants_camellia",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "אשכולית",
-      "answerHe": "אשכולית"
+      "nameHe": "קמליה",
+      "answerHe": "קמליה"
     },
     {
-      "id": "lime",
+      "id": "plants_lilac",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "ליים",
-      "answerHe": "ליים"
+      "nameHe": "לילך",
+      "answerHe": "לילך"
     },
     {
-      "id": "tomato",
+      "id": "plants_geranium",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "עגבנייה",
-      "answerHe": "עגבנייה"
+      "nameHe": "גרניום",
+      "answerHe": "גרניום"
     },
     {
-      "id": "cucumber",
+      "id": "plants_petunia",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "מלפפון",
-      "answerHe": "מלפפון"
+      "nameHe": "פטוניה",
+      "answerHe": "פטוניה"
     },
     {
-      "id": "carrot",
+      "id": "plants_zinnia",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "גזר",
-      "answerHe": "גזר"
+      "nameHe": "ציניה",
+      "answerHe": "ציניה"
     },
     {
-      "id": "potato",
+      "id": "plants_gladiolus",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "תפוח אדמה",
-      "answerHe": "תפוח אדמה"
+      "nameHe": "גלדיולה",
+      "answerHe": "גלדיולה"
     },
     {
-      "id": "onion",
+      "id": "plants_crocus",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "בצל",
-      "answerHe": "בצל"
+      "nameHe": "כרכום",
+      "answerHe": "כרכום"
     },
     {
-      "id": "garlic",
+      "id": "plants_bluebell",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "שום",
-      "answerHe": "שום"
+      "nameHe": "פעמונית",
+      "answerHe": "פעמונית"
     },
     {
-      "id": "pepper",
+      "id": "plants_clover",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "פלפל",
-      "answerHe": "פלפל"
+      "nameHe": "תלתן",
+      "answerHe": "תלתן"
     },
     {
-      "id": "eggplant",
+      "id": "plants_dandelion",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "חציל",
-      "answerHe": "חציל"
+      "nameHe": "שן הארי",
+      "answerHe": "שן הארי"
     },
     {
-      "id": "lettuce",
+      "id": "plants_water_lily",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "חסה",
-      "answerHe": "חסה"
+      "nameHe": "חבצלת המים",
+      "answerHe": "חבצלת המים"
     },
     {
-      "id": "cabbage",
+      "id": "plants_foxglove",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "כרוב",
-      "answerHe": "כרוב"
+      "nameHe": "אצבעונית",
+      "answerHe": "אצבעונית"
     },
     {
-      "id": "broccoli",
+      "id": "plants_pansy",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "ברוקולי",
-      "answerHe": "ברוקולי"
+      "nameHe": "אמנון ותמר",
+      "answerHe": "אמנון ותמר"
     },
     {
-      "id": "cauliflower",
+      "id": "plants_amaryllis",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "כרובית",
-      "answerHe": "כרובית"
+      "nameHe": "אמריליס",
+      "answerHe": "אמריליס"
     },
     {
-      "id": "corn",
+      "id": "plants_calla",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "תירס",
-      "answerHe": "תירס"
+      "nameHe": "קלה",
+      "answerHe": "קלה"
     },
     {
-      "id": "pumpkin",
+      "id": "plants_wisteria",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "דלעת",
-      "answerHe": "דלעת"
+      "nameHe": "ויסטריה",
+      "answerHe": "ויסטריה"
     },
     {
-      "id": "zucchini",
+      "id": "plants_morning_glory",
       "isActive": true,
       "source": "bundled",
       "category": "plants",
-      "nameHe": "קישוא",
-      "answerHe": "קישוא"
+      "nameHe": "לפופית",
+      "answerHe": "לפופית"
     },
     {
-      "id": "spinach",
-      "isActive": true,
-      "source": "bundled",
-      "category": "plants",
-      "nameHe": "תרד",
-      "answerHe": "תרד"
-    },
-    {
-      "id": "mushroom",
-      "isActive": true,
-      "source": "bundled",
-      "category": "plants",
-      "nameHe": "פטרייה",
-      "answerHe": "פטרייה"
-    },
-    {
-      "id": "peas",
-      "isActive": true,
-      "source": "bundled",
-      "category": "plants",
-      "nameHe": "אפונה",
-      "answerHe": "אפונה"
-    },
-    {
-      "id": "beet",
-      "isActive": true,
-      "source": "bundled",
-      "category": "plants",
-      "nameHe": "סלק",
-      "answerHe": "סלק"
-    },
-    {
-      "id": "radish",
-      "isActive": true,
-      "source": "bundled",
-      "category": "plants",
-      "nameHe": "צנונית",
-      "answerHe": "צנונית"
-    },
-    {
-      "id": "sweet_potato",
-      "isActive": true,
-      "source": "bundled",
-      "category": "plants",
-      "nameHe": "בטטה",
-      "answerHe": "בטטה"
-    },
-    {
-      "id": "celery",
-      "isActive": true,
-      "source": "bundled",
-      "category": "plants",
-      "nameHe": "סלרי",
-      "answerHe": "סלרי"
-    },
-    {
-      "id": "ginger",
-      "isActive": true,
-      "source": "bundled",
-      "category": "plants",
-      "nameHe": "ג'ינג'ר",
-      "answerHe": "ג'ינג'ר"
-    },
-    {
-      "id": "chili",
-      "isActive": true,
-      "source": "bundled",
-      "category": "plants",
-      "nameHe": "פלפל חריף",
-      "answerHe": "פלפל חריף"
-    },
-    {
-      "id": "asparagus",
-      "isActive": true,
-      "source": "bundled",
-      "category": "plants",
-      "nameHe": "אספרגוס",
-      "answerHe": "אספרגוס"
-    },
-    {
-      "id": "chair",
+      "id": "objects_chair",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1257,7 +1177,7 @@
       "answerHe": "כיסא"
     },
     {
-      "id": "table",
+      "id": "objects_table",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1265,7 +1185,7 @@
       "answerHe": "שולחן"
     },
     {
-      "id": "bed",
+      "id": "objects_bed",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1273,7 +1193,7 @@
       "answerHe": "מיטה"
     },
     {
-      "id": "clock",
+      "id": "objects_clock",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1281,7 +1201,7 @@
       "answerHe": "שעון"
     },
     {
-      "id": "book",
+      "id": "objects_book",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1289,7 +1209,7 @@
       "answerHe": "ספר"
     },
     {
-      "id": "pencil",
+      "id": "objects_pencil",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1297,7 +1217,7 @@
       "answerHe": "עיפרון"
     },
     {
-      "id": "pen",
+      "id": "objects_pen",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1305,7 +1225,7 @@
       "answerHe": "עט"
     },
     {
-      "id": "scissors",
+      "id": "objects_scissors",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1313,7 +1233,7 @@
       "answerHe": "מספריים"
     },
     {
-      "id": "hammer",
+      "id": "objects_hammer",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1321,7 +1241,7 @@
       "answerHe": "פטיש"
     },
     {
-      "id": "key",
+      "id": "objects_key",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1329,7 +1249,7 @@
       "answerHe": "מפתח"
     },
     {
-      "id": "umbrella",
+      "id": "objects_umbrella",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1337,7 +1257,7 @@
       "answerHe": "מטרייה"
     },
     {
-      "id": "bottle",
+      "id": "objects_bottle",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1345,7 +1265,7 @@
       "answerHe": "בקבוק"
     },
     {
-      "id": "cup",
+      "id": "objects_cup",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1353,7 +1273,7 @@
       "answerHe": "ספל"
     },
     {
-      "id": "plate",
+      "id": "objects_plate",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1361,7 +1281,7 @@
       "answerHe": "צלחת"
     },
     {
-      "id": "fork",
+      "id": "objects_fork",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1369,7 +1289,7 @@
       "answerHe": "מזלג"
     },
     {
-      "id": "spoon",
+      "id": "objects_spoon",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1377,7 +1297,7 @@
       "answerHe": "כף"
     },
     {
-      "id": "knife",
+      "id": "objects_knife",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1385,7 +1305,7 @@
       "answerHe": "סכין"
     },
     {
-      "id": "glasses",
+      "id": "objects_glasses",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1393,7 +1313,7 @@
       "answerHe": "משקפיים"
     },
     {
-      "id": "watch",
+      "id": "objects_watch",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1401,7 +1321,7 @@
       "answerHe": "שעון יד"
     },
     {
-      "id": "phone",
+      "id": "objects_phone",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1409,7 +1329,7 @@
       "answerHe": "טלפון"
     },
     {
-      "id": "computer",
+      "id": "objects_computer",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1417,7 +1337,7 @@
       "answerHe": "מחשב"
     },
     {
-      "id": "keyboard",
+      "id": "objects_keyboard",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1425,7 +1345,7 @@
       "answerHe": "מקלדת"
     },
     {
-      "id": "television",
+      "id": "objects_television",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1433,7 +1353,7 @@
       "answerHe": "טלוויזיה"
     },
     {
-      "id": "camera",
+      "id": "objects_camera",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1441,15 +1361,7 @@
       "answerHe": "מצלמה"
     },
     {
-      "id": "guitar",
-      "isActive": true,
-      "source": "bundled",
-      "category": "objects",
-      "nameHe": "גיטרה",
-      "answerHe": "גיטרה"
-    },
-    {
-      "id": "piano",
+      "id": "objects_piano",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1457,7 +1369,7 @@
       "answerHe": "פסנתר"
     },
     {
-      "id": "drum",
+      "id": "objects_drum",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1465,7 +1377,7 @@
       "answerHe": "תוף"
     },
     {
-      "id": "ball",
+      "id": "objects_ball",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1473,7 +1385,7 @@
       "answerHe": "כדור"
     },
     {
-      "id": "bicycle",
+      "id": "objects_bicycle",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1481,7 +1393,7 @@
       "answerHe": "אופניים"
     },
     {
-      "id": "car",
+      "id": "objects_car",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1489,7 +1401,7 @@
       "answerHe": "מכונית"
     },
     {
-      "id": "bus",
+      "id": "objects_bus",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1497,7 +1409,7 @@
       "answerHe": "אוטובוס"
     },
     {
-      "id": "train",
+      "id": "objects_train",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1505,7 +1417,7 @@
       "answerHe": "רכבת"
     },
     {
-      "id": "airplane",
+      "id": "objects_airplane",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1513,7 +1425,7 @@
       "answerHe": "מטוס"
     },
     {
-      "id": "boat",
+      "id": "objects_boat",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1521,7 +1433,7 @@
       "answerHe": "סירה"
     },
     {
-      "id": "ship",
+      "id": "objects_ship",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1529,7 +1441,7 @@
       "answerHe": "אונייה"
     },
     {
-      "id": "rocket",
+      "id": "objects_rocket",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1537,7 +1449,7 @@
       "answerHe": "טיל"
     },
     {
-      "id": "anchor",
+      "id": "objects_anchor",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1545,15 +1457,7 @@
       "answerHe": "עוגן"
     },
     {
-      "id": "ladder",
-      "isActive": true,
-      "source": "bundled",
-      "category": "objects",
-      "nameHe": "סולם",
-      "answerHe": "סולם"
-    },
-    {
-      "id": "broom",
+      "id": "objects_broom",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1561,7 +1465,7 @@
       "answerHe": "מטאטא"
     },
     {
-      "id": "bucket",
+      "id": "objects_bucket",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1569,7 +1473,7 @@
       "answerHe": "דלי"
     },
     {
-      "id": "candle",
+      "id": "objects_candle",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1577,7 +1481,7 @@
       "answerHe": "נר"
     },
     {
-      "id": "balloon",
+      "id": "objects_balloon",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1585,7 +1489,7 @@
       "answerHe": "בלון"
     },
     {
-      "id": "kite",
+      "id": "objects_kite",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1593,7 +1497,7 @@
       "answerHe": "עפיפון"
     },
     {
-      "id": "shoe",
+      "id": "objects_shoe",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1601,7 +1505,7 @@
       "answerHe": "נעל"
     },
     {
-      "id": "hat",
+      "id": "objects_hat",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1609,7 +1513,7 @@
       "answerHe": "כובע"
     },
     {
-      "id": "shirt",
+      "id": "objects_shirt",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1617,7 +1521,7 @@
       "answerHe": "חולצה"
     },
     {
-      "id": "backpack",
+      "id": "objects_backpack",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1625,7 +1529,7 @@
       "answerHe": "תיק גב"
     },
     {
-      "id": "ring",
+      "id": "objects_ring",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1633,7 +1537,7 @@
       "answerHe": "טבעת"
     },
     {
-      "id": "crown",
+      "id": "objects_crown",
       "isActive": true,
       "source": "bundled",
       "category": "objects",
@@ -1641,12 +1545,2844 @@
       "answerHe": "כתר"
     },
     {
-      "id": "mirror",
+      "id": "birds_sparrow",
       "isActive": true,
       "source": "bundled",
-      "category": "objects",
-      "nameHe": "מראה",
-      "answerHe": "מראה"
+      "category": "birds",
+      "nameHe": "דרור",
+      "answerHe": "דרור"
+    },
+    {
+      "id": "birds_robin",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "אדום החזה",
+      "answerHe": "אדום החזה"
+    },
+    {
+      "id": "birds_pigeon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "יונה",
+      "answerHe": "יונה"
+    },
+    {
+      "id": "birds_crow",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "עורב",
+      "answerHe": "עורב"
+    },
+    {
+      "id": "birds_raven",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "עורב שחור",
+      "answerHe": "עורב שחור"
+    },
+    {
+      "id": "birds_parrot",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "תוכי",
+      "answerHe": "תוכי"
+    },
+    {
+      "id": "birds_peacock",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "טווס",
+      "answerHe": "טווס"
+    },
+    {
+      "id": "birds_ostrich",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "יען",
+      "answerHe": "יען"
+    },
+    {
+      "id": "birds_swan",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "ברבור",
+      "answerHe": "ברבור"
+    },
+    {
+      "id": "birds_woodpecker",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "נקר",
+      "answerHe": "נקר"
+    },
+    {
+      "id": "birds_hummingbird",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "יונק הדבש",
+      "answerHe": "יונק הדבש"
+    },
+    {
+      "id": "birds_kingfisher",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "שלדג",
+      "answerHe": "שלדג"
+    },
+    {
+      "id": "birds_stork",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "חסידה",
+      "answerHe": "חסידה"
+    },
+    {
+      "id": "birds_heron",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "אנפה",
+      "answerHe": "אנפה"
+    },
+    {
+      "id": "birds_crane_bird",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "עגור",
+      "answerHe": "עגור"
+    },
+    {
+      "id": "birds_seagull",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "שחף",
+      "answerHe": "שחף"
+    },
+    {
+      "id": "birds_albatross",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "אלבטרוס",
+      "answerHe": "אלבטרוס"
+    },
+    {
+      "id": "birds_falcon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "בז",
+      "answerHe": "בז"
+    },
+    {
+      "id": "birds_hawk",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "נץ",
+      "answerHe": "נץ"
+    },
+    {
+      "id": "birds_vulture",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "נשר",
+      "answerHe": "נשר"
+    },
+    {
+      "id": "birds_toucan",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "טוקאן",
+      "answerHe": "טוקאן"
+    },
+    {
+      "id": "birds_cockatoo",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "קקדו",
+      "answerHe": "קקדו"
+    },
+    {
+      "id": "birds_canary",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "כנרית",
+      "answerHe": "כנרית"
+    },
+    {
+      "id": "birds_finch",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "פרוש",
+      "answerHe": "פרוש"
+    },
+    {
+      "id": "birds_cardinal",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "קרדינל",
+      "answerHe": "קרדינל"
+    },
+    {
+      "id": "birds_swallow",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "סנונית",
+      "answerHe": "סנונית"
+    },
+    {
+      "id": "birds_magpie",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "עקעק",
+      "answerHe": "עקעק"
+    },
+    {
+      "id": "birds_nightingale",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "זמיר",
+      "answerHe": "זמיר"
+    },
+    {
+      "id": "birds_emu",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "אמו",
+      "answerHe": "אמו"
+    },
+    {
+      "id": "birds_cassowary",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "קזואר",
+      "answerHe": "קזואר"
+    },
+    {
+      "id": "birds_puffin",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "פפין",
+      "answerHe": "פפין"
+    },
+    {
+      "id": "birds_quail",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "שליו",
+      "answerHe": "שליו"
+    },
+    {
+      "id": "birds_pheasant",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "פסיון",
+      "answerHe": "פסיון"
+    },
+    {
+      "id": "birds_partridge",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "חוגלה",
+      "answerHe": "חוגלה"
+    },
+    {
+      "id": "birds_dove",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "יונת בר",
+      "answerHe": "יונת בר"
+    },
+    {
+      "id": "birds_goose",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "אווז",
+      "answerHe": "אווז"
+    },
+    {
+      "id": "birds_duck",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "ברווז",
+      "answerHe": "ברווז"
+    },
+    {
+      "id": "birds_rooster",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "תרנגול",
+      "answerHe": "תרנגול"
+    },
+    {
+      "id": "birds_parakeet",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "תוכון",
+      "answerHe": "תוכון"
+    },
+    {
+      "id": "birds_lovebird",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "תוכי אהבה",
+      "answerHe": "תוכי אהבה"
+    },
+    {
+      "id": "birds_macaw",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "מקאו",
+      "answerHe": "מקאו"
+    },
+    {
+      "id": "birds_budgerigar",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "תוכון מצוי",
+      "answerHe": "תוכון מצוי"
+    },
+    {
+      "id": "birds_sparrowhawk",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "נץ מצוי",
+      "answerHe": "נץ מצוי"
+    },
+    {
+      "id": "birds_seabird",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "שחף ים",
+      "answerHe": "שחף ים"
+    },
+    {
+      "id": "birds_lark",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "עפרוני",
+      "answerHe": "עפרוני"
+    },
+    {
+      "id": "birds_wren",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "גדרון",
+      "answerHe": "גדרון"
+    },
+    {
+      "id": "birds_starling",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "זרזיר",
+      "answerHe": "זרזיר"
+    },
+    {
+      "id": "birds_hoopoe",
+      "isActive": true,
+      "source": "bundled",
+      "category": "birds",
+      "nameHe": "דוכיפת",
+      "answerHe": "דוכיפת"
+    },
+    {
+      "id": "vehicles_car",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "מכונית",
+      "answerHe": "מכונית"
+    },
+    {
+      "id": "vehicles_bus",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "אוטובוס",
+      "answerHe": "אוטובוס"
+    },
+    {
+      "id": "vehicles_train",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "רכבת",
+      "answerHe": "רכבת"
+    },
+    {
+      "id": "vehicles_airplane",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "מטוס",
+      "answerHe": "מטוס"
+    },
+    {
+      "id": "vehicles_bicycle",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "אופניים",
+      "answerHe": "אופניים"
+    },
+    {
+      "id": "vehicles_motorcycle",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "אופנוע",
+      "answerHe": "אופנוע"
+    },
+    {
+      "id": "vehicles_truck",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "משאית",
+      "answerHe": "משאית"
+    },
+    {
+      "id": "vehicles_boat",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "סירה",
+      "answerHe": "סירה"
+    },
+    {
+      "id": "vehicles_ship",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "אונייה",
+      "answerHe": "אונייה"
+    },
+    {
+      "id": "vehicles_helicopter",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "מסוק",
+      "answerHe": "מסוק"
+    },
+    {
+      "id": "vehicles_submarine",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "צוללת",
+      "answerHe": "צוללת"
+    },
+    {
+      "id": "vehicles_tram",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "חשמלית",
+      "answerHe": "חשמלית"
+    },
+    {
+      "id": "vehicles_taxi",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "מונית",
+      "answerHe": "מונית"
+    },
+    {
+      "id": "vehicles_ambulance",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "אמבולנס",
+      "answerHe": "אמבולנס"
+    },
+    {
+      "id": "vehicles_fire_engine",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "כבאית",
+      "answerHe": "כבאית"
+    },
+    {
+      "id": "vehicles_tractor",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "טרקטור",
+      "answerHe": "טרקטור"
+    },
+    {
+      "id": "vehicles_van",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "מסחרית",
+      "answerHe": "מסחרית"
+    },
+    {
+      "id": "vehicles_scooter",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "קורקינט",
+      "answerHe": "קורקינט"
+    },
+    {
+      "id": "vehicles_skateboard",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "סקייטבורד",
+      "answerHe": "סקייטבורד"
+    },
+    {
+      "id": "vehicles_hot_air_balloon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "כדור פורח",
+      "answerHe": "כדור פורח"
+    },
+    {
+      "id": "vehicles_rocket",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "טיל חלל",
+      "answerHe": "טיל חלל"
+    },
+    {
+      "id": "vehicles_ferry",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "מעבורת",
+      "answerHe": "מעבורת"
+    },
+    {
+      "id": "vehicles_canoe",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "קאנו",
+      "answerHe": "קאנו"
+    },
+    {
+      "id": "vehicles_kayak",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "קיאק",
+      "answerHe": "קיאק"
+    },
+    {
+      "id": "vehicles_sailboat",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "מפרשית",
+      "answerHe": "מפרשית"
+    },
+    {
+      "id": "vehicles_jet_ski",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "אופנוע ים",
+      "answerHe": "אופנוע ים"
+    },
+    {
+      "id": "vehicles_unicycle",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "חד אופן",
+      "answerHe": "חד אופן"
+    },
+    {
+      "id": "vehicles_monorail",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "מונורייל",
+      "answerHe": "מונורייל"
+    },
+    {
+      "id": "vehicles_cable_car",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "רכבל",
+      "answerHe": "רכבל"
+    },
+    {
+      "id": "vehicles_carriage",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "כרכרה",
+      "answerHe": "כרכרה"
+    },
+    {
+      "id": "vehicles_forklift",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "מלגזה",
+      "answerHe": "מלגזה"
+    },
+    {
+      "id": "vehicles_bulldozer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "דחפור",
+      "answerHe": "דחפור"
+    },
+    {
+      "id": "vehicles_excavator",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "מחפר",
+      "answerHe": "מחפר"
+    },
+    {
+      "id": "vehicles_snowmobile",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "אופנוע שלג",
+      "answerHe": "אופנוע שלג"
+    },
+    {
+      "id": "vehicles_jeep",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "ג'יפ",
+      "answerHe": "ג'יפ"
+    },
+    {
+      "id": "vehicles_limousine",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "לימוזינה",
+      "answerHe": "לימוזינה"
+    },
+    {
+      "id": "vehicles_pickup",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "טנדר",
+      "answerHe": "טנדר"
+    },
+    {
+      "id": "vehicles_double_decker",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "אוטובוס דו-קומתי",
+      "answerHe": "אוטובוס דו-קומתי"
+    },
+    {
+      "id": "vehicles_hovercraft",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "רחפת",
+      "answerHe": "רחפת"
+    },
+    {
+      "id": "vehicles_yacht",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "יאכטה",
+      "answerHe": "יאכטה"
+    },
+    {
+      "id": "vehicles_airship",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "ספינת אוויר",
+      "answerHe": "ספינת אוויר"
+    },
+    {
+      "id": "vehicles_glider",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "דאון",
+      "answerHe": "דאון"
+    },
+    {
+      "id": "vehicles_seaplane",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "מטוס ים",
+      "answerHe": "מטוס ים"
+    },
+    {
+      "id": "vehicles_tank",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "טנק",
+      "answerHe": "טנק"
+    },
+    {
+      "id": "vehicles_wheelbarrow",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "מריצה",
+      "answerHe": "מריצה"
+    },
+    {
+      "id": "vehicles_segway",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "סגוויי",
+      "answerHe": "סגוויי"
+    },
+    {
+      "id": "vehicles_cement_mixer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "vehicles",
+      "nameHe": "מערבל בטון",
+      "answerHe": "מערבל בטון"
+    },
+    {
+      "id": "professions_doctor",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "רופא",
+      "answerHe": "רופא"
+    },
+    {
+      "id": "professions_nurse",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "אחות",
+      "answerHe": "אחות"
+    },
+    {
+      "id": "professions_teacher",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "מורה",
+      "answerHe": "מורה"
+    },
+    {
+      "id": "professions_firefighter",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "כבאי",
+      "answerHe": "כבאי"
+    },
+    {
+      "id": "professions_police_officer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "שוטר",
+      "answerHe": "שוטר"
+    },
+    {
+      "id": "professions_chef",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "שף",
+      "answerHe": "שף"
+    },
+    {
+      "id": "professions_baker",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "אופה",
+      "answerHe": "אופה"
+    },
+    {
+      "id": "professions_farmer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "חקלאי",
+      "answerHe": "חקלאי"
+    },
+    {
+      "id": "professions_fisherman",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "דייג",
+      "answerHe": "דייג"
+    },
+    {
+      "id": "professions_pilot",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "טייס",
+      "answerHe": "טייס"
+    },
+    {
+      "id": "professions_sailor",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "מלח",
+      "answerHe": "מלח"
+    },
+    {
+      "id": "professions_soldier",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "חייל",
+      "answerHe": "חייל"
+    },
+    {
+      "id": "professions_judge",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "שופט",
+      "answerHe": "שופט"
+    },
+    {
+      "id": "professions_lawyer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "עורך דין",
+      "answerHe": "עורך דין"
+    },
+    {
+      "id": "professions_scientist",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "מדען",
+      "answerHe": "מדען"
+    },
+    {
+      "id": "professions_engineer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "מהנדס",
+      "answerHe": "מהנדס"
+    },
+    {
+      "id": "professions_architect",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "אדריכל",
+      "answerHe": "אדריכל"
+    },
+    {
+      "id": "professions_programmer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "מתכנת",
+      "answerHe": "מתכנת"
+    },
+    {
+      "id": "professions_accountant",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "רואה חשבון",
+      "answerHe": "רואה חשבון"
+    },
+    {
+      "id": "professions_electrician",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "חשמלאי",
+      "answerHe": "חשמלאי"
+    },
+    {
+      "id": "professions_plumber",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "שרברב",
+      "answerHe": "שרברב"
+    },
+    {
+      "id": "professions_carpenter",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "נגר",
+      "answerHe": "נגר"
+    },
+    {
+      "id": "professions_mechanic",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "מכונאי",
+      "answerHe": "מכונאי"
+    },
+    {
+      "id": "professions_painter_art",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "צייר",
+      "answerHe": "צייר"
+    },
+    {
+      "id": "professions_musician",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "מוזיקאי",
+      "answerHe": "מוזיקאי"
+    },
+    {
+      "id": "professions_singer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "זמר",
+      "answerHe": "זמר"
+    },
+    {
+      "id": "professions_dancer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "רקדן",
+      "answerHe": "רקדן"
+    },
+    {
+      "id": "professions_actor",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "שחקן",
+      "answerHe": "שחקן"
+    },
+    {
+      "id": "professions_photographer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "צלם",
+      "answerHe": "צלם"
+    },
+    {
+      "id": "professions_journalist",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "עיתונאי",
+      "answerHe": "עיתונאי"
+    },
+    {
+      "id": "professions_writer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "סופר",
+      "answerHe": "סופר"
+    },
+    {
+      "id": "professions_librarian",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "ספרן",
+      "answerHe": "ספרן"
+    },
+    {
+      "id": "professions_dentist",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "רופא שיניים",
+      "answerHe": "רופא שיניים"
+    },
+    {
+      "id": "professions_veterinarian",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "וטרינר",
+      "answerHe": "וטרינר"
+    },
+    {
+      "id": "professions_pharmacist",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "רוקח",
+      "answerHe": "רוקח"
+    },
+    {
+      "id": "professions_tailor",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "חייט",
+      "answerHe": "חייט"
+    },
+    {
+      "id": "professions_butcher",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "קצב",
+      "answerHe": "קצב"
+    },
+    {
+      "id": "professions_waiter",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "מלצר",
+      "answerHe": "מלצר"
+    },
+    {
+      "id": "professions_cashier",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "קופאי",
+      "answerHe": "קופאי"
+    },
+    {
+      "id": "professions_driver",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "נהג",
+      "answerHe": "נהג"
+    },
+    {
+      "id": "professions_astronaut",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "אסטרונאוט",
+      "answerHe": "אסטרונאוט"
+    },
+    {
+      "id": "professions_miner",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "כורה",
+      "answerHe": "כורה"
+    },
+    {
+      "id": "professions_blacksmith",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "נפח",
+      "answerHe": "נפח"
+    },
+    {
+      "id": "professions_postman",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "דוור",
+      "answerHe": "דוור"
+    },
+    {
+      "id": "professions_cleaner",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "מנקה",
+      "answerHe": "מנקה"
+    },
+    {
+      "id": "professions_construction_worker",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "פועל בניין",
+      "answerHe": "פועל בניין"
+    },
+    {
+      "id": "professions_surgeon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "מנתח",
+      "answerHe": "מנתח"
+    },
+    {
+      "id": "professions_referee",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "שופט ספורט",
+      "answerHe": "שופט ספורט"
+    },
+    {
+      "id": "flags_spain",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "ספרד",
+      "answerHe": "ספרד"
+    },
+    {
+      "id": "flags_uk",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "בריטניה",
+      "answerHe": "בריטניה"
+    },
+    {
+      "id": "flags_usa",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "ארצות הברית",
+      "answerHe": "ארצות הברית"
+    },
+    {
+      "id": "flags_canada",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "קנדה",
+      "answerHe": "קנדה"
+    },
+    {
+      "id": "flags_brazil",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "ברזיל",
+      "answerHe": "ברזיל"
+    },
+    {
+      "id": "flags_argentina",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "ארגנטינה",
+      "answerHe": "ארגנטינה"
+    },
+    {
+      "id": "flags_mexico",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "מקסיקו",
+      "answerHe": "מקסיקו"
+    },
+    {
+      "id": "flags_japan",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "יפן",
+      "answerHe": "יפן"
+    },
+    {
+      "id": "flags_china",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "סין",
+      "answerHe": "סין"
+    },
+    {
+      "id": "flags_india",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "הודו",
+      "answerHe": "הודו"
+    },
+    {
+      "id": "flags_australia",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "אוסטרליה",
+      "answerHe": "אוסטרליה"
+    },
+    {
+      "id": "flags_israel",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "ישראל",
+      "answerHe": "ישראל"
+    },
+    {
+      "id": "flags_egypt",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "מצרים",
+      "answerHe": "מצרים"
+    },
+    {
+      "id": "flags_greece",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "יוון",
+      "answerHe": "יוון"
+    },
+    {
+      "id": "flags_turkey",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "טורקיה",
+      "answerHe": "טורקיה"
+    },
+    {
+      "id": "flags_norway",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "נורווגיה",
+      "answerHe": "נורווגיה"
+    },
+    {
+      "id": "flags_portugal",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "פורטוגל",
+      "answerHe": "פורטוגל"
+    },
+    {
+      "id": "flags_south_korea",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "דרום קוריאה",
+      "answerHe": "דרום קוריאה"
+    },
+    {
+      "id": "flags_vietnam",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "וייטנאם",
+      "answerHe": "וייטנאם"
+    },
+    {
+      "id": "flags_saudi_arabia",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "ערב הסעודית",
+      "answerHe": "ערב הסעודית"
+    },
+    {
+      "id": "flags_south_africa",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "דרום אפריקה",
+      "answerHe": "דרום אפריקה"
+    },
+    {
+      "id": "flags_kenya",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "קניה",
+      "answerHe": "קניה"
+    },
+    {
+      "id": "flags_morocco",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "מרוקו",
+      "answerHe": "מרוקו"
+    },
+    {
+      "id": "flags_chile",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "צ׳ילה",
+      "answerHe": "צ׳ילה"
+    },
+    {
+      "id": "flags_cuba",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "קובה",
+      "answerHe": "קובה"
+    },
+    {
+      "id": "flags_jamaica",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "ג׳מייקה",
+      "answerHe": "ג׳מייקה"
+    },
+    {
+      "id": "flags_new_zealand",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "ניו זילנד",
+      "answerHe": "ניו זילנד"
+    },
+    {
+      "id": "flags_czech",
+      "isActive": true,
+      "source": "bundled",
+      "category": "flags",
+      "nameHe": "צ׳כיה",
+      "answerHe": "צ׳כיה"
+    },
+    {
+      "id": "instruments_piano",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "פסנתר",
+      "answerHe": "פסנתר"
+    },
+    {
+      "id": "instruments_guitar",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "גיטרה",
+      "answerHe": "גיטרה"
+    },
+    {
+      "id": "instruments_violin",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "כינור",
+      "answerHe": "כינור"
+    },
+    {
+      "id": "instruments_cello",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "צ'לו",
+      "answerHe": "צ'לו"
+    },
+    {
+      "id": "instruments_viola",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "ויולה",
+      "answerHe": "ויולה"
+    },
+    {
+      "id": "instruments_double_bass",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "קונטרבס",
+      "answerHe": "קונטרבס"
+    },
+    {
+      "id": "instruments_harp",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "נבל",
+      "answerHe": "נבל"
+    },
+    {
+      "id": "instruments_flute",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "חליל צד",
+      "answerHe": "חליל צד"
+    },
+    {
+      "id": "instruments_recorder",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "חלילית",
+      "answerHe": "חלילית"
+    },
+    {
+      "id": "instruments_clarinet",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "קלרינט",
+      "answerHe": "קלרינט"
+    },
+    {
+      "id": "instruments_oboe",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "אבוב",
+      "answerHe": "אבוב"
+    },
+    {
+      "id": "instruments_bassoon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "בסון",
+      "answerHe": "בסון"
+    },
+    {
+      "id": "instruments_saxophone",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "סקסופון",
+      "answerHe": "סקסופון"
+    },
+    {
+      "id": "instruments_trumpet",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "חצוצרה",
+      "answerHe": "חצוצרה"
+    },
+    {
+      "id": "instruments_trombone",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "טרומבון",
+      "answerHe": "טרומבון"
+    },
+    {
+      "id": "instruments_french_horn",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "קרן יער",
+      "answerHe": "קרן יער"
+    },
+    {
+      "id": "instruments_tuba",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "טובה",
+      "answerHe": "טובה"
+    },
+    {
+      "id": "instruments_snare_drum",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "תוף סנר",
+      "answerHe": "תוף סנר"
+    },
+    {
+      "id": "instruments_bass_drum",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "תוף בס",
+      "answerHe": "תוף בס"
+    },
+    {
+      "id": "instruments_timpani",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "טימפני",
+      "answerHe": "טימפני"
+    },
+    {
+      "id": "instruments_cymbals",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "מצלתיים",
+      "answerHe": "מצלתיים"
+    },
+    {
+      "id": "instruments_xylophone",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "קסילופון",
+      "answerHe": "קסילופון"
+    },
+    {
+      "id": "instruments_marimba",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "מרימבה",
+      "answerHe": "מרימבה"
+    },
+    {
+      "id": "instruments_vibraphone",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "ויברפון",
+      "answerHe": "ויברפון"
+    },
+    {
+      "id": "instruments_triangle",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "משולש",
+      "answerHe": "משולש"
+    },
+    {
+      "id": "instruments_tambourine",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "תוף מרים",
+      "answerHe": "תוף מרים"
+    },
+    {
+      "id": "instruments_maracas",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "מרקס",
+      "answerHe": "מרקס"
+    },
+    {
+      "id": "instruments_accordion",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "אקורדיון",
+      "answerHe": "אקורדיון"
+    },
+    {
+      "id": "instruments_organ",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "עוגב",
+      "answerHe": "עוגב"
+    },
+    {
+      "id": "instruments_banjo",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "בנג׳ו",
+      "answerHe": "בנג׳ו"
+    },
+    {
+      "id": "instruments_mandolin",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "מנדולינה",
+      "answerHe": "מנדולינה"
+    },
+    {
+      "id": "instruments_ukulele",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "יוקלילי",
+      "answerHe": "יוקלילי"
+    },
+    {
+      "id": "instruments_sitar",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "סיטאר",
+      "answerHe": "סיטאר"
+    },
+    {
+      "id": "instruments_bagpipes",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "חמת חלילים",
+      "answerHe": "חמת חלילים"
+    },
+    {
+      "id": "instruments_castanets",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "קסטנייטות",
+      "answerHe": "קסטנייטות"
+    },
+    {
+      "id": "instruments_bongo",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "בונגו",
+      "answerHe": "בונגו"
+    },
+    {
+      "id": "instruments_conga",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "קונגה",
+      "answerHe": "קונגה"
+    },
+    {
+      "id": "instruments_djembe",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "ג'מבה",
+      "answerHe": "ג'מבה"
+    },
+    {
+      "id": "instruments_gong",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "גונג",
+      "answerHe": "גונג"
+    },
+    {
+      "id": "instruments_lyre",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "לירה",
+      "answerHe": "לירה"
+    },
+    {
+      "id": "instruments_lute",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "לאוטה",
+      "answerHe": "לאוטה"
+    },
+    {
+      "id": "instruments_piccolo",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "פיקולו",
+      "answerHe": "פיקולו"
+    },
+    {
+      "id": "instruments_cornet",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "קורנט",
+      "answerHe": "קורנט"
+    },
+    {
+      "id": "instruments_electric_guitar",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "גיטרה חשמלית",
+      "answerHe": "גיטרה חשמלית"
+    },
+    {
+      "id": "instruments_keyboard",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "קלידים",
+      "answerHe": "קלידים"
+    },
+    {
+      "id": "instruments_synthesizer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "סינתיסייזר",
+      "answerHe": "סינתיסייזר"
+    },
+    {
+      "id": "instruments_harpsichord",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "צ'מבלו",
+      "answerHe": "צ'מבלו"
+    },
+    {
+      "id": "instruments_glockenspiel",
+      "isActive": true,
+      "source": "bundled",
+      "category": "instruments",
+      "nameHe": "גלוקנשפיל",
+      "answerHe": "גלוקנשפיל"
+    },
+    {
+      "id": "produce_apple",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "תפוח",
+      "answerHe": "תפוח"
+    },
+    {
+      "id": "produce_banana",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "בננה",
+      "answerHe": "בננה"
+    },
+    {
+      "id": "produce_orange",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "תפוז",
+      "answerHe": "תפוז"
+    },
+    {
+      "id": "produce_grape",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "ענבים",
+      "answerHe": "ענבים"
+    },
+    {
+      "id": "produce_strawberry",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "תות שדה",
+      "answerHe": "תות שדה"
+    },
+    {
+      "id": "produce_watermelon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "אבטיח",
+      "answerHe": "אבטיח"
+    },
+    {
+      "id": "produce_melon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "מלון",
+      "answerHe": "מלון"
+    },
+    {
+      "id": "produce_pear",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "אגס",
+      "answerHe": "אגס"
+    },
+    {
+      "id": "produce_peach",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "אפרסק",
+      "answerHe": "אפרסק"
+    },
+    {
+      "id": "produce_plum",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "שזיף",
+      "answerHe": "שזיף"
+    },
+    {
+      "id": "produce_cherry",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "דובדבן",
+      "answerHe": "דובדבן"
+    },
+    {
+      "id": "produce_pineapple",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "אננס",
+      "answerHe": "אננס"
+    },
+    {
+      "id": "produce_mango",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "מנגו",
+      "answerHe": "מנגו"
+    },
+    {
+      "id": "produce_kiwi",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "קיווי",
+      "answerHe": "קיווי"
+    },
+    {
+      "id": "produce_lemon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "לימון",
+      "answerHe": "לימון"
+    },
+    {
+      "id": "produce_pomegranate",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "רימון",
+      "answerHe": "רימון"
+    },
+    {
+      "id": "produce_fig",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "תאנה",
+      "answerHe": "תאנה"
+    },
+    {
+      "id": "produce_avocado",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "אבוקדו",
+      "answerHe": "אבוקדו"
+    },
+    {
+      "id": "produce_apricot",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "משמש",
+      "answerHe": "משמש"
+    },
+    {
+      "id": "produce_raspberry",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "פטל",
+      "answerHe": "פטל"
+    },
+    {
+      "id": "produce_blueberry",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "אוכמנית",
+      "answerHe": "אוכמנית"
+    },
+    {
+      "id": "produce_coconut",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "קוקוס",
+      "answerHe": "קוקוס"
+    },
+    {
+      "id": "produce_papaya",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "פפאיה",
+      "answerHe": "פפאיה"
+    },
+    {
+      "id": "produce_grapefruit",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "אשכולית",
+      "answerHe": "אשכולית"
+    },
+    {
+      "id": "produce_lime",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "ליים",
+      "answerHe": "ליים"
+    },
+    {
+      "id": "produce_tomato",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "עגבנייה",
+      "answerHe": "עגבנייה"
+    },
+    {
+      "id": "produce_cucumber",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "מלפפון",
+      "answerHe": "מלפפון"
+    },
+    {
+      "id": "produce_carrot",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "גזר",
+      "answerHe": "גזר"
+    },
+    {
+      "id": "produce_potato",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "תפוח אדמה",
+      "answerHe": "תפוח אדמה"
+    },
+    {
+      "id": "produce_onion",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "בצל",
+      "answerHe": "בצל"
+    },
+    {
+      "id": "produce_garlic",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "שום",
+      "answerHe": "שום"
+    },
+    {
+      "id": "produce_pepper",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "פלפל",
+      "answerHe": "פלפל"
+    },
+    {
+      "id": "produce_eggplant",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "חציל",
+      "answerHe": "חציל"
+    },
+    {
+      "id": "produce_lettuce",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "חסה",
+      "answerHe": "חסה"
+    },
+    {
+      "id": "produce_cabbage",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "כרוב",
+      "answerHe": "כרוב"
+    },
+    {
+      "id": "produce_broccoli",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "ברוקולי",
+      "answerHe": "ברוקולי"
+    },
+    {
+      "id": "produce_cauliflower",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "כרובית",
+      "answerHe": "כרובית"
+    },
+    {
+      "id": "produce_corn",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "תירס",
+      "answerHe": "תירס"
+    },
+    {
+      "id": "produce_pumpkin",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "דלעת",
+      "answerHe": "דלעת"
+    },
+    {
+      "id": "produce_zucchini",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "קישוא",
+      "answerHe": "קישוא"
+    },
+    {
+      "id": "produce_spinach",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "תרד",
+      "answerHe": "תרד"
+    },
+    {
+      "id": "produce_mushroom",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "פטרייה",
+      "answerHe": "פטרייה"
+    },
+    {
+      "id": "produce_peas",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "אפונה",
+      "answerHe": "אפונה"
+    },
+    {
+      "id": "produce_beet",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "סלק",
+      "answerHe": "סלק"
+    },
+    {
+      "id": "produce_radish",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "צנונית",
+      "answerHe": "צנונית"
+    },
+    {
+      "id": "produce_sweet_potato",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "בטטה",
+      "answerHe": "בטטה"
+    },
+    {
+      "id": "produce_celery",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "סלרי",
+      "answerHe": "סלרי"
+    },
+    {
+      "id": "produce_ginger",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "ג'ינג'ר",
+      "answerHe": "ג'ינג'ר"
+    },
+    {
+      "id": "produce_chili",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "פלפל חריף",
+      "answerHe": "פלפל חריף"
+    },
+    {
+      "id": "produce_asparagus",
+      "isActive": true,
+      "source": "bundled",
+      "category": "produce",
+      "nameHe": "אספרגוס",
+      "answerHe": "אספרגוס"
+    },
+    {
+      "id": "clothing_shirt",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "חולצה",
+      "answerHe": "חולצה"
+    },
+    {
+      "id": "clothing_tshirt",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "חולצת טי",
+      "answerHe": "חולצת טי"
+    },
+    {
+      "id": "clothing_pants",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "מכנסיים",
+      "answerHe": "מכנסיים"
+    },
+    {
+      "id": "clothing_jeans",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "ג'ינס",
+      "answerHe": "ג'ינס"
+    },
+    {
+      "id": "clothing_shorts",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "מכנסיים קצרים",
+      "answerHe": "מכנסיים קצרים"
+    },
+    {
+      "id": "clothing_dress",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "שמלה",
+      "answerHe": "שמלה"
+    },
+    {
+      "id": "clothing_skirt",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "חצאית",
+      "answerHe": "חצאית"
+    },
+    {
+      "id": "clothing_coat",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "מעיל",
+      "answerHe": "מעיל"
+    },
+    {
+      "id": "clothing_sweater",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "סוודר",
+      "answerHe": "סוודר"
+    },
+    {
+      "id": "clothing_hoodie",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "קפוצ'ון",
+      "answerHe": "קפוצ'ון"
+    },
+    {
+      "id": "clothing_suit",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "חליפה",
+      "answerHe": "חליפה"
+    },
+    {
+      "id": "clothing_vest",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "וסט",
+      "answerHe": "וסט"
+    },
+    {
+      "id": "clothing_socks",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "גרביים",
+      "answerHe": "גרביים"
+    },
+    {
+      "id": "clothing_shoes",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "נעליים",
+      "answerHe": "נעליים"
+    },
+    {
+      "id": "clothing_boots",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "מגפיים",
+      "answerHe": "מגפיים"
+    },
+    {
+      "id": "clothing_sneakers",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "נעלי ספורט",
+      "answerHe": "נעלי ספורט"
+    },
+    {
+      "id": "clothing_hat",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "כובע",
+      "answerHe": "כובע"
+    },
+    {
+      "id": "clothing_cap",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "כובע מצחייה",
+      "answerHe": "כובע מצחייה"
+    },
+    {
+      "id": "clothing_scarf",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "צעיף",
+      "answerHe": "צעיף"
+    },
+    {
+      "id": "clothing_gloves",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "כפפות",
+      "answerHe": "כפפות"
+    },
+    {
+      "id": "clothing_tie",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "עניבה",
+      "answerHe": "עניבה"
+    },
+    {
+      "id": "clothing_bowtie",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "עניבת פרפר",
+      "answerHe": "עניבת פרפר"
+    },
+    {
+      "id": "clothing_raincoat",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "מעיל גשם",
+      "answerHe": "מעיל גשם"
+    },
+    {
+      "id": "clothing_swimsuit",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "בגד ים",
+      "answerHe": "בגד ים"
+    },
+    {
+      "id": "clothing_underwear",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "תחתונים",
+      "answerHe": "תחתונים"
+    },
+    {
+      "id": "clothing_bra",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "חזייה",
+      "answerHe": "חזייה"
+    },
+    {
+      "id": "clothing_blouse",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "חולצת נשים",
+      "answerHe": "חולצת נשים"
+    },
+    {
+      "id": "clothing_cardigan",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "קרדיגן",
+      "answerHe": "קרדיגן"
+    },
+    {
+      "id": "clothing_jumpsuit",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "אוברול",
+      "answerHe": "אוברול"
+    },
+    {
+      "id": "clothing_leggings",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "טייץ",
+      "answerHe": "טייץ"
+    },
+    {
+      "id": "clothing_apron",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "סינר",
+      "answerHe": "סינר"
+    },
+    {
+      "id": "clothing_overalls",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "סרבל",
+      "answerHe": "סרבל"
+    },
+    {
+      "id": "clothing_mittens",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "כפפות אצבע",
+      "answerHe": "כפפות אצבע"
+    },
+    {
+      "id": "clothing_beanie",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "כובע גרב",
+      "answerHe": "כובע גרב"
+    },
+    {
+      "id": "clothing_heels",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "עקבים",
+      "answerHe": "עקבים"
+    },
+    {
+      "id": "clothing_flip_flops",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "כפכפים",
+      "answerHe": "כפכפים"
+    },
+    {
+      "id": "clothing_kimono",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "קימונו",
+      "answerHe": "קימונו"
+    },
+    {
+      "id": "clothing_hoodie_jacket",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "מעיל קפוצ'ון",
+      "answerHe": "מעיל קפוצ'ון"
+    },
+    {
+      "id": "clothing_turtleneck",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "גולף",
+      "answerHe": "גולף"
+    },
+    {
+      "id": "clothing_tank_top",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "גופייה",
+      "answerHe": "גופייה"
+    },
+    {
+      "id": "clothing_sunglasses",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "משקפי שמש",
+      "answerHe": "משקפי שמש"
+    },
+    {
+      "id": "clothing_helmet",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "קסדה",
+      "answerHe": "קסדה"
+    },
+    {
+      "id": "clothing_scarf_winter",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "צעיף חורף",
+      "answerHe": "צעיף חורף"
+    },
+    {
+      "id": "sports_soccer",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "כדורגל",
+      "answerHe": "כדורגל"
+    },
+    {
+      "id": "sports_basketball",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "כדורסל",
+      "answerHe": "כדורסל"
+    },
+    {
+      "id": "sports_tennis",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "טניס",
+      "answerHe": "טניס"
+    },
+    {
+      "id": "sports_volleyball",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "כדורעף",
+      "answerHe": "כדורעף"
+    },
+    {
+      "id": "sports_baseball",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "בייסבול",
+      "answerHe": "בייסבול"
+    },
+    {
+      "id": "sports_swimming",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "שחייה",
+      "answerHe": "שחייה"
+    },
+    {
+      "id": "sports_running",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "ריצה",
+      "answerHe": "ריצה"
+    },
+    {
+      "id": "sports_cycling",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "רכיבת אופניים",
+      "answerHe": "רכיבת אופניים"
+    },
+    {
+      "id": "sports_boxing",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "אגרוף",
+      "answerHe": "אגרוף"
+    },
+    {
+      "id": "sports_judo",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "ג'ודו",
+      "answerHe": "ג'ודו"
+    },
+    {
+      "id": "sports_gymnastics",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "התעמלות",
+      "answerHe": "התעמלות"
+    },
+    {
+      "id": "sports_skiing",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "סקי",
+      "answerHe": "סקי"
+    },
+    {
+      "id": "sports_surfing",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "גלישה",
+      "answerHe": "גלישה"
+    },
+    {
+      "id": "sports_golf",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "גולף",
+      "answerHe": "גולף"
+    },
+    {
+      "id": "sports_ice_hockey",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "הוקי קרח",
+      "answerHe": "הוקי קרח"
+    },
+    {
+      "id": "sports_rugby",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "רוגבי",
+      "answerHe": "רוגבי"
+    },
+    {
+      "id": "sports_cricket",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "קריקט",
+      "answerHe": "קריקט"
+    },
+    {
+      "id": "sports_table_tennis",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "טניס שולחן",
+      "answerHe": "טניס שולחן"
+    },
+    {
+      "id": "sports_archery",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "קשתות",
+      "answerHe": "קשתות"
+    },
+    {
+      "id": "sports_fencing",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "סיף",
+      "answerHe": "סיף"
+    },
+    {
+      "id": "sports_rowing",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "חתירה",
+      "answerHe": "חתירה"
+    },
+    {
+      "id": "sports_sailing",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "שיט",
+      "answerHe": "שיט"
+    },
+    {
+      "id": "sports_climbing",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "טיפוס",
+      "answerHe": "טיפוס"
+    },
+    {
+      "id": "sports_skateboarding",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "סקייטבורד",
+      "answerHe": "סקייטבורד"
+    },
+    {
+      "id": "sports_wrestling",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "היאבקות",
+      "answerHe": "היאבקות"
+    },
+    {
+      "id": "sports_weightlifting",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "הרמת משקולות",
+      "answerHe": "הרמת משקולות"
+    },
+    {
+      "id": "sports_handball",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "כדוריד",
+      "answerHe": "כדוריד"
+    },
+    {
+      "id": "sports_horse_riding",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "רכיבה על סוסים",
+      "answerHe": "רכיבה על סוסים"
+    },
+    {
+      "id": "sports_diving",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "קפיצה למים",
+      "answerHe": "קפיצה למים"
+    },
+    {
+      "id": "sports_water_polo",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "כדורמים",
+      "answerHe": "כדורמים"
+    },
+    {
+      "id": "sports_triathlon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "טריאתלון",
+      "answerHe": "טריאתלון"
+    },
+    {
+      "id": "sports_marathon",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "מרתון",
+      "answerHe": "מרתון"
+    },
+    {
+      "id": "sports_figure_skating",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "החלקה אמנותית",
+      "answerHe": "החלקה אמנותית"
+    },
+    {
+      "id": "sports_taekwondo",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "טאקוונדו",
+      "answerHe": "טאקוונדו"
+    },
+    {
+      "id": "sports_squash",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "סקווש",
+      "answerHe": "סקווש"
+    },
+    {
+      "id": "sports_softball",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "סופטבול",
+      "answerHe": "סופטבול"
+    },
+    {
+      "id": "sports_polo",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "פולו",
+      "answerHe": "פולו"
+    },
+    {
+      "id": "sports_darts",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "חיצים",
+      "answerHe": "חיצים"
+    },
+    {
+      "id": "sports_motorsport",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "ספורט מוטורי",
+      "answerHe": "ספורט מוטורי"
+    },
+    {
+      "id": "sports_skating",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "החלקה",
+      "answerHe": "החלקה"
+    },
+    {
+      "id": "sports_hiking",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "טיולים",
+      "answerHe": "טיולים"
+    },
+    {
+      "id": "sports_kayaking",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "שייט קיאקים",
+      "answerHe": "שייט קיאקים"
+    },
+    {
+      "id": "sports_chess",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "שחמט",
+      "answerHe": "שחמט"
     }
   ]
 }
