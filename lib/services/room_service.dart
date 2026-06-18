@@ -2492,8 +2492,10 @@ class RoomService {
   Future<List<GameImageModel>> getAllImages() => _loadLocalImages();
 
   Future<GameImageModel?> getImage(String imageId) async {
-    // Search every category so an image from any catalogue resolves regardless
-    // of the room's category. Falls back to the Israel-places pool's first entry.
+    if (imageId.isEmpty) return null;
+    // Search every category (bundled + remote) so an image from any catalogue
+    // resolves regardless of the room's category — heat rounds in particular use
+    // ids from topics other than israel_places.
     for (final cat in GameCategories.all) {
       final images = await _loadLocalImages(categoryId: cat.id);
       final found = images
@@ -2502,7 +2504,10 @@ class RoomService {
           .firstOrNull;
       if (found != null) return found;
     }
-    final fallback = await _loadLocalImages();
-    return fallback.isNotEmpty ? fallback.first : null;
+    // Unresolved: return null (the board shows a loading placeholder) rather
+    // than a wrong image. The old israel_places.first fallback surfaced the
+    // Western Wall inside חי-צומח-דומם heats whenever an id failed to resolve.
+    QaLoggerService.instance.log('GAME', 'GET_IMAGE_UNRESOLVED id=$imageId');
+    return null;
   }
 }
