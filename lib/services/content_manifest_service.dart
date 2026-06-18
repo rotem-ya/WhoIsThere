@@ -100,12 +100,16 @@ class ContentManifestService {
   static final ContentManifestService instance = ContentManifestService._();
 
   static const _prefsKey = 'content_manifest_v1';
+  static const _topicsPrefsKey = 'content_topics_active_v1';
   static const _docPath = 'content_manifest/places_v1';
 
   // id → isActive override (covers bundled + remote).
   final Map<String, bool> _activeById = {};
   // category id → remote places active AND with image cached, in that category.
   final Map<String, List<GameImageModel>> _remoteByCategory = {};
+  // category id → active flag (manifest `topicsActive` map). A whole topic
+  // ("חי צומח דומם") can be hidden by the admin without touching its places.
+  final Map<String, bool> _topicsActive = {};
   bool _loaded = false;
 
   bool get isLoaded => _loaded;
@@ -120,6 +124,11 @@ class ContentManifestService {
   bool isActive(String id, {required bool localDefault}) =>
       _activeById[id] ?? localDefault;
 
+  /// Active-state for a whole category/topic. A category absent from the
+  /// manifest `topicsActive` map counts as active (backward compatible — no
+  /// map means every topic shows, exactly like before).
+  bool isCategoryActive(String categoryId) => _topicsActive[categoryId] ?? true;
+
   /// Remote places ready to play (active + image cached) in [categoryId].
   /// Copy, never null.
   List<GameImageModel> availableRemoteImages(
@@ -131,6 +140,7 @@ class ContentManifestService {
   Future<void> loadCached() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      _applyTopics(prefs.getString(_topicsPrefsKey));
       final raw = prefs.getString(_prefsKey);
       if (raw == null) return;
       final places = _parsePlaces(raw);
@@ -161,12 +171,26 @@ class ContentManifestService {
           ? placesRaw.map(_ManifestPlace.tryParse).whereType<_ManifestPlace>().toList()
           : <_ManifestPlace>[];
 
+      // Whole-topic active flags (optional; absent map = every topic active).
+      final topics = <String, bool>{};
+      final topicsRaw = data['topicsActive'];
+      if (topicsRaw is Map) {
+        topicsRaw.forEach((k, v) {
+          if (v is bool) topics[k.toString()] = v;
+        });
+      }
+
       // Persist for offline use before doing any (slow) downloads.
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(
             _prefsKey, jsonEncode(places.map((p) => p.toJson()).toList()));
+        await prefs.setString(_topicsPrefsKey, jsonEncode(topics));
       } catch (_) {}
+
+      _topicsActive
+        ..clear()
+        ..addAll(topics);
 
       await _apply(places, downloadMissing: true);
       _loaded = true;
@@ -177,6 +201,20 @@ class ContentManifestService {
       _loaded = true;
       QaLoggerService.instance.log('CONTENT', 'MANIFEST_SYNC_FAILED $e');
     }
+  }
+
+  /// Loads the persisted `topicsActive` map (best-effort) into memory.
+  void _applyTopics(String? rawJson) {
+    _topicsActive.clear();
+    if (rawJson == null) return;
+    try {
+      final decoded = jsonDecode(rawJson);
+      if (decoded is Map) {
+        decoded.forEach((k, v) {
+          if (v is bool) _topicsActive[k.toString()] = v;
+        });
+      }
+    } catch (_) {}
   }
 
   List<_ManifestPlace> _parsePlaces(String rawJson) {

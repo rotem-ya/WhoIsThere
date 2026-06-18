@@ -981,6 +981,8 @@ class RoomService {
   Future<List<String>> _availableHeatTopics() async {
     final avail = <String>[];
     for (final c in GameCategories.fastHeat) {
+      // Admin can hide a whole topic via the manifest `topicsActive` map.
+      if (!ContentManifestService.instance.isCategoryActive(c)) continue;
       final pool = await _loadLocalImages(categoryId: c);
       if (pool.isNotEmpty) avail.add(c);
     }

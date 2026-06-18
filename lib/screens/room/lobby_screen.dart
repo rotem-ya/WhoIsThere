@@ -17,6 +17,7 @@ import '../../core/utils/chat_filter.dart';
 import '../../widgets/chat/chat_sheet.dart';
 import '../../services/qa_logger_service.dart';
 import '../../services/settings_service.dart';
+import '../../services/content_manifest_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../widgets/common/app_feedback.dart';
@@ -120,9 +121,12 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
+              // Topics the admin hid via the manifest `topicsActive` map are
+              // dropped from the picker (absent = active, backward compatible).
               for (final catId in GameCategories.fastHeat)
-                _topicChip(catId,
-                    selected: myList.contains(catId), myQuota: myQuota),
+                if (ContentManifestService.instance.isCategoryActive(catId))
+                  _topicChip(catId,
+                      selected: myList.contains(catId), myQuota: myQuota),
             ],
           ),
           const SizedBox(height: 8),
