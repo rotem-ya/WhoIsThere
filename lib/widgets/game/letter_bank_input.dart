@@ -5,7 +5,16 @@ import 'package:flutter/services.dart';
 
 import '../economy/coin_icon.dart';
 
-String normalizeHebrewFinals(String s) => s
+/// Removes geresh / gershayim marks (both ASCII and Hebrew forms). There is no
+/// geresh key in the letter bank, so words like ג'ירפה are spelled and matched
+/// as גירפה — the mark is ignored on both the slots and the comparison.
+String stripGeresh(String s) => s
+    .replaceAll('׳', '') // ׳ Hebrew punctuation geresh
+    .replaceAll('״', '') // ״ Hebrew punctuation gershayim
+    .replaceAll("'", '') // ASCII apostrophe
+    .replaceAll('"', ''); // ASCII quote
+
+String normalizeHebrewFinals(String s) => stripGeresh(s)
     .replaceAll('ך', 'כ')
     .replaceAll('ם', 'מ')
     .replaceAll('ן', 'נ')
@@ -102,7 +111,7 @@ class _LetterBankInputState extends State<LetterBankInput> {
   }
 
   void _resetForAnswer() {
-    final words = widget.answer.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
+    final words = stripGeresh(widget.answer).trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
     var total = 0;
     final lengths = <int>[];
     final letters = <String>[];
