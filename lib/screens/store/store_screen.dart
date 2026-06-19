@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/ad_constants.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/economy_config.dart';
 import '../../core/ui/app_scaffold.dart';
@@ -179,22 +180,27 @@ class _PurchaseTab extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
+        // Ad-related store items (ad-removal pack + rewarded-ad tile) are shown
+        // only when ads are enabled. With ads off at launch, advertising
+        // shouldn't be referenced anywhere in the UI (and would fail review).
+        if (AdConstants.adsEnabled) ...[
+          const SizedBox(height: AppSpacing.lg),
 
-        // ── Ad removal pack ───────────────────────────────────────────────
-        _SectionLabel(label: 'חבילות', icon: '🎁'),
-        const SizedBox(height: 10),
-        _AdRemovalCard()
-            .animate(delay: 180.ms)
-            .fadeIn(duration: 340.ms, curve: Curves.easeOut)
-            .slideY(begin: 0.06, end: 0, duration: 340.ms, curve: Curves.easeOut),
-        const SizedBox(height: AppSpacing.md),
+          // ── Ad removal pack ─────────────────────────────────────────────
+          _SectionLabel(label: 'חבילות', icon: '🎁'),
+          const SizedBox(height: 10),
+          _AdRemovalCard()
+              .animate(delay: 180.ms)
+              .fadeIn(duration: 340.ms, curve: Curves.easeOut)
+              .slideY(begin: 0.06, end: 0, duration: 340.ms, curve: Curves.easeOut),
+          const SizedBox(height: AppSpacing.md),
 
-        // ── Rewarded Ad ───────────────────────────────────────────────────
-        _RewardedAdTile(ref: ref)
-            .animate(delay: 260.ms)
-            .fadeIn(duration: 300.ms, curve: Curves.easeOut)
-            .slideY(begin: 0.06, end: 0, duration: 300.ms, curve: Curves.easeOut),
+          // ── Rewarded Ad ─────────────────────────────────────────────────
+          _RewardedAdTile(ref: ref)
+              .animate(delay: 260.ms)
+              .fadeIn(duration: 300.ms, curve: Curves.easeOut)
+              .slideY(begin: 0.06, end: 0, duration: 300.ms, curve: Curves.easeOut),
+        ],
       ],
     );
   }

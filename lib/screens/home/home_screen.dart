@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/ad_constants.dart';
 import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
@@ -436,7 +437,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   if (dailyAvailable)
                     optBtn('🎁 קבל פרס יומי', const [Color(0xFFE0A020), Color(0xFFB47800)],
                         () => run(() async => (await economy.claimDailyReward(uid!)) != null, proceed: true)),
-                  if (adsAvailable)
+                  if (AdConstants.adsEnabled && adsAvailable)
                     optBtn('📺 צפה בפרסומת (+${EconomyConfig.adRewardCoins})', const [Color(0xFF20A8E0), Color(0xFF0868A8)],
                         () => run(() => economy.applyAdReward(uid!), proceed: true)),
 

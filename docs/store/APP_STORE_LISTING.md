@@ -108,22 +108,20 @@ A picture hides behind a grid of tiles that reveal one by one. First to recogniz
 
 ## 4. App Privacy ("Nutrition Label" — שאלון נפרד בקונסולה)
 
-**Data is collected — Yes.** מלא כך (Data linked to the user אלא אם צוין):
+> ✅ **v1.0 = ללא פרסומות וללא tracking.** ב-`AdConstants.adsEnabled = false`, ו-`main.dart`
+> כבר **לא מאתחל** את AdMob SDK כשהפרסומות כבויות — לכן **לא נאסף Advertising Identifier ואין
+> tracking**, ולא נדרש ATT. (ראה §8 — כשמפעילים פרסומות בעתיד צריך לעדכן את הטבלה הזו + להוסיף ATT.)
+
+**Data is collected — Yes.** מלא כך (Data linked to the user; **Used to Track = No בכל השורות**):
 
 | Data Type | נאסף | מקושר למשתמש | Used to Track | מטרה (Purpose) |
 |-----------|------|--------------|---------------|-----------------|
-| Contact Info → Email Address | כן | כן | לא | App Functionality (חשבון/התחברות) |
+| Contact Info → Email Address | כן | כן | לא | App Functionality (חשבון/התחברות — Google/Apple sign-in) |
 | User Content → Name (שם שחקן) | כן | כן | לא | App Functionality |
 | Identifiers → User ID | כן | כן | לא | App Functionality (מצב משחק) |
-| Usage Data → Product Interaction | כן | כן | לא | App Functionality, Analytics |
-| Identifiers → Device ID / Advertising | כן | כן | **כן** | Third-Party Advertising (AdMob) |
+| Usage Data → Product Interaction | כן | כן | לא | App Functionality |
 
-> ⚠️ **App Tracking Transparency (ATT):** מאחר ש-AdMob משתמש ב-Advertising Identifier ו-"Used to
-> Track = Yes", iOS מחייב **בקשת ATT** (`NSUserTrackingUsageDescription` ב-Info.plist + הצגת
-> הדיאלוג). **לבדוק בקוד**: אם אין ATT — או להוסיף אותו, או להגדיר AdMob ל-non-personalized ads
-> ואז לסמן "Used to Track = No". אחרת אפל עלולה לדחות. (משימה ל-cowork לאמת ב-`ios/Runner/Info.plist`
-> וב-`lib/.../ad_constants.dart`.)
-
+- **Tracking:** None (אין שימוש ב-Advertising Identifier ב-v1.0).
 - **Encryption in transit:** Yes
 - **Data deletion request:** Yes — דרך אימייל התמיכה.
 
@@ -159,11 +157,24 @@ A picture hides behind a grid of tiles that reveal one by one. First to recogniz
 - [ ] Privacy Policy URL חי ותקף (כולל AdMob+Firebase — לאמת `docs/privacy.html`)
 - [ ] Description + Subtitle + Promotional + Keywords (סעיף 1) — עברית + en-US
 - [ ] Age Rating (סעיף 3)
-- [ ] App Privacy "Nutrition Label" (סעיף 4) **+ לאמת/להוסיף ATT** אם נדרש
-- [ ] Export Compliance / `ITSAppUsesNonExemptEncryption` (סעיף 5)
+- [ ] App Privacy "Nutrition Label" (סעיף 4) — **v1.0: ATT לא נדרש** (אין tracking)
+- [ ] Export Compliance / `ITSAppUsesNonExemptEncryption=false` (כבר ב-Info.plist)
 - [ ] צילומי מסך 6.7"/6.5" (סעיף 6)
 - [ ] בחר את ה-build, מלא "What to test"/"Notes for Review" (Play as guest)
 - [ ] Submit for Review
+
+---
+
+## 8. כשמפעילים פרסומות בעתיד (לא ל-v1.0)
+היום `AdConstants.adsEnabled = false` והקוד לא מאתחל AdMob. כשתרצו להדליק פרסומות:
+1. החליפו את ה-test unit IDs ב-`lib/core/constants/ad_constants.dart` במזהים אמיתיים מ-AdMob,
+   והחליפו את `GADApplicationIdentifier` ב-`ios/Runner/Info.plist` + ה-`APPLICATION_ID`
+   ב-`android/app/src/main/AndroidManifest.xml` ל-App ID האמיתי.
+2. `adsEnabled = true` (אז ה-SDK יאותחל ובאנרים/rewarded יחזרו).
+3. **הוסיפו ATT ל-iOS**: `NSUserTrackingUsageDescription` ב-Info.plist + בקשת הרשאה
+   (`AppTrackingTransparency`) לפני אתחול AdMob.
+4. עדכנו את **App Privacy** (אפל) ל-"Advertising Identifier / Used to Track = Yes" ואת
+   **Data safety** (Google) ל-"shares Advertising ID" — אחרת תהיה אי-התאמה ודחייה.
 
 ---
 

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:app_links/app_links.dart';
+import 'core/constants/ad_constants.dart';
 import 'core/constants/build_info.dart';
 import 'core/theme/app_styles.dart';
 import 'core/theme/app_theme.dart';
@@ -35,7 +36,13 @@ void main() async {
     firebaseError = e;
   }
 
-  MobileAds.instance.initialize();
+  // Only initialize the AdMob SDK when ads are actually enabled. With ads off
+  // (launch default) we skip init entirely so the SDK never collects the
+  // advertising identifier — keeping the store privacy declaration at
+  // "no ads / no tracking" and avoiding any ATT requirement.
+  if (AdConstants.adsEnabled) {
+    MobileAds.instance.initialize();
+  }
 
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
