@@ -1,0 +1,49 @@
+# Fastfile — iOS TestFlight delivery for WhoIsThere (whois_there)
+#
+# Lane "beta" builds a signed IPA and uploads it to TestFlight.
+# Authentication uses an App Store Connect API Key (Issuer ID + Key ID + .p8),
+# NOT an Apple ID / app-specific password. Every value comes from environment
+# variables that the CI workflow (.github/workflows/build-ios.yml) populates
+# from GitHub Secrets — nothing is hardcoded in this file.
+#
+# Env vars expected at runtime (set by the workflow from secrets.*):
+#   APPSTORE_API_KEY_ID     - App Store Connect API Key ID
+#   APPSTORE_API_ISSUER_ID  - App Store Connect API Issuer ID
+#   APPSTORE_API_KEY_PATH   - filesystem path to the decoded .p8 key file
+#   APPLE_TEAM_ID           - Apple Developer Team ID
+#   GITHUB_RUN_NUMBER       - GitHub Actions run number, used as the build number
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Build a signed IPA and upload it to TestFlight (App Store Connect API key auth)"
+  lane :beta do
+    # App Store Connect API key — read from env vars, not an Apple ID password.
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APPSTORE_API_KEY_ID"],
+      issuer_id: ENV["APPSTORE_API_ISSUER_ID"],
+      key_filepath: ENV["APPSTORE_API_KEY_PATH"],
+      in_house: false
+    )
+
+    # Build number from the GitHub Actions run number so every upload is unique.
+    build_number = ENV["GITHUB_RUN_NUMBER"] || "1"
+
+    # Build the signed IPA with Flutter (drives gym/xcodebuild via ExportOptions).
+    # flutter build ipa runs from the repo root, which is one level above ios/.
+    sh("cd .. && flutter build ipa --release " \
+       "--build-number=#{build_number} " \
+       "--export-options-plist=ios/ExportOptions.plist")
+
+    # Locate the exported IPA (name follows the Xcode scheme; glob to be safe).
+    ipa_path = Dir["../build/ios/ipa/*.ipa"].first
+    UI.user_error!("No IPA found in build/ios/ipa") if ipa_path.nil?
+
+    # Upload the build to TestFlight via pilot, authenticating with the API key.
+    pilot(
+      api_key: api_key,
+      ipa: ipa_path,
+      skip_waiting_for_build_processing: true
+    )
+  end
+end

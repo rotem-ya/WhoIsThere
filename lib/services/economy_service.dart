@@ -269,6 +269,63 @@ class EconomyService {
     return granted;
   }
 
+  // ── Free-entry safety net ─────────────────────────────────────
+  // One free game per UTC day when the player can't afford the entry fee. We
+  // top the wallet up by exactly the entry fee (not counted as totalEarned) and
+  // stamp lastFreeEntryAt, so the normal entry-fee deduction nets to free. This
+  // keeps the player out of a coin dead-end without touching the fee pipeline.
+
+  static bool freeEntryAvailable(UserEconomyModel? wallet) {
+    final last = wallet?.lastFreeEntryAt;
+    if (last == null) return true;
+    final now = DateTime.now().toUtc();
+    return !(last.year == now.year &&
+        last.month == now.month &&
+        last.day == now.day);
+  }
+
+  /// Grants one free entry (tops up by the entry fee) if not already used today.
+  /// Returns true if granted.
+  Future<bool> claimFreeEntry(String uid) async {
+    final now = DateTime.now().toUtc();
+    final ref = _walletRef(uid);
+    bool granted = false;
+
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      final wallet = snap.exists
+          ? UserEconomyModel.fromFirestore(uid, snap.data()!)
+          : UserEconomyModel.empty(uid);
+
+      if (!freeEntryAvailable(wallet)) return;
+
+      const coins = EconomyConfig.gameEntryFee;
+      final updated = wallet.copyWith(
+        coins: wallet.coins + coins,
+        lastFreeEntryAt: now,
+      );
+      tx.set(ref, updated.toFirestore());
+
+      final txId = _uuid.v4();
+      tx.set(_txCol(uid).doc(txId), EconomyTransactionModel(
+        id: txId,
+        type: TransactionType.freeEntry,
+        delta: coins,
+        balanceAfter: updated.coins,
+        createdAt: now,
+        meta: const {'freeEntry': true},
+      ).toFirestore());
+
+      granted = true;
+    });
+
+    if (granted) {
+      await _syncCache(uid);
+      QaLoggerService.instance.log('ECONOMY', 'FREE_ENTRY_GRANTED uid=${uid.substring(0, uid.length.clamp(0, 6))}');
+    }
+    return granted;
+  }
+
   // ── Spend coins (hints etc.) ──────────────────────────────────
 
   /// Returns false if the user doesn't have enough coins.

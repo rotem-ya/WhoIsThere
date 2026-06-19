@@ -211,6 +211,8 @@ class _DifficultyCard extends StatelessWidget {
         return 9;
       case Difficulty.veryEasy:
         return 5;
+      case Difficulty.giant:
+        return 10;
     }
   }
 

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../core/constants/game_categories.dart';
 import '../core/constants/game_constants.dart';
 import 'player_model.dart';
 
@@ -13,6 +14,7 @@ class RoomModel extends Equatable {
   final Map<String, int> difficultyVotes;
   final String? selectedImageId;
   final Difficulty? selectedDifficulty;
+  final String selectedCategory;
   final List<String> turnOrder;
   final int currentTurnIndex;
   final Map<int, String> placedPieces; // pieceIndex -> userId
@@ -21,6 +23,7 @@ class RoomModel extends Equatable {
   final List<String> letterCardGrantedPlayerIds;
   final String? winnerId;
   final Map<String, dynamic>? lastGuessEvent;
+  final Map<String, dynamic>? lastReaction; // {playerId, emoji, ts}
   final int guessCount;
   final DateTime createdAt;
   final TurnPhase turnPhase;
@@ -48,6 +51,23 @@ class RoomModel extends Equatable {
   /// player is only matched into this room if THEIR exposure to the same image
   /// equals this value (same-exposure matchmaking).
   final int matchExposureCount;
+  // Fast-game "heat": a sequence of quick rounds (one image per category). Empty
+  // for the normal single-round game. [heatRoundIndex] is the 0-based current round.
+  final List<String> heatCategories;
+  final List<String> heatImageIds;
+  final int heatRoundIndex;
+  // Friends-mode heat topic picks: playerId → list of chosen categoryIds.
+  // Each player picks 1; when there are <3 players the host picks the extra
+  // topics so the heat still has ≥3 rounds. Resolved into [heatCategories] when
+  // the host starts. Empty for quick-match (random topics).
+  final Map<String, List<String>> topicChoices;
+  // Friends games: player ids that have already claimed their placement reward
+  // (idempotency guard so the 20/5 coin gift is paid at most once each).
+  final List<String> placementPaidPlayerIds;
+  // Set on a FINISHED room when a player taps "play again": points at the fresh
+  // room the group can rejoin. Lets the rest of the win screen offer "join
+  // rematch". Null until someone starts a rematch. Friends games only.
+  final String? rematchRoomId;
 
   const RoomModel({
     required this.id,
@@ -59,6 +79,7 @@ class RoomModel extends Equatable {
     this.difficultyVotes = const {},
     this.selectedImageId,
     this.selectedDifficulty,
+    this.selectedCategory = GameCategories.israelPlaces,
     this.turnOrder = const [],
     this.currentTurnIndex = 0,
     this.placedPieces = const {},
@@ -67,6 +88,7 @@ class RoomModel extends Equatable {
     this.letterCardGrantedPlayerIds = const [],
     this.winnerId,
     this.lastGuessEvent,
+    this.lastReaction,
     this.guessCount = 0,
     required this.createdAt,
     this.turnPhase = TurnPhase.revealTurn,
@@ -91,7 +113,21 @@ class RoomModel extends Equatable {
     this.isPublicRoom = false,
     this.playerRound = 0,
     this.matchExposureCount = 0,
+    this.heatCategories = const [],
+    this.heatImageIds = const [],
+    this.heatRoundIndex = 0,
+    this.topicChoices = const {},
+    this.placementPaidPlayerIds = const [],
+    this.rematchRoomId,
   });
+
+  // True when this room is a fast-game heat (more than one queued round).
+  bool get isHeat => heatImageIds.length > 1;
+  bool get isLastHeatRound => heatRoundIndex >= heatImageIds.length - 1;
+
+  // Friends games are private (not public quick-match): free entry, per-game
+  // scoring (not added to lifetime totalPoints), top-2 placement coin rewards.
+  bool get isFriendsGame => !isPublicRoom;
 
   bool isBlockedFromGuessing(String userId) {
     final blockedUntil = blockedGuessers[userId];
@@ -160,6 +196,8 @@ class RoomModel extends Equatable {
       imageVotes: Map<String, String>.from(data['imageVotes'] ?? {}),
       difficultyVotes: Map<String, int>.from(data['difficultyVotes'] ?? {}),
       selectedImageId: data['selectedImageId'],
+      selectedCategory:
+          (data['selectedCategory'] as String?) ?? GameCategories.israelPlaces,
       selectedDifficulty: data['selectedDifficulty'] != null
           ? Difficulty.values.firstWhere(
               (e) => e.name == data['selectedDifficulty'],
@@ -175,6 +213,7 @@ class RoomModel extends Equatable {
           List<String>.from(data['letterCardGrantedPlayerIds'] ?? []),
       winnerId: data['winnerId'],
       lastGuessEvent: data['lastGuessEvent'] as Map<String, dynamic>?,
+      lastReaction: data['lastReaction'] as Map<String, dynamic>?,
       guessCount: data['guessCount'] as int? ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       turnPhase: TurnPhase.values.firstWhere(
@@ -207,6 +246,16 @@ class RoomModel extends Equatable {
       isPublicRoom: data['isPublicRoom'] as bool? ?? false,
       playerRound: (data['playerRound'] as num?)?.toInt() ?? 0,
       matchExposureCount: (data['matchExposureCount'] as num?)?.toInt() ?? 0,
+      heatCategories: List<String>.from(data['heatCategories'] ?? []),
+      heatImageIds: List<String>.from(data['heatImageIds'] ?? []),
+      heatRoundIndex: (data['heatRoundIndex'] as num?)?.toInt() ?? 0,
+      topicChoices: (data['topicChoices'] as Map?)?.map(
+            (k, v) => MapEntry(k.toString(), List<String>.from(v as List? ?? const [])),
+          ) ??
+          const {},
+      placementPaidPlayerIds:
+          List<String>.from(data['placementPaidPlayerIds'] ?? const []),
+      rematchRoomId: data['rematchRoomId'] as String?,
     );
   }
 
@@ -218,6 +267,7 @@ class RoomModel extends Equatable {
         'imageVotes': imageVotes,
         'difficultyVotes': difficultyVotes,
         'selectedImageId': selectedImageId,
+        'selectedCategory': selectedCategory,
         'selectedDifficulty': selectedDifficulty?.name,
         'turnOrder': turnOrder,
         'currentTurnIndex': currentTurnIndex,
@@ -227,6 +277,7 @@ class RoomModel extends Equatable {
         'letterCardGrantedPlayerIds': letterCardGrantedPlayerIds,
         'winnerId': winnerId,
         'lastGuessEvent': lastGuessEvent,
+        'lastReaction': lastReaction,
         'guessCount': guessCount,
         'createdAt': Timestamp.fromDate(createdAt),
         'turnPhase': turnPhase.name,
@@ -251,6 +302,12 @@ class RoomModel extends Equatable {
         'isPublicRoom': isPublicRoom,
         'playerRound': playerRound,
         'matchExposureCount': matchExposureCount,
+        'heatCategories': heatCategories,
+        'heatImageIds': heatImageIds,
+        'heatRoundIndex': heatRoundIndex,
+        'topicChoices': topicChoices,
+        'placementPaidPlayerIds': placementPaidPlayerIds,
+        'rematchRoomId': rematchRoomId,
       };
 
   RoomModel copyWith({
@@ -260,6 +317,7 @@ class RoomModel extends Equatable {
     Map<String, int>? difficultyVotes,
     String? selectedImageId,
     Difficulty? selectedDifficulty,
+    String? selectedCategory,
     List<String>? turnOrder,
     int? currentTurnIndex,
     Map<int, String>? placedPieces,
@@ -268,6 +326,7 @@ class RoomModel extends Equatable {
     List<String>? letterCardGrantedPlayerIds,
     String? winnerId,
     Map<String, dynamic>? lastGuessEvent,
+    Map<String, dynamic>? lastReaction,
     int? guessCount,
     TurnPhase? turnPhase,
     String? guessOpportunityPlayerId,
@@ -291,6 +350,12 @@ class RoomModel extends Equatable {
     bool? isPublicRoom,
     int? playerRound,
     int? matchExposureCount,
+    List<String>? heatCategories,
+    List<String>? heatImageIds,
+    int? heatRoundIndex,
+    Map<String, List<String>>? topicChoices,
+    List<String>? placementPaidPlayerIds,
+    String? rematchRoomId,
   }) =>
       RoomModel(
         id: id,
@@ -302,6 +367,7 @@ class RoomModel extends Equatable {
         difficultyVotes: difficultyVotes ?? this.difficultyVotes,
         selectedImageId: selectedImageId ?? this.selectedImageId,
         selectedDifficulty: selectedDifficulty ?? this.selectedDifficulty,
+        selectedCategory: selectedCategory ?? this.selectedCategory,
         turnOrder: turnOrder ?? this.turnOrder,
         currentTurnIndex: currentTurnIndex ?? this.currentTurnIndex,
         placedPieces: placedPieces ?? this.placedPieces,
@@ -311,6 +377,7 @@ class RoomModel extends Equatable {
             letterCardGrantedPlayerIds ?? this.letterCardGrantedPlayerIds,
         winnerId: winnerId ?? this.winnerId,
         lastGuessEvent: lastGuessEvent ?? this.lastGuessEvent,
+        lastReaction: lastReaction ?? this.lastReaction,
         guessCount: guessCount ?? this.guessCount,
         createdAt: createdAt,
         turnPhase: turnPhase ?? this.turnPhase,
@@ -338,6 +405,13 @@ class RoomModel extends Equatable {
         isPublicRoom: isPublicRoom ?? this.isPublicRoom,
         playerRound: playerRound ?? this.playerRound,
         matchExposureCount: matchExposureCount ?? this.matchExposureCount,
+        heatCategories: heatCategories ?? this.heatCategories,
+        heatImageIds: heatImageIds ?? this.heatImageIds,
+        heatRoundIndex: heatRoundIndex ?? this.heatRoundIndex,
+        topicChoices: topicChoices ?? this.topicChoices,
+        placementPaidPlayerIds:
+            placementPaidPlayerIds ?? this.placementPaidPlayerIds,
+        rematchRoomId: rematchRoomId ?? this.rematchRoomId,
       );
 
   @override
@@ -351,6 +425,7 @@ class RoomModel extends Equatable {
         difficultyVotes,
         selectedImageId,
         selectedDifficulty,
+        selectedCategory,
         turnOrder,
         currentTurnIndex,
         placedPieces,
@@ -359,6 +434,7 @@ class RoomModel extends Equatable {
         letterCardGrantedPlayerIds,
         winnerId,
         lastGuessEvent,
+        lastReaction,
         guessCount,
         turnPhase,
         guessOpportunityPlayerId,
@@ -382,5 +458,11 @@ class RoomModel extends Equatable {
         isPublicRoom,
         playerRound,
         matchExposureCount,
+        heatCategories,
+        heatImageIds,
+        heatRoundIndex,
+        topicChoices,
+        placementPaidPlayerIds,
+        rematchRoomId,
       ];
 }

@@ -11,10 +11,13 @@ import '../models/economy/economy_transaction_model.dart';
 import '../models/economy/user_economy_model.dart';
 import '../models/room_model.dart';
 import '../models/player_model.dart';
+import '../models/chat_message.dart';
 import '../models/game_image_model.dart';
 import '../core/constants/economy_config.dart';
+import '../core/constants/game_categories.dart';
 import '../core/constants/game_constants.dart';
 import '../core/utils/room_code_generator.dart';
+import 'content_manifest_service.dart';
 import 'qa_logger_service.dart';
 
 const List<String> _botNames = [
@@ -95,11 +98,16 @@ class RoomService {
 
   static const double _letterCardBonusChance = 0.12;
 
-  // Returns reveal countdown ring duration: fast early, slower as image becomes clearer.
+  // Returns reveal countdown ring duration. Tuned as an *accelerating* arc:
+  // slow while little is shown (gives the player room to attempt the high-value
+  // early guess), then progressively faster as the board fills — so the endgame
+  // tiles snap into place and pressure builds. This pairs with the shrinking
+  // guess-opportunity window (_guessOppTimerMs) for a clear slow→fast rhythm.
   static int _revealTimerMs(int revealedCount, int totalTiles) {
-    if (revealedCount < 3) return 3000;
-    if (revealedCount < 13) return 6000;
-    return 9000;
+    final ratio = totalTiles > 0 ? revealedCount / totalTiles : 0.0;
+    if (ratio < 0.30) return 3500; // opening: savor + early-guess window
+    if (ratio < 0.65) return 2500; // building up
+    return 1700; // endgame: urgent, snappy reveals
   }
 
   // Returns guess-opportunity timer duration in ms based on board state after the latest reveal.
@@ -152,27 +160,75 @@ class RoomService {
     'yehiam',
     'jaffa_clock_tower',
     'rabin_square',
+    // Content pack 2026-06-13
+    'yarkon_river',
+    'mount_sodom',
+    'weizmann_institute',
+    'tel_hai',
   };
 
-  Future<List<GameImageModel>>? _localImagesFuture;
+  // Raw catalogues (bundled JSON) are parsed once and memoized PER category
+  // asset. The playable pool is re-derived on every call so it always reflects
+  // the live content manifest (admin active/inactive + remote places) — the
+  // merge itself is cheap (a few dozen entries).
+  final Map<String, Future<List<Map<String, dynamic>>>> _rawByAsset = {};
 
-  Future<List<GameImageModel>> _loadLocalImages() {
-    return _localImagesFuture ??= _readLocalImages();
+  Future<List<Map<String, dynamic>>> _loadRawPlaces(String assetPath) {
+    return _rawByAsset[assetPath] ??= _readRawPlaces(assetPath);
   }
 
-  Future<List<GameImageModel>> _readLocalImages() async {
-    final rawJson = await rootBundle.loadString('assets/game_places/data/israel_places.json');
-    final decoded = jsonDecode(rawJson);
-    final rawPlaces = decoded is List
-        ? decoded
-        : (decoded is Map<String, dynamic> ? decoded['places'] as List<dynamic>? : null);
+  Future<List<Map<String, dynamic>>> _readRawPlaces(String assetPath) async {
+    try {
+      final rawJson = await rootBundle.loadString(assetPath);
+      final decoded = jsonDecode(rawJson);
+      final rawPlaces = decoded is List
+          ? decoded
+          : (decoded is Map<String, dynamic> ? decoded['places'] as List<dynamic>? : null);
+      if (rawPlaces == null) return const [];
+      return rawPlaces.whereType<Map<String, dynamic>>().toList(growable: false);
+    } catch (e) {
+      QaLoggerService.instance.log('CONTENT', 'RAW_PLACES_LOAD_ERROR asset=$assetPath $e');
+      return const [];
+    }
+  }
 
-    if (rawPlaces == null) return const [];
+  /// The playable pool for [categoryId] = bundled places (active per the manifest
+  /// override or the JSON is_active flag; the Israel-places catalogue is also
+  /// gated by the in-app id allowlist) + active remote places of that category
+  /// whose image is already cached. Safety net: if that yields nothing (bad or
+  /// empty manifest), fall back to bundled defaults so the game never runs dry.
+  Future<List<GameImageModel>> _loadLocalImages({
+    String categoryId = GameCategories.israelPlaces,
+  }) async {
+    final category = GameCategories.byId(categoryId);
+    final raw = await _loadRawPlaces(category.assetPath);
+    final manifest = ContentManifestService.instance;
 
-    return rawPlaces
-        .whereType<Map<String, dynamic>>()
-        .where((place) => place['is_active'] == true)
-        .where((place) => _availableLocalPlaceIds.contains(place['id']))
+    bool inAllowlist(Map<String, dynamic> p) =>
+        !category.useAllowlist || _availableLocalPlaceIds.contains(p['id']);
+
+    final bundled = raw
+        .where(inAllowlist)
+        // Active/hidden state: the manifest is the source of truth when it lists
+        // the place; otherwise fall back to the JSON is_active flag (a
+        // missing/legacy field counts as active). Admin "hide" = data-only.
+        .where((place) => manifest.isActive(
+              (place['id'] ?? '').toString(),
+              localDefault: place['is_active'] != false,
+            ))
+        .map(_localPlaceToImage)
+        .toList(growable: false);
+
+    final merged = <GameImageModel>[
+      ...bundled,
+      ...manifest.availableRemoteImages(category.id),
+    ];
+    if (merged.isNotEmpty) return merged;
+
+    // Safety net — ignore the manifest and return bundled defaults.
+    return raw
+        .where(inAllowlist)
+        .where((place) => place['is_active'] != false)
         .map(_localPlaceToImage)
         .toList(growable: false);
   }
@@ -202,6 +258,9 @@ class RoomService {
     int playerCount = 1,
     int entryFee = EconomyConfig.gameEntryFee,
     bool isPublicRoom = false,
+    Difficulty difficulty = Difficulty.easy,
+    String category = GameCategories.israelPlaces,
+    int heatRounds = 3,
   }) async {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
@@ -272,8 +331,28 @@ class RoomService {
     // image; only same-exposure real players will be matched into this room.
     String? preImageId;
     int matchExposure = 0;
-    if (isPublicRoom) {
-      final images = await _loadLocalImages();
+    var effectiveCategory = category;
+    List<String> heatCategories = const [];
+    List<String> heatImageIds = const [];
+
+    // Fast game (giant): quick-match builds a 3 random-topic heat now (so the
+    // waiting room is matchable by exposure). Friends rooms DEFER the heat to
+    // start time — it's built from the players' lobby topic picks in
+    // startGameDirectly (heatImageIds stays empty until then).
+    if (difficulty == Difficulty.giant && isPublicRoom) {
+      final heat = await _buildHeat(players, count: max(heatRounds, 3));
+      if (heat.imageIds.isNotEmpty) {
+        heatCategories = heat.categories;
+        heatImageIds = heat.imageIds;
+        preImageId = heat.imageIds.first;
+        effectiveCategory = heat.categories.first;
+        final hostExp = await _getExposureCounts(effectiveHostId);
+        matchExposure = hostExp[preImageId] ?? 0;
+        QaLoggerService.instance.log('MATCH',
+            'CREATE_HEAT rounds=${heat.imageIds.length} cats=${heat.categories.join(",")}');
+      }
+    } else if (isPublicRoom) {
+      final images = await _loadLocalImages(categoryId: category);
       if (images.isNotEmpty) {
         final img = await _pickSmartImage(images, players);
         preImageId = img.id;
@@ -296,6 +375,11 @@ class RoomService {
       playerRound: hostRound,
       selectedImageId: preImageId,
       matchExposureCount: matchExposure,
+      selectedDifficulty: difficulty,
+      selectedCategory: effectiveCategory,
+      heatCategories: heatCategories,
+      heatImageIds: heatImageIds,
+      heatRoundIndex: 0,
     );
 
     QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_WRITE id=${docRef.id}');
@@ -351,6 +435,57 @@ class RoomService {
     });
 
     return RoomModel.fromFirestore(await doc.reference.get());
+  }
+
+  /// "Play again" for friends games. The first player to tap on the win screen
+  /// creates a fresh private room cloning the finished game's type, then stamps
+  /// [rematchRoomId] on the old room so the rest of the group can rejoin. If a
+  /// rematch was already started (someone tapped first), returns that room id
+  /// instead of creating a duplicate. Returns null if the old room is gone.
+  Future<String?> createRematch({
+    required String oldRoomId,
+    required String hostId,
+    required String hostName,
+    String? hostPhotoUrl,
+  }) async {
+    final oldDoc = await _rooms.doc(oldRoomId).get();
+    if (!oldDoc.exists) return null;
+    final old = RoomModel.fromFirestore(oldDoc);
+    final existing = old.rematchRoomId;
+    if (existing != null && existing.isNotEmpty) return existing;
+
+    final newRoom = await createRoom(
+      hostId: hostId,
+      hostName: hostName,
+      hostPhotoUrl: hostPhotoUrl,
+      entryFee: 0,
+      isPublicRoom: false,
+      difficulty: old.selectedDifficulty ?? Difficulty.easy,
+    );
+    await oldDoc.reference.update({'rematchRoomId': newRoom.id});
+    return newRoom.id;
+  }
+
+  /// Joins a rematch room created via [createRematch] (looked up by id, then
+  /// added through the normal [joinRoom] path so all join logic stays in one
+  /// place). Returns null if the room is missing or no longer waiting.
+  Future<RoomModel?> joinRematch({
+    required String rematchRoomId,
+    required String userId,
+    required String userName,
+    String? userPhotoUrl,
+  }) async {
+    final doc = await _rooms.doc(rematchRoomId).get();
+    if (!doc.exists) return null;
+    final room = RoomModel.fromFirestore(doc);
+    if (room.phase != GamePhase.waiting) return null;
+    if (room.players.containsKey(userId)) return room;
+    return joinRoom(
+      code: room.code,
+      userId: userId,
+      userName: userName,
+      userPhotoUrl: userPhotoUrl,
+    );
   }
 
   /// Adds a single bot player to an existing waiting room.
@@ -475,9 +610,30 @@ class RoomService {
   }
 
   Future<void> startGameDirectly(String roomId) async {
-    final doc = await _rooms.doc(roomId).get();
-    final room = RoomModel.fromFirestore(doc);
-    final images = await _loadLocalImages();
+    var doc = await _rooms.doc(roomId).get();
+    var room = RoomModel.fromFirestore(doc);
+
+    // Friends fast-game: the heat was deferred at room creation. Build it now
+    // from the players' lobby topic picks (rounds = max(players, 3); missing
+    // picks + min-3 filler are random). Quick-match rooms already have a heat.
+    if (room.selectedDifficulty == Difficulty.giant && room.heatImageIds.isEmpty) {
+      final heat = await _buildFriendsHeat(room);
+      if (heat.imageIds.isNotEmpty) {
+        await _rooms.doc(roomId).update({
+          'heatCategories': heat.categories,
+          'heatImageIds': heat.imageIds,
+          'heatRoundIndex': 0,
+          'selectedImageId': heat.imageIds.first,
+          'selectedCategory': heat.categories.first,
+        });
+        doc = await _rooms.doc(roomId).get();
+        room = RoomModel.fromFirestore(doc);
+        QaLoggerService.instance.log('MATCH',
+            'START_FRIENDS_HEAT rounds=${heat.imageIds.length} cats=${heat.categories.join(",")}');
+      }
+    }
+
+    final images = await _loadLocalImages(categoryId: room.selectedCategory);
     if (images.isEmpty) return;
     // Reuse the image pre-picked at room creation (public quick-match rooms) so
     // the game image matches the one matchmaking paired players on. Falls back to
@@ -489,7 +645,8 @@ class RoomService {
     await _rooms.doc(roomId).update({'selectedImageId': image.id});
     // Start the game first (it rewrites the whole players map), THEN record
     // priorExposureCount via field-path so it isn't clobbered by _startGame.
-    await _startGame(roomId, room, Difficulty.easy);
+    // Honor the difficulty chosen at room creation (defaults to easy).
+    await _startGame(roomId, room, room.selectedDifficulty ?? Difficulty.easy);
     await _recordPriorExposure(roomId, room.players, image.id);
     await _recordExposureForAll(room.players, image.id);
   }
@@ -515,7 +672,7 @@ class RoomService {
   Future<void> resolveImageVote(String roomId, String hostId) async {
     final doc = await _rooms.doc(roomId).get();
     final room = RoomModel.fromFirestore(doc);
-    final images = await _loadLocalImages();
+    final images = await _loadLocalImages(categoryId: room.selectedCategory);
     if (images.isEmpty) return;
 
     final image = await _pickSmartImage(images, room.players);
@@ -810,14 +967,35 @@ class RoomService {
     final totalCells = difficulty.gridSize * difficulty.gridSize;
     final allCells = List.generate(totalCells, (i) => i);
 
+    // Open a few non-adjacent tiles up front so the board isn't blank at the
+    // whistle. Reuses the checkerboard picker (same spacing rule as auto-reveal)
+    // and is clamped so we can never reveal the entire board on the smallest
+    // grid. These count as 'system' reveals — no points, no turn.
+    final startRng = Random();
+    final startOpenCount = min(3, totalCells - 1);
+    final startAvailable = List<int>.from(allCells);
+    final startRevealed = <int>{};
+    final initialPlaced = <String, String>{};
+    for (var i = 0; i < startOpenCount; i++) {
+      final idx = _pickCheckerboardTile(
+        startAvailable,
+        startRevealed,
+        difficulty.gridSize,
+        startRng,
+      );
+      startAvailable.remove(idx);
+      startRevealed.add(idx);
+      initialPlaced[idx.toString()] = 'system';
+    }
+
     await _rooms.doc(roomId).update({
       'phase': GamePhase.playing.name,
       'selectedDifficulty': difficulty.name,
       'turnOrder': playerIds,
       'currentTurnIndex': 0,
       'players': updatedPlayers.map((k, v) => MapEntry(k, v.toMap())),
-      'placedPieces': {},
-      'availablePieceIndices': allCells,
+      'placedPieces': initialPlaced,
+      'availablePieceIndices': startAvailable,
       'solvedLetters': [],
       'letterCardGrantedPlayerIds': [],
       'turnPhase': TurnPhase.revealTurn.name,
@@ -836,6 +1014,164 @@ class RoomService {
       'potTotal': room.players.values.where((p) => p.isBot).length * room.entryFee,
       'entryFeePaidPlayerIds': [],
     });
+  }
+
+  // ── Fast-game "heat" (sequence of quick rounds: חי / צומח / דומם) ──────────
+
+  /// Records a friends-lobby topic pick (playerId → list of categoryIds). Every
+  /// participant picks exactly one; the host may pick as many as they like, and
+  /// each extra adds a heat round (see [_buildFriendsHeat]).
+  Future<void> setTopicChoices(
+      String roomId, String userId, List<String> categoryIds) async {
+    try {
+      await _rooms.doc(roomId).update({'topicChoices.$userId': categoryIds});
+    } catch (_) {}
+  }
+
+  /// Heat topic ids that actually have playable content right now.
+  Future<List<String>> _availableHeatTopics() async {
+    final avail = <String>[];
+    for (final c in GameCategories.fastHeat) {
+      // Admin can hide a whole topic via the manifest `topicsActive` map.
+      if (!ContentManifestService.instance.isCategoryActive(c)) continue;
+      final pool = await _loadLocalImages(categoryId: c);
+      if (pool.isNotEmpty) avail.add(c);
+    }
+    return avail;
+  }
+
+  /// Builds a heat plan (one image per topic slot) for the ordered [topics].
+  /// Topics MAY repeat (e.g. two players picked the same one) — a different
+  /// image is chosen per slot while the topic's pool allows it.
+  Future<({List<String> categories, List<String> imageIds})> _buildHeatForTopics(
+      List<String> topics, Map<String, PlayerModel> players) async {
+    final cats = <String>[];
+    final ids = <String>[];
+    final used = <String>{};
+    for (final catId in topics) {
+      final pool = await _loadLocalImages(categoryId: catId);
+      if (pool.isEmpty) continue; // topic has no content yet → skip slot
+      final fresh = pool.where((i) => !used.contains(i.id)).toList();
+      final source = fresh.isNotEmpty ? fresh : pool;
+      final img = await _pickSmartImage(source, players);
+      cats.add(catId);
+      ids.add(img.id);
+      used.add(img.id);
+    }
+    return (categories: cats, imageIds: ids);
+  }
+
+  /// Quick-match heat: [count] random topics (repeats only if fewer distinct
+  /// topics have content than the requested round count).
+  Future<({List<String> categories, List<String> imageIds})> _buildHeat(
+      Map<String, PlayerModel> players, {int count = 3}) async {
+    final avail = await _availableHeatTopics();
+    if (avail.isEmpty) {
+      return (categories: <String>[], imageIds: <String>[]);
+    }
+    final shuffled = [...avail]..shuffle(Random());
+    final topics = [
+      for (var i = 0; i < count; i++) shuffled[i % shuffled.length],
+    ];
+    return _buildHeatForTopics(topics, players);
+  }
+
+  /// Friends heat: each participant contributes ONE topic; the host may
+  /// contribute as many as they picked, which lengthens the heat. Round count =
+  /// max(max(playerCount, 3), totalPicks) — the host's extra picks add rounds,
+  /// while the ≥3 / ≥players floor is preserved. Any remaining slots (a player
+  /// never picked, or the host pressed "start anyway") are filled randomly.
+  Future<({List<String> categories, List<String> imageIds})> _buildFriendsHeat(
+      RoomModel room) async {
+    final avail = await _availableHeatTopics();
+    if (avail.isEmpty) {
+      return (categories: <String>[], imageIds: <String>[]);
+    }
+    final rng = Random();
+    String randTopic() => avail[rng.nextInt(avail.length)];
+
+    final topics = <String>[];
+    // Gather picks host-first: the host keeps all of theirs, every other player
+    // contributes at most one. Only topics with content are counted.
+    final orderedIds = [
+      if (room.players.containsKey(room.hostId)) room.hostId,
+      ...room.players.keys.where((id) => id != room.hostId),
+    ];
+    for (final pid in orderedIds) {
+      final picks =
+          (room.topicChoices[pid] ?? const <String>[]).where(avail.contains);
+      topics.addAll(pid == room.hostId ? picks : picks.take(1));
+    }
+    // Round count grows with the host's picks, but never below 3 / players.
+    final rounds = max(max(room.players.length, 3), topics.length);
+    // Fill any remaining slots randomly (min floor / unchosen players).
+    while (topics.length < rounds) {
+      topics.add(randTopic());
+    }
+    return _buildHeatForTopics(topics, room.players);
+  }
+
+  /// Board-reset fields for a fresh round (new image), KEEPING scores, pot and
+  /// entry-fee state. Shared by the heat-advance logic.
+  Map<String, dynamic> _roundResetUpdates(int gridSize, int nowMs) {
+    final totalCells = gridSize * gridSize;
+    final allCells = List.generate(totalCells, (i) => i);
+    final rng = Random();
+    final openCount = min(3, totalCells - 1);
+    final available = List<int>.from(allCells);
+    final revealed = <int>{};
+    final initialPlaced = <String, String>{};
+    for (var i = 0; i < openCount; i++) {
+      final idx = _pickCheckerboardTile(available, revealed, gridSize, rng);
+      available.remove(idx);
+      revealed.add(idx);
+      initialPlaced[idx.toString()] = 'system';
+    }
+    return {
+      'placedPieces': initialPlaced,
+      'availablePieceIndices': available,
+      'solvedLetters': <String>[],
+      'turnPhase': TurnPhase.revealTurn.name,
+      'revealDeadlineMs': nowMs + EconomyConfig.autoRevealIntervalMs,
+      'pendingRevealTileIndex': FieldValue.delete(),
+      'guessOpportunityPlayerId': null,
+      'guessModePlayerId': null,
+      'guessOpportunityDeadlineMs': null,
+      'guessModeDeadlineMs': null,
+      'lastRevealedByPlayerId': null,
+      'wrongGuessCounts': <String, dynamic>{},
+      'guessClaimCounts': <String, dynamic>{},
+      'blockedGuessers': <String, dynamic>{},
+      'revealCount': 0,
+      'revealCycleId': FieldValue.increment(1),
+      'winnerId': null,
+    };
+  }
+
+  /// Update map that advances a heat to its next round (next image/category).
+  Map<String, dynamic> _heatAdvanceUpdates(RoomModel room, int nowMs) {
+    final next = room.heatRoundIndex + 1;
+    return {
+      ..._roundResetUpdates(room.gridSize, nowMs),
+      'phase': GamePhase.playing.name,
+      'heatRoundIndex': next,
+      'selectedImageId': room.heatImageIds[next],
+      'selectedCategory': room.heatCategories[next],
+    };
+  }
+
+  /// Heat winner = highest cumulative score (with [bonusUid] credited [bonus]).
+  String _heatWinnerId(RoomModel room, {String? bonusUid, int bonus = 0}) {
+    String winner = room.players.keys.isEmpty ? '' : room.players.keys.first;
+    int best = -1 << 31;
+    room.players.forEach((id, p) {
+      final s = p.score + (id == bonusUid ? bonus : 0);
+      if (s > best) {
+        best = s;
+        winner = id;
+      }
+    });
+    return winner;
   }
 
   Future<void> _collectEntryFees(
@@ -969,6 +1305,67 @@ class RoomService {
           'POT_DISTRIBUTED amount=$pot winner=${winnerId.substring(0, winnerId.length.clamp(0, 6))}');
     } catch (e) {
       QaLoggerService.instance.log('ECONOMY', 'POT_DISTRIBUTE_ERROR error=$e');
+    }
+  }
+
+  /// Friends-game placement reward: gifts coins to the top finishers
+  /// (1st = friendsFirstPlaceReward, 2nd = friendsSecondPlaceReward). Each
+  /// player claims their own, idempotently via placementPaidPlayerIds. Returns
+  /// the coins awarded (0 if none / already claimed / not eligible).
+  Future<int> claimPlacementReward(String roomId, String userId) async {
+    if (userId.startsWith('virtual_')) return 0;
+    try {
+      return await _firestore.runTransaction<int>((tx) async {
+        final roomDoc = await tx.get(_rooms.doc(roomId));
+        if (!roomDoc.exists) return 0;
+        final room = RoomModel.fromFirestore(roomDoc);
+        if (!room.isFriendsGame) return 0; // friends games only
+        if (room.phase != GamePhase.finished) return 0;
+        if (room.placementPaidPlayerIds.contains(userId)) return 0;
+
+        final sorted = room.sortedPlayers;
+        final rank = sorted.indexWhere((p) => p.id == userId);
+        var reward = 0;
+        if (rank == 0) {
+          reward = EconomyConfig.friendsFirstPlaceReward;
+        } else if (rank == 1) {
+          reward = EconomyConfig.friendsSecondPlaceReward;
+        }
+
+        // All reads before any write (Firestore tx ordering).
+        final walletDoc = await tx.get(_walletRef(userId));
+
+        // Mark claimed regardless of rank so it's never re-evaluated.
+        tx.update(_rooms.doc(roomId), {
+          'placementPaidPlayerIds': FieldValue.arrayUnion([userId]),
+        });
+        if (reward <= 0) return 0;
+
+        final wallet = walletDoc.exists
+            ? UserEconomyModel.fromFirestore(
+                userId, walletDoc.data() as Map<String, dynamic>)
+            : null;
+        final before = wallet?.coins ?? 0;
+        final after = before + reward;
+        tx.set(_walletRef(userId), {'coins': after}, SetOptions(merge: true));
+        final txId = _uuid.v4();
+        tx.set(
+            _txRef(userId, txId),
+            EconomyTransactionModel(
+              id: txId,
+              type: TransactionType.matchWin,
+              delta: reward,
+              balanceAfter: after,
+              roomId: roomId,
+              createdAt: DateTime.now().toUtc(),
+              meta: {'placementRank': rank + 1},
+            ).toFirestore());
+        return reward;
+      });
+    } catch (e) {
+      QaLoggerService.instance
+          .log('ECONOMY', 'PLACEMENT_REWARD_ERROR error=$e');
+      return 0;
     }
   }
 
@@ -1179,6 +1576,7 @@ class RoomService {
     final txStartMs = now;
     bool committed = false;
     bool noWinner = false;
+    bool heatAdvanceNoWinner = false;
     List<String>? playerIdsForRefund;
     Map<String, PlayerModel>? noWinnerPlayers;
     String? noWinnerImageId;
@@ -1219,6 +1617,19 @@ class RoomService {
           final newRevealCount = room.revealCount + 1;
 
           if (newHidden.isEmpty) {
+            // Heat mid-round: board filled with no correct guess → advance to the
+            // next round (no pot refund; the image still counts as discovered).
+            if (room.isHeat && !room.isLastHeatRound) {
+              tx.update(_rooms.doc(roomId),
+                  _heatAdvanceUpdates(room, DateTime.now().millisecondsSinceEpoch));
+              QaLoggerService.instance.log('GAME',
+                  'HEAT_ROUND_ADVANCE_NO_WINNER round=${room.heatRoundIndex}->${room.heatRoundIndex + 1}');
+              committed = true;
+              heatAdvanceNoWinner = true;
+              noWinnerPlayers = room.players;
+              noWinnerImageId = room.selectedImageId;
+              return;
+            }
             tx.update(_rooms.doc(roomId), {
               'placedPieces.${pieceIndex.toString()}': 'system',
               'availablePieceIndices': newHidden,
@@ -1244,6 +1655,39 @@ class RoomService {
 
           final totalTiles = room.gridSize * room.gridSize;
           final revealedAfter = totalTiles - newHidden.length;
+
+          // Fast mode (Difficulty.giant, 10×10): a steady 1-card-per-second
+          // metronome. Reveal this tile AND queue the next one in the same
+          // transaction, staying in revealTurn with a 1000ms deadline — no
+          // guess-opportunity gap. (Players can still guess any time via the
+          // guess button.) Gated by difficulty, not size, so the normal 10×10
+          // "hard" tier is unaffected.
+          if (room.selectedDifficulty == Difficulty.giant && newHidden.isNotEmpty) {
+            final revealedSet = room.placedPieces.keys.toSet()..add(pieceIndex);
+            final nextTile = _pickCheckerboardTile(
+              newHidden,
+              revealedSet,
+              room.gridSize,
+              Random(),
+            );
+            tx.update(_rooms.doc(roomId), {
+              'placedPieces.${pieceIndex.toString()}': 'system',
+              'availablePieceIndices': newHidden,
+              'pendingRevealTileIndex': nextTile,
+              'revealDeadlineMs': now + 1000,
+              'turnPhase': TurnPhase.revealTurn.name,
+              'guessOpportunityPlayerId': null,
+              'guessOpportunityDeadlineMs': null,
+              'lastRevealedByPlayerId': null,
+              'revealCount': newRevealCount,
+              'revealCycleId': FieldValue.increment(1),
+            });
+            QaLoggerService.instance.log('REVEAL',
+                'AUTO_REVEAL_GIANT_CHAIN piece=$pieceIndex next=$nextTile count=$newRevealCount');
+            committed = true;
+            return;
+          }
+
           final guessOppMs = _guessOppTimerMs(revealedAfter, totalTiles);
 
           tx.update(_rooms.doc(roomId), {
@@ -1275,7 +1719,10 @@ class RoomService {
           room.gridSize,
           rng,
         );
-        final ringMs = _revealTimerMs(room.placedPieces.length, room.gridSize * room.gridSize);
+        // Fast mode: a fixed 1s countdown per card; otherwise the accelerating arc.
+        final ringMs = room.selectedDifficulty == Difficulty.giant
+            ? 1000
+            : _revealTimerMs(room.placedPieces.length, room.gridSize * room.gridSize);
 
         tx.update(_rooms.doc(roomId), {
           'pendingRevealTileIndex': pieceIndex,
@@ -1293,6 +1740,12 @@ class RoomService {
 
     if (noWinner && playerIdsForRefund != null) {
       unawaited(refundPot(roomId));
+      if (noWinnerPlayers != null && noWinnerImageId != null && noWinnerImageId!.isNotEmpty) {
+        _recordDiscoveredForAll(noWinnerPlayers!, noWinnerImageId!);
+      }
+    } else if (heatAdvanceNoWinner) {
+      // No refund mid-heat (pot carries to the heat's end); just record the
+      // discovered image for the round that filled.
       if (noWinnerPlayers != null && noWinnerImageId != null && noWinnerImageId!.isNotEmpty) {
         _recordDiscoveredForAll(noWinnerPlayers!, noWinnerImageId!);
       }
@@ -1737,6 +2190,10 @@ class RoomService {
     final txStartMs = nowMs;
     bool isCorrect = false;
     bool needsEliminationCheck = false;
+    // Heat (fast game) bookkeeping for the post-transaction step.
+    bool heatAdvanced = false;
+    String? finishWinnerId;
+    Map<String, PlayerModel>? roundPlayers;
 
     try {
     await _firestore.runTransaction((tx) async {
@@ -1767,9 +2224,28 @@ class RoomService {
       isCorrect = image.isCorrectAnswer(guess);
 
       if (isCorrect) {
+        roundPlayers = room.players;
+        // Heat mid-round: award score, then advance to the next round (board
+        // reset) instead of finishing. Cumulative score persists.
+        if (room.isHeat && !room.isLastHeatRound) {
+          final adv = _heatAdvanceUpdates(room, DateTime.now().millisecondsSinceEpoch);
+          adv['players.$userId.score'] = FieldValue.increment(difficulty.winReward);
+          adv['lastGuessEvent'] = {'playerId': userId, 'guess': guess, 'isCorrect': true};
+          adv['guessCount'] = FieldValue.increment(1);
+          tx.update(_rooms.doc(roomId), adv);
+          heatAdvanced = true;
+          QaLoggerService.instance.log('GUESS',
+              'HEAT_ROUND_ADVANCE round=${room.heatRoundIndex}->${room.heatRoundIndex + 1} guesser=${_short(userId)}');
+          return;
+        }
+        // Finish: normal game, or the heat's final round. The heat winner is the
+        // highest cumulative score (with this guess's winReward credited).
+        finishWinnerId = room.isHeat
+            ? _heatWinnerId(room, bonusUid: userId, bonus: difficulty.winReward)
+            : userId;
         tx.update(_rooms.doc(roomId), {
           'phase': GamePhase.finished.name,
-          'winnerId': userId,
+          'winnerId': finishWinnerId,
           'players.$userId.score': FieldValue.increment(difficulty.winReward),
           'lastGuessEvent': {'playerId': userId, 'guess': guess, 'isCorrect': true},
           'guessCount': FieldValue.increment(1),
@@ -1870,16 +2346,13 @@ class RoomService {
       if (e is FirebaseException && e.code == 'unavailable') rethrow;
     }
 
-    if (isCorrect) {
-      unawaited(distributePot(roomId, userId));
-      // Record discovered image for all players only when game ends with a correct answer
-      final roomSnap = await _rooms.doc(roomId).get();
-      if (roomSnap.exists) {
-        final endRoom = RoomModel.fromFirestore(roomSnap);
-        if (endRoom.selectedImageId != null && endRoom.selectedImageId!.isNotEmpty) {
-          _recordDiscoveredForAll(endRoom.players, endRoom.selectedImageId!);
-        }
-      }
+    if (heatAdvanced) {
+      // Mid-heat: the guessed image counts as discovered; no pot payout yet.
+      if (roundPlayers != null) _recordDiscoveredForAll(roundPlayers!, image.id);
+    } else if (isCorrect) {
+      // Finish (normal game or heat's last round): pot to the (cumulative) winner.
+      unawaited(distributePot(roomId, finishWinnerId ?? userId));
+      if (roundPlayers != null) _recordDiscoveredForAll(roundPlayers!, image.id);
     } else if (needsEliminationCheck) {
       await _checkLastPlayerStanding(roomId);
     }
@@ -2012,13 +2485,80 @@ class RoomService {
     }
   }
 
+  /// Broadcasts an emoji reaction to the room (everyone animates it). Cheap,
+  /// fire-and-forget; ts makes each reaction distinct for the listeners.
+  Future<void> sendReaction(String roomId, String userId, String emoji) async {
+    try {
+      await _rooms.doc(roomId).update({
+        'lastReaction': {
+          'playerId': userId,
+          'emoji': emoji,
+          'ts': DateTime.now().millisecondsSinceEpoch,
+        },
+      });
+    } catch (_) {}
+  }
+
+  /// Posts a text chat message to the room's `messages` subcollection. Text is
+  /// expected to be already cleaned by the caller (ChatFilter); trimmed/capped
+  /// here as a safety net. Fire-and-forget.
+  Future<void> sendChatMessage(
+      String roomId, String userId, String name, String text) async {
+    var body = text.trim();
+    if (body.isEmpty) return;
+    if (body.length > 120) body = body.substring(0, 120);
+    try {
+      await _rooms.doc(roomId).collection('messages').add({
+        'senderId': userId,
+        'senderName': name,
+        'text': body,
+        'ts': DateTime.now().millisecondsSinceEpoch,
+      });
+    } catch (_) {}
+  }
+
+  /// Streams the most recent chat messages (oldest→newest) for the room.
+  Stream<List<ChatMessage>> chatMessagesStream(String roomId) {
+    return _rooms
+        .doc(roomId)
+        .collection('messages')
+        .orderBy('ts', descending: true)
+        .limit(40)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => ChatMessage.fromMap(d.id, d.data()))
+            .toList()
+            .reversed
+            .toList());
+  }
+
+  /// Answer names for a category (used by bots to pick same-topic wrong guesses).
+  Future<List<String>> categoryAnswerNames(String categoryId) async {
+    final imgs = await _loadLocalImages(categoryId: categoryId);
+    return imgs.map((i) => i.answer).where((a) => a.isNotEmpty).toList();
+  }
+
   Future<List<GameImageModel>> getPublicImages() => _loadLocalImages();
 
   Future<List<GameImageModel>> getAllImages() => _loadLocalImages();
 
   Future<GameImageModel?> getImage(String imageId) async {
-    final images = await _loadLocalImages();
-    return images.where((image) => image.id == imageId).cast<GameImageModel?>().firstOrNull ??
-        (images.isNotEmpty ? images.first : null);
+    if (imageId.isEmpty) return null;
+    // Search every category (bundled + remote) so an image from any catalogue
+    // resolves regardless of the room's category — heat rounds in particular use
+    // ids from topics other than israel_places.
+    for (final cat in GameCategories.all) {
+      final images = await _loadLocalImages(categoryId: cat.id);
+      final found = images
+          .where((image) => image.id == imageId)
+          .cast<GameImageModel?>()
+          .firstOrNull;
+      if (found != null) return found;
+    }
+    // Unresolved: return null (the board shows a loading placeholder) rather
+    // than a wrong image. The old israel_places.first fallback surfaced the
+    // Western Wall inside חי-צומח-דומם heats whenever an id failed to resolve.
+    QaLoggerService.instance.log('GAME', 'GET_IMAGE_UNRESOLVED id=$imageId');
+    return null;
   }
 }

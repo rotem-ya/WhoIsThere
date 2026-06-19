@@ -1,0 +1,472 @@
+[
+  {
+    "id": "vehicles_car",
+    "name_he": "מכונית",
+    "answer_he": "מכונית",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_car.jpg"
+  },
+  {
+    "id": "vehicles_bus",
+    "name_he": "אוטובוס",
+    "answer_he": "אוטובוס",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_bus.jpg"
+  },
+  {
+    "id": "vehicles_train",
+    "name_he": "רכבת",
+    "answer_he": "רכבת",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_train.jpg"
+  },
+  {
+    "id": "vehicles_airplane",
+    "name_he": "מטוס",
+    "answer_he": "מטוס",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_airplane.jpg"
+  },
+  {
+    "id": "vehicles_bicycle",
+    "name_he": "אופניים",
+    "answer_he": "אופניים",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_bicycle.jpg"
+  },
+  {
+    "id": "vehicles_motorcycle",
+    "name_he": "אופנוע",
+    "answer_he": "אופנוע",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_motorcycle.jpg"
+  },
+  {
+    "id": "vehicles_truck",
+    "name_he": "משאית",
+    "answer_he": "משאית",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_truck.jpg"
+  },
+  {
+    "id": "vehicles_boat",
+    "name_he": "סירה",
+    "answer_he": "סירה",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_boat.jpg"
+  },
+  {
+    "id": "vehicles_ship",
+    "name_he": "אונייה",
+    "answer_he": "אונייה",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_ship.jpg"
+  },
+  {
+    "id": "vehicles_helicopter",
+    "name_he": "מסוק",
+    "answer_he": "מסוק",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_helicopter.jpg"
+  },
+  {
+    "id": "vehicles_submarine",
+    "name_he": "צוללת",
+    "answer_he": "צוללת",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_submarine.jpg"
+  },
+  {
+    "id": "vehicles_tram",
+    "name_he": "חשמלית",
+    "answer_he": "חשמלית",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_tram.jpg"
+  },
+  {
+    "id": "vehicles_taxi",
+    "name_he": "מונית",
+    "answer_he": "מונית",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_taxi.jpg"
+  },
+  {
+    "id": "vehicles_ambulance",
+    "name_he": "אמבולנס",
+    "answer_he": "אמבולנס",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_ambulance.jpg"
+  },
+  {
+    "id": "vehicles_fire_engine",
+    "name_he": "כבאית",
+    "answer_he": "כבאית",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_fire_engine.jpg"
+  },
+  {
+    "id": "vehicles_tractor",
+    "name_he": "טרקטור",
+    "answer_he": "טרקטור",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_tractor.jpg"
+  },
+  {
+    "id": "vehicles_van",
+    "name_he": "מסחרית",
+    "answer_he": "מסחרית",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_van.jpg"
+  },
+  {
+    "id": "vehicles_scooter",
+    "name_he": "קורקינט",
+    "answer_he": "קורקינט",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_scooter.jpg"
+  },
+  {
+    "id": "vehicles_skateboard",
+    "name_he": "סקייטבורד",
+    "answer_he": "סקייטבורד",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_skateboard.jpg"
+  },
+  {
+    "id": "vehicles_hot_air_balloon",
+    "name_he": "כדור פורח",
+    "answer_he": "כדור פורח",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_hot_air_balloon.jpg"
+  },
+  {
+    "id": "vehicles_rocket",
+    "name_he": "טיל חלל",
+    "answer_he": "טיל חלל",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_rocket.jpg"
+  },
+  {
+    "id": "vehicles_ferry",
+    "name_he": "מעבורת",
+    "answer_he": "מעבורת",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_ferry.jpg"
+  },
+  {
+    "id": "vehicles_canoe",
+    "name_he": "קאנו",
+    "answer_he": "קאנו",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_canoe.jpg"
+  },
+  {
+    "id": "vehicles_kayak",
+    "name_he": "קיאק",
+    "answer_he": "קיאק",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_kayak.jpg"
+  },
+  {
+    "id": "vehicles_sailboat",
+    "name_he": "מפרשית",
+    "answer_he": "מפרשית",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_sailboat.jpg"
+  },
+  {
+    "id": "vehicles_jet_ski",
+    "name_he": "אופנוע ים",
+    "answer_he": "אופנוע ים",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_jet_ski.jpg"
+  },
+  {
+    "id": "vehicles_unicycle",
+    "name_he": "חד אופן",
+    "answer_he": "חד אופן",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_unicycle.jpg"
+  },
+  {
+    "id": "vehicles_monorail",
+    "name_he": "מונורייל",
+    "answer_he": "מונורייל",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_monorail.jpg"
+  },
+  {
+    "id": "vehicles_cable_car",
+    "name_he": "רכבל",
+    "answer_he": "רכבל",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_cable_car.jpg"
+  },
+  {
+    "id": "vehicles_carriage",
+    "name_he": "כרכרה",
+    "answer_he": "כרכרה",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_carriage.jpg"
+  },
+  {
+    "id": "vehicles_forklift",
+    "name_he": "מלגזה",
+    "answer_he": "מלגזה",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_forklift.jpg"
+  },
+  {
+    "id": "vehicles_bulldozer",
+    "name_he": "דחפור",
+    "answer_he": "דחפור",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_bulldozer.jpg"
+  },
+  {
+    "id": "vehicles_excavator",
+    "name_he": "מחפר",
+    "answer_he": "מחפר",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_excavator.jpg"
+  },
+  {
+    "id": "vehicles_snowmobile",
+    "name_he": "אופנוע שלג",
+    "answer_he": "אופנוע שלג",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_snowmobile.jpg"
+  },
+  {
+    "id": "vehicles_jeep",
+    "name_he": "ג'יפ",
+    "answer_he": "ג'יפ",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_jeep.jpg"
+  },
+  {
+    "id": "vehicles_limousine",
+    "name_he": "לימוזינה",
+    "answer_he": "לימוזינה",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_limousine.jpg"
+  },
+  {
+    "id": "vehicles_pickup",
+    "name_he": "טנדר",
+    "answer_he": "טנדר",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_pickup.jpg"
+  },
+  {
+    "id": "vehicles_double_decker",
+    "name_he": "אוטובוס דו-קומתי",
+    "answer_he": "אוטובוס דו-קומתי",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_double_decker.jpg"
+  },
+  {
+    "id": "vehicles_hovercraft",
+    "name_he": "רחפת",
+    "answer_he": "רחפת",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_hovercraft.jpg"
+  },
+  {
+    "id": "vehicles_yacht",
+    "name_he": "יאכטה",
+    "answer_he": "יאכטה",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_yacht.jpg"
+  },
+  {
+    "id": "vehicles_airship",
+    "name_he": "ספינת אוויר",
+    "answer_he": "ספינת אוויר",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_airship.jpg"
+  },
+  {
+    "id": "vehicles_glider",
+    "name_he": "דאון",
+    "answer_he": "דאון",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_glider.jpg"
+  },
+  {
+    "id": "vehicles_seaplane",
+    "name_he": "מטוס ים",
+    "answer_he": "מטוס ים",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_seaplane.jpg"
+  },
+  {
+    "id": "vehicles_tank",
+    "name_he": "טנק",
+    "answer_he": "טנק",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_tank.jpg"
+  },
+  {
+    "id": "vehicles_wheelbarrow",
+    "name_he": "מריצה",
+    "answer_he": "מריצה",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_wheelbarrow.jpg"
+  },
+  {
+    "id": "vehicles_segway",
+    "name_he": "סגוויי",
+    "answer_he": "סגוויי",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_segway.jpg"
+  },
+  {
+    "id": "vehicles_cement_mixer",
+    "name_he": "מערבל בטון",
+    "answer_he": "מערבל בטון",
+    "aliases_he": [],
+    "category": "vehicles",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/vehicles_cement_mixer.jpg"
+  }
+]

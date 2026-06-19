@@ -11,6 +11,8 @@ import '../../../services/feedback_service.dart';
 import '../../../services/reward_calculator.dart';
 import '../../../widgets/game/animated_reward.dart';
 import '../../../widgets/economy/coin_icon.dart';
+import 'detective_toolbar.dart';
+import 'game_tools_sheet.dart';
 
 class GameActions extends ConsumerWidget {
   final bool isMyTurn;
@@ -34,6 +36,13 @@ class GameActions extends ConsumerWidget {
   final bool canUseStunCard;
   final List<PlayerModel> stunTargets;
   final Future<void> Function(String targetId)? onStunCard;
+  // Personal tile reveal purchase (this-player-only). Disabled when null.
+  final VoidCallback? onBuyReveal;
+  final int revealBuyPrice;
+  final int revealBuyCount;
+  final int maxRevealBuys;
+  // Detective reveal tools (bomb / spotlight / targeted / fast-forward).
+  final List<DetectiveAction> detectiveActions;
 
   const GameActions({
     required this.isMyTurn,
@@ -57,6 +66,11 @@ class GameActions extends ConsumerWidget {
     this.canUseStunCard = false,
     this.stunTargets = const [],
     this.onStunCard,
+    this.onBuyReveal,
+    this.revealBuyPrice = 0,
+    this.revealBuyCount = 0,
+    this.maxRevealBuys = 5,
+    this.detectiveActions = const [],
   });
 
   @override
@@ -91,6 +105,51 @@ class GameActions extends ConsumerWidget {
     // Show the decaying early-guess bonus always (hides itself when it hits 0)
     final showReward = earlyBonus > 0;
 
+    // All spend-to-help tools (detective reveals + hint + personal reveal) are
+    // consolidated into a single bottom sheet opened from one "כלים" button.
+    // This keeps the play screen tidy and the board image large.
+    final tools = <DetectiveAction>[...detectiveActions];
+    const _toolColor = Color(0xFF6FB0CF);
+    final showHint = GameConstants.hintsEnabled &&
+        isSolo &&
+        onRevealHint != null &&
+        totalTiles > 0 &&
+        revealedCount >= totalTiles * GameConstants.hintRevealThreshold;
+    if (showHint) {
+      final canHint = purchasedHintCount >= 1 || (canAffordFirstHint && !isBusy);
+      tools.add(DetectiveAction(
+        emoji: '💡',
+        label: purchasedHintCount >= 1 ? 'ראה רמז' : 'רמז',
+        price: purchasedHintCount >= 1 ? 0 : EconomyConfig.hintFirstPrice,
+        color: _toolColor,
+        enabled: canHint,
+        onTap: onRevealHint ?? () {},
+      ));
+      if (onBuySecondHint != null) {
+        final canSecond = canAffordSecondHint && !isBusy;
+        tools.add(DetectiveAction(
+          emoji: '💡',
+          label: 'רמז נוסף',
+          price: EconomyConfig.hintSecondPrice,
+          color: _toolColor,
+          enabled: canSecond,
+          onTap: onBuySecondHint ?? () {},
+        ));
+      }
+    }
+    if (revealBuyCount < maxRevealBuys) {
+      final canReveal = onBuyReveal != null && !isBusy;
+      tools.add(DetectiveAction(
+        emoji: '🃏',
+        label: 'חשוף קלף ($revealBuyCount/$maxRevealBuys)',
+        price: revealBuyPrice,
+        color: _toolColor,
+        enabled: canReveal,
+        onTap: onBuyReveal ?? () {},
+      ));
+    }
+    final enabledToolCount = tools.where((t) => t.enabled).length;
+
     return SafeArea(
       top: false,
       child: Padding(
@@ -119,36 +178,27 @@ class GameActions extends ConsumerWidget {
                 isActive: primaryIsActive,
                 glow: primaryGlow,
                 onTap: primaryOnTap,
-                reward: showReward ? earlyBonus : null,
+                reward: null,
               ),
-              // Hint button — only in solo mode (shown regardless of turn state).
-              // Gated behind GameConstants.hintsEnabled and only surfaces once
-              // 70% of the board is revealed, so it acts as a late rescue.
-              if (GameConstants.hintsEnabled &&
-                  isSolo &&
-                  onRevealHint != null &&
-                  totalTiles > 0 &&
-                  revealedCount >= totalTiles * GameConstants.hintRevealThreshold) ...[
+              // Shrinking early-guess bonus meter: a bar that depletes (and
+              // shifts green→amber→red) as more of the board is revealed, making
+              // the decaying reward feel urgent. Hides itself once the bonus is 0.
+              if (showReward) ...[
                 const SizedBox(height: 6),
-                _HintButton(
-                  label: purchasedHintCount >= 1 ? 'ראה רמז' : 'רמז',
-                  coinPrice: purchasedHintCount >= 1 ? null : EconomyConfig.hintFirstPrice,
-                  canAfford: purchasedHintCount >= 1 || (canAffordFirstHint && !isBusy),
-                  isBusy: isBusy && purchasedHintCount == 0,
-                  onTap: (purchasedHintCount >= 1 || (canAffordFirstHint && !isBusy))
-                      ? onRevealHint
-                      : null,
+                _RewardMeter(
+                  revealedCount: revealedCount,
+                  totalTiles: totalTiles,
+                  bonus: earlyBonus,
                 ),
-                if (onBuySecondHint != null) ...[
-                  const SizedBox(height: 6),
-                  _HintButton(
-                    label: 'רמז נוסף',
-                    coinPrice: EconomyConfig.hintSecondPrice,
-                    canAfford: canAffordSecondHint && !isBusy,
-                    isBusy: isBusy,
-                    onTap: canAffordSecondHint && !isBusy ? onBuySecondHint : null,
-                  ),
-                ],
+              ],
+              // All spend-to-help tools behind one compact button → opens a
+              // tidy sheet. Keeps the board large and the screen uncluttered.
+              if (tools.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                _ToolsButton(
+                  toolCount: enabledToolCount,
+                  onTap: () => showGameToolsSheet(context, tools),
+                ),
               ],
               // Stun card — only in multiplayer when user has cards
               if (canUseStunCard && onStunCard != null) ...[
@@ -167,77 +217,68 @@ class GameActions extends ConsumerWidget {
   }
 }
 
-class _HintButton extends StatelessWidget {
-  final String label;
-  final int? coinPrice;
-  final bool canAfford;
-  final bool isBusy;
-  final VoidCallback? onTap;
+/// Compact pill for secondary self-help actions (hint / personal reveal). Much
+/// smaller than the old full-width buttons so several fit on one wrapping row,
+/// leaving the board image more room.
+/// Single compact button that opens the tools sheet (bomb / spotlight /
+/// targeted / fast-forward / hint / reveal). [toolCount] shows how many are
+/// currently affordable.
+class _ToolsButton extends StatelessWidget {
+  final int toolCount;
+  final VoidCallback onTap;
 
-  const _HintButton({
-    required this.label,
-    this.coinPrice,
-    required this.canAfford,
-    required this.isBusy,
-    required this.onTap,
-  });
+  const _ToolsButton({required this.toolCount, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap == null
-          ? null
-          : () {
-              FeedbackService.click();
-              onTap!();
-            },
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 180),
-        opacity: canAfford && !isBusy ? 1.0 : 0.42,
-        child: Container(
-          height: 42,
-          decoration: BoxDecoration(
-            color: const Color(0xFF07101F).withOpacity(0.56),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: const Color(0xFF4A8BAA)
-                  .withOpacity(canAfford ? 0.32 : 0.14),
-              width: 0.8,
+      onTap: () {
+        FeedbackService.click();
+        onTap();
+      },
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFF07101F).withOpacity(0.56),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: const Color(0xFF4A8BAA).withOpacity(0.32),
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('🛠️', style: TextStyle(fontSize: 15)),
+            const SizedBox(width: 7),
+            const Text(
+              'תחבולות',
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                color: Color(0xFF6FB0CF),
+                fontSize: 14.5,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.lightbulb_outline_rounded,
-                  color: Color(0xFF5A9BBB), size: 18),
-              const SizedBox(width: 6),
-              coinPrice == null
-                  ? Text(
-                      label,
-                      textDirection: TextDirection.rtl,
-                      style: const TextStyle(
-                        color: Color(0xFF5A9BBB),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    )
-                  : Text.rich(
-                      TextSpan(
-                        text: '$label  ($coinPrice ',
-                        children: [
-                          coinSpan(size: 14),
-                          const TextSpan(text: ')'),
-                        ],
-                      ),
-                      textDirection: TextDirection.rtl,
-                      style: const TextStyle(
-                        color: Color(0xFF5A9BBB),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+            if (toolCount > 0) ...[
+              const SizedBox(width: 7),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF20A8E0).withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Text(
+                  '$toolCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -408,6 +449,95 @@ class _ActionButton extends StatelessWidget {
           );
     }
     return btn;
+  }
+}
+
+// ── Early-guess reward meter ──────────────────────────────────────────────────
+
+/// A slim bar that visualises the decaying early-guess bonus. It empties (and
+/// recolours green→amber→red) continuously as the board is revealed, so guessing
+/// early feels rewarding. The numeric bonus still steps by tier; the bar gives
+/// the smooth "act now" pressure. Purely cosmetic — reads board state only.
+class _RewardMeter extends StatelessWidget {
+  final int revealedCount;
+  final int totalTiles;
+  final int bonus;
+
+  const _RewardMeter({
+    required this.revealedCount,
+    required this.totalTiles,
+    required this.bonus,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio =
+        totalTiles <= 0 ? 1.0 : (revealedCount / totalTiles).clamp(0.0, 1.0);
+    // The bonus is positive only while the reveal ratio is within tier 4
+    // (≤ 80%); deplete the bar to empty exactly at that point.
+    final cutoff = EconomyConfig.earlyGuessTier4MaxRatio;
+    final fill = cutoff <= 0 ? 0.0 : (1.0 - ratio / cutoff).clamp(0.0, 1.0);
+    final Color barColor = fill > 0.6
+        ? const Color(0xFF34D399) // green — plenty of bonus left
+        : fill > 0.3
+            ? const Color(0xFFFBBF24) // amber — running down
+            : const Color(0xFFF87171); // red — almost gone
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'בונוס ניחוש מוקדם',
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '+$bonus',
+              style: TextStyle(
+                color: barColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(width: 2),
+            const CoinIcon(size: 13),
+          ],
+        ),
+        const SizedBox(height: 3),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Container(
+            height: 6,
+            color: Colors.white.withOpacity(0.12),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: AnimatedFractionallySizedBox(
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOut,
+                widthFactor: fill,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: barColor,
+                    borderRadius: BorderRadius.circular(4),
+                    boxShadow: [
+                      BoxShadow(color: barColor.withOpacity(0.6), blurRadius: 6),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

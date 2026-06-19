@@ -1,0 +1,42 @@
+rules_version = '2';
+// Deployed via .github/workflows/deploy-storage-rules.yml (firebaserules REST API),
+// mirroring the Firestore rules deploy. Release: firebase.storage/<bucket>.
+//
+// Holds the place-catalogue images managed by the admin app. The mobile game
+// reads these (any signed-in user); only an admin may upload/replace/delete.
+// "Admin" = a Firebase Auth user carrying the custom claim { admin: true }.
+// See docs/admin/CONTENT_SCHEMA.md for how the claim is granted.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAdmin() {
+      // Custom claim { admin: true } OR an allow-listed login email.
+      // Keep the email list in sync with firestore.rules / admin_config.
+      return request.auth != null && (
+        request.auth.token.admin == true ||
+        request.auth.token.email in ['rot4735@gmail.com']
+      );
+    }
+
+    function isImageUpload() {
+      // ≤ 10 MB and an image content-type. Keeps junk/oversized files out.
+      return request.resource.size < 10 * 1024 * 1024
+          && request.resource.contentType.matches('image/.*');
+    }
+
+    // ── Place catalogue images ────────────────────────────────────────────────
+    // place_images/<imageId>.<ext>      full-size image shown during the game
+    // place_images/thumbs/<imageId>.<ext>  optional smaller thumbnail
+    // Read: any signed-in player (the app loads these during gameplay).
+    // Write: admins only, via the admin app.
+    match /place_images/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin() && isImageUpload();
+    }
+
+    // ── Deny everything else ──────────────────────────────────────────────────
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

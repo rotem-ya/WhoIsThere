@@ -120,11 +120,15 @@ class _GuessBannerState extends State<GuessBanner>
 class BotTypingBanner extends StatefulWidget {
   final String botName;
   final String typedSoFar;
+  // Endgame threat: render a red, fast-pulsing "about to solve!" alarm to
+  // pressure the player into guessing first.
+  final bool isThreat;
 
   const BotTypingBanner({
     super.key,
     required this.botName,
     required this.typedSoFar,
+    this.isThreat = false,
   });
 
   @override
@@ -134,18 +138,31 @@ class BotTypingBanner extends StatefulWidget {
 class _BotTypingBannerState extends State<BotTypingBanner>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulse;
-  late final Animation<double> _borderOpacity;
+  late Animation<double> _borderOpacity;
 
   @override
   void initState() {
     super.initState();
-    _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 480),
-    )..repeat(reverse: true);
+    _pulse = AnimationController(vsync: this, duration: _pulseDuration)
+      ..repeat(reverse: true);
     _borderOpacity = Tween<double>(begin: 0.28, end: 0.90).animate(
       CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
     );
+  }
+
+  Duration get _pulseDuration =>
+      widget.isThreat ? const Duration(milliseconds: 300) : const Duration(milliseconds: 480);
+
+  @override
+  void didUpdateWidget(BotTypingBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Speed the pulse up when the banner escalates to a threat mid-life.
+    if (widget.isThreat != oldWidget.isThreat) {
+      _pulse.duration = _pulseDuration;
+      _pulse
+        ..reset()
+        ..repeat(reverse: true);
+    }
   }
 
   @override
@@ -157,6 +174,54 @@ class _BotTypingBannerState extends State<BotTypingBanner>
   @override
   Widget build(BuildContext context) {
     final isTyping = widget.typedSoFar.isNotEmpty;
+
+    if (widget.isThreat) {
+      return AnimatedBuilder(
+        animation: _borderOpacity,
+        builder: (_, __) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: const Color(0xFF7F0000).withOpacity(0.92),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: Colors.redAccent.withOpacity(0.40 + _borderOpacity.value * 0.55),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.withOpacity(_borderOpacity.value * 0.55),
+                  blurRadius: 14,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('🚨', style: TextStyle(fontSize: 15)),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    '${widget.botName} עומד לפתור! נחש מהר!',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textDirection: TextDirection.rtl,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return AnimatedBuilder(
       animation: _borderOpacity,

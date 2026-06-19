@@ -581,5 +581,61 @@
       "כיכר עירונית גדולה לכינוסים",
       "אתר זיכרון לדמות חשובה"
     ]
+  },
+  {
+    "id": "yarkon_river",
+    "name_he": "נהר הירקון",
+    "answer_he": "נהר הירקון",
+    "category": "nature",
+    "city_he": "תל אביב",
+    "image_asset": "assets/game_places/images/yarkon_river.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "נהר זורם דרך עיר במרכז",
+      "שביל הליכה יפה עם נוף עירוני"
+    ]
+  },
+  {
+    "id": "mount_sodom",
+    "name_he": "אשת לוט",
+    "answer_he": "אשת לוט",
+    "category": "nature",
+    "city_he": "ים המלח",
+    "image_asset": "assets/game_places/images/mount_sodom.jpg",
+    "difficulty": "hard",
+    "is_active": true,
+    "facts": [
+      "בקצה הדרומי של ים המלח",
+      "עמוד סלע מפורסם על הר סדום"
+    ]
+  },
+  {
+    "id": "weizmann_institute",
+    "name_he": "מכון ויצמן",
+    "answer_he": "מכון ויצמן",
+    "category": "landmark",
+    "city_he": "רחובות",
+    "image_asset": "assets/game_places/images/weizmann_institute.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "מוסד מחקר מדעי מוביל",
+      "קמפוס ירוק עם מתקני ניסוי"
+    ]
+  },
+  {
+    "id": "tel_hai",
+    "name_he": "תל חי",
+    "answer_he": "תל חי",
+    "category": "landmark",
+    "city_he": "גליל עליון",
+    "image_asset": "assets/game_places/images/tel_hai.jpg",
+    "difficulty": "medium",
+    "is_active": true,
+    "facts": [
+      "פסל אריה שואג מנציח מגינים שנפלו בקרב על יישוב קטן בצפון",
+      "מקום שאליו נקשרת האמרה \"טוב למות בעד ארצנו\""
+    ]
   }
 ]

@@ -1,0 +1,9 @@
+# Appfile — fastlane identifiers for WhoIsThere (iOS).
+#
+# The bundle identifier is fixed. The Apple Developer Team ID is injected from
+# the APPLE_TEAM_ID environment variable in CI — no secret values are stored
+# in this file.
+
+app_identifier("com.rotem.whoisthere")
+team_id(ENV["APPLE_TEAM_ID"])
+itc_team_id(ENV["APPLE_TEAM_ID"])

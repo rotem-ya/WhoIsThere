@@ -1,0 +1,282 @@
+[
+  {
+    "id": "flags_spain",
+    "name_he": "ספרד",
+    "answer_he": "ספרד",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_spain.jpg"
+  },
+  {
+    "id": "flags_uk",
+    "name_he": "בריטניה",
+    "answer_he": "בריטניה",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_uk.jpg"
+  },
+  {
+    "id": "flags_usa",
+    "name_he": "ארצות הברית",
+    "answer_he": "ארצות הברית",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_usa.jpg"
+  },
+  {
+    "id": "flags_canada",
+    "name_he": "קנדה",
+    "answer_he": "קנדה",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_canada.jpg"
+  },
+  {
+    "id": "flags_brazil",
+    "name_he": "ברזיל",
+    "answer_he": "ברזיל",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_brazil.jpg"
+  },
+  {
+    "id": "flags_argentina",
+    "name_he": "ארגנטינה",
+    "answer_he": "ארגנטינה",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_argentina.jpg"
+  },
+  {
+    "id": "flags_mexico",
+    "name_he": "מקסיקו",
+    "answer_he": "מקסיקו",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_mexico.jpg"
+  },
+  {
+    "id": "flags_japan",
+    "name_he": "יפן",
+    "answer_he": "יפן",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_japan.jpg"
+  },
+  {
+    "id": "flags_china",
+    "name_he": "סין",
+    "answer_he": "סין",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_china.jpg"
+  },
+  {
+    "id": "flags_india",
+    "name_he": "הודו",
+    "answer_he": "הודו",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_india.jpg"
+  },
+  {
+    "id": "flags_australia",
+    "name_he": "אוסטרליה",
+    "answer_he": "אוסטרליה",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_australia.jpg"
+  },
+  {
+    "id": "flags_israel",
+    "name_he": "ישראל",
+    "answer_he": "ישראל",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_israel.jpg"
+  },
+  {
+    "id": "flags_egypt",
+    "name_he": "מצרים",
+    "answer_he": "מצרים",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_egypt.jpg"
+  },
+  {
+    "id": "flags_greece",
+    "name_he": "יוון",
+    "answer_he": "יוון",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_greece.jpg"
+  },
+  {
+    "id": "flags_turkey",
+    "name_he": "טורקיה",
+    "answer_he": "טורקיה",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_turkey.jpg"
+  },
+  {
+    "id": "flags_norway",
+    "name_he": "נורווגיה",
+    "answer_he": "נורווגיה",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_norway.jpg"
+  },
+  {
+    "id": "flags_portugal",
+    "name_he": "פורטוגל",
+    "answer_he": "פורטוגל",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_portugal.jpg"
+  },
+  {
+    "id": "flags_south_korea",
+    "name_he": "דרום קוריאה",
+    "answer_he": "דרום קוריאה",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_south_korea.jpg"
+  },
+  {
+    "id": "flags_vietnam",
+    "name_he": "וייטנאם",
+    "answer_he": "וייטנאם",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_vietnam.jpg"
+  },
+  {
+    "id": "flags_saudi_arabia",
+    "name_he": "ערב הסעודית",
+    "answer_he": "ערב הסעודית",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_saudi_arabia.jpg"
+  },
+  {
+    "id": "flags_south_africa",
+    "name_he": "דרום אפריקה",
+    "answer_he": "דרום אפריקה",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_south_africa.jpg"
+  },
+  {
+    "id": "flags_kenya",
+    "name_he": "קניה",
+    "answer_he": "קניה",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_kenya.jpg"
+  },
+  {
+    "id": "flags_morocco",
+    "name_he": "מרוקו",
+    "answer_he": "מרוקו",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_morocco.jpg"
+  },
+  {
+    "id": "flags_chile",
+    "name_he": "צ׳ילה",
+    "answer_he": "צ׳ילה",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_chile.jpg"
+  },
+  {
+    "id": "flags_cuba",
+    "name_he": "קובה",
+    "answer_he": "קובה",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_cuba.jpg"
+  },
+  {
+    "id": "flags_jamaica",
+    "name_he": "ג׳מייקה",
+    "answer_he": "ג׳מייקה",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_jamaica.jpg"
+  },
+  {
+    "id": "flags_new_zealand",
+    "name_he": "ניו זילנד",
+    "answer_he": "ניו זילנד",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_new_zealand.jpg"
+  },
+  {
+    "id": "flags_czech",
+    "name_he": "צ׳כיה",
+    "answer_he": "צ׳כיה",
+    "aliases_he": [],
+    "category": "flags",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/flags_czech.jpg"
+  }
+]

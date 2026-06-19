@@ -1,0 +1,432 @@
+[
+  {
+    "id": "sports_soccer",
+    "name_he": "כדורגל",
+    "answer_he": "כדורגל",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_soccer.jpg"
+  },
+  {
+    "id": "sports_basketball",
+    "name_he": "כדורסל",
+    "answer_he": "כדורסל",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_basketball.jpg"
+  },
+  {
+    "id": "sports_tennis",
+    "name_he": "טניס",
+    "answer_he": "טניס",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_tennis.jpg"
+  },
+  {
+    "id": "sports_volleyball",
+    "name_he": "כדורעף",
+    "answer_he": "כדורעף",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_volleyball.jpg"
+  },
+  {
+    "id": "sports_baseball",
+    "name_he": "בייסבול",
+    "answer_he": "בייסבול",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_baseball.jpg"
+  },
+  {
+    "id": "sports_swimming",
+    "name_he": "שחייה",
+    "answer_he": "שחייה",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_swimming.jpg"
+  },
+  {
+    "id": "sports_running",
+    "name_he": "ריצה",
+    "answer_he": "ריצה",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_running.jpg"
+  },
+  {
+    "id": "sports_cycling",
+    "name_he": "רכיבת אופניים",
+    "answer_he": "רכיבת אופניים",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_cycling.jpg"
+  },
+  {
+    "id": "sports_boxing",
+    "name_he": "אגרוף",
+    "answer_he": "אגרוף",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_boxing.jpg"
+  },
+  {
+    "id": "sports_judo",
+    "name_he": "ג'ודו",
+    "answer_he": "ג'ודו",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_judo.jpg"
+  },
+  {
+    "id": "sports_gymnastics",
+    "name_he": "התעמלות",
+    "answer_he": "התעמלות",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_gymnastics.jpg"
+  },
+  {
+    "id": "sports_skiing",
+    "name_he": "סקי",
+    "answer_he": "סקי",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_skiing.jpg"
+  },
+  {
+    "id": "sports_surfing",
+    "name_he": "גלישה",
+    "answer_he": "גלישה",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_surfing.jpg"
+  },
+  {
+    "id": "sports_golf",
+    "name_he": "גולף",
+    "answer_he": "גולף",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_golf.jpg"
+  },
+  {
+    "id": "sports_ice_hockey",
+    "name_he": "הוקי קרח",
+    "answer_he": "הוקי קרח",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_ice_hockey.jpg"
+  },
+  {
+    "id": "sports_rugby",
+    "name_he": "רוגבי",
+    "answer_he": "רוגבי",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_rugby.jpg"
+  },
+  {
+    "id": "sports_cricket",
+    "name_he": "קריקט",
+    "answer_he": "קריקט",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_cricket.jpg"
+  },
+  {
+    "id": "sports_table_tennis",
+    "name_he": "טניס שולחן",
+    "answer_he": "טניס שולחן",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_table_tennis.jpg"
+  },
+  {
+    "id": "sports_archery",
+    "name_he": "קשתות",
+    "answer_he": "קשתות",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_archery.jpg"
+  },
+  {
+    "id": "sports_fencing",
+    "name_he": "סיף",
+    "answer_he": "סיף",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_fencing.jpg"
+  },
+  {
+    "id": "sports_rowing",
+    "name_he": "חתירה",
+    "answer_he": "חתירה",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_rowing.jpg"
+  },
+  {
+    "id": "sports_sailing",
+    "name_he": "שיט",
+    "answer_he": "שיט",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_sailing.jpg"
+  },
+  {
+    "id": "sports_climbing",
+    "name_he": "טיפוס",
+    "answer_he": "טיפוס",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_climbing.jpg"
+  },
+  {
+    "id": "sports_skateboarding",
+    "name_he": "סקייטבורד",
+    "answer_he": "סקייטבורד",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_skateboarding.jpg"
+  },
+  {
+    "id": "sports_wrestling",
+    "name_he": "היאבקות",
+    "answer_he": "היאבקות",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_wrestling.jpg"
+  },
+  {
+    "id": "sports_weightlifting",
+    "name_he": "הרמת משקולות",
+    "answer_he": "הרמת משקולות",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_weightlifting.jpg"
+  },
+  {
+    "id": "sports_handball",
+    "name_he": "כדוריד",
+    "answer_he": "כדוריד",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_handball.jpg"
+  },
+  {
+    "id": "sports_horse_riding",
+    "name_he": "רכיבה על סוסים",
+    "answer_he": "רכיבה על סוסים",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_horse_riding.jpg"
+  },
+  {
+    "id": "sports_diving",
+    "name_he": "קפיצה למים",
+    "answer_he": "קפיצה למים",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_diving.jpg"
+  },
+  {
+    "id": "sports_water_polo",
+    "name_he": "כדורמים",
+    "answer_he": "כדורמים",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_water_polo.jpg"
+  },
+  {
+    "id": "sports_triathlon",
+    "name_he": "טריאתלון",
+    "answer_he": "טריאתלון",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_triathlon.jpg"
+  },
+  {
+    "id": "sports_marathon",
+    "name_he": "מרתון",
+    "answer_he": "מרתון",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_marathon.jpg"
+  },
+  {
+    "id": "sports_figure_skating",
+    "name_he": "החלקה אמנותית",
+    "answer_he": "החלקה אמנותית",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_figure_skating.jpg"
+  },
+  {
+    "id": "sports_taekwondo",
+    "name_he": "טאקוונדו",
+    "answer_he": "טאקוונדו",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_taekwondo.jpg"
+  },
+  {
+    "id": "sports_squash",
+    "name_he": "סקווש",
+    "answer_he": "סקווש",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_squash.jpg"
+  },
+  {
+    "id": "sports_softball",
+    "name_he": "סופטבול",
+    "answer_he": "סופטבול",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_softball.jpg"
+  },
+  {
+    "id": "sports_polo",
+    "name_he": "פולו",
+    "answer_he": "פולו",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_polo.jpg"
+  },
+  {
+    "id": "sports_darts",
+    "name_he": "חיצים",
+    "answer_he": "חיצים",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_darts.jpg"
+  },
+  {
+    "id": "sports_motorsport",
+    "name_he": "ספורט מוטורי",
+    "answer_he": "ספורט מוטורי",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_motorsport.jpg"
+  },
+  {
+    "id": "sports_skating",
+    "name_he": "החלקה",
+    "answer_he": "החלקה",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_skating.jpg"
+  },
+  {
+    "id": "sports_hiking",
+    "name_he": "טיולים",
+    "answer_he": "טיולים",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_hiking.jpg"
+  },
+  {
+    "id": "sports_kayaking",
+    "name_he": "שייט קיאקים",
+    "answer_he": "שייט קיאקים",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_kayaking.jpg"
+  },
+  {
+    "id": "sports_chess",
+    "name_he": "שחמט",
+    "answer_he": "שחמט",
+    "aliases_he": [],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_chess.jpg"
+  }
+]

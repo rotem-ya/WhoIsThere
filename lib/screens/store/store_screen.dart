@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/ad_constants.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/economy_config.dart';
 import '../../core/ui/app_scaffold.dart';
@@ -38,12 +39,32 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
     super.dispose();
   }
 
+  // Resilient back: pop if there's something to pop (store was pushed),
+  // otherwise fall back to /home. The store can be reached via context.go
+  // (e.g. the "insufficient coins" dialog), which replaces the stack and leaves
+  // nothing to pop — Navigator.maybePop would then silently do nothing, trapping
+  // the user on the store screen.
+  void _handleBack() {
+    HapticFeedback.lightImpact();
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/home');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final walletAsync = ref.watch(walletProvider);
     final coins = walletAsync.valueOrNull?.coins ?? 0;
 
-    return AppScaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        _handleBack();
+      },
+      child: AppScaffold(
       backgroundGradient: AppColors.pageBackground,
       padding: EdgeInsets.zero,
       child: Column(
@@ -58,10 +79,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
                   IconButton(
                     icon: const Icon(Icons.arrow_back_rounded,
                         color: Colors.white),
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      Navigator.maybePop(context);
-                    },
+                    onPressed: _handleBack,
                   ),
                   const Expanded(
                     child: Text(
@@ -112,6 +130,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -161,22 +180,27 @@ class _PurchaseTab extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
+        // Ad-related store items (ad-removal pack + rewarded-ad tile) are shown
+        // only when ads are enabled. With ads off at launch, advertising
+        // shouldn't be referenced anywhere in the UI (and would fail review).
+        if (AdConstants.adsEnabled) ...[
+          const SizedBox(height: AppSpacing.lg),
 
-        // ── Ad removal pack ───────────────────────────────────────────────
-        _SectionLabel(label: 'חבילות', icon: '🎁'),
-        const SizedBox(height: 10),
-        _AdRemovalCard()
-            .animate(delay: 180.ms)
-            .fadeIn(duration: 340.ms, curve: Curves.easeOut)
-            .slideY(begin: 0.06, end: 0, duration: 340.ms, curve: Curves.easeOut),
-        const SizedBox(height: AppSpacing.md),
+          // ── Ad removal pack ─────────────────────────────────────────────
+          _SectionLabel(label: 'חבילות', icon: '🎁'),
+          const SizedBox(height: 10),
+          _AdRemovalCard()
+              .animate(delay: 180.ms)
+              .fadeIn(duration: 340.ms, curve: Curves.easeOut)
+              .slideY(begin: 0.06, end: 0, duration: 340.ms, curve: Curves.easeOut),
+          const SizedBox(height: AppSpacing.md),
 
-        // ── Rewarded Ad ───────────────────────────────────────────────────
-        _RewardedAdTile(ref: ref)
-            .animate(delay: 260.ms)
-            .fadeIn(duration: 300.ms, curve: Curves.easeOut)
-            .slideY(begin: 0.06, end: 0, duration: 300.ms, curve: Curves.easeOut),
+          // ── Rewarded Ad ─────────────────────────────────────────────────
+          _RewardedAdTile(ref: ref)
+              .animate(delay: 260.ms)
+              .fadeIn(duration: 300.ms, curve: Curves.easeOut)
+              .slideY(begin: 0.06, end: 0, duration: 300.ms, curve: Curves.easeOut),
+        ],
       ],
     );
   }
@@ -1072,6 +1096,17 @@ class _RewardedAdTile extends ConsumerWidget {
   Future<void> _watchAd(BuildContext context, WidgetRef ref) async {
     final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
     if (uid == null) return;
+
+    // Show the real rewarded ad first; only credit coins if the user watched
+    // long enough to earn the reward.
+    final watched = await ref.read(adServiceProvider).showRewarded();
+    if (!context.mounted) return;
+    if (!watched) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('הפרסומת לא זמינה כרגע, נסה שוב בעוד רגע')),
+      );
+      return;
+    }
 
     final granted =
         await ref.read(economyServiceProvider).applyAdReward(uid);

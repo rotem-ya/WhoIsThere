@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../core/constants/ad_constants.dart';
 import '../models/economy/user_economy_model.dart';
+import '../services/ad_service.dart';
 import '../services/auth_service.dart';
 import '../services/economy_service.dart';
 import '../services/hint_economy_guard.dart';
@@ -18,6 +20,18 @@ import '../models/game_image_model.dart';
 // Services
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 final roomServiceProvider = Provider<RoomService>((ref) => RoomService());
+
+// AdMob — single long-lived instance. Preloads rewarded + interstitial on
+// creation so the first show is instant.
+final adServiceProvider = Provider<AdService>((ref) {
+  final service = AdService();
+  if (AdConstants.adsEnabled) {
+    service.preloadRewarded();
+    service.preloadInterstitial();
+  }
+  ref.onDispose(service.dispose);
+  return service;
+});
 
 // Economy — LocalEconomyCache created once (async init via FutureProvider)
 final localEconomyCacheProvider = FutureProvider<LocalEconomyCache>(

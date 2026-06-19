@@ -11,8 +11,13 @@ import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/player_model.dart';
+import '../../models/room_model.dart';
+import '../../core/constants/game_categories.dart';
+import '../../core/utils/chat_filter.dart';
+import '../../widgets/chat/chat_sheet.dart';
 import '../../services/qa_logger_service.dart';
 import '../../services/settings_service.dart';
+import '../../services/content_manifest_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../widgets/common/app_feedback.dart';
@@ -50,6 +55,203 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     setState(() => _codeCopied = true);
     await Future.delayed(const Duration(milliseconds: 1500));
     if (mounted) setState(() => _codeCopied = false);
+  }
+
+  void _openChat() {
+    final user = ref.read(currentUserProvider).value;
+    QaLoggerService.instance.log('LOBBY', 'LOBBY_CHAT_OPENED');
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ChatSheet(
+        stream: ref.read(roomServiceProvider).chatMessagesStream(widget.roomId),
+        myUid: user?.id ?? '',
+        onSend: (text) {
+          final uid = user?.id;
+          if (uid == null) return;
+          final clean = ChatFilter.clean(text);
+          if (clean.isEmpty) return;
+          ref.read(roomServiceProvider).sendChatMessage(
+              widget.roomId, uid, user?.name ?? 'אני', clean);
+        },
+      ),
+    );
+  }
+
+  // ── Heat topic picker (חי צומח דומם friends game) ──────────────────────────
+
+  /// Rounds for the heat = max(players, 3).
+  /// Minimum topics a participant must pick to be "ready": exactly one — for
+  /// everyone. The host may pick MORE (see [_topicChip]) to add heat rounds;
+  /// the extra picks are optional, so the required count stays 1.
+  int _topicQuota(RoomModel room, String playerId) => 1;
+
+  Widget _buildHeatSetup(RoomModel room, dynamic currentUser) {
+    final myId = currentUser?.id as String?;
+    final myList = myId == null
+        ? const <String>[]
+        : (room.topicChoices[myId] ?? const <String>[]);
+    final isHost = myId != null && myId == room.hostId;
+    // Non-host picks exactly one; the host may pick several to lengthen the heat.
+    final title = isHost ? 'בחרו נושא — אפשר כמה שתרצו' : 'בחרו נושא למקצה';
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: AppStyles.glassCard(radius: 16, opacity: 0.12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14)),
+          const SizedBox(height: 8),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              // Topics the admin hid via the manifest `topicsActive` map are
+              // dropped from the picker (absent = active, backward compatible).
+              for (final catId in GameCategories.fastHeat)
+                if (ContentManifestService.instance.isCategoryActive(catId))
+                  _topicChip(catId,
+                      selected: myList.contains(catId), isHost: isHost),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              for (final p in room.players.values)
+                _pickStatusChip(p, room.topicChoices[p.id] ?? const [],
+                    _topicQuota(room, p.id)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _topicChip(String catId,
+      {required bool selected, required bool isHost}) {
+    final cat = GameCategories.byId(catId);
+    return GestureDetector(
+      onTap: () {
+        final uid = ref.read(currentUserProvider).value?.id;
+        if (uid == null) return;
+        HapticFeedback.selectionClick();
+        final room = ref.read(roomStreamProvider(widget.roomId)).valueOrNull;
+        final current = [...?room?.topicChoices[uid]];
+        if (current.contains(catId)) {
+          current.remove(catId);
+        } else {
+          // Non-host picks exactly one (replace previous); host may add many.
+          if (!isHost) current.clear();
+          current.add(catId);
+        }
+        ref
+            .read(roomServiceProvider)
+            .setTopicChoices(widget.roomId, uid, current);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppStyles.cyanGlow.withOpacity(0.22)
+              : Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected
+                ? AppStyles.cyanGlow
+                : Colors.white.withOpacity(0.15),
+            width: selected ? 1.6 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(cat.emoji, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+            Text(cat.nameHe,
+                style: TextStyle(
+                    color: selected ? AppStyles.cyanGlow : Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _pickStatusChip(PlayerModel p, List<String> choices, int quota) {
+    final name = p.name.isNotEmpty ? p.name : 'שחקן';
+    final complete = choices.length >= quota;
+    final emojis =
+        choices.map((c) => GameCategories.byId(c).emoji).join(' ');
+    final label = choices.isNotEmpty
+        ? '$name $emojis${complete ? '' : ' …'}'
+        : (p.isBot ? '$name 🎲' : '$name …');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: complete
+            ? Colors.greenAccent.withOpacity(0.12)
+            : Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: complete
+              ? Colors.greenAccent.withOpacity(0.4)
+              : Colors.white.withOpacity(0.12),
+          width: 0.8,
+        ),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              color: complete ? Colors.greenAccent : Colors.white54,
+              fontSize: 11,
+              fontWeight: FontWeight.w600)),
+    );
+  }
+
+  Future<bool?> _confirmStartWithUnchosen(List<PlayerModel> unchosen) {
+    final names = unchosen
+        .map((p) => p.name.isNotEmpty ? p.name : 'שחקן')
+        .join(', ');
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF0D1E30),
+          title: const Text('לא כולם בחרו נושא',
+              style: TextStyle(color: Colors.white, fontSize: 17)),
+          content: Text(
+            'השחקנים הבאים עדיין לא בחרו נושא:\n$names\n\nאפשר לבחור עבורם נושא אקראי ולהתחיל, או להמתין שיבחרו.',
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('המתן',
+                  style: TextStyle(color: Colors.white54)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('בחר אקראית והתחל',
+                  style: TextStyle(
+                      color: Color(0xFF22D3EE), fontWeight: FontWeight.w800)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _shareToWhatsApp(String code) {
@@ -167,13 +369,27 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
                     const SizedBox(height: 6),
 
-                    // ── Players grid (2 × 4 = 8 fixed slots) ──────────
-                    _PlayerGrid(
-                      players: room.players.values.toList(),
-                      currentUserId: currentUser?.id,
+                    // ── Players grid + topic picker (both scroll so the
+                    //    start button stays pinned above the Android system
+                    //    bar even with the full 11-topic picker) ───────────
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            _PlayerGrid(
+                              players: room.players.values.toList(),
+                              currentUserId: currentUser?.id,
+                            ),
+                            if (room.selectedDifficulty == Difficulty.giant) ...[
+                              const SizedBox(height: 8),
+                              _buildHeatSetup(room, currentUser),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
 
-                    const Spacer(),
+                    const SizedBox(height: 8),
 
                     // ── Min-players hint (host only, when not enough players) ──
                     if (isHost && !canStart)
@@ -205,6 +421,22 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                 HapticFeedback.mediumImpact();
                                 QaLoggerService.instance.log('LOBBY',
                                     'START_GAME_TAPPED roomId=${widget.roomId}');
+                                // Heat friends game: if some players haven't
+                                // picked a topic, ask the host how to proceed.
+                                if (room.selectedDifficulty == Difficulty.giant) {
+                                  final unchosen = room.players.values
+                                      .where((p) =>
+                                          !p.isBot &&
+                                          (room.topicChoices[p.id]?.length ??
+                                                  0) <
+                                              _topicQuota(room, p.id))
+                                      .toList();
+                                  if (unchosen.isNotEmpty) {
+                                    final proceed =
+                                        await _confirmStartWithUnchosen(unchosen);
+                                    if (proceed != true) return;
+                                  }
+                                }
                                 setState(() => _isStarting = true);
                                 try {
                                   await ref
@@ -311,7 +543,22 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         ),
 
         const SizedBox(width: 8),
-        const SizedBox(width: 36),
+
+        // Chat button — opens the room chat from the lobby (balances the back
+        // button so the title stays centered).
+        GestureDetector(
+          onTap: _openChat,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white38),
+              boxShadow: AppStyles.cyanGlowShadow(intensity: 0.3),
+            ),
+            child: const Text('💬', style: TextStyle(fontSize: 18)),
+          ),
+        ),
       ],
     );
   }

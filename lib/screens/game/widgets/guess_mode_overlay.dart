@@ -11,6 +11,11 @@ class GuessModeOverlay extends StatefulWidget {
   final int? deadlineMs;
   final String answer;
   final Future<bool> Function(String)? onSubmit;
+  // Bought-letter reveal, threaded down to the letter bank.
+  final int revealedLetterCount;
+  final VoidCallback? onBuyLetter;
+  final int nextLetterPrice;
+  final bool showBuyLetter;
 
   const GuessModeOverlay({
     super.key,
@@ -19,6 +24,10 @@ class GuessModeOverlay extends StatefulWidget {
     required this.deadlineMs,
     required this.answer,
     this.onSubmit,
+    this.revealedLetterCount = 0,
+    this.onBuyLetter,
+    this.nextLetterPrice = 0,
+    this.showBuyLetter = false,
   });
 
   @override
@@ -140,6 +149,10 @@ class _GuessModeOverlayState extends State<GuessModeOverlay>
                             answer: widget.answer,
                             enabled: widget.onSubmit != null,
                             onComplete: widget.onSubmit ?? (_) async => false,
+                            revealedLetterCount: widget.revealedLetterCount,
+                            onBuyLetter: widget.onBuyLetter,
+                            nextLetterPrice: widget.nextLetterPrice,
+                            showBuyLetter: widget.showBuyLetter,
                           ),
                         )
                       : _SpectatorBody(answer: widget.answer),
@@ -203,7 +216,7 @@ class _SpectatorBodyState extends State<_SpectatorBody> {
     });
 
     // Build word-length list from answer (mirror LetterBankInput logic)
-    final words = widget.answer.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final words = stripGeresh(widget.answer).trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
     var total = 0;
     final lengths = <int>[];
     for (final word in words) {

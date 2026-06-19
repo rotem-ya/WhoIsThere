@@ -1,0 +1,472 @@
+[
+  {
+    "id": "objects_chair",
+    "name_he": "כיסא",
+    "answer_he": "כיסא",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_chair.jpg"
+  },
+  {
+    "id": "objects_table",
+    "name_he": "שולחן",
+    "answer_he": "שולחן",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_table.jpg"
+  },
+  {
+    "id": "objects_bed",
+    "name_he": "מיטה",
+    "answer_he": "מיטה",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_bed.jpg"
+  },
+  {
+    "id": "objects_clock",
+    "name_he": "שעון",
+    "answer_he": "שעון",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_clock.jpg"
+  },
+  {
+    "id": "objects_book",
+    "name_he": "ספר",
+    "answer_he": "ספר",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_book.jpg"
+  },
+  {
+    "id": "objects_pencil",
+    "name_he": "עיפרון",
+    "answer_he": "עיפרון",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_pencil.jpg"
+  },
+  {
+    "id": "objects_pen",
+    "name_he": "עט",
+    "answer_he": "עט",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_pen.jpg"
+  },
+  {
+    "id": "objects_scissors",
+    "name_he": "מספריים",
+    "answer_he": "מספריים",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_scissors.jpg"
+  },
+  {
+    "id": "objects_hammer",
+    "name_he": "פטיש",
+    "answer_he": "פטיש",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_hammer.jpg"
+  },
+  {
+    "id": "objects_key",
+    "name_he": "מפתח",
+    "answer_he": "מפתח",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_key.jpg"
+  },
+  {
+    "id": "objects_umbrella",
+    "name_he": "מטרייה",
+    "answer_he": "מטרייה",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_umbrella.jpg"
+  },
+  {
+    "id": "objects_bottle",
+    "name_he": "בקבוק",
+    "answer_he": "בקבוק",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_bottle.jpg"
+  },
+  {
+    "id": "objects_cup",
+    "name_he": "ספל",
+    "answer_he": "ספל",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_cup.jpg"
+  },
+  {
+    "id": "objects_plate",
+    "name_he": "צלחת",
+    "answer_he": "צלחת",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_plate.jpg"
+  },
+  {
+    "id": "objects_fork",
+    "name_he": "מזלג",
+    "answer_he": "מזלג",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_fork.jpg"
+  },
+  {
+    "id": "objects_spoon",
+    "name_he": "כף",
+    "answer_he": "כף",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_spoon.jpg"
+  },
+  {
+    "id": "objects_knife",
+    "name_he": "סכין",
+    "answer_he": "סכין",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_knife.jpg"
+  },
+  {
+    "id": "objects_glasses",
+    "name_he": "משקפיים",
+    "answer_he": "משקפיים",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_glasses.jpg"
+  },
+  {
+    "id": "objects_watch",
+    "name_he": "שעון יד",
+    "answer_he": "שעון יד",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_watch.jpg"
+  },
+  {
+    "id": "objects_phone",
+    "name_he": "טלפון",
+    "answer_he": "טלפון",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_phone.jpg"
+  },
+  {
+    "id": "objects_computer",
+    "name_he": "מחשב",
+    "answer_he": "מחשב",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_computer.jpg"
+  },
+  {
+    "id": "objects_keyboard",
+    "name_he": "מקלדת",
+    "answer_he": "מקלדת",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_keyboard.jpg"
+  },
+  {
+    "id": "objects_television",
+    "name_he": "טלוויזיה",
+    "answer_he": "טלוויזיה",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_television.jpg"
+  },
+  {
+    "id": "objects_camera",
+    "name_he": "מצלמה",
+    "answer_he": "מצלמה",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_camera.jpg"
+  },
+  {
+    "id": "objects_piano",
+    "name_he": "פסנתר",
+    "answer_he": "פסנתר",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_piano.jpg"
+  },
+  {
+    "id": "objects_drum",
+    "name_he": "תוף",
+    "answer_he": "תוף",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_drum.jpg"
+  },
+  {
+    "id": "objects_ball",
+    "name_he": "כדור",
+    "answer_he": "כדור",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_ball.jpg"
+  },
+  {
+    "id": "objects_bicycle",
+    "name_he": "אופניים",
+    "answer_he": "אופניים",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_bicycle.jpg"
+  },
+  {
+    "id": "objects_car",
+    "name_he": "מכונית",
+    "answer_he": "מכונית",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_car.jpg"
+  },
+  {
+    "id": "objects_bus",
+    "name_he": "אוטובוס",
+    "answer_he": "אוטובוס",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_bus.jpg"
+  },
+  {
+    "id": "objects_train",
+    "name_he": "רכבת",
+    "answer_he": "רכבת",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_train.jpg"
+  },
+  {
+    "id": "objects_airplane",
+    "name_he": "מטוס",
+    "answer_he": "מטוס",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_airplane.jpg"
+  },
+  {
+    "id": "objects_boat",
+    "name_he": "סירה",
+    "answer_he": "סירה",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_boat.jpg"
+  },
+  {
+    "id": "objects_ship",
+    "name_he": "אונייה",
+    "answer_he": "אונייה",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_ship.jpg"
+  },
+  {
+    "id": "objects_rocket",
+    "name_he": "טיל",
+    "answer_he": "טיל",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_rocket.jpg"
+  },
+  {
+    "id": "objects_anchor",
+    "name_he": "עוגן",
+    "answer_he": "עוגן",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_anchor.jpg"
+  },
+  {
+    "id": "objects_broom",
+    "name_he": "מטאטא",
+    "answer_he": "מטאטא",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_broom.jpg"
+  },
+  {
+    "id": "objects_bucket",
+    "name_he": "דלי",
+    "answer_he": "דלי",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_bucket.jpg"
+  },
+  {
+    "id": "objects_candle",
+    "name_he": "נר",
+    "answer_he": "נר",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_candle.jpg"
+  },
+  {
+    "id": "objects_balloon",
+    "name_he": "בלון",
+    "answer_he": "בלון",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_balloon.jpg"
+  },
+  {
+    "id": "objects_kite",
+    "name_he": "עפיפון",
+    "answer_he": "עפיפון",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_kite.jpg"
+  },
+  {
+    "id": "objects_shoe",
+    "name_he": "נעל",
+    "answer_he": "נעל",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_shoe.jpg"
+  },
+  {
+    "id": "objects_hat",
+    "name_he": "כובע",
+    "answer_he": "כובע",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_hat.jpg"
+  },
+  {
+    "id": "objects_shirt",
+    "name_he": "חולצה",
+    "answer_he": "חולצה",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_shirt.jpg"
+  },
+  {
+    "id": "objects_backpack",
+    "name_he": "תיק גב",
+    "answer_he": "תיק גב",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_backpack.jpg"
+  },
+  {
+    "id": "objects_ring",
+    "name_he": "טבעת",
+    "answer_he": "טבעת",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_ring.jpg"
+  },
+  {
+    "id": "objects_crown",
+    "name_he": "כתר",
+    "answer_he": "כתר",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_crown.jpg"
+  }
+]

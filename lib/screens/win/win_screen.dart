@@ -9,9 +9,11 @@ import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../core/constants/game_constants.dart';
+import '../../core/constants/economy_config.dart';
 import '../../providers/providers.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
+import '../../models/room_model.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/banner_ad_widget.dart';
 import '../../widgets/common/player_avatar.dart';
@@ -30,6 +32,10 @@ class _WinScreenState extends ConsumerState<WinScreen>
   late final AnimationController _counterController;
   late final AnimationController _shineController;
   GameImageModel? _gameImage;
+  // Friends games: coins gifted for placing 1st (20) / 2nd (5). null until resolved.
+  int? _placementReward;
+  // True while a "play again" tap is in flight (creating / joining the rematch).
+  bool _busyRematch = false;
 
   @override
   void initState() {
@@ -66,10 +72,65 @@ class _WinScreenState extends ConsumerState<WinScreen>
     final currentUser = ref.read(currentUserProvider).value;
     if (room == null || currentUser == null) return;
     final myPlayer = room.players[currentUser.id];
-    if (myPlayer != null) {
+    if (myPlayer == null) return;
+    if (room.isFriendsGame) {
+      // Friends games are per-match: score is NOT added to lifetime points.
+      // Instead, the top-2 finishers receive a coin gift (20 / 5).
+      final reward = await ref
+          .read(roomServiceProvider)
+          .claimPlacementReward(widget.roomId, currentUser.id);
+      if (mounted) setState(() => _placementReward = reward);
+    } else {
       await ref
           .read(authServiceProvider)
           .updateTotalPoints(currentUser.id, myPlayer.score);
+    }
+  }
+
+  // "Play again" (friends games): the first tapper creates a fresh room and the
+  // others see the button flip to "join rematch" via the room stream. Either way
+  // we land in the new lobby.
+  Future<void> _onRematch(RoomModel room) async {
+    if (_busyRematch) return;
+    final user = ref.read(currentUserProvider).value;
+    if (user == null) return;
+    setState(() => _busyRematch = true);
+    try {
+      final svc = ref.read(roomServiceProvider);
+      var targetId = room.rematchRoomId;
+      if (targetId == null || targetId.isEmpty) {
+        targetId = await svc.createRematch(
+          oldRoomId: widget.roomId,
+          hostId: user.id,
+          hostName: user.name,
+          hostPhotoUrl: user.photoUrl,
+        );
+      } else {
+        await svc.joinRematch(
+          rematchRoomId: targetId,
+          userId: user.id,
+          userName: user.name,
+          userPhotoUrl: user.photoUrl,
+        );
+      }
+      if (targetId == null || targetId.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('לא ניתן לפתוח משחק חוזר')),
+          );
+          setState(() => _busyRematch = false);
+        }
+        return;
+      }
+      ref.read(currentRoomIdProvider.notifier).state = targetId;
+      if (mounted) context.go('/lobby/$targetId');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('שגיאה במשחק חוזר: $e')),
+        );
+        setState(() => _busyRematch = false);
+      }
     }
   }
 
@@ -164,12 +225,19 @@ class _WinScreenState extends ConsumerState<WinScreen>
                           ClipRRect(
                             borderRadius: const BorderRadius.vertical(
                                 top: Radius.circular(24)),
-                            child: CachedNetworkImage(
-                              imageUrl: _gameImage!.imageUrl,
-                              height: 140,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            ),
+                            child: _gameImage!.imageUrl.startsWith('assets/')
+                                ? Image.asset(
+                                    _gameImage!.imageUrl,
+                                    height: 140,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  )
+                                : CachedNetworkImage(
+                                    imageUrl: _gameImage!.imageUrl,
+                                    height: 140,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(
@@ -238,11 +306,34 @@ class _WinScreenState extends ConsumerState<WinScreen>
                     ),
                   ],
 
+                  // ── Friends placement coin gift (1st = 20, 2nd = 5) ────
+                  if (room.isFriendsGame && (_placementReward ?? 0) > 0) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    _PlacementRewardBox(coins: _placementReward!),
+                  ],
+
                   const SizedBox(height: AppSpacing.sm),
+
+                  // ── Friends "play again": rematch the same group ───────
+                  if (room.isFriendsGame) ...[
+                    _RematchButton(
+                      label: (room.rematchRoomId == null ||
+                              room.rematchRoomId!.isEmpty)
+                          ? '🔄 שחק שוב'
+                          : '➡️ הצטרף למשחק חוזר',
+                      busy: _busyRematch,
+                      onTap: () => _onRematch(room),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
 
                   // ── 6. Tactile home button ─────────────────────────────
                   _HomeButton(
-                    onTap: () {
+                    onTap: () async {
+                      // Interstitial "between games" — only fires if one is
+                      // ready and the min-gap has elapsed; otherwise no-op.
+                      await ref.read(adServiceProvider).maybeShowInterstitial();
+                      if (!context.mounted) return;
                       ref.read(currentRoomIdProvider.notifier).state = null;
                       context.go('/home');
                     },
@@ -466,6 +557,114 @@ class _TotalRewardBox extends StatelessWidget {
             duration: 300.ms,
             curve: Curves.easeOut);
   }
+}
+
+// ── Friends placement coin gift box (1st place = 20, 2nd place = 5) ────────
+
+class _PlacementRewardBox extends StatelessWidget {
+  final int coins;
+
+  const _PlacementRewardBox({required this.coins});
+
+  @override
+  Widget build(BuildContext context) {
+    // 1st place gets the larger gift; anything else shown here is 2nd place.
+    final isFirst = coins >= EconomyConfig.friendsFirstPlaceReward;
+    final label = isFirst ? '🥇 מקום ראשון' : '🥈 מקום שני';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A1A12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: const Color(0xFF34D399).withOpacity(0.40), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF34D399).withOpacity(0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('🎁', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 8),
+          Text(
+            '$label · פרס:',
+            style: AppTextStyles.body.copyWith(
+              color: const Color(0xFF34D399),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '+$coins',
+            style: const TextStyle(
+              color: Color(0xFF34D399),
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.monetization_on_rounded,
+              color: Color(0xFFFFD54F), size: 20),
+        ],
+      ),
+    )
+        .animate()
+        .fadeIn(delay: 560.ms, duration: 300.ms, curve: Curves.easeOut)
+        .moveY(
+            begin: 8,
+            end: 0,
+            delay: 560.ms,
+            duration: 300.ms,
+            curve: Curves.easeOut);
+  }
+}
+
+// ── "שחק שוב" / "הצטרף למשחק חוזר": primary gold action above the home button ─
+
+class _RematchButton extends StatelessWidget {
+  final String label;
+  final bool busy;
+  final VoidCallback onTap;
+
+  const _RematchButton({
+    required this.label,
+    required this.busy,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: FilledButton(
+          onPressed: busy ? null : onTap,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: const Color(0xFF12100A),
+            disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16)),
+            textStyle: const TextStyle(
+                fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.4),
+          ),
+          child: busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Color(0xFF12100A)),
+                )
+              : Text(label),
+        ),
+      )
+          .animate()
+          .fadeIn(delay: 640.ms, duration: 280.ms, curve: Curves.easeOut);
 }
 
 // ── Tactile "חזור לבית" button: 0.985 press, shadow compression, no bounce ─

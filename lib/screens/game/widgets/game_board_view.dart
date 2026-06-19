@@ -22,6 +22,9 @@ class GameBoardView extends StatefulWidget {
   final String cardSkinId;
   final int? pendingRevealTileIndex;
   final int? revealDeadlineMs;
+  // Tiles to flash as a dim peek (spotlight tool) — shown over the cover
+  // without counting as a real reveal. Cleared by the parent after a moment.
+  final Set<int> spotlightCells;
 
   final VoidCallback? onTapRevealed;
 
@@ -38,6 +41,7 @@ class GameBoardView extends StatefulWidget {
     this.cardSkinId = 'default',
     this.pendingRevealTileIndex,
     this.revealDeadlineMs,
+    this.spotlightCells = const {},
   });
 
   @override
@@ -103,6 +107,7 @@ class _GameBoardViewState extends State<GameBoardView> {
                         cardSkinId: widget.cardSkinId,
                         isPendingReveal: index == widget.pendingRevealTileIndex,
                         revealDeadlineMs: widget.revealDeadlineMs,
+                        spotlightPeek: widget.spotlightCells.contains(index),
                       ),
                   ],
                 ),
@@ -128,6 +133,7 @@ class _Tile extends StatefulWidget {
   final String cardSkinId;
   final bool isPendingReveal;
   final int? revealDeadlineMs;
+  final bool spotlightPeek;
 
   const _Tile({
     required this.index,
@@ -142,6 +148,7 @@ class _Tile extends StatefulWidget {
     this.cardSkinId = 'default',
     this.isPendingReveal = false,
     this.revealDeadlineMs,
+    this.spotlightPeek = false,
   });
 
   @override
@@ -290,6 +297,31 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
                     imageUrl: widget.imageUrl,
                   ),
                 ),
+                // Spotlight peek — a dim, ghostly flash of the hidden slice over
+                // the closed cover. Not a real reveal; the parent clears it.
+                if (widget.spotlightPeek && !widget.isRevealed)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 220),
+                        opacity: 0.25,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: kCyan.withOpacity(0.55),
+                              width: 1,
+                            ),
+                          ),
+                          child: _ImageSlice(
+                            index: widget.index,
+                            gridSize: widget.gridSize,
+                            tileSize: widget.tileSize,
+                            imageUrl: widget.imageUrl,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (widget.isPendingReveal && !widget.isRevealed)
                   Positioned.fill(
                     child: _CountdownOverlay(

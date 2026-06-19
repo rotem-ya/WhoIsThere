@@ -1,0 +1,482 @@
+[
+  {
+    "id": "instruments_piano",
+    "name_he": "פסנתר",
+    "answer_he": "פסנתר",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_piano.jpg"
+  },
+  {
+    "id": "instruments_guitar",
+    "name_he": "גיטרה",
+    "answer_he": "גיטרה",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_guitar.jpg"
+  },
+  {
+    "id": "instruments_violin",
+    "name_he": "כינור",
+    "answer_he": "כינור",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_violin.jpg"
+  },
+  {
+    "id": "instruments_cello",
+    "name_he": "צ'לו",
+    "answer_he": "צ'לו",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_cello.jpg"
+  },
+  {
+    "id": "instruments_viola",
+    "name_he": "ויולה",
+    "answer_he": "ויולה",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_viola.jpg"
+  },
+  {
+    "id": "instruments_double_bass",
+    "name_he": "קונטרבס",
+    "answer_he": "קונטרבס",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_double_bass.jpg"
+  },
+  {
+    "id": "instruments_harp",
+    "name_he": "נבל",
+    "answer_he": "נבל",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_harp.jpg"
+  },
+  {
+    "id": "instruments_flute",
+    "name_he": "חליל צד",
+    "answer_he": "חליל צד",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_flute.jpg"
+  },
+  {
+    "id": "instruments_recorder",
+    "name_he": "חלילית",
+    "answer_he": "חלילית",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_recorder.jpg"
+  },
+  {
+    "id": "instruments_clarinet",
+    "name_he": "קלרינט",
+    "answer_he": "קלרינט",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_clarinet.jpg"
+  },
+  {
+    "id": "instruments_oboe",
+    "name_he": "אבוב",
+    "answer_he": "אבוב",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_oboe.jpg"
+  },
+  {
+    "id": "instruments_bassoon",
+    "name_he": "בסון",
+    "answer_he": "בסון",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_bassoon.jpg"
+  },
+  {
+    "id": "instruments_saxophone",
+    "name_he": "סקסופון",
+    "answer_he": "סקסופון",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_saxophone.jpg"
+  },
+  {
+    "id": "instruments_trumpet",
+    "name_he": "חצוצרה",
+    "answer_he": "חצוצרה",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_trumpet.jpg"
+  },
+  {
+    "id": "instruments_trombone",
+    "name_he": "טרומבון",
+    "answer_he": "טרומבון",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_trombone.jpg"
+  },
+  {
+    "id": "instruments_french_horn",
+    "name_he": "קרן יער",
+    "answer_he": "קרן יער",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_french_horn.jpg"
+  },
+  {
+    "id": "instruments_tuba",
+    "name_he": "טובה",
+    "answer_he": "טובה",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_tuba.jpg"
+  },
+  {
+    "id": "instruments_snare_drum",
+    "name_he": "תוף סנר",
+    "answer_he": "תוף סנר",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_snare_drum.jpg"
+  },
+  {
+    "id": "instruments_bass_drum",
+    "name_he": "תוף בס",
+    "answer_he": "תוף בס",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_bass_drum.jpg"
+  },
+  {
+    "id": "instruments_timpani",
+    "name_he": "טימפני",
+    "answer_he": "טימפני",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_timpani.jpg"
+  },
+  {
+    "id": "instruments_cymbals",
+    "name_he": "מצלתיים",
+    "answer_he": "מצלתיים",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_cymbals.jpg"
+  },
+  {
+    "id": "instruments_xylophone",
+    "name_he": "קסילופון",
+    "answer_he": "קסילופון",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_xylophone.jpg"
+  },
+  {
+    "id": "instruments_marimba",
+    "name_he": "מרימבה",
+    "answer_he": "מרימבה",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_marimba.jpg"
+  },
+  {
+    "id": "instruments_vibraphone",
+    "name_he": "ויברפון",
+    "answer_he": "ויברפון",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_vibraphone.jpg"
+  },
+  {
+    "id": "instruments_triangle",
+    "name_he": "משולש",
+    "answer_he": "משולש",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_triangle.jpg"
+  },
+  {
+    "id": "instruments_tambourine",
+    "name_he": "תוף מרים",
+    "answer_he": "תוף מרים",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_tambourine.jpg"
+  },
+  {
+    "id": "instruments_maracas",
+    "name_he": "מרקס",
+    "answer_he": "מרקס",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_maracas.jpg"
+  },
+  {
+    "id": "instruments_accordion",
+    "name_he": "אקורדיון",
+    "answer_he": "אקורדיון",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_accordion.jpg"
+  },
+  {
+    "id": "instruments_organ",
+    "name_he": "עוגב",
+    "answer_he": "עוגב",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_organ.jpg"
+  },
+  {
+    "id": "instruments_banjo",
+    "name_he": "בנג׳ו",
+    "answer_he": "בנג׳ו",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_banjo.jpg"
+  },
+  {
+    "id": "instruments_mandolin",
+    "name_he": "מנדולינה",
+    "answer_he": "מנדולינה",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_mandolin.jpg"
+  },
+  {
+    "id": "instruments_ukulele",
+    "name_he": "יוקלילי",
+    "answer_he": "יוקלילי",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_ukulele.jpg"
+  },
+  {
+    "id": "instruments_sitar",
+    "name_he": "סיטאר",
+    "answer_he": "סיטאר",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_sitar.jpg"
+  },
+  {
+    "id": "instruments_bagpipes",
+    "name_he": "חמת חלילים",
+    "answer_he": "חמת חלילים",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_bagpipes.jpg"
+  },
+  {
+    "id": "instruments_castanets",
+    "name_he": "קסטנייטות",
+    "answer_he": "קסטנייטות",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_castanets.jpg"
+  },
+  {
+    "id": "instruments_bongo",
+    "name_he": "בונגו",
+    "answer_he": "בונגו",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_bongo.jpg"
+  },
+  {
+    "id": "instruments_conga",
+    "name_he": "קונגה",
+    "answer_he": "קונגה",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_conga.jpg"
+  },
+  {
+    "id": "instruments_djembe",
+    "name_he": "ג'מבה",
+    "answer_he": "ג'מבה",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_djembe.jpg"
+  },
+  {
+    "id": "instruments_gong",
+    "name_he": "גונג",
+    "answer_he": "גונג",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_gong.jpg"
+  },
+  {
+    "id": "instruments_lyre",
+    "name_he": "לירה",
+    "answer_he": "לירה",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_lyre.jpg"
+  },
+  {
+    "id": "instruments_lute",
+    "name_he": "לאוטה",
+    "answer_he": "לאוטה",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_lute.jpg"
+  },
+  {
+    "id": "instruments_piccolo",
+    "name_he": "פיקולו",
+    "answer_he": "פיקולו",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_piccolo.jpg"
+  },
+  {
+    "id": "instruments_cornet",
+    "name_he": "קורנט",
+    "answer_he": "קורנט",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_cornet.jpg"
+  },
+  {
+    "id": "instruments_electric_guitar",
+    "name_he": "גיטרה חשמלית",
+    "answer_he": "גיטרה חשמלית",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_electric_guitar.jpg"
+  },
+  {
+    "id": "instruments_keyboard",
+    "name_he": "קלידים",
+    "answer_he": "קלידים",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_keyboard.jpg"
+  },
+  {
+    "id": "instruments_synthesizer",
+    "name_he": "סינתיסייזר",
+    "answer_he": "סינתיסייזר",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_synthesizer.jpg"
+  },
+  {
+    "id": "instruments_harpsichord",
+    "name_he": "צ'מבלו",
+    "answer_he": "צ'מבלו",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_harpsichord.jpg"
+  },
+  {
+    "id": "instruments_glockenspiel",
+    "name_he": "גלוקנשפיל",
+    "answer_he": "גלוקנשפיל",
+    "aliases_he": [],
+    "category": "instruments",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/instruments_glockenspiel.jpg"
+  }
+]

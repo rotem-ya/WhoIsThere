@@ -7,6 +7,15 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Admin = custom claim { admin: true } (owner account) OR an allow-listed
+    // login email. Keep the email list in sync with lib/core/constants/admin_config.dart.
+    function isAdmin() {
+      return signedIn() && (
+        request.auth.token.admin == true ||
+        request.auth.token.email in ['rot4735@gmail.com']
+      );
+    }
+
     // ── Rooms ────────────────────────────────────────────────────────────────
     // Any authenticated user may read and create rooms.
     // Any authenticated user may update a room — covers:
@@ -31,18 +40,22 @@ service cloud.firestore {
       // (needed to read host's selectedCardSkin, player names, etc.)
       allow read: if signedIn();
 
-      // Only the owning user may write their own profile doc
-      allow create, update: if signedIn() && request.auth.uid == userId;
+      // The owning user — or an admin — may write the profile doc.
+      // Admin writes power the separate admin app (grant coins/skins/cards).
+      allow create, update: if signedIn() &&
+        (request.auth.uid == userId || isAdmin());
       allow delete: if false;
 
-      // Economy wallet — own user only
+      // Economy wallet — own user or admin (read+write: coins/totalEarned/…)
       match /economy/{document} {
-        allow read, write: if signedIn() && request.auth.uid == userId;
+        allow read, write: if signedIn() &&
+          (request.auth.uid == userId || isAdmin());
       }
 
-      // Economy transaction log — own user only
+      // Economy transaction log — own user or admin (admin writes adminAdjustment)
       match /economy_transactions/{txId} {
-        allow read, write: if signedIn() && request.auth.uid == userId;
+        allow read, write: if signedIn() &&
+          (request.auth.uid == userId || isAdmin());
       }
 
       // Exposure history — any authenticated user may read AND write.
@@ -56,9 +69,22 @@ service cloud.firestore {
     }
 
     // ── Place / image catalogue ───────────────────────────────────────────────
+    // Read: any signed-in player (the app loads the catalogue at game start).
+    // Write: admins only — a user carrying the custom claim { admin: true },
+    // granted to the owner's account and used by the admin content app.
+    // See docs/admin/CONTENT_SCHEMA.md.
     match /images/{imageId} {
       allow read: if signedIn();
-      allow write: if false;
+      allow write: if signedIn() && request.auth.token.admin == true;
+    }
+
+    // ── Content manifest ──────────────────────────────────────────────────────
+    // Read: any signed-in player — fetched once at startup to decide which places
+    // are active and to discover new remote places. Write: admins only (the
+    // separate admin app toggles active/inactive and adds remote places).
+    match /content_manifest/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
     }
 
     // ── Deny everything else ─────────────────────────────────────────────────

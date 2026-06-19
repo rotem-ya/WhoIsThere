@@ -169,14 +169,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             Row(
                               children: [
                                 Flexible(
-                                  child: Text(
-                                    user.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w900,
+                                  // Scale the nickname down to fit instead of
+                                  // truncating it, so the whole name stays visible.
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: AlignmentDirectional.centerStart,
+                                    child: Text(
+                                      user.name,
+                                      maxLines: 1,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -327,6 +332,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               const SizedBox(height: AppSpacing.sm),
 
+              // ── Support code — what the player gives the admin to be found ──
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: _SupportCodeCard(
+                  value: (user.email != null && user.email!.isNotEmpty)
+                      ? user.email!
+                      : user.id,
+                  isEmail: user.email != null && user.email!.isNotEmpty,
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.sm),
+
               // ── QA row ───────────────────────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -409,6 +427,81 @@ class _ProviderBadge extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// "קוד תמיכה" — the value a player gives the admin so they can be found.
+/// Copies the login email when present (best for the admin's email lookup),
+/// otherwise the UID (works for guests). Tap to copy.
+class _SupportCodeCard extends StatelessWidget {
+  final String value;
+  final bool isEmail;
+
+  const _SupportCodeCard({required this.value, required this.isEmail});
+
+  @override
+  Widget build(BuildContext context) {
+    // Show emails in full; shorten long UIDs for display (full value is copied).
+    final shown = isEmail || value.length <= 16
+        ? value
+        : '${value.substring(0, 14)}…';
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Clipboard.setData(ClipboardData(text: value));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('קוד התמיכה הועתק — שלח אותו לתמיכה'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.green.shade800,
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withOpacity(0.10)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.badge_outlined, color: Colors.white54, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'קוד תמיכה',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    shown,
+                    textDirection: TextDirection.ltr,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.content_copy_rounded,
+                color: Colors.white38, size: 16),
+          ],
+        ),
+      ),
     );
   }
 }

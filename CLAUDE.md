@@ -4,6 +4,19 @@
 
 ---
 
+## משחק עם חברים — בחירת נושאים + טבלת ניקוד פר-משחק
+- **מאגר נושאים (חי-צומח-דומם):** 11 קטגוריות ב-`GameCategories.fastHeat`: חיות, פרחים(=plants), דומם(=objects), ציפורים, כלי תחבורה, מקצועות, דגלים, כלי נגינה, פירות וירקות, בגדים, ספורט. כל קטגוריה = `assets/game_places/data/<id>.json` + תמונות ב-`assets/game_places/images/<id>_<name>.jpg` (id+שם קובץ ממורחבים בשם הקטגוריה כדי למנוע התנגשות בתיקייה השטוחה). תוכן מוטמע, `hasHints:false`.
+- **מס׳ סבבים:** משחק מהיר = `max(שחקנים, 3)`. חברים = `max(max(שחקנים,3), סה״כ נושאים שנבחרו)` — כל בחירה נוספת של המארח מאריכה את ההיט, עם רצפה של 3/מס׳ שחקנים.
+- **בחירת נושאים:**
+  - **גלובלי (משחק מהיר):** אקראי אוטומטי, `count = max(targetPlayers, 3)` (4 שחקנים → 4 נושאים). נבנה ב-`createRoom` (`heatRounds` param → `_buildHeat`).
+  - **חברים:** **כל משתתף בוחר נושא אחד; המארח יכול לבחור כמה שירצה** (כל בחירה נוספת = סבב נוסף). `topicChoices: Map<playerId, List<categoryId>>`. ב-UI: לא-מארח = בחירה יחידה (לחיצה על נושא אחר מחליפה), מארח = ללא הגבלה. ההיט נבנה ב-`startGameDirectly` מ-`_buildFriendsHeat` (מארח ראשון עם כל בחירותיו, אחר כך כל שאר השחקנים בלוקח-אחד; סלוטים חסרים → אקראי).
+  - דיאלוג בלובי כשלא כולם השלימו מכסה: "בחר אקראית והתחל" / "המתן".
+- **משחק עם חברים = חינם:** `_createPrivateRoom` יוצר עם `entryFee: 0`, ללא בדיקת מטבעות.
+- **ניקוד פר-משחק (לא מצטבר):** במשחק חברים (`room.isFriendsGame == !isPublicRoom`) הניקוד **לא** נוסף ל-`totalPoints`. טבלת הניקוד + הכרזת הזוכה מוצגות במסך הניצחון (קיים).
+- **פרסי דירוג חברים:** מקום 1 = 20🪙, מקום 2 = 5🪙 (`EconomyConfig.friendsFirstPlaceReward`/`friendsSecondPlaceReward`). מוענק ב-`RoomService.claimPlacementReward` (אידמפוטנטי דרך `placementPaidPlayerIds`), נקרא ממסך הניצחון לכל שחקן על עצמו.
+
+---
+
 ## כללי פיתוח
 - **ענף פיתוח / השקה (מאוחד):** `claude/qa-launch-prep-EXqLn`
   - זהו הענף המאוחד והיחיד לבנייה (iOS + Android). מכיל: 36 מקומות + טקסט עברי מבוקר, Apple Sign-in entitlement, תיקון קריסת "משחק מהיר" (ניטרול Firestore cache), חתימת AAB עם מפתח EA:3B דרך Secrets, וכל הקו הראשי (parallel guessing, quick-match, פרסומות, מפת גילויים).
@@ -103,7 +116,7 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 
 ### מטלות שהושלמו בסשן זה
 - [x] סאונד טיק של ספירת לאחור בחשיפת משבצת (reveal-tick player, per-second dedup)
-- [x] תזמון חשיפה פרוגרסיבי: 3s לראשונות, 6s ל-10 הבאות, 9s להמשך
+- [x] תזמון חשיפה מאיץ (קשת slow→fast): 3.5s עד 30% גילוי, 2.5s עד 65%, 1.7s באנדגיים (`_revealTimerMs` ב-`room_service.dart`). חלון הניחוש מתכווץ במקביל: 7s→5s→3.5s (`_guessOppTimerMs`).
 - [x] ניחוש מותר בכל שלב (לא רק ב-guessOpportunity)
 - [x] אין גישה לחנות תוך כדי משחק — הודעת snackbar
 - [x] ברירת מחדל מוזיקה 40% (היה 100%)
@@ -129,6 +142,26 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 
 ---
 
+## פלטפורמה אחידה — שני סוגי המשחק (ומשחקים עתידיים)
+
+**עיקרון:** כל סוגי המשחק רוכבים על אותה תשתית. פיצ'ר רוחבי (תוכן ענן, צ'אט, אווטרים…) מתווסף ב**נקודת חנק משותפת אחת** ולכן עובד אוטומטית בכל הסוגים — אין להעתיק לוגיקה לכל מסך בנפרד.
+
+### תוכן מהענן + אדמין (פעיל/לא-פעיל + מקומות חדשים) — אחיד לכל הקטגוריות
+- נקודת חנק יחידה: `RoomService._loadLocalImages({categoryId})` → ממזג מוטמע (`assets/.../<id>.json`) + תמונות remote מהמניפסט **לפי קטגוריה** (`ContentManifestService.availableRemoteImages(categoryId)`), עם רשת ביטחון לברירות מחדל מוטמעות.
+- סנכרון בהפעלה (`loadCached` + `sync`) ב-`main.dart` — תשתית משותפת, רצה פעם אחת לכל המצבים.
+- **המשחק הרגיל** (זיהוי מקומות) משתמש בקטגוריה `israel_places`. **חי צומח דומם** (מקצה) משתמש ב-`animals`/`plants`/`objects` דרך `_buildHeat` → אותו `_loadLocalImages(categoryId)`. לכן הוספת/השבתת תמונה מהאדמין עובדת **גם** בחי צומח דומם, ללא קוד נוסף.
+- **חוזה אדמין (קריטי לאחידות):** כל מקום remote במניפסט חייב לשאת שדה `category` עם אחד מה-ids: `israel_places` / `animals` / `plants` / `objects` (וגם `world_sites` / `israel_figures` / `world_figures` לעתיד). ברירת מחדל בהיעדר השדה = `israel_places` (כלומר ייכנס רק למשחק הרגיל). ids חייבים להיות זהים בדיוק ל-`GameCategories` ב-`lib/core/constants/game_categories.dart`.
+
+### צ'אט (טקסט חופשי + אימוג'ים) — אחיד לכל המצבים
+- `RoomService.sendChatMessage` / `chatMessagesStream` על תת-אוסף `rooms/{id}/messages` (rules מכוסה ב-`{document=**}`).
+- ה-UI (כפתור 💬, גיליון הצ'אט, טוסטים, בוטים) ב-`game_board_screen.dart` מגודר רק על `phase == GamePhase.playing` — **לא** על `isHeat`. לכן הצ'אט קיים גם במשחק הרגיל וגם בחי צומח דומם.
+
+### כשמוסיפים סוג משחק חדש
+- הוסף קטגוריה ב-`GameCategories` (id חדש + JSON). השתמש ב-`_loadLocalImages(categoryId)` לבחירת תמונות → תוכן הענן והאדמין מגיעים בחינם.
+- אל תגדר פיצ'רים רוחביים (צ'אט/אווטרים/תוכן) ב-`isHeat`/id ספציפי — גדר רק על `phase`/יכולת, כדי שיישארו אחידים.
+
+---
+
 ## הזמנה ל-Play Store — QA Launch Prep
 
 ### סטטוס: ✅ נפתר (מסלול A — נמצא מפתח ההעלאה הנכון EA:3B)
@@ -144,3 +177,30 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 - [ ] `build-apk.yml` עדיין מכיל את המפתח הישן `25:C3` + סיסמה בקוד — להעביר גם אותו ל-Secrets.
 - [ ] לנקות קבצים שלא נחוצים יותר: `android/upload_certificate.pem` + תיעוד מסלול B.
 - [ ] שקול keystore עם סיסמה חזקה (כרגע `123456`).
+
+
+---
+
+## העלאה ל-App Store (iOS / TestFlight)
+
+בנייה והעלאה ל-TestFlight רצות **כולן ב-CI** (GitHub Actions, runner macOS) — אין צורך לפתוח Xcode במחשב. ה-workflow הוא `.github/workflows/build-ios.yml`, שמריץ את fastlane lane `beta` (קבצים: `ios/fastlane/Fastfile`, `ios/fastlane/Appfile`, `ios/ExportOptions.plist`). מספר ה-build נלקח אוטומטית ממספר ריצת ה-workflow, והאימות מול App Store Connect הוא דרך App Store Connect API Key (ולא סיסמת Apple ID).
+
+### 7 ה-Secrets הנדרשים
+יש להוסיף אותם ב-**Settings → Secrets and variables → Actions → New repository secret**:
+- `APPSTORE_API_KEY_ID` — ה-Key ID של מפתח App Store Connect API
+- `APPSTORE_API_ISSUER_ID` — ה-Issuer ID של מפתח App Store Connect API
+- `APPSTORE_API_KEY_P8` — קובץ ה-.p8 של המפתח, מקודד base64
+- `IOS_DIST_CERT_P12` — תעודת ההפצה (Distribution) כקובץ .p12, מקודד base64
+- `IOS_DIST_CERT_PASSWORD` — הסיסמה של קובץ ה-.p12
+- `IOS_PROVISION_PROFILE` — פרופיל ה-Provisioning (App Store) כקובץ .mobileprovision, מקודד base64
+- `APPLE_TEAM_ID` — מזהה ה-Team של חשבון Apple Developer
+
+### צעדים חד-פעמיים (ידני, ע"י אדם — לא ב-CI)
+1. הרשמה ל-**Apple Developer Program** (חשבון בתשלום).
+2. יצירת רשומת אפליקציה ב-**App Store Connect** עם bundle id `com.rotem.whoisthere`.
+3. יצירת **App Store Connect API Key** (Users and Access → Integrations / Keys) — שמירת קובץ ה-.p8, ה-Key ID וה-Issuer ID.
+4. יצירת/ייצוא **תעודת Distribution** (קובץ .p12 עם סיסמה) ו-**פרופיל Provisioning** מסוג App Store עבור `com.rotem.whoisthere`.
+5. קידוד הקבצים ל-base64 והדבקתם ב-Secrets המתאימים (לדוגמה: `base64 -i AuthKey.p8 | pbcopy`).
+
+### איך מריצים
+Actions tab → בוחרים את ה-workflow **Build iOS (TestFlight)** → **Run workflow** (טריגר `workflow_dispatch` בלבד). ה-workflow מפענח את ה-secrets לקבצים, מייבא תעודה + פרופיל ל-keychain זמני, ממלא את `ExportOptions.plist` (Team ID + שם הפרופיל), בונה IPA חתום ומעלה אותו ל-TestFlight דרך pilot. מספר ה-build נקבע אוטומטית מ-`GITHUB_RUN_NUMBER`.
