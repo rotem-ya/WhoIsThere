@@ -1097,6 +1097,17 @@ class _RewardedAdTile extends ConsumerWidget {
     final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
     if (uid == null) return;
 
+    // Show the real rewarded ad first; only credit coins if the user watched
+    // long enough to earn the reward.
+    final watched = await ref.read(adServiceProvider).showRewarded();
+    if (!context.mounted) return;
+    if (!watched) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('הפרסומת לא זמינה כרגע, נסה שוב בעוד רגע')),
+      );
+      return;
+    }
+
     final granted =
         await ref.read(economyServiceProvider).applyAdReward(uid);
     if (!context.mounted) return;

@@ -56,6 +56,36 @@ Android Interstitial:  ca-app-pub-______________/__________
 
 ---
 
+---
+
+## ✅ סטטוס: הוטמע (19/06/2026)
+
+המזהים האמיתיים התקבלו והוטמעו בקוד. פרסומות **מופעלות** (`AdConstants.adsEnabled = true`).
+
+**המזהים (publisher `ca-app-pub-8795917295916240`):**
+```
+Android App ID:        ca-app-pub-8795917295916240~6423959619
+iOS App ID:            ca-app-pub-8795917295916240~3606224584
+Android Rewarded:      ca-app-pub-8795917295916240/5386210117
+Android Interstitial:  ca-app-pub-8795917295916240/7385687498
+iOS Rewarded:          ca-app-pub-8795917295916240/6787187623
+iOS Interstitial:      ca-app-pub-8795917295916240/7162326216
+```
+
+**מה הוטמע:**
+- `lib/core/constants/ad_constants.dart` — IDs אמיתיים, `interstitialUnitId` חדש, `adsEnabled=true`, `bannersEnabled=false` (אין יחידת באנר — באנרים מנוטרלים בנפרד).
+- `android/.../AndroidManifest.xml` + `ios/Runner/Info.plist` — App IDs אמיתיים.
+- `lib/services/ad_service.dart` — שירות חדש: טעינה מראש + הצגה של Rewarded ו-Interstitial, תגמול רק בסיום צפייה, תקרת תדירות 2 דק' ל-Interstitial.
+- `adServiceProvider` ב-`providers.dart` (preload בהפעלה).
+- Rewarded: מסך חנות (`_RewardedAdTile`) + כפתור בית — מציגים פרסומת אמיתית, ומזכים מטבעות רק אם נצפתה.
+- Interstitial: מוצג ביציאה מ"מסך הניצחון" לבית (בין משחקים), עם תקרת תדירות.
+
+**⏳ נותר (iOS בלבד, לא חוסם השקת Android):**
+- [ ] **ATT prompt** — נוסף `NSUserTrackingUsageDescription` ל-Info.plist, אך עדיין אין קריאת `requestTrackingAuthorization` (דורש חבילת `app_tracking_transparency`). בלי זה iOS מגיש פרסומות לא-מותאמות אישית (תקין להשקה). להוסיף לפני הגשת iOS.
+- [ ] בדיקה בבילד אמיתי שהפרסומות נטענות ומוצגות.
+
+---
+
 ## החלטת לוח-זמנים (חשוב)
 הקמת AdMob + מימוש + בדיקה לוקחת זמן. שתי אפשרויות:
 - **A — להשיק עכשיו בלי פרסומות, ולהוסיף פרסומות בעדכון 1.1 מהר אחריו.** המהיר ביותר ל-review;

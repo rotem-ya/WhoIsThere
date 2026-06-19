@@ -329,7 +329,11 @@ class _WinScreenState extends ConsumerState<WinScreen>
 
                   // ── 6. Tactile home button ─────────────────────────────
                   _HomeButton(
-                    onTap: () {
+                    onTap: () async {
+                      // Interstitial "between games" — only fires if one is
+                      // ready and the min-gap has elapsed; otherwise no-op.
+                      await ref.read(adServiceProvider).maybeShowInterstitial();
+                      if (!context.mounted) return;
                       ref.read(currentRoomIdProvider.notifier).state = null;
                       context.go('/home');
                     },

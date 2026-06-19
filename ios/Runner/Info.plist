@@ -7,7 +7,9 @@
 	<key>CFBundleDisplayName</key>
 	<string>מה בתמונה?</string>
 	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<string>ca-app-pub-8795917295916240~3606224584</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>נשתמש במזהה שלך כדי להציג פרסומות רלוונטיות יותר. גם בלי אישור תוכל להמשיך לשחק כרגיל.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>CFBundleExecutable</key>
