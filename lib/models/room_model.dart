@@ -64,6 +64,10 @@ class RoomModel extends Equatable {
   // Friends games: player ids that have already claimed their placement reward
   // (idempotency guard so the 20/5 coin gift is paid at most once each).
   final List<String> placementPaidPlayerIds;
+  // Set on a FINISHED room when a player taps "play again": points at the fresh
+  // room the group can rejoin. Lets the rest of the win screen offer "join
+  // rematch". Null until someone starts a rematch. Friends games only.
+  final String? rematchRoomId;
 
   const RoomModel({
     required this.id,
@@ -114,6 +118,7 @@ class RoomModel extends Equatable {
     this.heatRoundIndex = 0,
     this.topicChoices = const {},
     this.placementPaidPlayerIds = const [],
+    this.rematchRoomId,
   });
 
   // True when this room is a fast-game heat (more than one queued round).
@@ -250,6 +255,7 @@ class RoomModel extends Equatable {
           const {},
       placementPaidPlayerIds:
           List<String>.from(data['placementPaidPlayerIds'] ?? const []),
+      rematchRoomId: data['rematchRoomId'] as String?,
     );
   }
 
@@ -301,6 +307,7 @@ class RoomModel extends Equatable {
         'heatRoundIndex': heatRoundIndex,
         'topicChoices': topicChoices,
         'placementPaidPlayerIds': placementPaidPlayerIds,
+        'rematchRoomId': rematchRoomId,
       };
 
   RoomModel copyWith({
@@ -348,6 +355,7 @@ class RoomModel extends Equatable {
     int? heatRoundIndex,
     Map<String, List<String>>? topicChoices,
     List<String>? placementPaidPlayerIds,
+    String? rematchRoomId,
   }) =>
       RoomModel(
         id: id,
@@ -403,6 +411,7 @@ class RoomModel extends Equatable {
         topicChoices: topicChoices ?? this.topicChoices,
         placementPaidPlayerIds:
             placementPaidPlayerIds ?? this.placementPaidPlayerIds,
+        rematchRoomId: rematchRoomId ?? this.rematchRoomId,
       );
 
   @override
@@ -454,5 +463,6 @@ class RoomModel extends Equatable {
         heatRoundIndex,
         topicChoices,
         placementPaidPlayerIds,
+        rematchRoomId,
       ];
 }

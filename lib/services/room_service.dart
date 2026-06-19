@@ -437,6 +437,57 @@ class RoomService {
     return RoomModel.fromFirestore(await doc.reference.get());
   }
 
+  /// "Play again" for friends games. The first player to tap on the win screen
+  /// creates a fresh private room cloning the finished game's type, then stamps
+  /// [rematchRoomId] on the old room so the rest of the group can rejoin. If a
+  /// rematch was already started (someone tapped first), returns that room id
+  /// instead of creating a duplicate. Returns null if the old room is gone.
+  Future<String?> createRematch({
+    required String oldRoomId,
+    required String hostId,
+    required String hostName,
+    String? hostPhotoUrl,
+  }) async {
+    final oldDoc = await _rooms.doc(oldRoomId).get();
+    if (!oldDoc.exists) return null;
+    final old = RoomModel.fromFirestore(oldDoc);
+    final existing = old.rematchRoomId;
+    if (existing != null && existing.isNotEmpty) return existing;
+
+    final newRoom = await createRoom(
+      hostId: hostId,
+      hostName: hostName,
+      hostPhotoUrl: hostPhotoUrl,
+      entryFee: 0,
+      isPublicRoom: false,
+      difficulty: old.selectedDifficulty ?? Difficulty.easy,
+    );
+    await oldDoc.reference.update({'rematchRoomId': newRoom.id});
+    return newRoom.id;
+  }
+
+  /// Joins a rematch room created via [createRematch] (looked up by id, then
+  /// added through the normal [joinRoom] path so all join logic stays in one
+  /// place). Returns null if the room is missing or no longer waiting.
+  Future<RoomModel?> joinRematch({
+    required String rematchRoomId,
+    required String userId,
+    required String userName,
+    String? userPhotoUrl,
+  }) async {
+    final doc = await _rooms.doc(rematchRoomId).get();
+    if (!doc.exists) return null;
+    final room = RoomModel.fromFirestore(doc);
+    if (room.phase != GamePhase.waiting) return null;
+    if (room.players.containsKey(userId)) return room;
+    return joinRoom(
+      code: room.code,
+      userId: userId,
+      userName: userName,
+      userPhotoUrl: userPhotoUrl,
+    );
+  }
+
   /// Adds a single bot player to an existing waiting room.
   Future<void> addBotToRoom(String roomId, int botIndex) async {
     final doc = await _rooms.doc(roomId).get();
