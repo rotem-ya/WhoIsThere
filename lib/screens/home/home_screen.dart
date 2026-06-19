@@ -46,6 +46,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _doIntro = !HomeScreen._introPlayed;
     HomeScreen._introPlayed = true;
     QaLoggerService.instance.log('HOME', 'HOME_SCREEN_OPENED');
+    // Instantiate the ad service early so rewarded + interstitial ads are
+    // preloaded and ready before the player taps (avoids a failed first tap).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(adServiceProvider);
+    });
   }
 
   /// Test-branch difficulty picker. Returns the chosen difficulty, or null if
