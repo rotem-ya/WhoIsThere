@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/avatar_util.dart';
 import '../../models/avatar_frame.dart';
+import '../../models/avatar_choice.dart';
 
 class PlayerAvatar extends StatelessWidget {
   final String name;
@@ -14,6 +15,8 @@ class PlayerAvatar extends StatelessWidget {
   final String? seed;
   // Cosmetic frame id (purchased & equipped). Null/'none' → no ring.
   final String? frameId;
+  // Chosen avatar id. Null/'auto' → generated face (or photo when present).
+  final String? avatarId;
 
   const PlayerAvatar({
     super.key,
@@ -24,11 +27,49 @@ class PlayerAvatar extends StatelessWidget {
     this.isEliminated = false,
     this.seed,
     this.frameId,
+    this.avatarId,
   });
 
   @override
   Widget build(BuildContext context) {
     final style = avatarFor(seed ?? name);
+    final choice = avatarChoiceFor(avatarId);
+    // An explicit avatar choice wins over both the generated face and a photo,
+    // since the player deliberately picked it.
+    final useChoice = !choice.isAuto;
+
+    final Widget face;
+    if (useChoice) {
+      face = Container(
+        width: radius * 2,
+        height: radius * 2,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: choice.gradient,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          choice.emoji,
+          style: TextStyle(fontSize: radius * 1.05, height: 1.0),
+        ),
+      );
+    } else {
+      face = CircleAvatar(
+        radius: radius,
+        backgroundColor: photoUrl != null
+            ? AppColors.primary.withOpacity(0.2)
+            : style.color.withOpacity(0.30),
+        backgroundImage:
+            photoUrl != null ? CachedNetworkImageProvider(photoUrl!) : null,
+        child: photoUrl == null
+            ? Text(
+                style.emoji,
+                style: TextStyle(fontSize: radius * 1.0, height: 1.0),
+              )
+            : null,
+      );
+    }
+
     final Widget core = Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -48,20 +89,7 @@ class PlayerAvatar extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          CircleAvatar(
-            radius: radius,
-            backgroundColor: photoUrl != null
-                ? AppColors.primary.withOpacity(0.2)
-                : style.color.withOpacity(0.30),
-            backgroundImage:
-                photoUrl != null ? CachedNetworkImageProvider(photoUrl!) : null,
-            child: photoUrl == null
-                ? Text(
-                    style.emoji,
-                    style: TextStyle(fontSize: radius * 1.0, height: 1.0),
-                  )
-                : null,
-          ),
+          face,
           if (isEliminated)
             CircleAvatar(
               radius: radius,

@@ -807,6 +807,14 @@ class _SkinsTab extends StatelessWidget {
       children: [
         const SizedBox(height: AppSpacing.md),
         const _DesignBanner(
+          title: 'אווטרים',
+          subtitle: 'אווטר מגניב שיופיע ליד השם במשחק',
+          icon: Icons.emoji_emotions_rounded,
+          accent: Color(0xFF4FC3F7),
+          route: '/store/avatars',
+        ),
+        const SizedBox(height: AppSpacing.md),
+        const _DesignBanner(
           title: 'עיצובי קלפים',
           subtitle: 'בחר עיצוב לכרטיסיות המשחק',
           icon: Icons.style_rounded,

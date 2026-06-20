@@ -807,7 +807,10 @@ class _PlayerAvatarTile extends StatelessWidget {
                   boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.5) : null,
                 ),
                 child: PlayerAvatar(
-                    name: player.name, radius: 14, frameId: player.frameId),
+                    name: player.name,
+                    radius: 14,
+                    frameId: player.frameId,
+                    avatarId: player.avatarId),
               ),
               const SizedBox(width: 8),
 

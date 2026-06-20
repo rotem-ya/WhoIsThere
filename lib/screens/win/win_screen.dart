@@ -403,7 +403,8 @@ class _ScoreRow extends StatelessWidget {
               name: player.name,
               photoUrl: player.photoUrl,
               radius: 16,
-              frameId: player.frameId),
+              frameId: player.frameId,
+              avatarId: player.avatarId),
           const SizedBox(width: AppSpacing.sm),
           Flexible(
             child: Text(

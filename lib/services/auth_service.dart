@@ -481,6 +481,11 @@ class AuthService {
         ...List<String>.from(tgt['ownedBoardSkins'] ?? []),
       }.toList();
 
+      final mergedAvatars = {
+        ...List<String>.from(src['ownedAvatars'] ?? []),
+        ...List<String>.from(tgt['ownedAvatars'] ?? []),
+      }.toList();
+
       final mergedPoints = math.max(
         (src['totalPoints'] as num?)?.toInt() ?? 0,
         (tgt['totalPoints'] as num?)?.toInt() ?? 0,
@@ -494,6 +499,7 @@ class AuthService {
         'ownedNameStyles': mergedNameStyles,
         'ownedWinEffects': mergedWinEffects,
         'ownedBoardSkins': mergedBoardSkins,
+        'ownedAvatars': mergedAvatars,
       }, SetOptions(merge: true));
 
       // ── Merge wallet ────────────────────────────────────────────────────
