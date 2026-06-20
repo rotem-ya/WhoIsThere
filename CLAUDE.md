@@ -4,6 +4,21 @@
 
 ---
 
+## מערכת קוסמטיקה (cosmetics) — נרכשת במטבעות, ללא pay-to-win
+ארבעה סוגי קוסמטיקה, כולם באותו דפוס: model+קטלוג בקוד (`lib/models/`), מסך חנות (`lib/screens/store/`) עם providers `selectedXProvider`/`ownedXProvider` (StreamProvider על `users/{uid}`), קנייה = טרנזקציית Firestore (`coins` − מחיר + `totalSpent` increment, `ownedX` arrayUnion), הצמדה = `selectedX` על user doc. באנר בטאב 🎨 (`store_screen.dart` → `_DesignBanner`). מיזוג ב-`auth_service` במעבר אורח→Google (`ownedX`). דרגות לפי מחיר: בסיסי 50–150 / נדיר 300–500 / פרימיום 1000.
+
+| סוג | model | מסך/route | שדה user | היכן נראה | הפצה לשחקנים אחרים |
+|-----|-------|-----------|----------|-----------|---------------------|
+| מסגרות אווטר | `avatar_frame.dart` | `/store/frames` | `selectedAvatarFrame`/`ownedFrames` | לובי, ניצחון, פרופיל | `PlayerModel.frameId` (RoomService host+join) |
+| צבעי שם | `name_style.dart` | `/store/names` | `selectedNameStyle`/`ownedNameStyles` | לובי, פרופיל (לא מסך ניצחון — שם צבעי מקום) | `PlayerModel.nameStyleId` |
+| אפקטי ניצחון | `win_effect.dart` | `/store/effects` | `selectedWinEffect`/`ownedWinEffects` | מסך ניצחון (אפקט המנצח, כולם רואים) | `PlayerModel.winEffectId` |
+| רקע לוח | `board_skin.dart` | `/store/board` | `selectedBoardSkin`/`ownedBoardSkins` | מסך משחק (רקע) | **פר-צופה** (לא מופץ) — נפרד מ`card_skins` (גב כרטיסיות) |
+
+- רינדור: `PlayerAvatar.frameId` (טבעת SweepGradient), `PlayerNameText` (solid/ShaderMask), `WinEffectOverlay` (מערכת חלקיקים CustomPainter, ללא חבילות), `game_board_screen` רקע מ-`boardSkinFor(...).gradient`.
+- הוספת פריט = שורה בקטלוג בלבד. **אל תבלבל** "רקע לוח" (board_skin) עם "עיצובי כרטיסיות" (card_skins, גב המשבצות) — שתי מערכות נפרדות.
+
+---
+
 ## משחק עם חברים — בחירת נושאים + טבלת ניקוד פר-משחק
 - **מאגר נושאים (חי-צומח-דומם):** 11 קטגוריות ב-`GameCategories.fastHeat`: חיות, פרחים(=plants), דומם(=objects), ציפורים, כלי תחבורה, מקצועות, דגלים, כלי נגינה, פירות וירקות, בגדים, ספורט. כל קטגוריה = `assets/game_places/data/<id>.json` + תמונות ב-`assets/game_places/images/<id>_<name>.jpg` (id+שם קובץ ממורחבים בשם הקטגוריה כדי למנוע התנגשות בתיקייה השטוחה). תוכן מוטמע, `hasHints:false`.
 - **מס׳ סבבים:** משחק מהיר = `max(שחקנים, 3)`. חברים = `max(max(שחקנים,3), סה״כ נושאים שנבחרו)` — כל בחירה נוספת של המארח מאריכה את ההיט, עם רצפה של 3/מס׳ שחקנים.

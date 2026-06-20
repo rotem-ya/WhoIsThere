@@ -837,6 +837,14 @@ class _SkinsTab extends StatelessWidget {
           accent: Color(0xFFFF8A65),
           route: '/store/effects',
         ),
+        const SizedBox(height: AppSpacing.md),
+        const _DesignBanner(
+          title: 'רקע לוח המשחק',
+          subtitle: 'רקע צבעוני ללוח המשחק שלך',
+          icon: Icons.grid_view_rounded,
+          accent: Color(0xFF4CA1AF),
+          route: '/store/board',
+        ),
       ],
     );
   }

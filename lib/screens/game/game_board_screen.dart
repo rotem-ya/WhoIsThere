@@ -20,8 +20,10 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_categories.dart';
 import '../../core/constants/game_constants.dart';
+import '../../models/board_skin.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
+import '../store/board_skins_screen.dart' show selectedBoardSkinProvider;
 import '../../models/room_model.dart';
 import '../../models/chat_message.dart';
 import '../../models/economy/match_reward_breakdown.dart';
@@ -2126,6 +2128,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   Widget build(BuildContext context) {
     final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
     final user = ref.watch(currentUserProvider).value;
+    final boardSkin =
+        boardSkinFor(ref.watch(selectedBoardSkinProvider).valueOrNull);
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -2140,8 +2144,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
           child: Stack(
           children: [
             DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: AppStyles.backgroundGradient,
+              decoration: BoxDecoration(
+                gradient: boardSkin.isNone
+                    ? AppStyles.backgroundGradient
+                    : boardSkin.gradient,
               ),
               child: SafeArea(
                 top: false,
