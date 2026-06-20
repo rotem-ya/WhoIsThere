@@ -4,8 +4,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/ad_constants.dart';
 import '../../../core/theme/app_styles.dart';
 import '../../../models/economy/match_reward_breakdown.dart';
+import '../../../widgets/common/banner_ad_widget.dart';
 import '../../../widgets/economy/coin_icon.dart';
 
 class GameWinnerView extends StatefulWidget {
@@ -16,6 +18,14 @@ class GameWinnerView extends StatefulWidget {
   final MatchRewardBreakdown? rewardBreakdown;
   final VoidCallback onHome;
 
+  /// Coins this player earned this match — used by the optional "double your
+  /// coins" rewarded-ad button. 0 hides the button.
+  final int coinsWon;
+
+  /// Opt-in rewarded ad: shows a video, then grants a bonus equal to [coinsWon]
+  /// (doubling the winnings). Returns true on success. Null hides the button.
+  final Future<bool> Function()? onDoubleCoins;
+
   const GameWinnerView({
     super.key,
     required this.winnerName,
@@ -24,6 +34,8 @@ class GameWinnerView extends StatefulWidget {
     this.imageUrl,
     this.rewardBreakdown,
     required this.onHome,
+    this.coinsWon = 0,
+    this.onDoubleCoins,
   });
 
   @override
@@ -34,12 +46,25 @@ class _GameWinnerViewState extends State<GameWinnerView> {
   late final ConfettiController _confettiController;
   bool _showCard = false;
   bool _showButton = false;
+  bool _doubled = false;
+  bool _doublingBusy = false;
 
   @override
   void initState() {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 2));
     _runEntrance();
+  }
+
+  Future<void> _handleDouble() async {
+    if (_doublingBusy || _doubled || widget.onDoubleCoins == null) return;
+    setState(() => _doublingBusy = true);
+    final ok = await widget.onDoubleCoins!();
+    if (!mounted) return;
+    setState(() {
+      _doublingBusy = false;
+      if (ok) _doubled = true;
+    });
   }
 
   Future<void> _runEntrance() async {
@@ -74,7 +99,8 @@ class _GameWinnerViewState extends State<GameWinnerView> {
           shouldLoop: false,
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: EdgeInsets.fromLTRB(
+              20, 12, 20, AdConstants.bannersEnabled ? 66 : 12),
           // Single compact screen, no scrolling: the card is laid out at the
           // available width and scaled down (FittedBox) if it would be taller
           // than the viewport, so everything fits without ever scrolling.
@@ -100,6 +126,12 @@ class _GameWinnerViewState extends State<GameWinnerView> {
                           rewardBreakdown: widget.rewardBreakdown,
                           showButton: _showButton,
                           onHome: widget.onHome,
+                          canDouble: widget.onDoubleCoins != null &&
+                              widget.coinsWon > 0,
+                          coinsWon: widget.coinsWon,
+                          doubled: _doubled,
+                          doublingBusy: _doublingBusy,
+                          onDouble: _handleDouble,
                         ),
                       ),
                     ),
@@ -108,6 +140,13 @@ class _GameWinnerViewState extends State<GameWinnerView> {
               );
             },
           ),
+        ),
+        // Banner pinned to the bottom of the win screen (outside the scaled
+        // card so it renders at its real pixel size). Self-hides when banners
+        // are disabled.
+        const Align(
+          alignment: Alignment.bottomCenter,
+          child: SafeArea(child: BannerAdWidget()),
         ),
       ],
     );
@@ -135,6 +174,11 @@ class _WinnerCard extends StatelessWidget {
   final MatchRewardBreakdown? rewardBreakdown;
   final bool showButton;
   final VoidCallback onHome;
+  final bool canDouble;
+  final int coinsWon;
+  final bool doubled;
+  final bool doublingBusy;
+  final VoidCallback onDouble;
 
   const _WinnerCard({
     required this.winnerName,
@@ -144,6 +188,11 @@ class _WinnerCard extends StatelessWidget {
     required this.rewardBreakdown,
     required this.showButton,
     required this.onHome,
+    required this.canDouble,
+    required this.coinsWon,
+    required this.doubled,
+    required this.doublingBusy,
+    required this.onDouble,
   });
 
   @override
@@ -286,6 +335,75 @@ class _WinnerCard extends StatelessWidget {
           if (rewardBreakdown != null) ...[
             const SizedBox(height: 10),
             _RewardSummary(breakdown: rewardBreakdown!),
+          ],
+          // Opt-in "double your coins" rewarded ad — only ever runs on tap.
+          if (canDouble && showButton) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: doubled
+                  ? DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF143B22),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF2EBd6B)),
+                      ),
+                      child: Center(
+                        child: Text.rich(
+                          TextSpan(
+                            text: '🎉 הזכייה הוכפלה! +$coinsWon ',
+                            children: [coinSpan(size: 16)],
+                          ),
+                          textDirection: TextDirection.rtl,
+                          style: const TextStyle(
+                            color: Color(0xFF8FE0AC),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    )
+                  : DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF2EBd6B), Color(0xFF1B8F4D)],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: FilledButton(
+                        onPressed: doublingBusy ? null : onDouble,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          disabledBackgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: doublingBusy
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.4, color: Colors.white),
+                              )
+                            : Text.rich(
+                                TextSpan(
+                                  text: '🎬 שכפל את הזכייה  +$coinsWon ',
+                                  children: [coinSpan(size: 16)],
+                                ),
+                                textDirection: TextDirection.rtl,
+                                style: const TextStyle(
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                      ),
+                    ),
+            ),
           ],
           const SizedBox(height: 14),
           AnimatedOpacity(

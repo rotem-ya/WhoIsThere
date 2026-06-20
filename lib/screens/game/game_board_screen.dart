@@ -2401,7 +2401,36 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       trivia: trivia,
                       imageUrl: _image?.imageUrl,
                       rewardBreakdown: _rewardBreakdown,
-                      onHome: () {
+                      coinsWon: _rewardBreakdown?.total ?? 0,
+                      onDoubleCoins: () async {
+                        final uid = currentUserId;
+                        if (uid == null) return false;
+                        final watched = await ref
+                            .read(adServiceProvider)
+                            .showRewarded();
+                        if (!watched) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      'הפרסומת לא זמינה כרגע, נסה שוב בעוד רגע')),
+                            );
+                          }
+                          return false;
+                        }
+                        final amount = _rewardBreakdown?.total ?? 0;
+                        if (amount <= 0) return false;
+                        return ref
+                            .read(economyServiceProvider)
+                            .applyAdBonus(uid, amount);
+                      },
+                      onHome: () async {
+                        // Interstitial "between games" — only on this tap, never
+                        // automatic; no-op if not ready or within the time cap.
+                        await ref
+                            .read(adServiceProvider)
+                            .maybeShowInterstitial();
+                        if (!mounted) return;
                         QaLoggerService.instance.log('GAME', 'GAME_RETURN_HOME phase=finished_winner');
                         context.go('/home');
                       },
@@ -2410,7 +2439,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   return _NoWinnerView(
                     answer: _image?.answer ?? '',
                     imageUrl: _image?.imageUrl,
-                    onHome: () {
+                    onHome: () async {
+                      await ref
+                          .read(adServiceProvider)
+                          .maybeShowInterstitial();
+                      if (!mounted) return;
                       QaLoggerService.instance.log('GAME', 'GAME_RETURN_HOME phase=finished_no_winner');
                       context.go('/home');
                     },

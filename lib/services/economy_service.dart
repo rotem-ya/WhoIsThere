@@ -284,6 +284,20 @@ class EconomyService {
         last.day == now.day);
   }
 
+  /// Grants a one-off coin bonus for watching a rewarded ad on the win screen
+  /// (e.g. doubling the coins just earned this match). Not subject to the daily
+  /// ad-reward cap because it is naturally gated by finishing a match.
+  Future<bool> applyAdBonus(String uid, int amount) async {
+    if (amount <= 0) return false;
+    await _applyDelta(
+      uid: uid,
+      delta: amount,
+      type: TransactionType.adReward,
+      meta: {'adBonus': amount},
+    );
+    return true;
+  }
+
   /// Grants one free entry (tops up by the entry fee) if not already used today.
   /// Returns true if granted.
   Future<bool> claimFreeEntry(String uid) async {
