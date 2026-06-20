@@ -1510,6 +1510,40 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     }
   }
 
+  /// Friends-game "play again": the first tapper creates a fresh rematch room
+  /// and everyone else joins it via the room stream — the whole group lands in
+  /// the same new lobby.
+  Future<void> _handleRematch(RoomModel room) async {
+    final user = ref.read(currentUserProvider).value;
+    if (user == null) return;
+    final svc = ref.read(roomServiceProvider);
+    var targetId = room.rematchRoomId;
+    if (targetId == null || targetId.isEmpty) {
+      targetId = await svc.createRematch(
+        oldRoomId: room.id,
+        hostId: user.id,
+        hostName: user.name,
+        hostPhotoUrl: user.photoUrl,
+      );
+    } else {
+      await svc.joinRematch(
+        rematchRoomId: targetId,
+        userId: user.id,
+        userName: user.name,
+        userPhotoUrl: user.photoUrl,
+      );
+    }
+    if (!mounted) return;
+    if (targetId == null || targetId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('לא ניתן לפתוח משחק חוזר')),
+      );
+      return;
+    }
+    ref.read(currentRoomIdProvider.notifier).state = targetId;
+    context.go('/lobby/$targetId');
+  }
+
   Future<void> _useRevealHint(RoomModel room, String userId) async {
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
     if (!isSolo) return;
@@ -2424,6 +2458,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                             .read(economyServiceProvider)
                             .applyAdBonus(uid, amount);
                       },
+                      showRematch: room.isFriendsGame,
+                      rematchReady: room.rematchRoomId != null &&
+                          room.rematchRoomId!.isNotEmpty,
+                      onRematch: room.isFriendsGame
+                          ? () => _handleRematch(room)
+                          : null,
                       onHome: () async {
                         // Interstitial "between games" — only on this tap, never
                         // automatic; no-op if not ready or within the time cap.
