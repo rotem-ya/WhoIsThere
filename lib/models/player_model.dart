@@ -13,6 +13,8 @@ class PlayerModel extends Equatable {
   final int discoveredCount;
   final int playerRound;
   final int priorExposureCount;
+  // Equipped cosmetic avatar frame id ('none' = no ring).
+  final String frameId;
 
   const PlayerModel({
     required this.id,
@@ -27,6 +29,7 @@ class PlayerModel extends Equatable {
     this.discoveredCount = 0,
     this.playerRound = 0,
     this.priorExposureCount = 0,
+    this.frameId = 'none',
   });
 
   factory PlayerModel.fromMap(String id, Map<String, dynamic> data) {
@@ -43,6 +46,7 @@ class PlayerModel extends Equatable {
       discoveredCount: data['discoveredCount'] ?? 0,
       playerRound: data['playerRound'] ?? 0,
       priorExposureCount: data['priorExposureCount'] ?? 0,
+      frameId: (data['frameId'] as String?) ?? 'none',
     );
   }
 
@@ -58,6 +62,7 @@ class PlayerModel extends Equatable {
         'discoveredCount': discoveredCount,
         'playerRound': playerRound,
         'priorExposureCount': priorExposureCount,
+        'frameId': frameId,
       };
 
   PlayerModel copyWith({
@@ -72,6 +77,7 @@ class PlayerModel extends Equatable {
     int? discoveredCount,
     int? playerRound,
     int? priorExposureCount,
+    String? frameId,
   }) =>
       PlayerModel(
         id: id,
@@ -86,6 +92,7 @@ class PlayerModel extends Equatable {
         discoveredCount: discoveredCount ?? this.discoveredCount,
         playerRound: playerRound ?? this.playerRound,
         priorExposureCount: priorExposureCount ?? this.priorExposureCount,
+        frameId: frameId ?? this.frameId,
       );
 
   @override
@@ -101,5 +108,6 @@ class PlayerModel extends Equatable {
         discoveredCount,
         playerRound,
         priorExposureCount,
+        frameId,
       ];
 }

@@ -292,6 +292,7 @@ class RoomService {
     final userSnap = await _firestore.doc('users/$effectiveHostId').get();
     QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_USER_READ_OK exists=${userSnap.exists}');
     final cardSkinId = (userSnap.data()?['selectedCardSkin'] as String?) ?? 'default';
+    final hostFrameId = (userSnap.data()?['selectedAvatarFrame'] as String?) ?? 'none';
     final hostTotalPoints = (userSnap.data()?['totalPoints'] as int?) ?? 0;
     final hostDiscoveredCount =
         (userSnap.data()?['discoveredImageIds'] as List?)?.length ?? 0;
@@ -306,6 +307,7 @@ class RoomService {
       discoveredCount: hostDiscoveredCount,
       playerRound: hostRound,
       isHost: true,
+      frameId: hostFrameId,
     );
 
     final players = <String, PlayerModel>{effectiveHostId: host};
@@ -418,6 +420,8 @@ class RoomService {
     final joiningTotalPoints = (joiningUserSnap.data()?['totalPoints'] as int?) ?? 0;
     final joiningDiscoveredCount =
         (joiningUserSnap.data()?['discoveredImageIds'] as List?)?.length ?? 0;
+    final joiningFrameId =
+        (joiningUserSnap.data()?['selectedAvatarFrame'] as String?) ?? 'none';
     final joiningRound = await computePlayerRound(userId);
 
     final newPlayer = PlayerModel(
@@ -428,6 +432,7 @@ class RoomService {
       totalPoints: joiningTotalPoints,
       discoveredCount: joiningDiscoveredCount,
       playerRound: joiningRound,
+      frameId: joiningFrameId,
     );
 
     await doc.reference.update({

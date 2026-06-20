@@ -802,77 +802,101 @@ class _SkinsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        children: [
-          const SizedBox(height: AppSpacing.md),
-          // Card skins banner
-          PressableScale(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              context.push('/store/skins');
-            },
-            child: Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+      children: [
+        const SizedBox(height: AppSpacing.md),
+        const _DesignBanner(
+          title: 'עיצובי קלפים',
+          subtitle: 'בחר עיצוב לכרטיסיות המשחק',
+          icon: Icons.style_rounded,
+          accent: Color(0xFF8B6FFF),
+          route: '/store/skins',
+        ),
+        const SizedBox(height: AppSpacing.md),
+        const _DesignBanner(
+          title: 'מסגרות אווטר',
+          subtitle: 'מסגרת שתופיע סביב האווטר שלך',
+          icon: Icons.account_circle_rounded,
+          accent: Color(0xFFD4AF37),
+          route: '/store/frames',
+        ),
+      ],
+    );
+  }
+}
+
+class _DesignBanner extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color accent;
+  final String route;
+
+  const _DesignBanner({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.accent,
+    required this.route,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PressableScale(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        context.push(route);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF0A1A2E), Color(0xFF1A0A2E)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: accent.withOpacity(0.55), width: 1.4),
+          boxShadow: [
+            BoxShadow(
+              color: accent.withOpacity(0.12),
+              blurRadius: 18,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF0A1A2E), Color(0xFF1A0A2E)],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFF8B6FFF).withOpacity(0.55),
-                  width: 1.4,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF8B6FFF).withOpacity(0.12),
-                    blurRadius: 18,
-                    spreadRadius: 1,
-                  ),
-                ],
+                color: accent.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: accent.withOpacity(0.40)),
               ),
-              child: Row(
+              child: Icon(icon, color: accent, size: 32),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF8B6FFF).withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: const Color(0xFF8B6FFF).withOpacity(0.40),
-                      ),
-                    ),
-                    child: const Icon(Icons.style_rounded,
-                        color: Color(0xFF8B6FFF), size: 32),
+                  Text(title,
+                      style: AppTextStyles.titleLight.copyWith(fontSize: 18)),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.white54, fontSize: 13),
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('עיצובי קלפים',
-                            style: AppTextStyles.titleLight
-                                .copyWith(fontSize: 18)),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'בחר עיצוב לכרטיסיות המשחק',
-                          style:
-                              TextStyle(color: Colors.white54, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_left_rounded,
-                      color: Colors.white38, size: 26),
                 ],
               ),
             ),
-          ),
-        ],
+            const Icon(Icons.chevron_left_rounded,
+                color: Colors.white38, size: 26),
+          ],
+        ),
       ),
     );
   }

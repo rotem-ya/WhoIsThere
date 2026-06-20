@@ -18,6 +18,7 @@ import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
 import 'discovered_images_screen.dart';
 import '../store/card_skins_screen.dart' show ownedSkinsProvider;
+import '../store/avatar_frames_screen.dart' show selectedFrameProvider;
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -100,6 +101,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
+    final selectedFrame = ref.watch(selectedFrameProvider).valueOrNull ?? 'none';
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
@@ -159,7 +161,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: Row(
                     children: [
                       // Avatar
-                      PlayerAvatar(name: user.name, photoUrl: user.photoUrl, radius: 34),
+                      PlayerAvatar(
+                          name: user.name,
+                          photoUrl: user.photoUrl,
+                          radius: 34,
+                          frameId: selectedFrame),
                       const SizedBox(width: 16),
                       // Name + edit
                       Expanded(

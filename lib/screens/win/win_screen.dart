@@ -391,7 +391,10 @@ class _ScoreRow extends StatelessWidget {
           Text(medal, style: const TextStyle(fontSize: 20)),
           const SizedBox(width: AppSpacing.sm),
           PlayerAvatar(
-              name: player.name, photoUrl: player.photoUrl, radius: 16),
+              name: player.name,
+              photoUrl: player.photoUrl,
+              radius: 16,
+              frameId: player.frameId),
           const SizedBox(width: AppSpacing.sm),
           Flexible(
             child: Text(
