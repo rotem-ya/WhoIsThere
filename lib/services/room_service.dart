@@ -1162,8 +1162,15 @@ class RoomService {
 
   /// Heat winner = highest cumulative score (with [bonusUid] credited [bonus]).
   String _heatWinnerId(RoomModel room, {String? bonusUid, int bonus = 0}) {
-    String winner = room.players.keys.isEmpty ? '' : room.players.keys.first;
-    int best = -1 << 31;
+    // The heat winner is the highest cumulative scorer — but only among players
+    // who actually solved at least one round. A round win grants winReward
+    // (10–60), far more than the 1–5 wrong-guess penalty, so any genuine solver
+    // sits at a clearly positive score, while a player who solved nothing stays
+    // at 0 (or goes negative). Without this guard a passive player could "win"
+    // simply because the bots lost points on wrong guesses — i.e. winning a
+    // heat without ever guessing an answer.
+    String winner = '';
+    int best = 0; // strictly-positive scores only
     room.players.forEach((id, p) {
       final s = p.score + (id == bonusUid ? bonus : 0);
       if (s > best) {
@@ -1171,6 +1178,13 @@ class RoomService {
         winner = id;
       }
     });
+    // Fallback: nobody has a positive score (extremely rare — only if the very
+    // player who made the finishing guess was already deeply negative). Award
+    // it to that finishing guesser, since they did solve this final round.
+    if (winner.isEmpty) {
+      winner = bonusUid ??
+          (room.players.keys.isEmpty ? '' : room.players.keys.first);
+    }
     return winner;
   }
 
