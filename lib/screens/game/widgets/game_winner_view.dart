@@ -26,6 +26,13 @@ class GameWinnerView extends StatefulWidget {
   /// (doubling the winnings). Returns true on success. Null hides the button.
   final Future<bool> Function()? onDoubleCoins;
 
+  /// Friends-game rematch ("play again, same group"). [showRematch] gates the
+  /// button; [rematchReady] flips it from "create" to "join" once another
+  /// player has already opened the rematch room. Null [onRematch] hides it.
+  final bool showRematch;
+  final bool rematchReady;
+  final Future<void> Function()? onRematch;
+
   const GameWinnerView({
     super.key,
     required this.winnerName,
@@ -36,6 +43,9 @@ class GameWinnerView extends StatefulWidget {
     required this.onHome,
     this.coinsWon = 0,
     this.onDoubleCoins,
+    this.showRematch = false,
+    this.rematchReady = false,
+    this.onRematch,
   });
 
   @override
@@ -48,6 +58,7 @@ class _GameWinnerViewState extends State<GameWinnerView> {
   bool _showButton = false;
   bool _doubled = false;
   bool _doublingBusy = false;
+  bool _rematchBusy = false;
 
   @override
   void initState() {
@@ -65,6 +76,16 @@ class _GameWinnerViewState extends State<GameWinnerView> {
       _doublingBusy = false;
       if (ok) _doubled = true;
     });
+  }
+
+  Future<void> _doRematch() async {
+    if (_rematchBusy || widget.onRematch == null) return;
+    setState(() => _rematchBusy = true);
+    try {
+      await widget.onRematch!();
+    } finally {
+      if (mounted) setState(() => _rematchBusy = false);
+    }
   }
 
   Future<void> _runEntrance() async {
@@ -132,6 +153,10 @@ class _GameWinnerViewState extends State<GameWinnerView> {
                           doubled: _doubled,
                           doublingBusy: _doublingBusy,
                           onDouble: _handleDouble,
+                          showRematch: widget.showRematch,
+                          rematchReady: widget.rematchReady,
+                          rematchBusy: _rematchBusy,
+                          onRematch: _doRematch,
                         ),
                       ),
                     ),
@@ -179,6 +204,10 @@ class _WinnerCard extends StatelessWidget {
   final bool doubled;
   final bool doublingBusy;
   final VoidCallback onDouble;
+  final bool showRematch;
+  final bool rematchReady;
+  final bool rematchBusy;
+  final VoidCallback onRematch;
 
   const _WinnerCard({
     required this.winnerName,
@@ -193,6 +222,10 @@ class _WinnerCard extends StatelessWidget {
     required this.doubled,
     required this.doublingBusy,
     required this.onDouble,
+    required this.showRematch,
+    required this.rematchReady,
+    required this.rematchBusy,
+    required this.onRematch,
   });
 
   @override
@@ -403,6 +436,51 @@ class _WinnerCard extends StatelessWidget {
                               ),
                       ),
                     ),
+            ),
+          ],
+          // Friends "play again": regroups the same lobby. First tapper creates
+          // the rematch room; everyone else sees "join rematch".
+          if (showRematch && showButton) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF20A8E0), Color(0xFF0868A8)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: FilledButton(
+                  onPressed: rematchBusy ? null : onRematch,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    disabledBackgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    textStyle: const TextStyle(
+                        fontSize: 17, fontWeight: FontWeight.w900),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: rematchBusy
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2.4, color: Colors.white),
+                        )
+                      : Text(
+                          rematchReady
+                              ? '➡️ הצטרף למשחק חוזר'
+                              : '🔄 שחק שוב',
+                          textDirection: TextDirection.rtl,
+                        ),
+                ),
+              ),
             ),
           ],
           const SizedBox(height: 14),
