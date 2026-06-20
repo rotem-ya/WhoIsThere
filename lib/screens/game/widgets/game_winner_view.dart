@@ -280,14 +280,14 @@ class _WinnerCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ] else
-            const Text('🏆', style: TextStyle(fontSize: 56, height: 1)),
+            const Text('🏆', style: TextStyle(fontSize: 46, height: 1)),
           const SizedBox(height: 6),
           const Text(
             'ניצחון!',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFFD4AF37),
-              fontSize: 32,
+              fontSize: 26,
               fontWeight: FontWeight.w900,
               height: 1,
             ),
@@ -296,9 +296,11 @@ class _WinnerCard extends StatelessWidget {
           Text(
             '$winnerName גילה את המקום',
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 18,
+              fontSize: 15.5,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -311,7 +313,7 @@ class _WinnerCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Color(0xFFD4AF37),
-                fontSize: 15,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.4,
               ),
@@ -323,7 +325,7 @@ class _WinnerCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white.withOpacity(0.68),
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -383,16 +385,22 @@ class _WinnerCard extends StatelessWidget {
                         border: Border.all(color: const Color(0xFF2EBd6B)),
                       ),
                       child: Center(
-                        child: Text.rich(
-                          TextSpan(
-                            text: '🎉 הזכייה הוכפלה! +$coinsWon ',
-                            children: [coinSpan(size: 16)],
-                          ),
-                          textDirection: TextDirection.rtl,
-                          style: const TextStyle(
-                            color: Color(0xFF8FE0AC),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text.rich(
+                              TextSpan(
+                                text: '🎉 הזכייה הוכפלה! +$coinsWon ',
+                                children: [coinSpan(size: 15)],
+                              ),
+                              textDirection: TextDirection.rtl,
+                              style: const TextStyle(
+                                color: Color(0xFF8FE0AC),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -413,6 +421,7 @@ class _WinnerCard extends StatelessWidget {
                           disabledBackgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
                           foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16)),
                         ),
@@ -423,15 +432,18 @@ class _WinnerCard extends StatelessWidget {
                                 child: CircularProgressIndicator(
                                     strokeWidth: 2.4, color: Colors.white),
                               )
-                            : Text.rich(
-                                TextSpan(
-                                  text: '🎬 שכפל את הזכייה  +$coinsWon ',
-                                  children: [coinSpan(size: 16)],
-                                ),
-                                textDirection: TextDirection.rtl,
-                                style: const TextStyle(
-                                  fontSize: 16.5,
-                                  fontWeight: FontWeight.w900,
+                            : FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text.rich(
+                                  TextSpan(
+                                    text: '🎬 שכפל את הזכייה  +$coinsWon ',
+                                    children: [coinSpan(size: 15)],
+                                  ),
+                                  textDirection: TextDirection.rtl,
+                                  style: const TextStyle(
+                                    fontSize: 15.5,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                                 ),
                               ),
                       ),
@@ -473,11 +485,14 @@ class _WinnerCard extends StatelessWidget {
                           child: CircularProgressIndicator(
                               strokeWidth: 2.4, color: Colors.white),
                         )
-                      : Text(
-                          rematchReady
-                              ? '➡️ הצטרף למשחק חוזר'
-                              : '🔄 שחק שוב',
-                          textDirection: TextDirection.rtl,
+                      : FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            rematchReady
+                                ? '➡️ הצטרף למשחק חוזר'
+                                : '🔄 שחק שוב',
+                            textDirection: TextDirection.rtl,
+                          ),
                         ),
                 ),
               ),
