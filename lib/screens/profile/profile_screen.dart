@@ -19,6 +19,8 @@ import '../../widgets/common/player_avatar.dart';
 import 'discovered_images_screen.dart';
 import '../store/card_skins_screen.dart' show ownedSkinsProvider;
 import '../store/avatar_frames_screen.dart' show selectedFrameProvider;
+import '../store/name_styles_screen.dart' show selectedNameStyleProvider;
+import '../../widgets/common/player_name_text.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -102,6 +104,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
     final selectedFrame = ref.watch(selectedFrameProvider).valueOrNull ?? 'none';
+    final selectedNameStyle =
+        ref.watch(selectedNameStyleProvider).valueOrNull ?? 'none';
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
@@ -180,10 +184,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   child: FittedBox(
                                     fit: BoxFit.scaleDown,
                                     alignment: AlignmentDirectional.centerStart,
-                                    child: Text(
-                                      user.name,
-                                      maxLines: 1,
-                                      style: const TextStyle(
+                                    child: PlayerNameText(
+                                      text: user.name,
+                                      styleId: selectedNameStyle,
+                                      base: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 18,
                                         fontWeight: FontWeight.w900,

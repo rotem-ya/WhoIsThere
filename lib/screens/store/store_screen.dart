@@ -821,6 +821,14 @@ class _SkinsTab extends StatelessWidget {
           accent: Color(0xFFD4AF37),
           route: '/store/frames',
         ),
+        const SizedBox(height: AppSpacing.md),
+        const _DesignBanner(
+          title: 'צבעי שם',
+          subtitle: 'צבע או גרדיאנט לשם שלך',
+          icon: Icons.text_fields_rounded,
+          accent: Color(0xFF4DD0A0),
+          route: '/store/names',
+        ),
       ],
     );
   }

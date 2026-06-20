@@ -24,6 +24,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/player_avatar.dart';
+import '../../widgets/common/player_name_text.dart';
 import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/common/banner_ad_widget.dart';
 import '../../widgets/economy/coin_icon.dart';
@@ -810,11 +811,10 @@ class _PlayerAvatarTile extends StatelessWidget {
 
               // Name + round badge
               Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppStyles.bodyMedium.copyWith(
+                child: PlayerNameText(
+                  text: label,
+                  styleId: player.nameStyleId,
+                  base: AppStyles.bodyMedium.copyWith(
                     color: isMe ? AppStyles.cyanGlow : Colors.white,
                     fontWeight: FontWeight.w700,
                   ),
