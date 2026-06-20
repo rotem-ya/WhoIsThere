@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/constants/ad_constants.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_constants.dart';
 // player_rank removed — using discoveredCount badge instead;
 import '../../core/theme/app_styles.dart';
@@ -24,6 +26,7 @@ import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/common/banner_ad_widget.dart';
+import '../../widgets/economy/coin_icon.dart';
 
 class LobbyScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -55,6 +58,74 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     setState(() => _codeCopied = true);
     await Future.delayed(const Duration(milliseconds: 1500));
     if (mounted) setState(() => _codeCopied = false);
+  }
+
+  // Opt-in rewarded ad in the lobby: only ever runs when the player taps this
+  // button — never automatic. Grants the daily-capped coin reward.
+  Future<void> _watchAdForCoins() async {
+    final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
+    if (uid == null) return;
+    final watched = await ref.read(adServiceProvider).showRewarded();
+    if (!mounted) return;
+    if (!watched) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('הפרסומת לא זמינה כרגע, נסה שוב בעוד רגע')),
+      );
+      return;
+    }
+    final granted = await ref.read(economyServiceProvider).applyAdReward(uid);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(granted
+            ? '+${EconomyConfig.adRewardCoins} מטבעות הופקדו!'
+            : 'המכסה היומית הושלמה'),
+        backgroundColor: const Color(0xFF0A3880),
+      ),
+    );
+  }
+
+  /// "Watch a video for coins" lobby button. Hidden when ads are off or the
+  /// player has used today's rewarded-ad quota.
+  Widget _buildLobbyAdButton() {
+    if (!AdConstants.adsEnabled) return const SizedBox.shrink();
+    final wallet = ref.watch(walletProvider).valueOrNull;
+    final adsToday = wallet?.adRewardsTodayCount ?? 0;
+    final remaining = (EconomyConfig.maxAdRewardsPerDay - adsToday)
+        .clamp(0, EconomyConfig.maxAdRewardsPerDay);
+    if (remaining <= 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: PressableScale(
+        onTap: _watchAdForCoins,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF20A8E0), Color(0xFF0868A8)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Center(
+            child: Text.rich(
+              TextSpan(
+                text: '🎬 צפה בסרטון וקבל ${EconomyConfig.adRewardCoins} ',
+                children: [coinSpan(size: 15)],
+              ),
+              textDirection: TextDirection.rtl,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15.5,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _openChat() {
@@ -460,6 +531,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                           : const _WaitingFooter(),
                     ),
                     const SizedBox(height: 8),
+                    _buildLobbyAdButton(),
                     const BannerAdWidget(),
                     const SizedBox(height: 4),
                   ],

@@ -17,10 +17,11 @@ class AdConstants {
   /// day before they start serving — that delay is normal.)
   static const bool useTestAds = true;
 
-  /// Banners are intentionally OFF — no banner ad unit was created in AdMob
-  /// (the product uses only rewarded + interstitial). Kept as a separate gate
-  /// so banner widgets never render even while [adsEnabled] is true.
-  static const bool bannersEnabled = false;
+  /// Banners are shown on the win screen + lobby. NOTE: no dedicated banner ad
+  /// unit exists yet in AdMob, so [bannerUnitId] currently serves Google's test
+  /// banner. Before the production build, create a Banner ad unit per platform
+  /// and wire its IDs into [bannerUnitId] (or banners must stay test-only).
+  static const bool bannersEnabled = true;
 
   // ── Google official TEST unit IDs (always fill) ──────────────────────────
   static const String _testBannerAndroid = 'ca-app-pub-3940256099942544/6300978111';
