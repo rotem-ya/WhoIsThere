@@ -17,10 +17,7 @@ class AdConstants {
   /// day before they start serving — that delay is normal.)
   static const bool useTestAds = true;
 
-  /// Banners are shown on the win screen + lobby. NOTE: no dedicated banner ad
-  /// unit exists yet in AdMob, so [bannerUnitId] currently serves Google's test
-  /// banner. Before the production build, create a Banner ad unit per platform
-  /// and wire its IDs into [bannerUnitId] (or banners must stay test-only).
+  /// Banners are shown on the win screen + lobby.
   static const bool bannersEnabled = true;
 
   // ── Google official TEST unit IDs (always fill) ──────────────────────────
@@ -35,15 +32,19 @@ class AdConstants {
   // App IDs (with '~') live in AndroidManifest.xml and ios/Runner/Info.plist:
   //   Android app: ca-app-pub-8795917295916240~6423959619
   //   iOS app:     ca-app-pub-8795917295916240~3606224584
+  static const String _realBannerAndroid = 'ca-app-pub-8795917295916240/2514303064';
+  static const String _realBannerIos = 'ca-app-pub-8795917295916240/4204044862';
   static const String _realRewardedAndroid = 'ca-app-pub-8795917295916240/5386210117';
   static const String _realRewardedIos = 'ca-app-pub-8795917295916240/6787187623';
   static const String _realInterstitialAndroid = 'ca-app-pub-8795917295916240/7385687498';
   static const String _realInterstitialIos = 'ca-app-pub-8795917295916240/7162326216';
 
-  /// No real banner unit exists; always uses the test banner. Only ever
-  /// consumed when [bannersEnabled] is true (currently never).
-  static String get bannerUnitId =>
-      Platform.isAndroid ? _testBannerAndroid : _testBannerIos;
+  static String get bannerUnitId {
+    if (useTestAds) {
+      return Platform.isAndroid ? _testBannerAndroid : _testBannerIos;
+    }
+    return Platform.isAndroid ? _realBannerAndroid : _realBannerIos;
+  }
 
   static String get rewardedUnitId {
     if (useTestAds) {
