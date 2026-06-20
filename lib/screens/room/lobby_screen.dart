@@ -214,6 +214,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   Widget _topicChip(String catId,
       {required bool selected, required bool isHost}) {
     final cat = GameCategories.byId(catId);
+    // Admin display-name override from the content manifest, else built-in name.
+    final label = ContentManifestService.instance.topicLabel(catId) ?? cat.nameHe;
     return GestureDetector(
       onTap: () {
         final uid = ref.read(currentUserProvider).value?.id;
@@ -251,7 +253,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           children: [
             Text(cat.emoji, style: const TextStyle(fontSize: 16)),
             const SizedBox(width: 6),
-            Text(cat.nameHe,
+            Text(label,
                 style: TextStyle(
                     color: selected ? AppStyles.cyanGlow : Colors.white,
                     fontSize: 13,

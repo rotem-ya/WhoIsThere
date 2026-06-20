@@ -101,6 +101,7 @@ class ContentManifestService {
 
   static const _prefsKey = 'content_manifest_v1';
   static const _topicsPrefsKey = 'content_topics_active_v1';
+  static const _topicLabelsPrefsKey = 'content_topic_labels_v1';
   static const _docPath = 'content_manifest/places_v1';
 
   // id → isActive override (covers bundled + remote).
@@ -110,6 +111,9 @@ class ContentManifestService {
   // category id → active flag (manifest `topicsActive` map). A whole topic
   // ("חי צומח דומם") can be hidden by the admin without touching its places.
   final Map<String, bool> _topicsActive = {};
+  // category id → admin display-name override (manifest `topicLabels` map).
+  // Empty/missing = the bundled default name from GameCategories (§8).
+  final Map<String, String> _topicLabels = {};
   bool _loaded = false;
 
   bool get isLoaded => _loaded;
@@ -129,6 +133,15 @@ class ContentManifestService {
   /// map means every topic shows, exactly like before).
   bool isCategoryActive(String categoryId) => _topicsActive[categoryId] ?? true;
 
+  /// Admin display-name override for a topic, or null when none is set (callers
+  /// then fall back to the bundled default name from GameCategories §8). A
+  /// category absent from the manifest `topicLabels` map returns null —
+  /// backward compatible: no map means every topic shows its built-in name.
+  String? topicLabel(String categoryId) {
+    final v = _topicLabels[categoryId];
+    return (v != null && v.isNotEmpty) ? v : null;
+  }
+
   /// Remote places ready to play (active + image cached) in [categoryId].
   /// Copy, never null.
   List<GameImageModel> availableRemoteImages(
@@ -141,6 +154,7 @@ class ContentManifestService {
     try {
       final prefs = await SharedPreferences.getInstance();
       _applyTopics(prefs.getString(_topicsPrefsKey));
+      _applyTopicLabels(prefs.getString(_topicLabelsPrefsKey));
       final raw = prefs.getString(_prefsKey);
       if (raw == null) return;
       final places = _parsePlaces(raw);
@@ -180,17 +194,30 @@ class ContentManifestService {
         });
       }
 
+      // Per-topic display-name overrides (optional; absent map = built-in names).
+      final labels = <String, String>{};
+      final labelsRaw = data['topicLabels'];
+      if (labelsRaw is Map) {
+        labelsRaw.forEach((k, v) {
+          if (v is String && v.isNotEmpty) labels[k.toString()] = v;
+        });
+      }
+
       // Persist for offline use before doing any (slow) downloads.
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(
             _prefsKey, jsonEncode(places.map((p) => p.toJson()).toList()));
         await prefs.setString(_topicsPrefsKey, jsonEncode(topics));
+        await prefs.setString(_topicLabelsPrefsKey, jsonEncode(labels));
       } catch (_) {}
 
       _topicsActive
         ..clear()
         ..addAll(topics);
+      _topicLabels
+        ..clear()
+        ..addAll(labels);
 
       await _apply(places, downloadMissing: true);
       _loaded = true;
@@ -212,6 +239,20 @@ class ContentManifestService {
       if (decoded is Map) {
         decoded.forEach((k, v) {
           if (v is bool) _topicsActive[k.toString()] = v;
+        });
+      }
+    } catch (_) {}
+  }
+
+  /// Loads the persisted `topicLabels` map (best-effort) into memory.
+  void _applyTopicLabels(String? rawJson) {
+    _topicLabels.clear();
+    if (rawJson == null) return;
+    try {
+      final decoded = jsonDecode(rawJson);
+      if (decoded is Map) {
+        decoded.forEach((k, v) {
+          if (v is String && v.isNotEmpty) _topicLabels[k.toString()] = v;
         });
       }
     } catch (_) {}

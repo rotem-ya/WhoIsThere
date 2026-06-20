@@ -5,6 +5,7 @@ import '../../../core/constants/game_categories.dart';
 import '../../../core/constants/game_constants.dart';
 import '../../../models/game_image_model.dart';
 import '../../../models/room_model.dart';
+import '../../../services/content_manifest_service.dart';
 import 'answer_slots.dart';
 import 'detective_toolbar.dart';
 import 'game_actions.dart';
@@ -468,6 +469,10 @@ class _HeatTopicChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cat = GameCategories.byId(room.selectedCategory);
+    // Admin display-name override from the content manifest, else built-in name.
+    final label = ContentManifestService.instance
+            .topicLabel(room.selectedCategory) ??
+        cat.nameHe;
     final total = room.heatImageIds.length;
     final round = (room.heatRoundIndex + 1).clamp(1, total == 0 ? 1 : total);
     return Padding(
@@ -481,7 +486,7 @@ class _HeatTopicChip extends StatelessWidget {
             border: Border.all(color: const Color(0xFF20A8E0).withOpacity(0.45)),
           ),
           child: Text(
-            '${cat.emoji}  ${cat.nameHe}   ·   סבב $round/$total',
+            '${cat.emoji}  $label   ·   סבב $round/$total',
             textDirection: TextDirection.rtl,
             style: const TextStyle(
               color: Colors.white,
