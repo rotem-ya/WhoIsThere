@@ -17,6 +17,7 @@ import '../../models/room_model.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/banner_ad_widget.dart';
 import '../../widgets/common/player_avatar.dart';
+import '../../widgets/common/win_effect_overlay.dart';
 
 class WinScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -172,7 +173,9 @@ class _WinScreenState extends ConsumerState<WinScreen>
               isWinner ? AppColors.primaryGradient : AppColors.pageBackground,
           padding: EdgeInsets.zero,
           safeArea: false,
-          child: SafeArea(
+          child: Stack(
+            children: [
+              SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Column(
@@ -344,6 +347,12 @@ class _WinScreenState extends ConsumerState<WinScreen>
                 ],
               ),
             ),
+          ),
+              if (winner != null && winner.winEffectId != 'none')
+                Positioned.fill(
+                  child: WinEffectOverlay(effectId: winner.winEffectId),
+                ),
+            ],
           ),
         ), // AppScaffold
         ); // PopScope

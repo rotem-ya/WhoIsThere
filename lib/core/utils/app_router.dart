@@ -19,6 +19,7 @@ import '../../screens/store/store_screen.dart';
 import '../../screens/store/card_skins_screen.dart';
 import '../../screens/store/avatar_frames_screen.dart';
 import '../../screens/store/name_styles_screen.dart';
+import '../../screens/store/win_effects_screen.dart';
 import '../../screens/voting/vote_difficulty_screen.dart';
 import '../../screens/voting/vote_image_screen.dart';
 import '../../screens/win/win_screen.dart';
@@ -110,6 +111,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/store/names',
         builder: (context, state) => const NameStylesScreen(),
+      ),
+      GoRoute(
+        path: '/store/effects',
+        builder: (context, state) => const WinEffectsScreen(),
       ),
       GoRoute(
         path: '/settings',

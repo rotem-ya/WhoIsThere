@@ -294,6 +294,7 @@ class RoomService {
     final cardSkinId = (userSnap.data()?['selectedCardSkin'] as String?) ?? 'default';
     final hostFrameId = (userSnap.data()?['selectedAvatarFrame'] as String?) ?? 'none';
     final hostNameStyleId = (userSnap.data()?['selectedNameStyle'] as String?) ?? 'none';
+    final hostWinEffectId = (userSnap.data()?['selectedWinEffect'] as String?) ?? 'none';
     final hostTotalPoints = (userSnap.data()?['totalPoints'] as int?) ?? 0;
     final hostDiscoveredCount =
         (userSnap.data()?['discoveredImageIds'] as List?)?.length ?? 0;
@@ -310,6 +311,7 @@ class RoomService {
       isHost: true,
       frameId: hostFrameId,
       nameStyleId: hostNameStyleId,
+      winEffectId: hostWinEffectId,
     );
 
     final players = <String, PlayerModel>{effectiveHostId: host};
@@ -426,6 +428,8 @@ class RoomService {
         (joiningUserSnap.data()?['selectedAvatarFrame'] as String?) ?? 'none';
     final joiningNameStyleId =
         (joiningUserSnap.data()?['selectedNameStyle'] as String?) ?? 'none';
+    final joiningWinEffectId =
+        (joiningUserSnap.data()?['selectedWinEffect'] as String?) ?? 'none';
     final joiningRound = await computePlayerRound(userId);
 
     final newPlayer = PlayerModel(
@@ -438,6 +442,7 @@ class RoomService {
       playerRound: joiningRound,
       frameId: joiningFrameId,
       nameStyleId: joiningNameStyleId,
+      winEffectId: joiningWinEffectId,
     );
 
     await doc.reference.update({

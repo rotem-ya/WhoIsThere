@@ -829,6 +829,14 @@ class _SkinsTab extends StatelessWidget {
           accent: Color(0xFF4DD0A0),
           route: '/store/names',
         ),
+        const SizedBox(height: AppSpacing.md),
+        const _DesignBanner(
+          title: 'אפקטי ניצחון',
+          subtitle: 'חגיגה במסך הזכייה כשתנצח',
+          icon: Icons.celebration_rounded,
+          accent: Color(0xFFFF8A65),
+          route: '/store/effects',
+        ),
       ],
     );
   }

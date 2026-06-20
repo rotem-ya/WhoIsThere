@@ -17,6 +17,8 @@ class PlayerModel extends Equatable {
   final String frameId;
   // Equipped cosmetic name colour/gradient id ('none' = default).
   final String nameStyleId;
+  // Equipped cosmetic win-screen celebration effect id ('none' = default).
+  final String winEffectId;
 
   const PlayerModel({
     required this.id,
@@ -33,6 +35,7 @@ class PlayerModel extends Equatable {
     this.priorExposureCount = 0,
     this.frameId = 'none',
     this.nameStyleId = 'none',
+    this.winEffectId = 'none',
   });
 
   factory PlayerModel.fromMap(String id, Map<String, dynamic> data) {
@@ -51,6 +54,7 @@ class PlayerModel extends Equatable {
       priorExposureCount: data['priorExposureCount'] ?? 0,
       frameId: (data['frameId'] as String?) ?? 'none',
       nameStyleId: (data['nameStyleId'] as String?) ?? 'none',
+      winEffectId: (data['winEffectId'] as String?) ?? 'none',
     );
   }
 
@@ -68,6 +72,7 @@ class PlayerModel extends Equatable {
         'priorExposureCount': priorExposureCount,
         'frameId': frameId,
         'nameStyleId': nameStyleId,
+        'winEffectId': winEffectId,
       };
 
   PlayerModel copyWith({
@@ -84,6 +89,7 @@ class PlayerModel extends Equatable {
     int? priorExposureCount,
     String? frameId,
     String? nameStyleId,
+    String? winEffectId,
   }) =>
       PlayerModel(
         id: id,
@@ -100,6 +106,7 @@ class PlayerModel extends Equatable {
         priorExposureCount: priorExposureCount ?? this.priorExposureCount,
         frameId: frameId ?? this.frameId,
         nameStyleId: nameStyleId ?? this.nameStyleId,
+        winEffectId: winEffectId ?? this.winEffectId,
       );
 
   @override
@@ -117,5 +124,6 @@ class PlayerModel extends Equatable {
         priorExposureCount,
         frameId,
         nameStyleId,
+        winEffectId,
       ];
 }
