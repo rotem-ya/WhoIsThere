@@ -10,11 +10,20 @@ import '../../core/constants/economy_config.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
+import '../../models/board_skin.dart';
 import '../../providers/providers.dart';
 import '../../widgets/common/app_feedback.dart';
+import '../../widgets/common/player_avatar.dart';
+import '../../widgets/common/player_name_text.dart';
 import '../../widgets/common/pressable_scale.dart';
+import '../../widgets/common/win_effect_overlay.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_icon.dart';
+import 'avatars_screen.dart' show selectedAvatarProvider;
+import 'avatar_frames_screen.dart' show selectedFrameProvider;
+import 'name_styles_screen.dart' show selectedNameStyleProvider;
+import 'win_effects_screen.dart' show selectedWinEffectProvider;
+import 'board_skins_screen.dart' show selectedBoardSkinProvider;
 
 class StoreScreen extends ConsumerStatefulWidget {
   const StoreScreen({super.key});
@@ -797,80 +806,230 @@ class _LockedCard extends StatelessWidget {
 
 // ── Tab 4: עיצובים ────────────────────────────────────────────────────────────
 
-class _SkinsTab extends StatelessWidget {
+class _SkinsTab extends ConsumerWidget {
   const _SkinsTab();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final name = ref.watch(currentUserProvider).valueOrNull?.name ?? 'שחקן';
+    final avatarId = ref.watch(selectedAvatarProvider).valueOrNull ?? 'auto';
+    final frameId = ref.watch(selectedFrameProvider).valueOrNull ?? 'none';
+    final nameStyleId =
+        ref.watch(selectedNameStyleProvider).valueOrNull ?? 'none';
+    final winEffectId =
+        ref.watch(selectedWinEffectProvider).valueOrNull ?? 'none';
+    final boardSkinId =
+        ref.watch(selectedBoardSkinProvider).valueOrNull ?? 'none';
+
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
       children: [
-        const SizedBox(height: AppSpacing.md),
-        const _DesignBanner(
-          title: 'אווטרים',
-          subtitle: 'אווטר מגניב שיופיע ליד השם במשחק',
-          icon: Icons.emoji_emotions_rounded,
-          accent: Color(0xFF4FC3F7),
-          route: '/store/avatars',
+        // ── Live "my look" preview ────────────────────────────────────────
+        _MyLookPreview(
+          name: name,
+          avatarId: avatarId,
+          frameId: frameId,
+          nameStyleId: nameStyleId,
         ),
-        const SizedBox(height: AppSpacing.md),
-        const _DesignBanner(
-          title: 'עיצובי קלפים',
-          subtitle: 'בחר עיצוב לכרטיסיות המשחק',
-          icon: Icons.style_rounded,
-          accent: Color(0xFF8B6FFF),
-          route: '/store/skins',
+        const SizedBox(height: AppSpacing.lg),
+        Row(
+          children: [
+            const Icon(Icons.brush_rounded, color: Colors.white54, size: 16),
+            const SizedBox(width: 6),
+            Text('כלי העיצוב',
+                style: AppTextStyles.titleLight.copyWith(fontSize: 15)),
+          ],
         ),
-        const SizedBox(height: AppSpacing.md),
-        const _DesignBanner(
-          title: 'מסגרות אווטר',
-          subtitle: 'מסגרת שתופיע סביב האווטר שלך',
-          icon: Icons.account_circle_rounded,
-          accent: Color(0xFFD4AF37),
-          route: '/store/frames',
-        ),
-        const SizedBox(height: AppSpacing.md),
-        const _DesignBanner(
-          title: 'צבעי שם',
-          subtitle: 'צבע או גרדיאנט לשם שלך',
-          icon: Icons.text_fields_rounded,
-          accent: Color(0xFF4DD0A0),
-          route: '/store/names',
-        ),
-        const SizedBox(height: AppSpacing.md),
-        const _DesignBanner(
-          title: 'אפקטי ניצחון',
-          subtitle: 'חגיגה במסך הזכייה כשתנצח',
-          icon: Icons.celebration_rounded,
-          accent: Color(0xFFFF8A65),
-          route: '/store/effects',
-        ),
-        const SizedBox(height: AppSpacing.md),
-        const _DesignBanner(
-          title: 'רקע לוח המשחק',
-          subtitle: 'רקע צבעוני ללוח המשחק שלך',
-          icon: Icons.grid_view_rounded,
-          accent: Color(0xFF4CA1AF),
-          route: '/store/board',
+        const SizedBox(height: AppSpacing.sm),
+        // ── Category cards grid ───────────────────────────────────────────
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: AppSpacing.md,
+          mainAxisSpacing: AppSpacing.md,
+          childAspectRatio: 1.18,
+          children: [
+            _DesignCard(
+              title: 'אווטרים',
+              accent: const Color(0xFF4FC3F7),
+              route: '/store/avatars',
+              preview: PlayerAvatar(
+                  name: name, seed: name, radius: 22, avatarId: avatarId),
+            ),
+            _DesignCard(
+              title: 'מסגרות',
+              accent: const Color(0xFFD4AF37),
+              route: '/store/frames',
+              preview: PlayerAvatar(
+                  name: name, seed: name, radius: 20, frameId: frameId),
+            ),
+            _DesignCard(
+              title: 'צבעי שם',
+              accent: const Color(0xFF4DD0A0),
+              route: '/store/names',
+              preview: PlayerNameText(
+                text: name,
+                styleId: nameStyleId,
+                base: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900),
+              ),
+            ),
+            _DesignCard(
+              title: 'אפקטי ניצחון',
+              accent: const Color(0xFFFF8A65),
+              route: '/store/effects',
+              preview: winEffectId == 'none'
+                  ? const Icon(Icons.celebration_rounded,
+                      color: Color(0xFFFF8A65), size: 34)
+                  : SizedBox(
+                      width: 64,
+                      height: 48,
+                      child: WinEffectOverlay(
+                          effectId: winEffectId, particleCount: 14),
+                    ),
+            ),
+            _DesignCard(
+              title: 'עיצובי קלפים',
+              accent: const Color(0xFF8B6FFF),
+              route: '/store/skins',
+              preview: const Icon(Icons.style_rounded,
+                  color: Color(0xFF8B6FFF), size: 34),
+            ),
+            _DesignCard(
+              title: 'רקע לוח',
+              accent: const Color(0xFF4CA1AF),
+              route: '/store/board',
+              preview: _BoardSwatch(skinId: boardSkinId),
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
-class _DesignBanner extends StatelessWidget {
+// ── Live combined-look preview ──────────────────────────────────────────────────
+
+class _MyLookPreview extends StatelessWidget {
+  final String name;
+  final String avatarId;
+  final String frameId;
+  final String nameStyleId;
+
+  const _MyLookPreview({
+    required this.name,
+    required this.avatarId,
+    required this.frameId,
+    required this.nameStyleId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0E2A4A), Color(0xFF1A0A2E)],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+            color: const Color(0xFF4FC3F7).withOpacity(0.40), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1890D0).withOpacity(0.18),
+            blurRadius: 22,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          PlayerAvatar(
+            name: name,
+            seed: name,
+            radius: 32,
+            avatarId: avatarId,
+            frameId: frameId,
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('המראה שלי',
+                    style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                PlayerNameText(
+                  text: name,
+                  styleId: nameStyleId,
+                  base: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 2),
+                const Text('כך שאר השחקנים רואים אותך',
+                    style: TextStyle(color: Colors.white38, fontSize: 11)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Board skin colour swatch ────────────────────────────────────────────────────
+
+class _BoardSwatch extends StatelessWidget {
+  final String skinId;
+  const _BoardSwatch({required this.skinId});
+
+  @override
+  Widget build(BuildContext context) {
+    final skin = boardSkinFor(skinId);
+    return Container(
+      width: 54,
+      height: 40,
+      decoration: BoxDecoration(
+        gradient: skin.isNone
+            ? const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF13294B), Color(0xFF050A16)],
+              )
+            : skin.gradient,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white24, width: 0.8),
+      ),
+    );
+  }
+}
+
+// ── Design category card (grid tile) ────────────────────────────────────────────
+
+class _DesignCard extends StatelessWidget {
   final String title;
-  final String subtitle;
-  final IconData icon;
   final Color accent;
   final String route;
+  final Widget preview;
 
-  const _DesignBanner({
+  const _DesignCard({
     required this.title,
-    required this.subtitle,
-    required this.icon,
     required this.accent,
     required this.route,
+    required this.preview,
   });
 
   @override
@@ -881,52 +1040,48 @@ class _DesignBanner extends StatelessWidget {
         context.push(route);
       },
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF0A1A2E), Color(0xFF1A0A2E)],
+            colors: [Color(0xFF0A1A2E), Color(0xFF120A24)],
           ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: accent.withOpacity(0.55), width: 1.4),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: accent.withOpacity(0.45), width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: accent.withOpacity(0.12),
-              blurRadius: 18,
-              spreadRadius: 1,
+              color: accent.withOpacity(0.10),
+              blurRadius: 14,
+              spreadRadius: 0,
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: accent.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: accent.withOpacity(0.40)),
-              ),
-              child: Icon(icon, color: accent, size: 32),
-            ),
-            const SizedBox(width: AppSpacing.md),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: AppTextStyles.titleLight.copyWith(fontSize: 18)),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(color: Colors.white54, fontSize: 13),
-                  ),
-                ],
-              ),
+              child: Center(child: preview),
             ),
-            const Icon(Icons.chevron_left_rounded,
-                color: Colors.white38, size: 26),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800),
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(Icons.chevron_left_rounded,
+                    color: accent.withOpacity(0.8), size: 18),
+              ],
+            ),
           ],
         ),
       ),
