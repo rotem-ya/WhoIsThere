@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
@@ -11,6 +12,7 @@ import '../../models/avatar_choice.dart';
 import '../../providers/providers.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
+import '../../widgets/common/player_name_text.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_icon.dart';
 
@@ -89,6 +91,7 @@ class AvatarsScreen extends ConsumerWidget {
               textAlign: TextAlign.center,
             ),
           ),
+          _AvatarHero(avatarId: selected, userName: userName),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(
@@ -246,6 +249,70 @@ class AvatarsScreen extends ConsumerWidget {
         const SnackBar(content: Text('שגיאה בהצמדת האווטר')),
       );
     }
+  }
+}
+
+// ── Live hero preview ───────────────────────────────────────────────────────────
+
+class _AvatarHero extends StatelessWidget {
+  final String avatarId;
+  final String userName;
+
+  const _AvatarHero({required this.avatarId, required this.userName});
+
+  @override
+  Widget build(BuildContext context) {
+    final choice = avatarChoiceFor(avatarId);
+    final accent = choice.accent;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.xs),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [accent.withOpacity(0.22), const Color(0xFF0A1228)],
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: accent.withOpacity(0.45), width: 1.2),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // The avatar gently pulses + glows — a live, premium preview.
+            PlayerAvatar(
+              name: userName.isEmpty ? '🙂' : userName,
+              seed: userName,
+              radius: 42,
+              avatarId: avatarId,
+            )
+                .animate(onPlay: (c) => c.repeat(reverse: true))
+                .scaleXY(begin: 1.0, end: 1.06, duration: 1100.ms, curve: Curves.easeInOut)
+                .boxShadow(
+                  begin: BoxShadow(
+                      color: accent.withOpacity(0.0), blurRadius: 0, spreadRadius: 0),
+                  end: BoxShadow(
+                      color: accent.withOpacity(0.55), blurRadius: 22, spreadRadius: 2),
+                  duration: 1100.ms,
+                  curve: Curves.easeInOut,
+                ),
+            const SizedBox(height: 10),
+            PlayerNameText(
+              text: choice.name,
+              styleId: 'none',
+              base: const TextStyle(
+                  color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 2),
+            const Text('תצוגה חיה',
+                style: TextStyle(color: Colors.white38, fontSize: 11)),
+          ],
+        ),
+      ),
+    );
   }
 }
 
