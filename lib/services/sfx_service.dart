@@ -12,9 +12,17 @@ class SfxService {
 
   final AudioPlayer _coin = AudioPlayer(playerId: 'sfx-coin');
   final AudioPlayer _pop = AudioPlayer(playerId: 'sfx-pop');
+  final AudioPlayer _ding = AudioPlayer(playerId: 'sfx-ding');
+  final AudioPlayer _buzz = AudioPlayer(playerId: 'sfx-buzz');
+  final AudioPlayer _reveal = AudioPlayer(playerId: 'sfx-reveal');
+  final AudioPlayer _fanfare = AudioPlayer(playerId: 'sfx-fanfare');
 
   static final AssetSource _coinSound = AssetSource('sounds/daily_coins.mp3');
   static final AssetSource _popSound = AssetSource('sounds/player_join.wav');
+  static final AssetSource _dingSound = AssetSource('sounds/correct_ding.wav');
+  static final AssetSource _buzzSound = AssetSource('sounds/wrong_buzz.wav');
+  static final AssetSource _revealSound = AssetSource('sounds/aperture_open.wav');
+  static final AssetSource _fanfareSound = AssetSource('sounds/victory_fanfare.mp3');
 
   Future<void> _play(AudioPlayer player, AssetSource src) async {
     try {
@@ -33,4 +41,14 @@ class SfxService {
 
   /// A light pop for equipping/selecting a cosmetic.
   Future<void> equip() => _play(_pop, _popSound);
+
+  // ── Letters game ──────────────────────────────────────────────────────────
+  /// Correct letter placed (green).
+  Future<void> letterCorrect() => _play(_ding, _dingSound);
+  /// Wrong / absent letter (gray).
+  Future<void> letterWrong() => _play(_buzz, _buzzSound);
+  /// Image tiles revealed.
+  Future<void> reveal() => _play(_reveal, _revealSound);
+  /// Victory fanfare.
+  Future<void> win() => _play(_fanfare, _fanfareSound);
 }

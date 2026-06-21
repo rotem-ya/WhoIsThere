@@ -17,6 +17,8 @@ import '../core/constants/economy_config.dart';
 import '../core/constants/game_categories.dart';
 import '../core/constants/game_constants.dart';
 import '../core/utils/room_code_generator.dart';
+import '../core/utils/letters_matcher.dart';
+import '../widgets/game/letter_bank_input.dart' show normalizeHebrewFinals;
 import 'content_manifest_service.dart';
 import 'qa_logger_service.dart';
 
@@ -2545,5 +2547,221 @@ class RoomService {
     // Western Wall inside חי-צומח-דומם heats whenever an id failed to resolve.
     QaLoggerService.instance.log('GAME', 'GET_IMAGE_UNRESOLVED id=$imageId');
     return null;
+  }
+
+  // ── Letters game (משחק האותיות) ────────────────────────────────────────────
+
+  /// Grid size for the letters board. 6×6 = 36 tiles — enough that revealing
+  /// 4/2 tiles per guess builds the picture gradually without exposing it in a
+  /// couple of turns.
+  static const Difficulty _lettersDifficulty = Difficulty.easy;
+
+  /// Picks a random playable image across ALL content categories (the answer is
+  /// its Hebrew name, no topic shown). "Playable" = a normalized answer of 2..10
+  /// letters so the Wordle slots stay reasonable.
+  Future<GameImageModel?> _pickRandomLettersImage(
+    Map<String, PlayerModel> players,
+  ) async {
+    final cats = <String>{GameCategories.israelPlaces, ...GameCategories.fastHeat};
+    final pool = <GameImageModel>[];
+    for (final c in cats) {
+      pool.addAll(await _loadLocalImages(categoryId: c));
+    }
+    if (pool.isEmpty) return null;
+    final playable = pool.where((img) {
+      final n = buildLettersPuzzle(img.answer).length;
+      return n >= 2 && n <= 10;
+    }).toList();
+    final source = playable.isNotEmpty ? playable : pool;
+    return _pickSmartImage(source, players);
+  }
+
+  /// Creates a solo letters duel: 1 human + 1 bot, mode='letters', a random
+  /// secret image, per-player boards initialized, started immediately (no lobby).
+  Future<RoomModel> createLettersRoom({
+    required String hostId,
+    required String hostName,
+    String? hostPhotoUrl,
+  }) async {
+    final code = RoomCodeGenerator.generate();
+    final docRef = _rooms.doc();
+
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      try { await currentUser.getIdToken(true); } catch (_) {}
+    }
+    final effectiveHostId = currentUser?.uid ?? hostId;
+
+    final userSnap = await _firestore.doc('users/$effectiveHostId').get();
+    final cardSkinId = (userSnap.data()?['selectedCardSkin'] as String?) ?? 'default';
+    final hostFrameId = (userSnap.data()?['selectedAvatarFrame'] as String?) ?? 'none';
+    final hostNameStyleId = (userSnap.data()?['selectedNameStyle'] as String?) ?? 'none';
+    final hostWinEffectId = (userSnap.data()?['selectedWinEffect'] as String?) ?? 'none';
+    final hostAvatarId = (userSnap.data()?['selectedAvatar'] as String?) ?? 'auto';
+    final hostTotalPoints = (userSnap.data()?['totalPoints'] as int?) ?? 0;
+    final hostDiscoveredCount =
+        (userSnap.data()?['discoveredImageIds'] as List?)?.length ?? 0;
+    final hostRound = await computePlayerRound(effectiveHostId);
+
+    final host = PlayerModel(
+      id: effectiveHostId,
+      name: hostName,
+      photoUrl: hostPhotoUrl,
+      score: 0,
+      totalPoints: hostTotalPoints,
+      discoveredCount: hostDiscoveredCount,
+      playerRound: hostRound,
+      isHost: true,
+      frameId: hostFrameId,
+      nameStyleId: hostNameStyleId,
+      winEffectId: hostWinEffectId,
+      avatarId: hostAvatarId,
+    );
+
+    final botId = 'virtual_2_${docRef.id}';
+    final botProfile = _randomBotProfile();
+    final bot = PlayerModel(
+      id: botId,
+      name: _randomBotName({host.name}),
+      score: 0,
+      isBot: true,
+      discoveredCount: botProfile.discoveredCount,
+      totalPoints: botProfile.totalPoints,
+    );
+
+    final players = <String, PlayerModel>{effectiveHostId: host, botId: bot};
+
+    final image = await _pickRandomLettersImage(players);
+    final turnOrder = players.keys.toList()..shuffle();
+
+    final room = RoomModel(
+      id: docRef.id,
+      code: code,
+      hostId: effectiveHostId,
+      players: players,
+      createdAt: DateTime.now(),
+      entryFee: 0, // solo letters is free for the MVP
+      cardSkinId: cardSkinId,
+      isPublicRoom: false,
+      playerRound: hostRound,
+      phase: GamePhase.playing,
+      selectedImageId: image?.id,
+      selectedDifficulty: _lettersDifficulty,
+      turnOrder: turnOrder,
+      currentTurnIndex: 0,
+      mode: 'letters',
+      secretWord: image?.answer,
+      lettersRevealedTiles: {for (final id in players.keys) id: const []},
+      lettersGuessed: {for (final id in players.keys) id: const []},
+      lettersSolvedSlots: {for (final id in players.keys) id: const []},
+    );
+
+    QaLoggerService.instance.log('LETTERS',
+        'CREATE id=${docRef.id} img=${image?.id} word=${image?.answer} '
+        'slots=${image == null ? 0 : buildLettersPuzzle(image.answer).length}');
+    await docRef.set(room.toMap());
+    return room;
+  }
+
+  /// Result of a single letter guess in the letters game.
+  /// [accepted] is false when the guess was rejected (not your turn / slot taken
+  /// / game over) and nothing changed.
+  /// One turn = guess [letter] for [slotIndex]. Per-slot Wordle feedback drives
+  /// the per-player tile reveal; the first player to fill every slot wins.
+  Future<({bool accepted, LetterFeedback feedback, int tilesRevealed, bool win})>
+      guessLetterInLettersGame({
+    required String roomId,
+    required String userId,
+    required int slotIndex,
+    required String letter,
+  }) async {
+    var accepted = false;
+    var feedback = LetterFeedback.absent;
+    var tilesRevealed = 0;
+    var win = false;
+    String? finishedImageId;
+    Map<String, PlayerModel>? finishedPlayers;
+
+    await _firestore.runTransaction((tx) async {
+      final roomDoc = await tx.get(_rooms.doc(roomId));
+      if (!roomDoc.exists) return;
+      final room = RoomModel.fromFirestore(roomDoc);
+
+      if (room.phase != GamePhase.playing || !room.isLetters) return;
+      if (room.currentTurnUserId != userId) return; // not your turn
+      final word = room.secretWord;
+      if (word == null || word.isEmpty) return;
+
+      final puzzle = buildLettersPuzzle(word);
+      if (slotIndex < 0 || slotIndex >= puzzle.length) return;
+
+      final solved = List<int>.from(room.lettersSolvedSlots[userId] ?? const []);
+      if (solved.contains(slotIndex)) return; // slot already locked
+
+      accepted = true;
+      feedback = evaluateGuess(puzzle, slotIndex, letter);
+      final norm = normalizeHebrewFinals(letter);
+
+      final updates = <String, dynamic>{
+        'lettersGuessed.$userId': FieldValue.arrayUnion([norm]),
+      };
+
+      // Reveal tiles on THIS player's board only.
+      tilesRevealed = tilesForFeedback(feedback);
+      if (tilesRevealed > 0) {
+        final revealed =
+            List<int>.from(room.lettersRevealedTiles[userId] ?? const []);
+        final revealedSet = revealed.toSet();
+        final gridSize = _lettersDifficulty.gridSize;
+        final total = gridSize * gridSize;
+        final available = [
+          for (var i = 0; i < total; i++)
+            if (!revealedSet.contains(i)) i
+        ];
+        final rng = Random();
+        final newlyRevealed = <int>[];
+        for (var i = 0; i < tilesRevealed && available.isNotEmpty; i++) {
+          final idx = _pickCheckerboardTile(available, revealedSet, gridSize, rng);
+          available.remove(idx);
+          revealedSet.add(idx);
+          newlyRevealed.add(idx);
+        }
+        if (newlyRevealed.isNotEmpty) {
+          updates['lettersRevealedTiles.$userId'] =
+              FieldValue.arrayUnion(newlyRevealed);
+        }
+      }
+
+      if (feedback == LetterFeedback.exact) {
+        solved.add(slotIndex);
+        updates['lettersSolvedSlots.$userId'] = FieldValue.arrayUnion([slotIndex]);
+      }
+
+      if (isPuzzleComplete(puzzle, solved.toSet())) {
+        win = true;
+        finishedImageId = room.selectedImageId;
+        finishedPlayers = room.players;
+        updates['phase'] = GamePhase.finished.name;
+        updates['winnerId'] = userId;
+        updates['turnPhase'] = TurnPhase.roundOver.name;
+      } else {
+        // Pass the turn to the other player.
+        updates['currentTurnIndex'] = room.currentTurnIndex + 1;
+      }
+
+      tx.update(_rooms.doc(roomId), updates);
+    });
+
+    QaLoggerService.instance.log('LETTERS',
+        'GUESS uid=${_short(userId)} slot=$slotIndex letter=$letter '
+        'accepted=$accepted fb=${feedback.name} tiles=$tilesRevealed win=$win');
+
+    if (win && finishedImageId != null && finishedImageId!.isNotEmpty &&
+        finishedPlayers != null) {
+      // The secret image counts as discovered for the real player(s) present.
+      _recordDiscoveredForAll(finishedPlayers!, finishedImageId!);
+    }
+
+    return (accepted: accepted, feedback: feedback, tilesRevealed: tilesRevealed, win: win);
   }
 }

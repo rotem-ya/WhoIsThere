@@ -69,6 +69,24 @@ class RoomModel extends Equatable {
   // rematch". Null until someone starts a rematch. Friends games only.
   final String? rematchRoomId;
 
+  // ── Letters game (משחק האותיות) — Wordle-style image-reveal duel ──────────
+  // Game mode discriminator. 'normal' is the classic/heat reveal game (default
+  // so existing rooms deserialize unchanged); 'letters' is the turn-based
+  // letter-guessing duel.
+  final String mode;
+  // The secret answer for the letters game — the Hebrew name of the chosen
+  // image (selectedImageId). Null for non-letters rooms.
+  final String? secretWord;
+  // Per-player board state for the letters game (separate board per player):
+  // uid → list of revealed tile indices on THAT player's board.
+  final Map<String, List<int>> lettersRevealedTiles;
+  // uid → list of letters that player has guessed (normalized), for keyboard
+  // coloring (present/absent).
+  final Map<String, List<String>> lettersGuessed;
+  // uid → list of slot indices the player has correctly filled (green). When a
+  // player's solved-slot count equals the answer length they win (auto-win).
+  final Map<String, List<int>> lettersSolvedSlots;
+
   const RoomModel({
     required this.id,
     required this.code,
@@ -119,7 +137,15 @@ class RoomModel extends Equatable {
     this.topicChoices = const {},
     this.placementPaidPlayerIds = const [],
     this.rematchRoomId,
+    this.mode = 'normal',
+    this.secretWord,
+    this.lettersRevealedTiles = const {},
+    this.lettersGuessed = const {},
+    this.lettersSolvedSlots = const {},
   });
+
+  // True for the letters game (Wordle-style duel).
+  bool get isLetters => mode == 'letters';
 
   // True when this room is a fast-game heat (more than one queued round).
   bool get isHeat => heatImageIds.length > 1;
@@ -256,6 +282,20 @@ class RoomModel extends Equatable {
       placementPaidPlayerIds:
           List<String>.from(data['placementPaidPlayerIds'] ?? const []),
       rematchRoomId: data['rematchRoomId'] as String?,
+      mode: (data['mode'] as String?) ?? 'normal',
+      secretWord: data['secretWord'] as String?,
+      lettersRevealedTiles: (data['lettersRevealedTiles'] as Map?)?.map(
+            (k, v) => MapEntry(k.toString(), List<int>.from(v as List? ?? const [])),
+          ) ??
+          const {},
+      lettersGuessed: (data['lettersGuessed'] as Map?)?.map(
+            (k, v) => MapEntry(k.toString(), List<String>.from(v as List? ?? const [])),
+          ) ??
+          const {},
+      lettersSolvedSlots: (data['lettersSolvedSlots'] as Map?)?.map(
+            (k, v) => MapEntry(k.toString(), List<int>.from(v as List? ?? const [])),
+          ) ??
+          const {},
     );
   }
 
@@ -308,6 +348,11 @@ class RoomModel extends Equatable {
         'topicChoices': topicChoices,
         'placementPaidPlayerIds': placementPaidPlayerIds,
         'rematchRoomId': rematchRoomId,
+        'mode': mode,
+        if (secretWord != null) 'secretWord': secretWord,
+        'lettersRevealedTiles': lettersRevealedTiles,
+        'lettersGuessed': lettersGuessed,
+        'lettersSolvedSlots': lettersSolvedSlots,
       };
 
   RoomModel copyWith({
@@ -356,6 +401,11 @@ class RoomModel extends Equatable {
     Map<String, List<String>>? topicChoices,
     List<String>? placementPaidPlayerIds,
     String? rematchRoomId,
+    String? mode,
+    String? secretWord,
+    Map<String, List<int>>? lettersRevealedTiles,
+    Map<String, List<String>>? lettersGuessed,
+    Map<String, List<int>>? lettersSolvedSlots,
   }) =>
       RoomModel(
         id: id,
@@ -412,6 +462,11 @@ class RoomModel extends Equatable {
         placementPaidPlayerIds:
             placementPaidPlayerIds ?? this.placementPaidPlayerIds,
         rematchRoomId: rematchRoomId ?? this.rematchRoomId,
+        mode: mode ?? this.mode,
+        secretWord: secretWord ?? this.secretWord,
+        lettersRevealedTiles: lettersRevealedTiles ?? this.lettersRevealedTiles,
+        lettersGuessed: lettersGuessed ?? this.lettersGuessed,
+        lettersSolvedSlots: lettersSolvedSlots ?? this.lettersSolvedSlots,
       );
 
   @override
@@ -464,5 +519,10 @@ class RoomModel extends Equatable {
         topicChoices,
         placementPaidPlayerIds,
         rematchRoomId,
+        mode,
+        secretWord,
+        lettersRevealedTiles,
+        lettersGuessed,
+        lettersSolvedSlots,
       ];
 }

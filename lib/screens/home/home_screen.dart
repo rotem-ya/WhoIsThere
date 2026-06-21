@@ -36,6 +36,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   late final bool _doIntro;
   bool _isCreating = false;
   int? _loadingPlayers;
+  bool _loadingLetters = false;
   DateTime? _lastBackPressedAt;
   // Test branch: difficulty chosen for the next quick game (picker below).
   Difficulty _quickDifficulty = Difficulty.easy;
@@ -220,6 +221,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _loadingPlayers = null;
         });
       }
+    }
+  }
+
+  /// Letters game (משחק האותיות) — a free solo Wordle-style duel vs a bot.
+  Future<void> _startLettersGame() async {
+    if (_isCreating || _loadingLetters) return;
+    QaLoggerService.instance.log('HOME', 'TAP_LETTERS_GAME');
+    FeedbackService.click();
+    setState(() => _loadingLetters = true);
+    try {
+      final user = await ref.read(currentUserProvider.future);
+      if (user == null) return;
+      final room = await ref.read(roomServiceProvider).createLettersRoom(
+            hostId: user.id,
+            hostName: user.name,
+            hostPhotoUrl: user.photoUrl,
+          );
+      if (mounted) context.go('/letters/${room.id}');
+    } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log('HOME', 'LETTERS_GAME_ERROR ${msg.length > 60 ? msg.substring(0, 60) : msg}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('יצירת המשחק נכשלה: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingLetters = false);
     }
   }
 
@@ -670,6 +699,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             delayMs: 600, durationMs: 240,
                           ),
                           SizedBox(height: verySmall ? 6 : 10),
+                          _step(
+                            _LettersButton(
+                              isLoading: _loadingLetters,
+                              onTap: (_isCreating || _loadingLetters)
+                                  ? null
+                                  : _startLettersGame,
+                            ),
+                            delayMs: 660, durationMs: 240,
+                          ),
+                          SizedBox(height: verySmall ? 6 : 10),
                           const BannerAdWidget(),
                           SizedBox(height: verySmall ? 4 : 8),
                         ],
@@ -899,6 +938,58 @@ class _FriendsButton extends StatelessWidget {
                   const Icon(Icons.people_rounded, color: Color(0xFF87CEEB), size: 19),
                 const SizedBox(width: 10),
                 const Text('שחק עם חברים', style: TextStyle(color: Color(0xFF87CEEB), fontSize: 16, fontWeight: FontWeight.w800)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LettersButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback? onTap;
+
+  const _LettersButton({required this.isLoading, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: PressableScale(
+        onTap: onTap == null
+            ? null
+            : () {
+                HapticFeedback.lightImpact();
+                onTap!();
+              },
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 160),
+          opacity: onTap == null ? 0.58 : 1,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 13),
+            decoration: BoxDecoration(
+              color: const Color(0xFF050A14).withOpacity(0.50),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.40)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isLoading)
+                  const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          color: Color(0xFFFFE082), strokeWidth: 2))
+                else
+                  const Text('🔤', style: TextStyle(fontSize: 19)),
+                const SizedBox(width: 10),
+                const Text('משחק האותיות',
+                    style: TextStyle(
+                        color: Color(0xFFFFE082),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800)),
               ],
             ),
           ),

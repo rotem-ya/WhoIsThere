@@ -7,6 +7,7 @@ import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
 import '../../screens/auth/auth_screen.dart';
 import '../../screens/game/game_board_screen.dart';
+import '../../screens/game/letters_game_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/room/create_room_screen.dart';
@@ -88,6 +89,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/game/:roomId',
         builder: (context, state) =>
             GameBoardScreen(roomId: state.pathParameters['roomId']!),
+      ),
+      GoRoute(
+        path: '/letters/:roomId',
+        builder: (context, state) =>
+            LettersGameScreen(roomId: state.pathParameters['roomId']!),
       ),
       GoRoute(
         path: '/win/:roomId',
