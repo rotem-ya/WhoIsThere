@@ -383,14 +383,13 @@ class _CardsTab extends StatelessWidget {
           ),
           Expanded(
             child: GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.62,
+              crossAxisCount: 3,
+              crossAxisSpacing: 9,
+              mainAxisSpacing: 9,
+              childAspectRatio: 0.74,
               children: [
                 _PlayingCard(
                   title: 'חסימה 5 שניות',
-                  description: 'מונע ניחוש מיריב למשך 5 שניות',
                   emoji: '⏱️',
                   iconData: Icons.timer_outlined,
                   illustrationGradient: const [Color(0xFF1890D0), Color(0xFF0060A0)],
@@ -404,7 +403,6 @@ class _CardsTab extends StatelessWidget {
                 ).animate(delay: 60.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
                 _PlayingCard(
                   title: 'החשכה',
-                  description: 'מחשיך את הלוח של יריב ל-5 שניות',
                   emoji: '🕶️',
                   iconData: Icons.visibility_off_outlined,
                   illustrationGradient: const [Color(0xFF3A3A4A), Color(0xFF1A1A2E)],
@@ -418,7 +416,6 @@ class _CardsTab extends StatelessWidget {
                 ).animate(delay: 120.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
                 _PlayingCard(
                   title: 'חסימה 10 שניות',
-                  description: 'מונע ניחוש מיריב למשך 10 שניות',
                   emoji: '⏰',
                   iconData: Icons.timer,
                   illustrationGradient: const [Color(0xFF1060A0), Color(0xFF003080)],
@@ -432,7 +429,6 @@ class _CardsTab extends StatelessWidget {
                 ).animate(delay: 180.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
                 _PlayingCard(
                   title: 'כרטיס עצור',
-                  description: 'חוסם שחקן אחד מניחוש לתור שלם',
                   emoji: '🔒',
                   iconData: Icons.lock_outline,
                   illustrationGradient: const [Color(0xFF8B4FBF), Color(0xFF5A1A8A)],
@@ -446,7 +442,6 @@ class _CardsTab extends StatelessWidget {
                 ).animate(delay: 240.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
                 _PlayingCard(
                   title: 'הצצה',
-                  description: 'חושף לרגע את הלוח שלך — כרטיס עזר אישי',
                   emoji: '👁️',
                   iconData: Icons.visibility_outlined,
                   illustrationGradient: const [Color(0xFF26A69A), Color(0xFF00695C)],
@@ -532,7 +527,6 @@ class _CardsTab extends StatelessWidget {
 
 class _PlayingCard extends StatelessWidget {
   final String title;
-  final String description;
   final String emoji;
   final IconData iconData;
   final List<Color> illustrationGradient;
@@ -546,7 +540,6 @@ class _PlayingCard extends StatelessWidget {
 
   const _PlayingCard({
     required this.title,
-    required this.description,
     required this.emoji,
     required this.iconData,
     required this.illustrationGradient,
@@ -585,14 +578,13 @@ class _PlayingCard extends StatelessWidget {
                 const Color(0xFF04091A),
               ],
             ),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: accentColor.withOpacity(0.70), width: 1.8),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: accentColor.withOpacity(0.45), width: 1.0),
             boxShadow: [
               BoxShadow(
-                color: accentColor.withOpacity(0.22),
-                blurRadius: 14,
-                spreadRadius: 1,
-                offset: const Offset(0, 4),
+                color: accentColor.withOpacity(0.12),
+                blurRadius: 9,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -601,19 +593,41 @@ class _PlayingCard extends StatelessWidget {
             children: [
               // ── Coloured top bar ─────────────────────────────────────────
               Container(
-                height: 7,
+                height: 4,
                 decoration: BoxDecoration(
                   color: accentColor,
                   borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(16)),
+                      const BorderRadius.vertical(top: Radius.circular(15)),
                 ),
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
+                      // Card illustration
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: illustrationGradient,
+                          ),
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Icon(iconData,
+                                color: Colors.white.withOpacity(0.22), size: 24),
+                            Text(emoji,
+                                style: const TextStyle(fontSize: 17, height: 1)),
+                          ],
+                        ),
+                      ),
                       // Title
                       Text(
                         title,
@@ -622,68 +636,19 @@ class _PlayingCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          height: 1.2,
-                        ),
-                      ),
-                      // Card illustration
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: illustrationGradient,
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: illustrationGradient.first.withOpacity(0.45),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Icon(iconData, color: Colors.white.withOpacity(0.25), size: 38),
-                            Text(emoji, style: const TextStyle(fontSize: 22, height: 1)),
-                          ],
-                        ),
-                      ),
-                      // Description
-                      Text(
-                        description,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.60),
                           fontSize: 11,
-                          height: 1.3,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
                         ),
                       ),
-                      // Owned badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: accentColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: accentColor.withOpacity(0.45), width: 1),
-                        ),
-                        child: Text(
-                          'ברשותך: $owned',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: accentColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                          ),
+                      // Owned count (compact)
+                      Text(
+                        'ברשותך $owned',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: accentColor,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -692,21 +657,21 @@ class _PlayingCard extends StatelessWidget {
               ),
               // ── Buy button ───────────────────────────────────────────────
               Container(
-                margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                padding: const EdgeInsets.symmetric(vertical: 9),
+                margin: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+                padding: const EdgeInsets.symmetric(vertical: 6),
                 decoration: BoxDecoration(
                   color: canAfford ? accentColor : Colors.white12,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text.rich(
                   TextSpan(
                     text: '$price ',
-                    children: [coinSpan(size: 14, color: canAfford ? const Color(0xFFFFC107) : Colors.white38)],
+                    children: [coinSpan(size: 12, color: canAfford ? const Color(0xFFFFC107) : Colors.white38)],
                   ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: canAfford ? Colors.white : Colors.white38,
-                    fontSize: 14,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -739,25 +704,37 @@ class _LockedCard extends StatelessWidget {
           end: Alignment.bottomCenter,
           colors: [Color(0xFF1A1A2A), Color(0xFF0A0A14)],
         ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white12, width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12, width: 1.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            height: 7,
+            height: 4,
             decoration: const BoxDecoration(
               color: Colors.white12,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
             ),
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Text(
+                        emoji,
+                        style: const TextStyle(
+                            fontSize: 32, height: 1, color: Color(0x33FFFFFF)),
+                      ),
+                      const Icon(Icons.lock_rounded,
+                          color: Colors.white54, size: 22),
+                    ],
+                  ),
                   Text(
                     title,
                     textAlign: TextAlign.center,
@@ -765,30 +742,18 @@ class _LockedCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white38,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      height: 1.2,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      height: 1.15,
                     ),
                   ),
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Text(
-                        emoji,
-                        style: const TextStyle(
-                            fontSize: 44, height: 1, color: Color(0x33FFFFFF)),
-                      ),
-                      const Icon(Icons.lock_rounded,
-                          color: Colors.white54, size: 30),
-                    ],
-                  ),
                   Text(
-                    'גלה $requiredDiscoveries מקומות\nלפתיחה',
+                    'גלה $requiredDiscoveries מקומות',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white38,
-                      fontSize: 11,
-                      height: 1.4,
+                      fontSize: 9,
+                      height: 1.2,
                     ),
                   ),
                 ],
@@ -796,22 +761,22 @@ class _LockedCard extends StatelessWidget {
             ),
           ),
           Container(
-            margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-            padding: const EdgeInsets.symmetric(vertical: 9),
+            margin: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+            padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white10,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.lock_rounded, color: Colors.white24, size: 14),
-                SizedBox(width: 4),
+                Icon(Icons.lock_rounded, color: Colors.white24, size: 12),
+                SizedBox(width: 3),
                 Text(
                   'נעול',
                   style: TextStyle(
                       color: Colors.white24,
-                      fontSize: 13,
+                      fontSize: 11,
                       fontWeight: FontWeight.w900),
                 ),
               ],
