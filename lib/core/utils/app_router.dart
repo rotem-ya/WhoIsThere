@@ -177,7 +177,7 @@ class _RouterNotifier extends ChangeNotifier {
         final wasAnonymous = prevUser?.isAnonymous ?? true;
         final isNonAnonymous = nextUser != null && !nextUser.isAnonymous;
         if (wasAnonymous && isNonAnonymous) {
-          nextUser.getIdToken(true).catchError((_) {});
+          nextUser.getIdToken(true).catchError((_) => '');
         }
 
         if (wasLoggedIn != isLoggedIn) notifyListeners();

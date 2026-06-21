@@ -728,7 +728,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   _lastObservedNotOwnerRevealDeadline == room.revealDeadlineMs;
               if (isRemoteStalled) {
                 final overdueMs = now - room.revealDeadlineMs!;
-                _markOpponentStuck(stalledOwner!, room.revealDeadlineMs!,
+                _markOpponentStuck(stalledOwner, room.revealDeadlineMs!,
                     overdueMs: overdueMs);
               } else {
                 _markOffline('snapshot_stale_$level');
@@ -2653,7 +2653,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     QaLoggerService.instance.log('GAME', 'SPECTATOR_GUESS_CLOCK_VISIBLE');
                   }
                   if (!_scoreCliffSignalLogged && canGuessNow) {
-                    final _b9MyScore = currentUserId != null ? (room.players[currentUserId]?.score ?? 0) : 0;
+                    final _b9MyScore = room.players[currentUserId]?.score ?? 0;
                     final _b9LeaderScore = room.sortedPlayers.isNotEmpty ? room.sortedPlayers.first.score : 0;
                     if ((_b9LeaderScore - _b9MyScore) <= 1) {
                       _scoreCliffSignalLogged = true;
@@ -2699,15 +2699,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                           GameCategories.byId(room.selectedCategory).hasHints &&
                           _purchasedFacts.length == 1 &&
                           (_image?.facts.length ?? 0) > 1)
-                      ? () => _buySecondHint(room, currentUserId!)
+                      ? () => _buySecondHint(room, currentUserId)
                       : null,
                   onGuess: (!_isFinished && currentUserId != null)
-                      ? () => _handleGuessTap(room, currentUserId!, canGuessNow)
+                      ? () => _handleGuessTap(room, currentUserId, canGuessNow)
                       : null,
                   showGuessInput: _localGuessOpen && !_isFinished,
                   localGuessDeadlineMs: _localGuessDeadlineMs,
                   onGuessSubmit: (currentUserId != null && _localGuessOpen)
-                      ? (value) => _submitGuess(room, currentUserId!, value)
+                      ? (value) => _submitGuess(room, currentUserId, value)
                       : null,
                   stunCardCount: room.isHeat ? 0 : (user?.stunCardCount ?? 0),
                   onStunCard: (currentUserId == null || room.isHeat) ? null : (targetId) async {
@@ -2732,13 +2732,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   revealBuyCount: _revealBuyCount,
                   maxRevealBuys: room.isHeat ? 0 : _maxPersonalReveals,
                   onBuyReveal: (_canBuyReveal && !room.isHeat)
-                      ? () => _buyPersonalReveal(room, currentUserId!)
+                      ? () => _buyPersonalReveal(room, currentUserId)
                       : null,
                   detectiveActions: _detectiveActions,
                   spotlightCells: _spotlightCells,
                   revealedLetterCount: _lettersBought,
                   onBuyLetter: _canBuyLetter
-                      ? () => _buyLetter(room, currentUserId!)
+                      ? () => _buyLetter(room, currentUserId)
                       : null,
                   nextLetterPrice: _nextLetterPrice,
                   showBuyLetter: _showBuyLetter,

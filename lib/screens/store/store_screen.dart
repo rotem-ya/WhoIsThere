@@ -11,6 +11,7 @@ import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
+import '../../services/sfx_service.dart';
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/board_skin_background.dart';
 import '../../widgets/common/player_avatar.dart';
@@ -506,6 +507,7 @@ class _CardsTab extends StatelessWidget {
 
     if (granted) {
       AppFeedback.success();
+      SfxService.instance.purchase();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('✅ $label נרכש!')),
       );
@@ -1018,7 +1020,7 @@ class _DesignCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return PressableScale(
       onTap: () {
-        HapticFeedback.lightImpact();
+        AppFeedback.tap();
         context.push(route);
       },
       child: Container(

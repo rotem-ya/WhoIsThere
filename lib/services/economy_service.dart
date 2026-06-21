@@ -249,7 +249,7 @@ class EconomyService {
       );
       final data = updated.toFirestore();
       data['adRewardWindowStart'] =
-          Timestamp.fromDate(sameDay ? windowStart! : now);
+          Timestamp.fromDate(sameDay ? windowStart : now);
       tx.set(ref, data);
 
       final txId = _uuid.v4();

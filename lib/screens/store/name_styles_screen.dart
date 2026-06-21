@@ -9,6 +9,7 @@ import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../models/name_style.dart';
 import '../../providers/providers.dart';
+import '../../services/sfx_service.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_name_text.dart';
 import '../../widgets/economy/coin_display.dart';
@@ -218,6 +219,7 @@ class NameStylesScreen extends ConsumerWidget {
       });
 
       if (!context.mounted) return;
+      SfxService.instance.purchase();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${style.name} נרכש! לחץ "הצמד" כדי להפעיל')),
       );
@@ -242,6 +244,7 @@ class NameStylesScreen extends ConsumerWidget {
       await FirebaseFirestore.instance
           .doc('users/$uid')
           .set({'selectedNameStyle': style.id}, SetOptions(merge: true));
+      SfxService.instance.equip();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

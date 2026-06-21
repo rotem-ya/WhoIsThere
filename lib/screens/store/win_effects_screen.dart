@@ -9,6 +9,7 @@ import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../models/win_effect.dart';
 import '../../providers/providers.dart';
+import '../../services/sfx_service.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/win_effect_overlay.dart';
 import '../../widgets/economy/coin_display.dart';
@@ -212,6 +213,7 @@ class WinEffectsScreen extends ConsumerWidget {
       });
 
       if (!context.mounted) return;
+      SfxService.instance.purchase();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${effect.name} נרכש! לחץ "הצמד" כדי להפעיל')),
       );
@@ -236,6 +238,7 @@ class WinEffectsScreen extends ConsumerWidget {
       await FirebaseFirestore.instance
           .doc('users/$uid')
           .set({'selectedWinEffect': effect.id}, SetOptions(merge: true));
+      SfxService.instance.equip();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

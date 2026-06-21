@@ -9,6 +9,7 @@ import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../models/avatar_frame.dart';
 import '../../providers/providers.dart';
+import '../../services/sfx_service.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
 import '../../widgets/economy/coin_display.dart';
@@ -216,6 +217,7 @@ class AvatarFramesScreen extends ConsumerWidget {
       });
 
       if (!context.mounted) return;
+      SfxService.instance.purchase();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${frame.name} נרכשה! לחץ "הצמד" כדי להפעיל')),
       );
@@ -240,6 +242,7 @@ class AvatarFramesScreen extends ConsumerWidget {
       await FirebaseFirestore.instance
           .doc('users/$uid')
           .set({'selectedAvatarFrame': frame.id}, SetOptions(merge: true));
+      SfxService.instance.equip();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

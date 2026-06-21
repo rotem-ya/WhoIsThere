@@ -10,6 +10,7 @@ import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../models/avatar_choice.dart';
 import '../../providers/providers.dart';
+import '../../services/sfx_service.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/player_name_text.dart';
@@ -214,6 +215,7 @@ class AvatarsScreen extends ConsumerWidget {
             SetOptions(merge: true));
       });
 
+      SfxService.instance.purchase();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${avatar.name} נרכש! לחץ "הצמד" כדי להפעיל')),
@@ -239,6 +241,7 @@ class AvatarsScreen extends ConsumerWidget {
       await FirebaseFirestore.instance
           .doc('users/$uid')
           .set({'selectedAvatar': avatar.id}, SetOptions(merge: true));
+      SfxService.instance.equip();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${avatar.name} הוצמד!')),
