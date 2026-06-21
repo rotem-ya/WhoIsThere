@@ -219,6 +219,10 @@ class RoomService {
               localDefault: place['is_active'] != false,
             ))
         .map(_localPlaceToImage)
+        // Apply any live admin override (image/text) to the bundled item — the
+        // image swaps in immediately when published & cached, and falls back to
+        // the bundled asset once the admin clears the override.
+        .map(manifest.resolveBundled)
         .toList(growable: false);
 
     final merged = <GameImageModel>[
@@ -227,11 +231,13 @@ class RoomService {
     ];
     if (merged.isNotEmpty) return merged;
 
-    // Safety net — ignore the manifest and return bundled defaults.
+    // Safety net — ignore the manifest and return bundled defaults (overrides
+    // are a no-op here when the manifest is empty).
     return raw
         .where(inAllowlist)
         .where((place) => place['is_active'] != false)
         .map(_localPlaceToImage)
+        .map(manifest.resolveBundled)
         .toList(growable: false);
   }
 

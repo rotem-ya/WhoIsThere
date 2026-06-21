@@ -177,6 +177,15 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 
 ---
 
+## משחק האותיות (משחק חדש) — מצב + מטלות דחויות
+משחק וורדל-עם-תמונות, 1 נגד 1 תורות. התשובה = שם עברי של תמונה אקראית מכל הקטגוריות (בלי כותרת נושא). אות במיקום מדויק (ירוק) → 4 משבצות; אות שקיימת במקום אחר (צהוב) → 2; חוטא → 0. **לוח נפרד לכל שחקן**, לוח זכוכית-מט 8×8 (משבצות שהיריב חשף = זכוכית אדומה מט). ניצחון אוטומטי למשלים ראשון.
+- **קוד:** `mode:'letters'` + `secretWord`/`lettersRevealedTiles`/`lettersGuessed`/`lettersSolvedSlots` ב-`RoomModel`; לוגיקה טהורה ב-`lib/core/utils/letters_matcher.dart` (+ טסטים); שירות `createLettersRoom`/`guessLetterInLettersGame` ב-`room_service`; מסך `lib/screens/game/letters_game_screen.dart` (route `/letters/:roomId`); כניסה מהבית = כפתור "🔤 משחק האותיות".
+- **מטלות דחויות (לבקשת רוטם — להזכיר):**
+  - [ ] **מולטיפלייר (יריב אמיתי)** — matchmaking מסונן `mode=='letters'`; ה-state כבר מוכן (לוחות נפרדים, סוד משותף, בורר תורות טרנזקציוני).
+  - [ ] פוליש: אנימציות חשיפה/מחוון תור, אולי טיימר קצר לתור, בדיקה חיה על מכשיר (ביצועי ה-blur של 64 משבצות).
+
+---
+
 ## הזמנה ל-Play Store — QA Launch Prep
 
 ### סטטוס: ✅ נפתר (מסלול A — נמצא מפתח ההעלאה הנכון EA:3B)

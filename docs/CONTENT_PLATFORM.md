@@ -51,9 +51,9 @@
       "nameHe": "הכותל המערבי",     // (גם name_he מתקבל)
       "answerHe": "הכותל",          // (גם answer_he). נופל ל-nameHe אם חסר.
       "aliasesHe": ["הכותל המערבי", "הכותל"], // (גם aliases_he). תשובות חלופיות מקובלות.
-      "facts": ["...", "..."],     // רמזים. רלוונטי ל-remote בלבד (ראה §4).
-      "imageUrl": "https://.../western_wall.jpg", // remote בלבד — download URL מ-Storage.
-      "imageVersion": 3            // remote בלבד — int. bump בכל החלפת תמונה (cache-bust).
+      "facts": ["...", "..."],     // רמזים. ל-remote = ההגדרה; ל-bundled = override טקסטואלי (ראה §4).
+      "imageUrl": "https://.../western_wall.jpg", // remote = התמונה; ל-bundled = override תמונה חי (ראה §4). ריק/חסר = נפילה לבילד.
+      "imageVersion": 3            // int. bump בכל החלפת תמונה (cache-bust). תקף ל-remote וגם ל-override של bundled.
     }
   ]
 }
@@ -72,6 +72,17 @@
 - שם-התצוגה הוא **תצוגה בלבד** — הוא **אינו** משנה את ה-`category` id, שמות קבצים, או הבריכה. רק הטקסט שהשחקן רואה משתנה.
 - בצד המשחק: `ContentManifestService.topicLabel(categoryId)` (מחזיר `null` כשאין override → ה-UI נופל לשם המובנה). נטען offline (`loadCached`) ומסונכרן בהפעלה (`sync`).
 
+**Manifest Override לפריט bundled (חי, ללא build):**
+- כל כניסה — כולל `source:"bundled"` — יכולה לשאת **override** שגובר על הבילד, דרך **אותם שדות קיימים** (אין שדות חדשים):
+  - **תמונה:** `imageUrl` (+`imageVersion` ל-cache-bust). אין יותר הגבלת "remote בלבד".
+  - **טקסט:** `nameHe` / `answerHe` / `aliasesHe` / `facts`.
+- **קדימות (חד-משמעית, חלה על כל הקטגוריות באותו merge של `_loadLocalImages`):**
+  - תמונה: אם במניפסט יש `imageUrl` **לא-ריק** → המשחק מציג אותו (cache-bust לפי `imageVersion`), ללא קשר ל-`source`. אם ריק/חסר → נפילה ל-asset המוטמע.
+  - טקסט: ערך **לא-ריק** במניפסט גובר על ה-JSON המוטמע; אחרת המוטמע. (`answerHe` נופל ל-`nameHe` בפענוח — לעריכת טקסט יש לשלוח את שני השדות יחד.)
+- **אין צורך בשום שדה "זמני":** עצם קיום `imageUrl` לא-ריק = override פעיל. **ניקוי override** = הסרת `imageUrl`(+`imageVersion`) מהכניסה, או `imageUrl` ריק → המשחק חוזר אוטומטית ל-asset המוטמע (ראה מחזור-חיים ב-§3).
+- **בטיחות offline:** override-תמונה נכנס לתוקף רק אחרי שהקובץ נצרב במטמון (pre-warm ב-`sync`). עד אז (או במצב offline ראשוני) המשחק מציג את ה-asset המוטמע — לעולם לא תמונה שבורה.
+- בצד המשחק: `ContentManifestService.resolveBundled(GameImageModel)` מיישם את הקדימות; נקרא בתוך `RoomService._loadLocalImages` על כל פריט מוטמע. נטען offline (`loadCached`) ומסונכרן בהפעלה (`sync`), בדיוק כמו `topicsActive`/`topicLabels`.
+
 **חוקי פרסום (publish):**
 1. כתוב את **כל** המסמך בכתיבה אחת (set), כולל `version` מוגדל.
 2. אל תסיר שדות לא-מוכרים שכבר קיימים — שמר תאימות קדימה.
@@ -81,10 +92,15 @@
 
 ## 3. אחסון תמונות (Firebase Storage)
 
-- מקומות **remote** בלבד זקוקים לתמונה ב-Storage. מקומות **bundled** — התמונה כבר באפליקציה.
-- נתיב מומלץ: `place_images/{category}/{id}.jpg` (או `.webp`). שמור על דחיסה (JPEG/WebP, ~150KB) — ה-egress עולה כסף.
+- מקומות **remote** זקוקים לתמונה ב-Storage. מקומות **bundled** מציגים את ה-asset המוטמע — **אלא אם** הוגדר להם override-תמונה (ראה §2/§4), ואז גם הם נשענים על Storage **באופן זמני**.
+- נתיב: `place_images/{category}/{id}.jpg` (או `.webp`). `id` = ה-id (המוטמע, אם bundled), `category` = ה-id המדויק מ-§8. שמור על דחיסה (JPEG/WebP, ~150KB) — ה-egress עולה כסף.
 - האדמין מעלה את הקובץ → משיג `getDownloadURL()` → כותב אותו ל-`imageUrl` בכניסת המקום במניפסט.
 - **החלפת תמונה לאותו `id`:** העלה מחדש **והגדל את `imageVersion`**. בלי זה — המכשירים ימשיכו להציג את התמונה הישנה מהמטמון.
+
+**מחזור-חיים של override-תמונה ל-bundled (זמני וחי — החלק הקריטי):**
+1. **החלפה חיה:** האדמין מחליף תמונה לפריט bundled → עולה מיד ל-Storage → נכתב `imageUrl`+`imageVersion` בכניסה → המשחק מציג אותה **מיד** (אחרי `sync` + pre-warm במטמון), בלי build חדש.
+2. **Handoff להטמעה:** האדמין מייצא zip handoff לקטגוריה ושולח לקלוד המשחק. קלוד המשחק מטמיע את התמונה ב-`assets` ומוציא release.
+3. **ניקוי override:** אחרי שה-release עם התמונה הצרובה עלה, האדמין **מסיר** `imageUrl`(+`imageVersion`) מהכניסה (או מאפס ל-`imageUrl` ריק) ומפרסם (version++). מאז המשחק חוזר להציג את ה-asset הקל המוטמע → **חוסך egress**. אין שדה "זמני" — היעדר `imageUrl` הוא הניקוי.
 
 ---
 
@@ -92,11 +108,12 @@
 
 | | **bundled** | **remote** |
 |---|---|---|
-| מקור התמונה | מוטמע באפליקציה (assets) | Firebase Storage |
-| מקור המטא-דאטה (שם/רמזים) | JSON מוטמע באפליקציה | **המניפסט** (`nameHe`/`facts`/…) |
-| מה האדמין שולט בו | **`isActive` בלבד** (הפעלה/השבתה) | **הכל** (הוספה/עריכה/השבתה/החלפת תמונה/מחיקה) |
+| מקור התמונה | asset מוטמע — **או** override מ-Storage (`imageUrl`, זמני, ראה §3) | Firebase Storage |
+| מקור המטא-דאטה (שם/רמזים) | JSON מוטמע — **או** override מהמניפסט (`nameHe`/`answerHe`/`aliasesHe`/`facts`) | **המניפסט** (`nameHe`/`facts`/…) |
+| מה האדמין שולט בו | **`isActive`** + **override חי** (תמונה וטקסט דרך אותם שדות) | **הכל** (הוספה/עריכה/השבתה/החלפת תמונה/מחיקה) |
 | נכנס לבריכת המשחק כש… | קיים ב-JSON **וגם** `isActive!=false` | `isActive==true` **וגם** התמונה כבר במטמון המכשיר |
 
+- **קדימות (§2):** לכל `id`, `imageUrl` לא-ריק במניפסט → המשחק מציג אותו (cache-bust לפי `imageVersion`) ללא קשר ל-`source`; אחרת ה-asset המוטמע. אותו עיקרון לטקסט: ערך לא-ריק גובר, אחרת המוטמע. override-תמונה דורש שהקובץ כבר במטמון (אחרת נפילה לבילד — בטיחות offline).
 - מקום **bundled** שלא מופיע במניפסט נחשב **פעיל** (ברירת מחדל). כדי להשבית אותו — הוסף לו כניסה עם `isActive:false`.
 - כדי שהאדמין יציג **את כל** המקומות ה-bundled (כדי לאפשר השבתה), הוא צריך את רשימת ה-ids המוטמעים. ראה **[`docs/content_catalog_seed.json`](content_catalog_seed.json)** — snapshot מלא (id, category, nameHe) לייבוא חד-פעמי. יש לרענן אותו כשתוכן מוטמע משתנה (ראה Changelog).
 - **השבתה אינה מוחקת היסטוריה:** השבתת מקום מורידה אותו מהבריכה לעתיד, אבל מקום שכבר גולה ע"י שחקן נשאר ב-`discoveredImageIds` שלו (היסטוריה אישית). זו התנהגות מכוונת.
@@ -113,6 +130,8 @@
 3. **הוספת מקום remote** — טופס: בחירת קטגוריה (חובה!) → העלאת תמונה ל-Storage → מילוי nameHe/answerHe/aliasesHe/facts → כתיבת כניסה עם `source:"remote"` + `imageUrl` + `imageVersion:1`.
 4. **עריכת/החלפת** מקום remote — כולל החלפת תמונה עם bump ל-`imageVersion`.
 5. **מחיקת** מקום remote (bundled לא נמחק, רק מושבת).
+   - **5א. החלפת תמונה / override לכל פריט (כולל bundled):** כפתור "החלף תמונה" בכל קטגוריה → העלאה ל-`place_images/{category}/{id}.jpg` → כתיבת `imageUrl`+`imageVersion` בכניסת הפריט (יוצר כניסה אם אין) → פרסום (version++). המשחק יציג מיד (§3). אינדיקציה ויזואלית לפריט עם override פעיל + כפתור **"נקה override (חזרה לבילד)"** שמסיר `imageUrl`+`imageVersion` (או מאפס לריק) ומפרסם (version++). (אופציונלי) override טקסטואלי לפריט bundled דרך `nameHe`/`answerHe`/`aliasesHe`/`facts` — שלח `nameHe`+`answerHe` יחד.
+   - **5ב. ייצוא zip handoff לכל קטגוריה** — לשליחה לקלוד המשחק להטמעה ב-assets, ואז ניקוי ה-override (מחזור-החיים §3).
 6. **פרסום** — כל שינוי כותב מחדש את המסמך עם `version` מוגדל (אפשר batching של כמה שינויים לפרסום אחד).
 7. **השהיה/הצגה של נושא שלם** — toggle על `topicsActive[categoryId]` (ראה §2). כפתור "השהה/הצג נושא" ליד כל קטגוריה בחי-צומח-דומם כותב `false`/`true` למפה ומפרסם (version++). מפתח = ה-id המדויק מ-§8. נושא מושהה נעלם מבוחר-הנושאים במשחק (כולל הפעלה מחדש).
 8. **שינוי שם-תצוגה של נושא** — כפתור "✏️ שם" ליד כל קטגוריה כותב `topicLabels[categoryId]=<שם חדש>` (ראה §2) ומפרסם (version++). מפתח = ה-id המדויק מ-§8. ערך ריק / מחיקת המפתח = חזרה לשם ברירת-המחדל. השם החדש מופיע במשחק (בוחר-הנושאים + תצוגת המקצה) בהפעלה הבאה.
@@ -174,3 +193,4 @@ world_figures   → "דמויות מוכרות בעולם"  (תשתית, ריק)
 | 2026-06-18 | משחק | רוענן `content_catalog_seed.json` (version 2): **546** מקומות מוטמעים ב-12 קטגוריות (israel_places 45, animals 59, plants 40, objects 47, birds 48, vehicles 47, professions 48, flags 28, instruments 48, produce 50, clothing 43, sports 43). `category` = ה-game id (= שם הקובץ), לא ה-sub-type הפר-פריט. | האדמין: לייבא מחדש את ה-seed (מחליף את הסט הישן של 4 קטגוריות) |
 | 2026-06-18 | משחק | מנגנון `topicsActive` — השבתת נושא שלם דרך המניפסט (§2). שם השדה: **`topicsActive`**, ברירת מחדל **פעיל** (מפתח חסר = מוצג). נצרך ב-`isCategoryActive` → בוחר-הנושאים + הגרלת המשחק המהיר. | האדמין: להוסיף כפתור "השהה/הצג נושא" שכותב `topicsActive[id]=false/true` עם המפתחות מ-§8 ומפרסם (version++) |
 | 2026-06-20 | משחק | מנגנון `topicLabels` — שם-תצוגה לנושא דרך המניפסט (§2). **שם השדה מאושר: `topicLabels`** (מפה `categoryId → string`), ברירת מחדל = השם המובנה מ-§8 (מפתח/מפה חסרים = תאימות מלאה לאחור). תצוגה בלבד — אינו משנה `category`/קבצים/בריכה. נצרך ב-`ContentManifestService.topicLabel` → בוחר-הנושאים בלובי + תצוגת המקצה במשחק. | האדמין: להוסיף כפתור "✏️ שם" שכותב `topicLabels[id]=<שם>` עם המפתחות מ-§8 ומפרסם (version++); ערך ריק = חזרה לברירת מחדל |
+| 2026-06-21 | משחק | **Manifest Override לפריט bundled** (§2/§3/§4/§5א) — אושר ומומש בצד המשחק. **אין שדות חדשים**, שימוש חוזר בשדות הקיימים: **`imageUrl`+`imageVersion`** (override תמונה, בוטלה הגבלת "remote בלבד") ו-**`nameHe`/`answerHe`/`aliasesHe`/`facts`** (override טקסטואלי). קדימות: `imageUrl` לא-ריק גובר על ה-asset (cache-bust לפי `imageVersion`), ערך טקסט לא-ריק גובר על ה-JSON; אחרת נפילה לבילד. **ניקוי override** = הסרת `imageUrl`(+`imageVersion`)/ריק → חזרה אוטומטית לבילד. override-תמונה נכנס לתוקף רק כשהקובץ במטמון (בטיחות offline). מומש ב-`ContentManifestService.resolveBundled` + pre-warm ב-`_apply`, נקרא ב-`RoomService._loadLocalImages` לכל הקטגוריות; נטען offline + sync. | האדמין: לממש 5א — כפתור "החלף תמונה" + "נקה override" לכל פריט (כולל bundled), אינדיקציית override פעיל; (אופציונלי) override טקסטואלי. אותם נתיב Storage (§3) ופרסום version++. |

@@ -106,6 +106,13 @@ class ContentManifestService {
 
   // id → isActive override (covers bundled + remote).
   final Map<String, bool> _activeById = {};
+  // id → full manifest entry (covers bundled + remote). Drives per-item override
+  // of a BUNDLED place's image/text without a new build (see [resolveBundled]).
+  final Map<String, _ManifestPlace> _entryById = {};
+  // Override image URLs (cache-busted) that are confirmed cached and therefore
+  // safe to show. A bundled override only takes effect once its image is ready,
+  // so offline/just-published items fall back to the bundled asset cleanly.
+  final Set<String> _readyOverrideUrls = {};
   // category id → remote places active AND with image cached, in that category.
   final Map<String, List<GameImageModel>> _remoteByCategory = {};
   // category id → active flag (manifest `topicsActive` map). A whole topic
@@ -147,6 +154,50 @@ class ContentManifestService {
   List<GameImageModel> availableRemoteImages(
           [String categoryId = 'israel_places']) =>
       List<GameImageModel>.unmodifiable(_remoteByCategory[categoryId] ?? const []);
+
+  /// Applies any live admin override to a BUNDLED place. For every id the
+  /// manifest may carry overrides that win over the built-in JSON/asset:
+  ///  • image — when the entry has a non-empty `imageUrl` AND that (cache-busted)
+  ///    image is already cached, it replaces the bundled asset (egress-friendly:
+  ///    once the admin clears `imageUrl`, the game falls back to the asset).
+  ///  • text — a non-empty `nameHe` / `answerHe` / `aliasesHe` / `facts` replaces
+  ///    the bundled value (empty = no override). `answerHe` falls back to
+  ///    `nameHe` per the manifest parse, so send both together for a text edit.
+  /// Returns [bundled] unchanged when there is no entry or nothing to override.
+  GameImageModel resolveBundled(GameImageModel bundled) {
+    final o = _entryById[bundled.id];
+    if (o == null) return bundled;
+
+    final overrideUrl = o.effectiveUrl;
+    final useImage =
+        overrideUrl != null && _readyOverrideUrls.contains(overrideUrl);
+
+    final name = o.nameHe.isNotEmpty ? o.nameHe : bundled.name;
+    final answer = o.answerHe.isNotEmpty ? o.answerHe : bundled.answer;
+    final aliases = o.aliases.isNotEmpty ? o.aliases : bundled.acceptedAnswers;
+    final facts = o.facts.isNotEmpty ? o.facts : bundled.facts;
+
+    if (!useImage &&
+        name == bundled.name &&
+        answer == bundled.answer &&
+        identical(aliases, bundled.acceptedAnswers) &&
+        identical(facts, bundled.facts)) {
+      return bundled; // nothing changed
+    }
+
+    return GameImageModel(
+      id: bundled.id,
+      name: name,
+      answer: answer,
+      acceptedAnswers: aliases,
+      facts: facts,
+      category: bundled.category,
+      isPremium: bundled.isPremium,
+      cost: bundled.cost,
+      imageUrl: useImage ? overrideUrl : bundled.imageUrl,
+      thumbnailUrl: useImage ? overrideUrl : bundled.thumbnailUrl,
+    );
+  }
 
   /// Instant, offline load from the last persisted manifest. Call at startup
   /// before [sync] so the previous state applies with zero network wait.
@@ -271,27 +322,40 @@ class ContentManifestService {
     _activeById
       ..clear()
       ..addEntries(places.map((p) => MapEntry(p.id, p.isActive)));
+    _entryById
+      ..clear()
+      ..addEntries(places.map((p) => MapEntry(p.id, p)));
+    _readyOverrideUrls.clear();
 
     final cache = DefaultCacheManager();
     final byCategory = <String, List<GameImageModel>>{};
     for (final p in places) {
-      if (!p.isRemote || !p.isActive) continue;
+      if (!p.isActive) continue;
       final url = p.effectiveUrl;
       if (url == null) {
-        QaLoggerService.instance.log('CONTENT', 'MANIFEST_REMOTE_NO_URL id=${p.id}');
+        // A remote place with no image can't be played; a bundled place with no
+        // override URL simply keeps its asset — nothing to pre-warm.
+        if (p.isRemote) {
+          QaLoggerService.instance.log('CONTENT', 'MANIFEST_REMOTE_NO_URL id=${p.id}');
+        }
         continue;
       }
+      // Pre-warm any image carried by the manifest — remote definitions AND
+      // bundled overrides — so it's ready (and offline-safe) before use.
       try {
         var fileInfo = await cache.getFileFromCache(url);
         if (fileInfo == null && downloadMissing) {
           fileInfo = await cache.downloadFile(url).timeout(const Duration(seconds: 12));
         }
         if (fileInfo != null) {
-          (byCategory[p.category] ??= []).add(_toImage(p, url));
+          _readyOverrideUrls.add(url);
+          if (p.isRemote) {
+            (byCategory[p.category] ??= []).add(_toImage(p, url));
+          }
         }
-        // Not cached and offline → skip this remote place for now.
+        // Not cached and offline → skip; bundled places fall back to the asset.
       } catch (e) {
-        QaLoggerService.instance.log('CONTENT', 'MANIFEST_REMOTE_SKIP id=${p.id} $e');
+        QaLoggerService.instance.log('CONTENT', 'MANIFEST_IMG_SKIP id=${p.id} $e');
       }
     }
     _remoteByCategory
