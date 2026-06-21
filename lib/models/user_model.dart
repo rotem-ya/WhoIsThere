@@ -21,6 +21,7 @@ class UserModel extends Equatable {
   final int guessBlock5Count;
   final int guessBlock10Count;
   final int blackoutCardCount;
+  final int peekCardCount;
   final bool noAds;
 
   const UserModel({
@@ -41,6 +42,7 @@ class UserModel extends Equatable {
     this.guessBlock5Count = 0,
     this.guessBlock10Count = 0,
     this.blackoutCardCount = 0,
+    this.peekCardCount = 0,
     this.noAds = false,
   });
 
@@ -64,6 +66,7 @@ class UserModel extends Equatable {
       guessBlock5Count: (data['guessBlock5Count'] as int?) ?? 0,
       guessBlock10Count: (data['guessBlock10Count'] as int?) ?? 0,
       blackoutCardCount: (data['blackoutCardCount'] as int?) ?? 0,
+      peekCardCount: (data['peekCardCount'] as int?) ?? 0,
       noAds: (data['noAds'] as bool?) ?? false,
     );
   }
@@ -103,6 +106,7 @@ class UserModel extends Equatable {
     int? guessBlock5Count,
     int? guessBlock10Count,
     int? blackoutCardCount,
+    int? peekCardCount,
     bool? noAds,
   }) =>
       UserModel(
@@ -123,6 +127,7 @@ class UserModel extends Equatable {
         guessBlock5Count: guessBlock5Count ?? this.guessBlock5Count,
         guessBlock10Count: guessBlock10Count ?? this.guessBlock10Count,
         blackoutCardCount: blackoutCardCount ?? this.blackoutCardCount,
+        peekCardCount: peekCardCount ?? this.peekCardCount,
         noAds: noAds ?? this.noAds,
       );
 
@@ -142,6 +147,7 @@ class UserModel extends Equatable {
         guessBlock5Count,
         guessBlock10Count,
         blackoutCardCount,
+        peekCardCount,
         noAds,
       ];
 }

@@ -1790,6 +1790,37 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     );
   }
 
+  /// 👁️ Peek card — owned consumable. Reveals the player's hidden tiles for
+  /// EconomyConfig.peekCardDurationMs, consuming one card from inventory (no
+  /// coin cost). Reuses the spotlight reveal/auto-hide path.
+  Future<void> _usePeekCard(String userId) async {
+    if (_spotlightCells.isNotEmpty) return; // a peek/spotlight is already running
+    final room = _lastRoom;
+    if (room == null) return;
+    final hidden = _hiddenTilesFor(room);
+    if (hidden.isEmpty) return;
+
+    // Atomically consume one card; bail if the player has none left.
+    final consumed =
+        await ref.read(economyServiceProvider).consumePeekCard(userId);
+    if (!consumed || !mounted) return;
+
+    HapticFeedback.mediumImpact();
+    QaLoggerService.instance.log('CARD', 'PEEK_CARD_USED tiles=${hidden.length}');
+    setState(() {
+      _spotlightCells
+        ..clear()
+        ..addAll(hidden);
+    });
+    _spotlightTimer?.cancel();
+    _spotlightTimer = Timer(
+      const Duration(milliseconds: EconomyConfig.peekCardDurationMs),
+      () {
+        if (mounted) setState(() => _spotlightCells.clear());
+      },
+    );
+  }
+
   /// Modal grid picker for the targeted-reveal tool. Hidden tiles are tappable;
   /// already-shown tiles are inert. Returns the chosen index or null on cancel.
   Future<int?> _showTilePicker(RoomModel room, Set<int> hidden) {
@@ -2675,6 +2706,20 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       onTap: () => _useFastForward(room, currentUserId),
                     ),
                   ]);
+
+                  // 👁️ Peek card — owned consumable (no per-use coin cost).
+                  // Shown only when the player has one in inventory.
+                  final peekCount = user?.peekCardCount ?? 0;
+                  if (peekCount > 0) {
+                    _detectiveActions.add(DetectiveAction(
+                      emoji: '👁️',
+                      label: 'הצצה ×$peekCount',
+                      price: 0,
+                      color: const Color(0xFF26A69A),
+                      enabled: _hiddenLeft > 0 && _spotlightCells.isEmpty,
+                      onTap: () => _usePeekCard(currentUserId),
+                    ));
+                  }
                 }
 
                 // Bought-letter (answer hint) availability in the guess input.

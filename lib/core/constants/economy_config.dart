@@ -117,6 +117,13 @@ class EconomyConfig {
   static const int blackoutCardPrice = 25;
   static const int blackoutDurationMs = 5000;
 
+  // ── Peek card (self-help consumable) ──────────────────────────
+  // Owned in inventory; reveals the player's own board for a moment with no
+  // per-use coin cost (unlike the spotlight tool). Unlocks at 15 discoveries.
+  static const int peekCardPrice = 40;
+  static const int peekCardDurationMs = 2000;
+  static const int peekCardUnlockDiscoveries = 15;
+
   // ── In-game detective reveal tools (pay-per-use, personal/client-local) ─
   // Self-help reveal actions used during a round. They uncover tiles for the
   // acting player ONLY (never written to the shared board), so they work the

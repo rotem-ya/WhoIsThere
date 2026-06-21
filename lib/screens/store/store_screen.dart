@@ -364,6 +364,7 @@ class _CardsTab extends StatelessWidget {
     final block5Count = user?.guessBlock5Count ?? 0;
     final block10Count = user?.guessBlock10Count ?? 0;
     final blackoutCount = user?.blackoutCardCount ?? 0;
+    final peekCount = user?.peekCardCount ?? 0;
     final discovered = user?.discoveredImageIds.length ?? 0;
 
     return Padding(
@@ -375,7 +376,7 @@ class _CardsTab extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 6),
             child: Text(
-              'לחץ על שחקן במשחק כדי להפעיל כרטיס',
+              'כרטיסי התקפה — לחץ על שחקן במשחק · כרטיסי עזר — בתפריט הכלים',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white54, fontSize: 12),
             ),
@@ -443,6 +444,20 @@ class _CardsTab extends StatelessWidget {
                   requiredDiscoveries: 40,
                   onBuy: () => _buyCard(context, 'stun'),
                 ).animate(delay: 240.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
+                _PlayingCard(
+                  title: 'הצצה',
+                  description: 'חושף לרגע את הלוח שלך — כרטיס עזר אישי',
+                  emoji: '👁️',
+                  iconData: Icons.visibility_outlined,
+                  illustrationGradient: const [Color(0xFF26A69A), Color(0xFF00695C)],
+                  accentColor: const Color(0xFF26A69A),
+                  owned: peekCount,
+                  price: EconomyConfig.peekCardPrice,
+                  canAfford: coins >= EconomyConfig.peekCardPrice,
+                  locked: discovered < EconomyConfig.peekCardUnlockDiscoveries,
+                  requiredDiscoveries: EconomyConfig.peekCardUnlockDiscoveries,
+                  onBuy: () => _buyCard(context, 'peek'),
+                ).animate(delay: 300.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
               ],
             ),
           ),
@@ -478,6 +493,10 @@ class _CardsTab extends StatelessWidget {
       price = EconomyConfig.blackoutCardPrice;
       buyFn = () => economy.buyBlackoutCard(uid);
       label = 'כרטיס החשכה';
+    } else if (type == 'peek') {
+      price = EconomyConfig.peekCardPrice;
+      buyFn = () => economy.buyPeekCard(uid);
+      label = 'כרטיס הצצה';
     } else {
       return;
     }

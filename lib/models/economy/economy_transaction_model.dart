@@ -21,6 +21,7 @@ enum TransactionType {
   guessBlock5Purchase,
   guessBlock10Purchase,
   blackoutCardPurchase,
+  peekCardPurchase,
   freeEntry,
 }
 
