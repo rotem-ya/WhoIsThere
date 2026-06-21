@@ -10,6 +10,7 @@ import '../../core/ui/app_text_styles.dart';
 import '../../models/board_skin.dart';
 import '../../providers/providers.dart';
 import '../../widgets/common/app_header.dart';
+import '../../widgets/common/board_skin_background.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_icon.dart';
 
@@ -399,16 +400,8 @@ class _BoardTile extends StatelessWidget {
               child: ClipRRect(
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(13)),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: skin.isNone
-                        ? const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Color(0xFF13294B), Color(0xFF050A16)],
-                          )
-                        : skin.gradient,
-                  ),
+                child: BoardSkinBackground(
+                  skinId: skin.id,
                   child: const _FauxBoardGrid(),
                 ),
               ),

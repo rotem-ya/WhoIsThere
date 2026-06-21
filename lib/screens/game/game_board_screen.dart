@@ -23,6 +23,7 @@ import '../../core/constants/game_constants.dart';
 import '../../models/board_skin.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
+import '../../widgets/common/board_skin_background.dart';
 import '../store/board_skins_screen.dart' show selectedBoardSkinProvider;
 import '../../models/room_model.dart';
 import '../../models/chat_message.dart';
@@ -2174,12 +2175,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
           ),
           child: Stack(
           children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: boardSkin.isNone
-                    ? AppStyles.backgroundGradient
-                    : boardSkin.gradient,
-              ),
+            BoardSkinBackground(
+              skinId: boardSkin.id,
               child: SafeArea(
                 top: false,
                 child: roomAsync.when(

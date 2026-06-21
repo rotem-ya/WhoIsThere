@@ -10,9 +10,9 @@ import '../../core/constants/economy_config.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
-import '../../models/board_skin.dart';
 import '../../providers/providers.dart';
 import '../../widgets/common/app_feedback.dart';
+import '../../widgets/common/board_skin_background.dart';
 import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/player_name_text.dart';
 import '../../widgets/common/pressable_scale.dart';
@@ -1017,20 +1017,18 @@ class _BoardSwatch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final skin = boardSkinFor(skinId);
-    return Container(
+    return SizedBox(
       width: 54,
       height: 40,
-      decoration: BoxDecoration(
-        gradient: skin.isNone
-            ? const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF13294B), Color(0xFF050A16)],
-              )
-            : skin.gradient,
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white24, width: 0.8),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white24, width: 0.8),
+          ),
+          child: BoardSkinBackground(skinId: skinId),
+        ),
       ),
     );
   }
