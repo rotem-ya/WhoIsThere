@@ -135,10 +135,8 @@ class EconomyConfig {
   static const int bombRevealClusterSize = 4;
   static const int maxBombUses = 2;
 
-  // 🔦 Spotlight — flashes the whole board (dim peek) for a moment, then hides.
-  static const int spotlightPrice = 50;
-  static const int spotlightDurationMs = 1500;
-  static const int maxSpotlightUses = 2;
+  // 🔦 Spotlight — removed (superseded by the 👁️ Peek card, which reveals the
+  // whole board from inventory). Constants intentionally dropped.
 
   // 🎯 Targeted reveal — player picks one specific tile to uncover.
   static const int targetedRevealPrice = 35;

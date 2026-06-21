@@ -129,10 +129,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   // Detective reveal tools — pay-per-use self-help actions. Like personal
   // reveals these uncover tiles for THIS player only (client-local, never
   // written to Firestore). Per-round usage counters cap each tool; all reset
-  // when a new place loads. Spotlight flashes a transient dim peek that auto-
-  // clears after EconomyConfig.spotlightDurationMs.
+  // when a new place loads. The Peek card flashes a transient reveal of all
+  // hidden tiles that auto-clears after EconomyConfig.peekCardDurationMs
+  // (these _spotlight* fields drive that transient reveal).
   int _bombUses = 0;
-  int _spotlightUses = 0;
   int _targetedUses = 0;
   int _fastForwardUses = 0;
   final Set<int> _spotlightCells = {};
@@ -1032,7 +1032,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _personalRevealedTiles.clear();
     _lettersBought = 0;
     _bombUses = 0;
-    _spotlightUses = 0;
     _targetedUses = 0;
     _fastForwardUses = 0;
     _spotlightTimer?.cancel();
@@ -1764,31 +1763,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       _personalRevealedTiles.add(chosen);
       _targetedUses++;
     });
-  }
-
-  /// 🔦 Spotlight — flashes every hidden tile as a dim peek, then auto-hides
-  /// after EconomyConfig.spotlightDurationMs.
-  Future<void> _useSpotlight(RoomModel room, String userId) async {
-    if (_spotlightUses >= EconomyConfig.maxSpotlightUses) return;
-    if (_spotlightCells.isNotEmpty) return; // a flash is already running
-    final hidden = _hiddenTilesFor(room);
-    if (hidden.isEmpty) return;
-    if (!await _spendForTool(room, userId, EconomyConfig.spotlightPrice)) return;
-
-    QaLoggerService.instance.log('GAME', 'TOOL_SPOTLIGHT tiles=${hidden.length}');
-    setState(() {
-      _spotlightCells
-        ..clear()
-        ..addAll(hidden);
-      _spotlightUses++;
-    });
-    _spotlightTimer?.cancel();
-    _spotlightTimer = Timer(
-      const Duration(milliseconds: EconomyConfig.spotlightDurationMs),
-      () {
-        if (mounted) setState(() => _spotlightCells.clear());
-      },
-    );
   }
 
   /// 👁️ Peek card — owned consumable. Reveals the player's hidden tiles for
@@ -2670,17 +2644,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                           _bombUses < EconomyConfig.maxBombUses &&
                           _coins >= EconomyConfig.bombRevealPrice,
                       onTap: () => _useBomb(room, currentUserId),
-                    ),
-                    DetectiveAction(
-                      emoji: '🔦',
-                      label: 'זרקור',
-                      price: EconomyConfig.spotlightPrice,
-                      color: const Color(0xFFFFD54F),
-                      enabled: _hiddenLeft > 0 &&
-                          _spotlightCells.isEmpty &&
-                          _spotlightUses < EconomyConfig.maxSpotlightUses &&
-                          _coins >= EconomyConfig.spotlightPrice,
-                      onTap: () => _useSpotlight(room, currentUserId),
                     ),
                     DetectiveAction(
                       emoji: '🎯',
