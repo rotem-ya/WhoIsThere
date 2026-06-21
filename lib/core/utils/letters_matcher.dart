@@ -16,6 +16,10 @@ import '../../widgets/game/letter_bank_input.dart'
 /// 12-slot cap so the on-screen layout never overflows).
 const int kLettersMaxSlots = 12;
 
+/// The letters board is a fixed 8×8 grid of frosted-glass tiles (independent of
+/// the [Difficulty] grid sizes).
+const int kLettersGridSize = 8;
+
 enum LetterFeedback { exact, present, absent }
 
 /// A prepared puzzle: one entry per letter slot, aligned across the three lists.

@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,8 +16,8 @@ import '../../core/utils/letters_matcher.dart';
 import '../../models/game_image_model.dart';
 import '../../models/room_model.dart';
 import '../../providers/providers.dart';
+import '../../services/settings_service.dart';
 import '../../services/sfx_service.dart';
-import 'widgets/game_board_view.dart';
 
 /// The letters game (משחק האותיות) — a Wordle-style image-reveal duel.
 /// Turn-based 1v1: on your turn you place a letter into a slot. A correct
@@ -50,7 +53,36 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   String? _lastBotTurnKey;
   bool _winSoundPlayed = false;
 
+  static final AudioPlayer _bgPlayer = AudioPlayer(playerId: 'letters-bg');
+  static final AssetSource _bgMusic = AssetSource('sounds/background_studio.mp3');
+  late final ConfettiController _confetti;
+
   String? get _myUid => ref.read(firebaseUserProvider).valueOrNull?.uid;
+
+  @override
+  void initState() {
+    super.initState();
+    _confetti = ConfettiController(duration: const Duration(seconds: 2));
+    _startMusic();
+  }
+
+  Future<void> _startMusic() async {
+    try {
+      final vol = SettingsService.instance.musicVolume;
+      await _bgPlayer.setReleaseMode(ReleaseMode.loop);
+      await _bgPlayer.setVolume(0.44 * vol);
+      await _bgPlayer.play(_bgMusic);
+    } catch (_) {
+      // Audio is non-critical.
+    }
+  }
+
+  @override
+  void dispose() {
+    _confetti.dispose();
+    _bgPlayer.stop();
+    super.dispose();
+  }
 
   Future<void> _ensureImage(String? imageId) async {
     if (imageId == null || imageId.isEmpty) return;
@@ -120,7 +152,9 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
     if (_lastBotTurnKey == key) return;
     _lastBotTurnKey = key;
 
-    Future.delayed(const Duration(milliseconds: 1200), () async {
+    // Deliberate "thinking" pace so the duel reads clearly as turn-by-turn.
+    final delayMs = 2500 + math.Random().nextInt(1500); // 2.5–4.0s
+    Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
       final live = ref.read(roomStreamProvider(widget.roomId)).valueOrNull;
       if (live == null ||
@@ -226,8 +260,8 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
     final oppId = room.turnOrder.firstWhere((id) => id != uid, orElse: () => '');
     final opp = room.players[oppId];
     final oppSolved = (room.lettersSolvedSlots[oppId] ?? const []).length;
+    final oppRevealed = (room.lettersRevealedTiles[oppId] ?? const []);
 
-    final gridSize = room.selectedDifficulty?.gridSize ?? 6;
     final activeSlot = (_selectedSlot != null && !mySolved.contains(_selectedSlot))
         ? _selectedSlot
         : _firstEmptySlot(puzzle, mySolved);
@@ -249,15 +283,11 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
               children: [
                 const SizedBox(height: 6),
                 Expanded(
-                  child: GameBoardView(
-                    gridSize: gridSize,
-                    revealedCells: myRevealed,
-                    availableCells: const [],
+                  child: _FrostedBoard(
+                    gridSize: kLettersGridSize,
                     imageUrl: _image?.imageUrl,
-                    enabled: false,
-                    glowEnabled: false,
-                    onReveal: null,
-                    cardSkinId: room.cardSkinId,
+                    myRevealed: myRevealed,
+                    oppRevealed: oppRevealed,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -296,10 +326,27 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
     final winner = room.players[room.winnerId];
     if (!_winSoundPlayed) {
       _winSoundPlayed = true;
+      _bgPlayer.stop();
       SfxService.instance.win();
+      if (iWon) _confetti.play();
     }
     final url = _image?.imageUrl;
-    return Center(
+    return Stack(
+      children: [
+        Align(
+          alignment: Alignment.topCenter,
+          child: ConfettiWidget(
+            confettiController: _confetti,
+            blastDirectionality: BlastDirectionality.explosive,
+            shouldLoop: false,
+            numberOfParticles: 22,
+            maxBlastForce: 22,
+            minBlastForce: 8,
+            gravity: 0.25,
+            colors: const [_kGold, _kGoldLight, _kGreen, AppStyles.cyanGlow],
+          ),
+        ),
+        Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -363,6 +410,8 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
           ],
         ),
       ),
+        ),
+      ],
     );
   }
 }
@@ -645,4 +694,190 @@ class _Key extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Frosted-glass board ─────────────────────────────────────────────────────
+//
+// One blurred copy of the secret image is the "frosted glass" base (you see
+// vague colours but no detail). Tiles YOU revealed punch through to a sharp
+// slice; tiles the OPPONENT revealed (that you haven't) tint to frosted red
+// glass — your only window into how close they are. Newly revealed tiles pop in.
+class _FrostedBoard extends StatelessWidget {
+  final int gridSize;
+  final String? imageUrl;
+  final List<int> myRevealed;
+  final List<int> oppRevealed;
+
+  const _FrostedBoard({
+    required this.gridSize,
+    required this.imageUrl,
+    required this.myRevealed,
+    required this.oppRevealed,
+  });
+
+  Widget _fullImage(double side) {
+    final url = imageUrl;
+    if (url == null || url.isEmpty) {
+      return Container(color: const Color(0xFF0A1A2E));
+    }
+    return url.startsWith('assets/')
+        ? Image.asset(url, width: side, height: side, fit: BoxFit.cover)
+        : CachedNetworkImage(
+            imageUrl: url,
+            width: side,
+            height: side,
+            fit: BoxFit.cover,
+            errorWidget: (_, __, ___) => Container(color: const Color(0xFF0A1A2E)),
+          );
+  }
+
+  Widget _sharpSlice(int index, double side, double tileSize) {
+    final row = index ~/ gridSize;
+    final col = index % gridSize;
+    final x = gridSize <= 1 ? 0.0 : (col / (gridSize - 1)) * 2.0 - 1.0;
+    final y = gridSize <= 1 ? 0.0 : (row / (gridSize - 1)) * 2.0 - 1.0;
+    return ClipRect(
+      child: OverflowBox(
+        alignment: Alignment(x, y),
+        minWidth: side,
+        maxWidth: side,
+        minHeight: side,
+        maxHeight: side,
+        child: _fullImage(side),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mySet = myRevealed.toSet();
+    final oppOnly = oppRevealed.toSet().difference(mySet);
+
+    return LayoutBuilder(builder: (context, c) {
+      final side = math.min(c.maxWidth, c.maxHeight);
+      final tile = side / gridSize;
+
+      return Center(
+        child: Container(
+          width: side,
+          height: side,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppStyles.cyanGlow.withOpacity(0.30), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.45),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: Stack(
+              children: [
+                // Frosted base: heavily blurred image + cool glass tint.
+                Positioned.fill(
+                  child: ImageFiltered(
+                    imageFilter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                    child: _fullImage(side),
+                  ),
+                ),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withOpacity(0.14),
+                          Colors.white.withOpacity(0.05),
+                          const Color(0xFF0A1A2E).withOpacity(0.22),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Opponent-only tiles → frosted red glass.
+                for (final idx in oppOnly)
+                  Positioned(
+                    key: ValueKey('o$idx'),
+                    left: (idx % gridSize) * tile,
+                    top: (idx ~/ gridSize) * tile,
+                    width: tile,
+                    height: tile,
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 360),
+                      builder: (_, t, __) => DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFFFF5A5A).withOpacity(0.42 * t),
+                              const Color(0xFFB81E1E).withOpacity(0.30 * t),
+                            ],
+                          ),
+                          border: Border.all(
+                            color: const Color(0xFFFF8A8A).withOpacity(0.45 * t),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                // My revealed tiles → sharp image, popping in.
+                for (final idx in mySet)
+                  Positioned(
+                    key: ValueKey('m$idx'),
+                    left: (idx % gridSize) * tile,
+                    top: (idx ~/ gridSize) * tile,
+                    width: tile,
+                    height: tile,
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 420),
+                      curve: Curves.easeOutBack,
+                      builder: (_, t, child) => Opacity(
+                        opacity: t.clamp(0.0, 1.0),
+                        child: Transform.scale(scale: 0.7 + 0.3 * t, child: child),
+                      ),
+                      child: _sharpSlice(idx, side, tile),
+                    ),
+                  ),
+                // Glass grid lines on top so every tile reads as a glass pane.
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(painter: _GridPainter(gridSize)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+}
+
+class _GridPainter extends CustomPainter {
+  final int gridSize;
+  const _GridPainter(this.gridSize);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.07)
+      ..strokeWidth = 1;
+    final tw = size.width / gridSize;
+    final th = size.height / gridSize;
+    for (var i = 1; i < gridSize; i++) {
+      canvas.drawLine(Offset(tw * i, 0), Offset(tw * i, size.height), paint);
+      canvas.drawLine(Offset(0, th * i), Offset(size.width, th * i), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GridPainter old) => old.gridSize != gridSize;
 }

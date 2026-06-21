@@ -2712,8 +2712,8 @@ class RoomService {
         final revealed =
             List<int>.from(room.lettersRevealedTiles[userId] ?? const []);
         final revealedSet = revealed.toSet();
-        final gridSize = _lettersDifficulty.gridSize;
-        final total = gridSize * gridSize;
+        const gridSize = kLettersGridSize;
+        const total = gridSize * gridSize;
         final available = [
           for (var i = 0; i < total; i++)
             if (!revealedSet.contains(i)) i
