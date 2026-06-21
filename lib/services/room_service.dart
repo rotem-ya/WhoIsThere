@@ -1208,55 +1208,6 @@ class RoomService {
     return winner;
   }
 
-  Future<void> _collectEntryFees(
-    String roomId,
-    Map<String, PlayerModel> players,
-    int entryFee,
-  ) async {
-    final humanIds = players.entries
-        .where((e) => !e.value.isBot)
-        .map((e) => e.key)
-        .toList();
-
-    var potCollected = 0;
-    for (final uid in humanIds) {
-      try {
-        await _firestore.runTransaction((tx) async {
-          final walletDoc = await tx.get(_walletRef(uid));
-          final wallet = walletDoc.exists
-              ? UserEconomyModel.fromFirestore(
-                  uid, walletDoc.data() as Map<String, dynamic>)
-              : null;
-          final before = wallet?.coins ?? 0;
-          if (before < entryFee) return; // insufficient — UI should have blocked this
-          final after = before - entryFee;
-          tx.set(_walletRef(uid), {'coins': after}, SetOptions(merge: true));
-          final txId = _uuid.v4();
-          tx.set(_txRef(uid, txId), EconomyTransactionModel(
-            id: txId,
-            type: TransactionType.roomEntryFee,
-            delta: -entryFee,
-            balanceAfter: after,
-            roomId: roomId,
-            createdAt: DateTime.now().toUtc(),
-            meta: {'entryFee': entryFee},
-          ).toFirestore());
-          potCollected += entryFee;
-        });
-      } catch (e) {
-        QaLoggerService.instance.log('ECONOMY',
-            'ENTRY_FEE_COLLECT_ERROR uid=${uid.substring(0, uid.length.clamp(0, 6))} error=$e');
-      }
-    }
-
-    if (potCollected > 0) {
-      await _rooms.doc(roomId).update({
-        'potTotal': FieldValue.increment(potCollected),
-      });
-      QaLoggerService.instance.log('ECONOMY',
-          'ENTRY_FEES_COLLECTED total=$potCollected players=${humanIds.length}');
-    }
-  }
 
   /// Called by each player's own client when the game starts.
   /// Uses an idempotency list (entryFeePaidPlayerIds) so double-payment is impossible.

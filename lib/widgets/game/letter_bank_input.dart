@@ -59,12 +59,7 @@ class LetterBankInput extends StatefulWidget {
 }
 
 class _LetterBankInputState extends State<LetterBankInput> {
-  static const Color _navy = Color(0xFF07101F);
-  static const Color _navySoft = Color(0xFF111B36);
-  static const Color _gold = Color(0xFFD4AF37);
   static const Color _goldLight = Color(0xFFFFE082);
-  static const Color _goldDark = Color(0xFFA1811A);
-  static const Color _cyan = Color(0xFF87CEEB);
 
   late List<int> _wordLengths;
   late List<String?> _filled;

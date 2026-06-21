@@ -1,4 +1,3 @@
-import 'widgets/answer_slots.dart';
 import 'widgets/game_layout.dart';
 import 'widgets/game_winner_view.dart';
 import 'dart:async';
@@ -22,7 +21,6 @@ import '../../core/constants/game_categories.dart';
 import '../../core/constants/game_constants.dart';
 import '../../models/board_skin.dart';
 import '../../models/game_image_model.dart';
-import '../../models/player_model.dart';
 import '../../widgets/common/board_skin_background.dart';
 import '../store/board_skins_screen.dart' show selectedBoardSkinProvider;
 import '../../models/room_model.dart';
@@ -32,13 +30,9 @@ import '../../core/utils/chat_filter.dart';
 import '../../widgets/chat/chat_sheet.dart';
 import '../../providers/providers.dart';
 import '../../services/settings_service.dart';
-import '../../services/hint_economy_guard.dart';
 import '../../services/reward_calculator.dart';
 import '../../services/qa_logger_service.dart';
-import '../../widgets/game/animated_reward.dart';
 import '../../widgets/game/letter_bank_input.dart';
-import 'widgets/game_top_hud.dart';
-import 'widgets/game_board_view.dart';
 import 'widgets/detective_toolbar.dart';
 
 class GameBoardScreen extends ConsumerStatefulWidget {
@@ -116,7 +110,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   bool _hasGuessedThisTurn = false;
 
   // Hint fact cycling
-  int _nextFactIndex = 0;
   List<String> _purchasedFacts = [];
 
   // Personal tile reveals — tiles this player paid to uncover for themselves
@@ -1027,7 +1020,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   Future<void> _loadImage(String imageId) async {
     if (imageId.isEmpty || imageId == _loadedImageId) return;
     _loadedImageId = imageId;
-    _nextFactIndex = 0;
     _purchasedFacts = [];
     _personalRevealedTiles.clear();
     _lettersBought = 0;
@@ -1044,52 +1036,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     }
   }
 
-  Future<void> _humanRevealTile({
-    required RoomModel room,
-    required String userId,
-    required int index,
-  }) async {
-    if (_isBusy) return;
-    if (!room.availablePieceIndices.contains(index)) return;
-
-    final difficulty = room.selectedDifficulty ?? Difficulty.easy;
-    final isLastTile = room.availablePieceIndices.length == 1;
-
-    setState(() => _isBusy = true);
-    try {
-      await ref.read(roomServiceProvider).revealPiece(
-            roomId: room.id,
-            userId: userId,
-            pieceIndex: index,
-            difficulty: difficulty,
-          );
-      if (isLastTile) {
-        await ref.read(roomServiceProvider).endGameNoWinner(room.id);
-      } else {
-        if (mounted) {
-          setState(() {
-            _hasRevealedThisTurn = true;
-            _revealedAtTurnIndex = room.currentTurnIndex;
-          });
-        }
-      }
-    } catch (e) {
-      if (_isFirestoreUnavailable(e)) _markOffline('firestore_unavailable');
-    } finally {
-      if (mounted) setState(() => _isBusy = false);
-    }
-  }
-
-  Future<void> _skipTurn(RoomModel room) async {
-    if (_isBusy) return;
-    setState(() => _isBusy = true);
-    try {
-      await ref.read(roomServiceProvider).skipPiecePlacement(roomId: room.id);
-      if (mounted) setState(() => _hasRevealedThisTurn = false);
-    } finally {
-      if (mounted) setState(() => _isBusy = false);
-    }
-  }
 
   void _scheduleBotTurn(RoomModel room) {
     // In auto-reveal mode, bots no longer reveal tiles (guardian handles it).
@@ -3465,58 +3411,6 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
   }
 }
 
-class _FactDialog extends StatelessWidget {
-  final String? fact;
-  const _FactDialog({required this.fact});
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: const Color(0xFF07101F),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.5)),
-      ),
-      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-      contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-      actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      title: const Row(
-        children: [
-          Icon(Icons.lightbulb_outline_rounded, color: Color(0xFF87CEEB), size: 20),
-          SizedBox(width: 8),
-          Text(
-            'רמז',
-            style: TextStyle(
-              color: Color(0xFF87CEEB),
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-      content: Text(
-        fact ?? 'אין רמז זמין למקום הזה',
-        textAlign: TextAlign.right,
-        textDirection: TextDirection.rtl,
-        style: TextStyle(
-          color: fact != null ? Colors.white : Colors.white54,
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          height: 1.55,
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text(
-            'הבנתי',
-            style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.w900),
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _PurchasedHintsDialog extends StatelessWidget {
   final List<String> facts;

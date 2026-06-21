@@ -71,7 +71,6 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
     if (currentRoom == null || !mounted) return;
 
     // Count how many humans joined since we created the room.
-    final humanCount = currentRoom.players.values.where((p) => !p.isBot).length;
     final totalNeeded = widget.targetPlayers;
     final totalNow = currentRoom.players.length;
 

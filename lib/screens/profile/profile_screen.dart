@@ -13,7 +13,6 @@ import '../../core/ui/app_text_styles.dart';
 import '../../core/utils/display_name_sanitizer.dart';
 import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
-import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
 import 'discovered_images_screen.dart';
