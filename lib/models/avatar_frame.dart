@@ -15,12 +15,20 @@ class AvatarFrame {
   /// Soft outer glow in the ring's primary colour.
   final bool glow;
 
+  /// Number of evenly-spaced "gem" studs around the ring (0 = none).
+  final int studs;
+
+  /// Draws a second thin inner ring with a small gap (a premium accent).
+  final bool doubleRing;
+
   const AvatarFrame({
     required this.id,
     required this.name,
     required this.price,
     this.colors = const [],
     this.glow = false,
+    this.studs = 0,
+    this.doubleRing = false,
   });
 
   /// The "no frame" default everyone owns implicitly.
@@ -80,6 +88,7 @@ const kAvatarFrames = <AvatarFrame>[
     price: 300,
     colors: [Color(0xFFFF9A9E), Color(0xFFFF6A3D), Color(0xFFFFC371)],
     glow: true,
+    studs: 8,
   ),
   AvatarFrame(
     id: 'ice',
@@ -87,6 +96,7 @@ const kAvatarFrames = <AvatarFrame>[
     price: 360,
     colors: [Color(0xFF81D4FA), Color(0xFFE0FFFF), Color(0xFF29B6F6)],
     glow: true,
+    studs: 8,
   ),
   AvatarFrame(
     id: 'fire',
@@ -94,6 +104,7 @@ const kAvatarFrames = <AvatarFrame>[
     price: 420,
     colors: [Color(0xFFFFD54F), Color(0xFFFF5722), Color(0xFFD32F2F)],
     glow: true,
+    studs: 8,
   ),
   AvatarFrame(
     id: 'neon',
@@ -101,6 +112,7 @@ const kAvatarFrames = <AvatarFrame>[
     price: 500,
     colors: [Color(0xFFFF00FF), Color(0xFF00FFFF), Color(0xFFFF00FF)],
     glow: true,
+    studs: 10,
   ),
 
   // ── פרימיום (1000 מטבעות) ───────────────────────────────────────────────────
@@ -110,6 +122,8 @@ const kAvatarFrames = <AvatarFrame>[
     price: 1000,
     colors: [Color(0xFFFFD700), Color(0xFF8E2DE2), Color(0xFFFFD700)],
     glow: true,
+    studs: 12,
+    doubleRing: true,
   ),
   AvatarFrame(
     id: 'diamond',
@@ -117,6 +131,8 @@ const kAvatarFrames = <AvatarFrame>[
     price: 1000,
     colors: [Color(0xFFE0FFFF), Color(0xFF00E5FF), Color(0xFFFFFFFF)],
     glow: true,
+    studs: 12,
+    doubleRing: true,
   ),
   AvatarFrame(
     id: 'legend',
@@ -130,6 +146,8 @@ const kAvatarFrames = <AvatarFrame>[
       Color(0xFFFF00FF),
     ],
     glow: true,
+    studs: 16,
+    doubleRing: true,
   ),
 ];
 
