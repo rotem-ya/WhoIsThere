@@ -103,26 +103,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           fontWeight: FontWeight.w800)),
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _ContentChip(
-                        emoji: '📍',
-                        label: 'זיהוי מקומות',
-                        selected: content == Difficulty.easy,
-                        onTap: () => setSheet(() => content = Difficulty.easy),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _ContentChip(
-                        emoji: '⚡',
-                        label: 'חי צומח דומם',
-                        selected: content == Difficulty.giant,
-                        onTap: () => setSheet(() => content = Difficulty.giant),
-                      ),
-                    ),
-                  ],
+                _ContentChip(
+                  emoji: '📍',
+                  label: 'זיהוי מקומות',
+                  selected: content == Difficulty.easy,
+                  onTap: () => setSheet(() => content = Difficulty.easy),
+                ),
+                const SizedBox(height: 10),
+                _ContentChip(
+                  emoji: '⚡',
+                  label: 'חי צומח דומם',
+                  selected: content == Difficulty.giant,
+                  onTap: () => setSheet(() => content = Difficulty.giant),
                 ),
                 const SizedBox(height: 18),
                 const Align(
@@ -778,7 +770,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 _GameTypeCard(
                                   icon: '🔤',
                                   title: 'משחק האותיות',
-                                  subtitle: 'נחשו את המילה · נגד הבוט',
+                                  subtitle: 'נחשו את המילה הנסתרת',
                                   gradientColors: const [Color(0xFF7A5A12), Color(0xFF3C2C06)],
                                   borderColor: const Color(0xFFD4AF37),
                                   glowColor: const Color(0xFF8A6E1E),
@@ -1143,7 +1135,8 @@ class _ContentChip extends StatelessWidget {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         decoration: BoxDecoration(
           color: selected
               ? accent.withOpacity(0.18)
@@ -1155,22 +1148,23 @@ class _ContentChip extends StatelessWidget {
           ),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 20)),
-            const SizedBox(width: 8),
-            Flexible(
+            Text(emoji, style: const TextStyle(fontSize: 21)),
+            const SizedBox(width: 12),
+            Expanded(
               child: Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: selected ? Colors.white : Colors.white70,
-                  fontSize: 14.5,
+                  fontSize: 16,
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ),
+            if (selected)
+              const Icon(Icons.check_circle_rounded, color: accent, size: 22),
           ],
         ),
       ),
