@@ -54,14 +54,112 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
-  /// Test-branch difficulty picker. Returns the chosen difficulty, or null if
-  /// the player dismissed the sheet.
-  Future<Difficulty?> _pickDifficulty() {
-    // Two game types only: regular 6×6, and fast 15×15 (1 card/sec).
-    const options = [
-      Difficulty.easy,
-      Difficulty.giant,
-    ];
+  /// Quick-game sheet: choose the topic (places / חי-צומח-דומם) AND the number
+  /// of players in one place, then launch. Replaces the old two-step popup.
+  void _showQuickGameSheet() {
+    FeedbackService.click();
+    var content = _quickDifficulty; // local selection (easy=places, giant=heat)
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: Container(
+            padding: EdgeInsets.fromLTRB(
+                20, 12, 20, 16 + MediaQuery.paddingOf(ctx).bottom),
+            decoration: const BoxDecoration(
+              color: Color(0xFF0D1E30),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text('משחק מהיר',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900)),
+                const SizedBox(height: 4),
+                Text('נגד שחקנים אמיתיים — מי יזהה ראשון',
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.55), fontSize: 13)),
+                const SizedBox(height: 18),
+                const Align(
+                  alignment: Alignment.centerRight,
+                  child: Text('בחרו נושא',
+                      style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800)),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ContentChip(
+                        emoji: '📍',
+                        label: 'זיהוי מקומות',
+                        selected: content == Difficulty.easy,
+                        onTap: () => setSheet(() => content = Difficulty.easy),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _ContentChip(
+                        emoji: '⚡',
+                        label: 'חי צומח דומם',
+                        selected: content == Difficulty.giant,
+                        onTap: () => setSheet(() => content = Difficulty.giant),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                const Align(
+                  alignment: Alignment.centerRight,
+                  child: Text('כמה שחקנים?',
+                      style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800)),
+                ),
+                const SizedBox(height: 10),
+                for (final n in const [2, 3, 4]) ...[
+                  _QuickGameButton(
+                    players: n,
+                    isLoading: false,
+                    onTap: () => _launchQuick(ctx, content, n),
+                  ),
+                  if (n != 4) const SizedBox(height: 8),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _launchQuick(BuildContext sheetCtx, Difficulty content, int players) {
+    _quickDifficulty = content;
+    Navigator.pop(sheetCtx);
+    _startQuickGame(players);
+  }
+
+  /// Topic picker for the friends flow (places / חי-צומח-דומם). Returns the
+  /// chosen content, or null if dismissed.
+  Future<Difficulty?> _pickContent() {
+    const options = [Difficulty.easy, Difficulty.giant];
     return showModalBottomSheet<Difficulty>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -77,7 +175,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('בחר סוג משחק',
+              const Text('בחרו נושא',
                   style: TextStyle(
                       color: Colors.white,
                       fontSize: 19,
@@ -104,7 +202,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                                d == Difficulty.giant ? 'חי צומח דומם' : 'זיהוי מקומות',
+                                d == Difficulty.giant
+                                    ? 'חי צומח דומם'
+                                    : 'זיהוי מקומות',
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
@@ -127,13 +227,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     QaLoggerService.instance.log('HOME', 'TAP_QUICK_GAME players=$targetPlayers');
     FeedbackService.click();
 
-    // Test branch: let the player pick the difficulty before a quick game
-    // (shown once; the insufficient-coins re-entry reuses the choice).
-    if (!bypassCoinCheck) {
-      final picked = await _pickDifficulty();
-      if (picked == null) return; // cancelled
-      _quickDifficulty = picked;
-    }
+    // Content type (places / חי-צומח-דומם) is chosen in the quick-game sheet and
+    // stored in [_quickDifficulty] before this runs.
 
     // Block entry if insufficient coins (skipped when re-entering after the
     // insufficient-coins dialog already topped the wallet up).
@@ -328,7 +423,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     // Pick the game type once (זיהוי מקומות / חי צומח דומם).
     // Friends games are FREE — no entry fee, no coin check.
-    final difficulty = gameType ?? await _pickDifficulty();
+    final difficulty = gameType ?? await _pickContent();
     if (difficulty == null) return; // dismissed
 
     setState(() {
@@ -654,7 +749,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           const SizedBox(height: 6),
                           _step(
                             Text(
-                              'מי יזהה את המקום ראשון?',
+                              'בחרו סוג משחק',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: const Color(0xFF87CEEB).withOpacity(0.86),
@@ -669,44 +764,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           _step(
                             Column(
                               children: [
-                                _QuickGameButton(
-                                  players: 2,
-                                  isLoading: _isCreating && _loadingPlayers == 2,
-                                  onTap: _isCreating ? null : () => _startQuickGame(2),
+                                _GameTypeCard(
+                                  icon: '🎯',
+                                  title: 'משחק מהיר',
+                                  subtitle: 'נגד שחקנים אמיתיים · מי יזהה ראשון',
+                                  gradientColors: const [Color(0xFF1A4A8A), Color(0xFF0A2356)],
+                                  borderColor: const Color(0xFF4A9EFF),
+                                  glowColor: const Color(0xFF2266CC),
+                                  isLoading: _isCreating,
+                                  onTap: _isCreating ? null : _showQuickGameSheet,
                                 ),
-                                const SizedBox(height: 8),
-                                _QuickGameButton(
-                                  players: 3,
-                                  isLoading: _isCreating && _loadingPlayers == 3,
-                                  onTap: _isCreating ? null : () => _startQuickGame(3),
+                                SizedBox(height: verySmall ? 8 : 10),
+                                _GameTypeCard(
+                                  icon: '🔤',
+                                  title: 'משחק האותיות',
+                                  subtitle: 'וורדל תמונות · נגד הבוט',
+                                  gradientColors: const [Color(0xFF7A5A12), Color(0xFF3C2C06)],
+                                  borderColor: const Color(0xFFD4AF37),
+                                  glowColor: const Color(0xFF8A6E1E),
+                                  isLoading: _loadingLetters,
+                                  onTap: (_isCreating || _loadingLetters)
+                                      ? null
+                                      : _startLettersGame,
                                 ),
-                                const SizedBox(height: 8),
-                                _QuickGameButton(
-                                  players: 4,
-                                  isLoading: _isCreating && _loadingPlayers == 4,
-                                  onTap: _isCreating ? null : () => _startQuickGame(4),
+                                SizedBox(height: verySmall ? 8 : 10),
+                                _GameTypeCard(
+                                  icon: '👥',
+                                  title: 'שחק עם חברים',
+                                  subtitle: 'חדר פרטי עם קוד · חינם',
+                                  gradientColors: const [Color(0xFF135A4A), Color(0xFF0A2E26)],
+                                  borderColor: const Color(0xFF3DCCAA),
+                                  glowColor: const Color(0xFF1A8866),
+                                  isLoading: false,
+                                  onTap: _isCreating ? null : _showFriendsSheet,
                                 ),
                               ],
                             ),
                             delayMs: 460, durationMs: 260, dy: 5,
-                          ),
-                          SizedBox(height: verySmall ? 8 : 12),
-                          _step(
-                            _FriendsButton(
-                              isLoading: _isCreating && _loadingPlayers == null,
-                              onTap: _isCreating ? null : _showFriendsSheet,
-                            ),
-                            delayMs: 600, durationMs: 240,
-                          ),
-                          SizedBox(height: verySmall ? 6 : 10),
-                          _step(
-                            _LettersButton(
-                              isLoading: _loadingLetters,
-                              onTap: (_isCreating || _loadingLetters)
-                                  ? null
-                                  : _startLettersGame,
-                            ),
-                            delayMs: 660, durationMs: 240,
                           ),
                           SizedBox(height: verySmall ? 6 : 10),
                           const BannerAdWidget(),
@@ -905,94 +999,174 @@ class _QuickGameButton extends StatelessWidget {
   }
 }
 
-class _FriendsButton extends StatelessWidget {
+// ── One clear game-type card (משחק מהיר / אותיות / חברים) ──────────────────
+
+class _GameTypeCard extends StatelessWidget {
+  final String icon;
+  final String title;
+  final String subtitle;
+  final List<Color> gradientColors;
+  final Color borderColor;
+  final Color glowColor;
   final bool isLoading;
   final VoidCallback? onTap;
 
-  const _FriendsButton({required this.isLoading, required this.onTap});
+  const _GameTypeCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.gradientColors,
+    required this.borderColor,
+    required this.glowColor,
+    required this.isLoading,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: PressableScale(
-        onTap: onTap == null ? null : () {
-          HapticFeedback.lightImpact();
-          onTap!();
-        },
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 160),
-          opacity: onTap == null ? 0.58 : 1,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 13),
-            decoration: BoxDecoration(
-              color: const Color(0xFF050A14).withOpacity(0.50),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.26)),
+    return PressableScale(
+      onTap: onTap == null
+          ? null
+          : () {
+              HapticFeedback.mediumImpact();
+              onTap!();
+            },
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 160),
+        opacity: onTap == null ? 0.55 : 1,
+        child: Container(
+          height: 72,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: gradientColors,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isLoading)
-                  const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Color(0xFF87CEEB), strokeWidth: 2))
-                else
-                  const Icon(Icons.people_rounded, color: Color(0xFF87CEEB), size: 19),
-                const SizedBox(width: 10),
-                const Text('שחק עם חברים', style: TextStyle(color: Color(0xFF87CEEB), fontSize: 16, fontWeight: FontWeight.w800)),
-              ],
-            ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: borderColor.withOpacity(0.7), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: glowColor.withOpacity(0.35),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
+          child: isLoading
+              ? const Center(
+                  child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2.4)))
+              : Row(
+                  children: [
+                    const SizedBox(width: 18),
+                    Container(
+                      width: 46,
+                      height: 46,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: borderColor.withOpacity(0.16),
+                        borderRadius: BorderRadius.circular(13),
+                        border: Border.all(color: borderColor.withOpacity(0.40)),
+                      ),
+                      child: Text(icon, style: const TextStyle(fontSize: 24)),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                height: 1.1),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: Colors.white.withOpacity(0.62),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                height: 1),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_left_rounded,
+                        color: borderColor.withOpacity(0.8), size: 26),
+                    const SizedBox(width: 10),
+                  ],
+                ),
         ),
       ),
     );
   }
 }
 
-class _LettersButton extends StatelessWidget {
-  final bool isLoading;
-  final VoidCallback? onTap;
+// ── Topic chip for the quick-game sheet ─────────────────────────────────────
 
-  const _LettersButton({required this.isLoading, required this.onTap});
+class _ContentChip extends StatelessWidget {
+  final String emoji;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ContentChip({
+    required this.emoji,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: PressableScale(
-        onTap: onTap == null
-            ? null
-            : () {
-                HapticFeedback.lightImpact();
-                onTap!();
-              },
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 160),
-          opacity: onTap == null ? 0.58 : 1,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 13),
-            decoration: BoxDecoration(
-              color: const Color(0xFF050A14).withOpacity(0.50),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.40)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isLoading)
-                  const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          color: Color(0xFFFFE082), strokeWidth: 2))
-                else
-                  const Text('🔤', style: TextStyle(fontSize: 19)),
-                const SizedBox(width: 10),
-                const Text('משחק האותיות',
-                    style: TextStyle(
-                        color: Color(0xFFFFE082),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800)),
-              ],
-            ),
+    const accent = Color(0xFF4A9EFF);
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+        decoration: BoxDecoration(
+          color: selected
+              ? accent.withOpacity(0.18)
+              : Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? accent : Colors.white.withOpacity(0.12),
+            width: selected ? 2 : 1,
           ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 20)),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? Colors.white : Colors.white70,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
