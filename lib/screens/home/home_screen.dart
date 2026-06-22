@@ -767,7 +767,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 _GameTypeCard(
                                   icon: '🎯',
                                   title: 'משחק מהיר',
-                                  subtitle: 'נגד שחקנים אמיתיים · מי יזהה ראשון',
+                                  subtitle: 'נגד שחקנים אמיתיים',
                                   gradientColors: const [Color(0xFF1A4A8A), Color(0xFF0A2356)],
                                   borderColor: const Color(0xFF4A9EFF),
                                   glowColor: const Color(0xFF2266CC),
@@ -778,7 +778,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 _GameTypeCard(
                                   icon: '🔤',
                                   title: 'משחק האותיות',
-                                  subtitle: 'וורדל תמונות · נגד הבוט',
+                                  subtitle: 'נחשו את המילה · נגד הבוט',
                                   gradientColors: const [Color(0xFF7A5A12), Color(0xFF3C2C06)],
                                   borderColor: const Color(0xFFD4AF37),
                                   glowColor: const Color(0xFF8A6E1E),
@@ -791,7 +791,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 _GameTypeCard(
                                   icon: '👥',
                                   title: 'שחק עם חברים',
-                                  subtitle: 'חדר פרטי עם קוד · חינם',
+                                  subtitle: 'חדר פרטי עם קוד',
                                   gradientColors: const [Color(0xFF135A4A), Color(0xFF0A2E26)],
                                   borderColor: const Color(0xFF3DCCAA),
                                   glowColor: const Color(0xFF1A8866),
@@ -1062,19 +1062,19 @@ class _GameTypeCard extends StatelessWidget {
                           color: Colors.white, strokeWidth: 2.4)))
               : Row(
                   children: [
-                    const SizedBox(width: 18),
+                    const SizedBox(width: 14),
                     Container(
-                      width: 46,
-                      height: 46,
+                      width: 44,
+                      height: 44,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: borderColor.withOpacity(0.16),
                         borderRadius: BorderRadius.circular(13),
                         border: Border.all(color: borderColor.withOpacity(0.40)),
                       ),
-                      child: Text(icon, style: const TextStyle(fontSize: 24)),
+                      child: Text(icon, style: const TextStyle(fontSize: 23)),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -1082,9 +1082,12 @@ class _GameTypeCard extends StatelessWidget {
                         children: [
                           Text(
                             title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
                             style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 18,
+                                fontSize: 17,
                                 fontWeight: FontWeight.w900,
                                 height: 1.1),
                           ),
@@ -1093,17 +1096,19 @@ class _GameTypeCard extends StatelessWidget {
                             subtitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            softWrap: false,
                             style: TextStyle(
                                 color: Colors.white.withOpacity(0.62),
-                                fontSize: 12,
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w600,
                                 height: 1),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 6),
                     Icon(Icons.chevron_left_rounded,
-                        color: borderColor.withOpacity(0.8), size: 26),
+                        color: borderColor.withOpacity(0.8), size: 24),
                     const SizedBox(width: 10),
                   ],
                 ),
