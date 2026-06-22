@@ -2582,12 +2582,19 @@ class RoomService {
     return _pickSmartImage(source, players);
   }
 
-  /// Creates a solo letters duel: 1 human + 1 bot, mode='letters', a random
-  /// secret image, per-player boards initialized, started immediately (no lobby).
+  /// Creates a letters duel room (mode='letters'). Three flavors:
+  ///  • solo: 1 human + 1 bot, starts immediately (phase=playing).
+  ///  • friends ([solo]=false, [isPublicRoom]=false): private waiting room with
+  ///    a join code; the 2nd human triggers the start.
+  ///  • random ([solo]=false, [isPublicRoom]=true): public waiting room for
+  ///    quick-match; a bot fills in if no one joins.
+  /// The secret image is picked at create so both players share it.
   Future<RoomModel> createLettersRoom({
     required String hostId,
     required String hostName,
     String? hostPhotoUrl,
+    bool solo = true,
+    bool isPublicRoom = false,
   }) async {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
@@ -2624,21 +2631,23 @@ class RoomService {
       avatarId: hostAvatarId,
     );
 
-    final botId = 'virtual_2_${docRef.id}';
-    final botProfile = _randomBotProfile();
-    final bot = PlayerModel(
-      id: botId,
-      name: _randomBotName({host.name}),
-      score: 0,
-      isBot: true,
-      discoveredCount: botProfile.discoveredCount,
-      totalPoints: botProfile.totalPoints,
-    );
-
-    final players = <String, PlayerModel>{effectiveHostId: host, botId: bot};
+    final players = <String, PlayerModel>{effectiveHostId: host};
+    if (solo) {
+      final botId = 'virtual_2_${docRef.id}';
+      final botProfile = _randomBotProfile();
+      players[botId] = PlayerModel(
+        id: botId,
+        name: _randomBotName({host.name}),
+        score: 0,
+        isBot: true,
+        discoveredCount: botProfile.discoveredCount,
+        totalPoints: botProfile.totalPoints,
+      );
+    }
 
     final image = await _pickRandomLettersImage(players);
-    final turnOrder = players.keys.toList()..shuffle();
+    final started = solo; // solo starts now; friends/random wait for a 2nd player
+    final turnOrder = started ? (players.keys.toList()..shuffle()) : <String>[];
 
     final room = RoomModel(
       id: docRef.id,
@@ -2646,27 +2655,91 @@ class RoomService {
       hostId: effectiveHostId,
       players: players,
       createdAt: DateTime.now(),
-      entryFee: 0, // solo letters is free for the MVP
+      entryFee: 0, // letters is free
       cardSkinId: cardSkinId,
-      isPublicRoom: false,
+      isPublicRoom: isPublicRoom,
       playerRound: hostRound,
-      phase: GamePhase.playing,
+      phase: started ? GamePhase.playing : GamePhase.waiting,
       selectedImageId: image?.id,
       selectedDifficulty: _lettersDifficulty,
       turnOrder: turnOrder,
       currentTurnIndex: 0,
       mode: 'letters',
       secretWord: image?.answer,
-      lettersRevealedTiles: {for (final id in players.keys) id: const []},
-      lettersGuessed: {for (final id in players.keys) id: const []},
-      lettersSolvedSlots: {for (final id in players.keys) id: const []},
+      lettersRevealedTiles: started ? {for (final id in players.keys) id: const []} : const {},
+      lettersGuessed: started ? {for (final id in players.keys) id: const []} : const {},
+      lettersSolvedSlots: started ? {for (final id in players.keys) id: const []} : const {},
     );
 
     QaLoggerService.instance.log('LETTERS',
-        'CREATE id=${docRef.id} img=${image?.id} word=${image?.answer} '
+        'CREATE id=${docRef.id} solo=$solo public=$isPublicRoom img=${image?.id} '
         'slots=${image == null ? 0 : buildLettersPuzzle(image.answer).length}');
     await docRef.set(room.toMap());
     return room;
+  }
+
+  /// Finds a public letters room waiting for an opponent (quick-match). Reuses
+  /// the existing waiting/public index and filters mode in code (no new index).
+  Future<RoomModel?> findLettersMatch(String userId) async {
+    try {
+      final snap = await _rooms
+          .where('phase', isEqualTo: GamePhase.waiting.name)
+          .where('isPublicRoom', isEqualTo: true)
+          .limit(10)
+          .get();
+      for (final doc in snap.docs) {
+        final room = RoomModel.fromFirestore(doc);
+        if (!room.isLetters) continue;
+        if (room.hostId == userId) continue;
+        if (room.players.containsKey(userId)) continue;
+        if (room.players.length >= 2) continue;
+        return room;
+      }
+    } catch (e) {
+      QaLoggerService.instance.log('LETTERS', 'MATCH_FIND_FAILED $e');
+    }
+    return null;
+  }
+
+  /// Starts a waiting letters room. Initializes per-player boards + turn order
+  /// and flips to playing. When [addBotIfAlone] and only the host is present, a
+  /// bot is added so a quick-match never strands the player. Host-only caller.
+  Future<void> startLettersGame(String roomId, {bool addBotIfAlone = false}) async {
+    await _firestore.runTransaction((tx) async {
+      final roomDoc = await tx.get(_rooms.doc(roomId));
+      if (!roomDoc.exists) return;
+      final room = RoomModel.fromFirestore(roomDoc);
+      if (!room.isLetters || room.phase != GamePhase.waiting) return;
+
+      final players = Map<String, PlayerModel>.from(room.players);
+      final updates = <String, dynamic>{};
+
+      if (players.length < 2) {
+        if (!addBotIfAlone) return; // can't start a duel alone yet
+        final botId = 'virtual_2_$roomId';
+        final profile = _randomBotProfile();
+        final bot = PlayerModel(
+          id: botId,
+          name: _randomBotName(players.values.map((p) => p.name).toSet()),
+          score: 0,
+          isBot: true,
+          discoveredCount: profile.discoveredCount,
+          totalPoints: profile.totalPoints,
+        );
+        players[botId] = bot;
+        updates['players.$botId'] = bot.toMap();
+      }
+
+      final ids = players.keys.toList()..shuffle();
+      updates['turnOrder'] = ids;
+      updates['currentTurnIndex'] = 0;
+      updates['phase'] = GamePhase.playing.name;
+      updates['lettersRevealedTiles'] = {for (final id in ids) id: <int>[]};
+      updates['lettersGuessed'] = {for (final id in ids) id: <String>[]};
+      updates['lettersSolvedSlots'] = {for (final id in ids) id: <int>[]};
+      tx.update(_rooms.doc(roomId), updates);
+      QaLoggerService.instance.log('LETTERS', 'START id=$roomId players=${ids.length}');
+    });
   }
 
   /// Result of a single letter guess in the letters game.

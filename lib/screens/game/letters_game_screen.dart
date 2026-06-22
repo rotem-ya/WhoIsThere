@@ -52,6 +52,8 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   bool _submitting = false;
   String? _lastBotTurnKey;
   bool _winSoundPlayed = false;
+  bool _startTriggered = false;
+  Timer? _randomFallbackTimer;
 
   static final AudioPlayer _bgPlayer = AudioPlayer(playerId: 'letters-bg');
   static final AssetSource _bgMusic = AssetSource('sounds/background_studio.mp3');
@@ -80,8 +82,43 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   @override
   void dispose() {
     _confetti.dispose();
+    _randomFallbackTimer?.cancel();
     _bgPlayer.stop();
     super.dispose();
+  }
+
+  /// Host-only: start the duel once a 2nd player is present. For a random
+  /// (public) room, fall back to a bot after a short search so nobody waits
+  /// forever.
+  void _maybeAutoStart(RoomModel room) {
+    final uid = _myUid;
+    if (uid == null || uid != room.hostId || _startTriggered) return;
+
+    if (room.players.length >= 2) {
+      _startTriggered = true;
+      _randomFallbackTimer?.cancel();
+      ref.read(roomServiceProvider).startLettersGame(widget.roomId);
+      return;
+    }
+    if (room.isPublicRoom && _randomFallbackTimer == null) {
+      _randomFallbackTimer = Timer(const Duration(seconds: 8), () {
+        final live = ref.read(roomStreamProvider(widget.roomId)).valueOrNull;
+        if (!mounted || live == null || live.phase != GamePhase.waiting) return;
+        _startTriggered = true;
+        ref
+            .read(roomServiceProvider)
+            .startLettersGame(widget.roomId, addBotIfAlone: true);
+      });
+    }
+  }
+
+  void _playVsBotNow() {
+    if (_startTriggered) return;
+    _startTriggered = true;
+    _randomFallbackTimer?.cancel();
+    ref
+        .read(roomServiceProvider)
+        .startLettersGame(widget.roomId, addBotIfAlone: true);
   }
 
   Future<void> _ensureImage(String? imageId) async {
@@ -239,6 +276,11 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                   return _buildFinished(room, puzzle);
                 }
 
+                if (room.phase == GamePhase.waiting) {
+                  _maybeAutoStart(room);
+                  return _buildWaiting(room);
+                }
+
                 _maybeScheduleBotTurn(room, puzzle);
                 return _buildPlaying(room, puzzle);
               },
@@ -317,6 +359,98 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildWaiting(RoomModel room) {
+    final uid = _myUid ?? '';
+    final isHost = uid == room.hostId;
+    final isRandom = room.isPublicRoom;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('משחק האותיות',
+                style: TextStyle(
+                    color: _kGoldLight, fontSize: 26, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 18),
+            if (isRandom) ...[
+              const CircularProgressIndicator(color: _kGold),
+              const SizedBox(height: 20),
+              const Text('מחפש יריב…',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 6),
+              const Text('אם לא יימצא יריב, תשחק מול הבוט',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white54, fontSize: 13)),
+            ] else if (isHost) ...[
+              const Text('הזמינו חבר',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 16),
+              const Text('קוד החדר',
+                  style: TextStyle(color: Colors.white54, fontSize: 13)),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: room.code));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('הקוד הועתק'), duration: Duration(seconds: 2)),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF07101F),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _kGold.withOpacity(0.6), width: 1.5),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(room.code,
+                          style: const TextStyle(
+                              color: _kGoldLight,
+                              fontSize: 30,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 6)),
+                      const SizedBox(width: 10),
+                      Icon(Icons.copy_rounded, color: _kGold.withOpacity(0.8), size: 20),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text('שתפו את הקוד עם חבר כדי לשחק יחד',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white54, fontSize: 13)),
+              const SizedBox(height: 24),
+              const CircularProgressIndicator(color: _kGold),
+              const SizedBox(height: 12),
+              const Text('ממתין לחבר…',
+                  style: TextStyle(color: Colors.white70, fontSize: 14)),
+              const SizedBox(height: 18),
+              TextButton(
+                onPressed: _playVsBotNow,
+                child: const Text('שחק מול הבוט עכשיו',
+                    style: TextStyle(color: _kGoldLight, fontSize: 16, fontWeight: FontWeight.w800)),
+              ),
+            ] else ...[
+              const CircularProgressIndicator(color: _kGold),
+              const SizedBox(height: 18),
+              const Text('ממתין שהמשחק יתחיל…',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+            ],
+            const SizedBox(height: 26),
+            TextButton(
+              onPressed: () => context.go('/home'),
+              child: const Text('חזרה לבית',
+                  style: TextStyle(color: Colors.white54, fontSize: 15)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

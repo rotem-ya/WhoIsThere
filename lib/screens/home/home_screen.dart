@@ -22,6 +22,8 @@ import '../../widgets/economy/coin_icon.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
 import '../../models/room_model.dart';
 
+enum _GameKind { places, heat, letters }
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -35,7 +37,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   late final bool _doIntro;
   bool _isCreating = false;
-  int? _loadingPlayers;
   bool _loadingLetters = false;
   DateTime? _lastBackPressedAt;
   // Test branch: difficulty chosen for the next quick game (picker below).
@@ -56,84 +57,119 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   /// Quick-game sheet: choose the topic (places / חי-צומח-דומם) AND the number
   /// of players in one place, then launch. Replaces the old two-step popup.
-  void _showQuickGameSheet() {
+  /// Unified "how do you want to play <game>?" sheet. Same layout for every
+  /// game so the choice — random opponent vs friends — is always in the same
+  /// place. Adapts the random section per game (player count for the image
+  /// games, 1v1 for letters).
+  void _showPlaySheet(_GameKind kind) {
     FeedbackService.click();
-    var content = _quickDifficulty; // local selection (easy=places, giant=heat)
+    final name = kind == _GameKind.places
+        ? 'זיהוי מקומות'
+        : kind == _GameKind.heat
+            ? 'חי צומח דומם'
+            : 'משחק האותיות';
+    final desc = kind == _GameKind.letters
+        ? 'נחשו את המילה הנסתרת מאחורי התמונה'
+        : 'מי יזהה את התמונה ראשון';
+    const fee = EconomyConfig.gameEntryFee;
+
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) => Directionality(
-          textDirection: TextDirection.rtl,
-          child: Container(
-            padding: EdgeInsets.fromLTRB(
-                20, 12, 20, 16 + MediaQuery.paddingOf(ctx).bottom),
-            decoration: const BoxDecoration(
-              color: Color(0xFF0D1E30),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Container(
+          padding: EdgeInsets.fromLTRB(
+              20, 12, 20, 16 + MediaQuery.paddingOf(ctx).bottom),
+          decoration: const BoxDecoration(
+            color: Color(0xFF0D1E30),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text('משחק מהיר',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900)),
+                Text(name,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 4),
-                Text('נגד שחקנים אמיתיים — מי יזהה ראשון',
-                    style: TextStyle(
-                        color: Colors.white.withOpacity(0.55), fontSize: 13)),
+                Text(desc,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 13)),
                 const SizedBox(height: 18),
-                const Align(
-                  alignment: Alignment.centerRight,
-                  child: Text('בחרו נושא',
-                      style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800)),
+                _sheetLabel('🎲 שחקנים אקראיים'),
+                const SizedBox(height: 8),
+                if (kind == _GameKind.letters)
+                  _FriendsSheetOption(
+                    icon: Icons.casino_rounded,
+                    iconColor: const Color(0xFF4A9EFF),
+                    title: 'התחל משחק',
+                    subtitle: '1 על 1 · נגד יריב אקראי',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _startLettersRandom();
+                    },
+                  )
+                else
+                  for (final n in const [2, 3, 4]) ...[
+                    _FriendsSheetOption(
+                      icon: Icons.groups_rounded,
+                      iconColor: const Color(0xFF4A9EFF),
+                      title: n == 2 ? '1 על 1' : '$n שחקנים',
+                      subtitle: 'כניסה $fee · קופה ${fee * n} מטבעות',
+                      onTap: () {
+                        _quickDifficulty =
+                            kind == _GameKind.heat ? Difficulty.giant : Difficulty.easy;
+                        Navigator.pop(ctx);
+                        _startQuickGame(n);
+                      },
+                    ),
+                    if (n != 4) const SizedBox(height: 8),
+                  ],
+                const SizedBox(height: 18),
+                _sheetLabel('👥 חברים'),
+                const SizedBox(height: 8),
+                _FriendsSheetOption(
+                  icon: Icons.add_circle_outline_rounded,
+                  iconColor: const Color(0xFF3DCCAA),
+                  title: 'פתח חדר',
+                  subtitle: 'חינם · שתפו קוד עם חבר',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    if (kind == _GameKind.letters) {
+                      _startLettersFriends();
+                    } else {
+                      _createPrivateRoom(
+                          gameType: kind == _GameKind.heat
+                              ? Difficulty.giant
+                              : Difficulty.easy);
+                    }
+                  },
                 ),
                 const SizedBox(height: 8),
-                _ContentChip(
-                  emoji: '📍',
-                  label: 'זיהוי מקומות',
-                  selected: content == Difficulty.easy,
-                  onTap: () => setSheet(() => content = Difficulty.easy),
+                _FriendsSheetOption(
+                  icon: Icons.key_rounded,
+                  iconColor: const Color(0xFF81C784),
+                  title: 'יש לי קוד',
+                  subtitle: 'הצטרפו לחדר של חבר',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showJoinDialog();
+                  },
                 ),
-                const SizedBox(height: 10),
-                _ContentChip(
-                  emoji: '⚡',
-                  label: 'חי צומח דומם',
-                  selected: content == Difficulty.giant,
-                  onTap: () => setSheet(() => content = Difficulty.giant),
-                ),
-                const SizedBox(height: 18),
-                const Align(
-                  alignment: Alignment.centerRight,
-                  child: Text('כמה שחקנים?',
-                      style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800)),
-                ),
-                const SizedBox(height: 10),
-                for (final n in const [2, 3, 4]) ...[
-                  _QuickGameButton(
-                    players: n,
-                    isLoading: false,
-                    onTap: () => _launchQuick(ctx, content, n),
-                  ),
-                  if (n != 4) const SizedBox(height: 8),
-                ],
               ],
             ),
           ),
@@ -142,11 +178,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  void _launchQuick(BuildContext sheetCtx, Difficulty content, int players) {
-    _quickDifficulty = content;
-    Navigator.pop(sheetCtx);
-    _startQuickGame(players);
-  }
+  Widget _sheetLabel(String text) => Align(
+        alignment: Alignment.centerRight,
+        child: Text(text,
+            style: const TextStyle(
+                color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w800)),
+      );
 
   /// Topic picker for the friends flow (places / חי-צומח-דומם). Returns the
   /// chosen content, or null if dismissed.
@@ -236,7 +273,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     setState(() {
       _isCreating = true;
-      _loadingPlayers = targetPlayers;
     });
 
     try {
@@ -305,16 +341,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (mounted) {
         setState(() {
           _isCreating = false;
-          _loadingPlayers = null;
         });
       }
     }
   }
 
-  /// Letters game (משחק האותיות) — a free solo Wordle-style duel vs a bot.
-  Future<void> _startLettersGame() async {
+  /// Letters game vs a RANDOM player: join a waiting opponent if one exists,
+  /// otherwise open a public room (a bot fills in if nobody joins shortly).
+  Future<void> _startLettersRandom() async {
     if (_isCreating || _loadingLetters) return;
-    QaLoggerService.instance.log('HOME', 'TAP_LETTERS_GAME');
+    QaLoggerService.instance.log('HOME', 'TAP_LETTERS_RANDOM');
+    FeedbackService.click();
+    setState(() => _loadingLetters = true);
+    try {
+      final user = await ref.read(currentUserProvider.future);
+      if (user == null) return;
+      final svc = ref.read(roomServiceProvider);
+      final match = await svc.findLettersMatch(user.id);
+      String roomId;
+      if (match != null) {
+        await svc.joinRoom(
+          code: match.code,
+          userId: user.id,
+          userName: user.name,
+          userPhotoUrl: user.photoUrl,
+        );
+        roomId = match.id;
+      } else {
+        final room = await svc.createLettersRoom(
+          hostId: user.id,
+          hostName: user.name,
+          hostPhotoUrl: user.photoUrl,
+          solo: false,
+          isPublicRoom: true,
+        );
+        roomId = room.id;
+      }
+      ref.read(currentRoomIdProvider.notifier).state = roomId;
+      if (mounted) context.go('/letters/$roomId');
+    } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log('HOME', 'LETTERS_RANDOM_ERROR ${msg.length > 60 ? msg.substring(0, 60) : msg}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('יצירת המשחק נכשלה: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingLetters = false);
+    }
+  }
+
+  /// Letters game with a FRIEND: open a private room and show its code; the
+  /// friend joins via "יש לי קוד" and the game starts when they arrive.
+  Future<void> _startLettersFriends() async {
+    if (_isCreating || _loadingLetters) return;
+    QaLoggerService.instance.log('HOME', 'TAP_LETTERS_FRIENDS');
     FeedbackService.click();
     setState(() => _loadingLetters = true);
     try {
@@ -324,11 +406,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             hostId: user.id,
             hostName: user.name,
             hostPhotoUrl: user.photoUrl,
+            solo: false,
+            isPublicRoom: false,
           );
+      ref.read(currentRoomIdProvider.notifier).state = room.id;
       if (mounted) context.go('/letters/${room.id}');
     } catch (e) {
       final msg = e.toString();
-      QaLoggerService.instance.log('HOME', 'LETTERS_GAME_ERROR ${msg.length > 60 ? msg.substring(0, 60) : msg}');
+      QaLoggerService.instance.log('HOME', 'LETTERS_FRIENDS_ERROR ${msg.length > 60 ? msg.substring(0, 60) : msg}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('יצירת המשחק נכשלה: $e')),
@@ -349,65 +434,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  void _showFriendsSheet() {
-    QaLoggerService.instance.log('HOME', 'TAP_FRIENDS_SHEET');
-    final navBarPadding = MediaQuery.paddingOf(context).bottom;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Container(
-          padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + navBarPadding),
-          decoration: const BoxDecoration(
-            color: Color(0xFF0D1E30),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 36, height: 4,
-                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'שחק עם חברים',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 16),
-              _FriendsSheetOption(
-                icon: Icons.add_circle_outline_rounded,
-                iconColor: const Color(0xFF87CEEB),
-                title: 'פתח חדר',
-                subtitle: 'חינם · צור חדר וזמן חברים בקוד',
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _createPrivateRoom();
-                },
-              ),
-              const SizedBox(height: 10),
-              _FriendsSheetOption(
-                icon: Icons.key_rounded,
-                iconColor: const Color(0xFF81C784),
-                title: 'יש לי קוד',
-                subtitle: 'הצטרף לחדר של חבר',
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _showJoinDialog();
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<void> _createPrivateRoom({Difficulty? gameType}) async {
     if (_isCreating) return;
     QaLoggerService.instance.log('HOME', 'TAP_CREATE_ROOM');
@@ -420,7 +446,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     setState(() {
       _isCreating = true;
-      _loadingPlayers = null;
     });
 
     try {
@@ -452,7 +477,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (mounted) {
         setState(() {
           _isCreating = false;
-          _loadingPlayers = null;
         });
       }
     }
@@ -757,14 +781,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             Column(
                               children: [
                                 _GameTypeCard(
-                                  icon: '🎯',
-                                  title: 'משחק מהיר',
-                                  subtitle: 'נגד שחקנים אמיתיים',
+                                  icon: '🏞️',
+                                  title: 'זיהוי מקומות',
+                                  subtitle: 'מצאו את המקום בתמונה',
                                   gradientColors: const [Color(0xFF1A4A8A), Color(0xFF0A2356)],
                                   borderColor: const Color(0xFF4A9EFF),
                                   glowColor: const Color(0xFF2266CC),
                                   isLoading: _isCreating,
-                                  onTap: _isCreating ? null : _showQuickGameSheet,
+                                  onTap: _isCreating
+                                      ? null
+                                      : () => _showPlaySheet(_GameKind.places),
+                                ),
+                                SizedBox(height: verySmall ? 8 : 10),
+                                _GameTypeCard(
+                                  icon: '🐢',
+                                  title: 'חי צומח דומם',
+                                  subtitle: 'חיות · צמחים · חפצים ועוד',
+                                  gradientColors: const [Color(0xFF135A4A), Color(0xFF0A2E26)],
+                                  borderColor: const Color(0xFF3DCCAA),
+                                  glowColor: const Color(0xFF1A8866),
+                                  isLoading: _isCreating,
+                                  onTap: _isCreating
+                                      ? null
+                                      : () => _showPlaySheet(_GameKind.heat),
                                 ),
                                 SizedBox(height: verySmall ? 8 : 10),
                                 _GameTypeCard(
@@ -777,18 +816,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   isLoading: _loadingLetters,
                                   onTap: (_isCreating || _loadingLetters)
                                       ? null
-                                      : _startLettersGame,
-                                ),
-                                SizedBox(height: verySmall ? 8 : 10),
-                                _GameTypeCard(
-                                  icon: '👥',
-                                  title: 'שחק עם חברים',
-                                  subtitle: 'חדר פרטי עם קוד',
-                                  gradientColors: const [Color(0xFF135A4A), Color(0xFF0A2E26)],
-                                  borderColor: const Color(0xFF3DCCAA),
-                                  glowColor: const Color(0xFF1A8866),
-                                  isLoading: false,
-                                  onTap: _isCreating ? null : _showFriendsSheet,
+                                      : () => _showPlaySheet(_GameKind.letters),
                                 ),
                               ],
                             ),
@@ -870,128 +898,6 @@ class _Dot extends StatelessWidget {
 }
 
 // ── Equal quick-game button for 2/3/4 players ─────────────────────────────
-
-class _QuickGameButton extends StatelessWidget {
-  final int players;
-  final bool isLoading;
-  final VoidCallback? onTap;
-
-  const _QuickGameButton({
-    required this.players,
-    required this.isLoading,
-    required this.onTap,
-  });
-
-  static const _configs = {
-    2: (
-      icon: '⚔️',
-      label: '1 על 1',
-      gradientColors: [Color(0xFF1A4A8A), Color(0xFF0A2356)],
-      borderColor: Color(0xFF4A9EFF),
-      glowColor: Color(0xFF2266CC),
-    ),
-    3: (
-      icon: '🎯',
-      label: '3 שחקנים',
-      gradientColors: [Color(0xFF1A5A4A), Color(0xFF0A2E26)],
-      borderColor: Color(0xFF3DCCAA),
-      glowColor: Color(0xFF1A8866),
-    ),
-    4: (
-      icon: '🏆',
-      label: '4 שחקנים',
-      gradientColors: [Color(0xFF3A1A6A), Color(0xFF1E0A3C)],
-      borderColor: Color(0xFF9966FF),
-      glowColor: Color(0xFF6633BB),
-    ),
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final cfg = _configs[players]!;
-
-    return PressableScale(
-      onTap: onTap == null ? null : () {
-        HapticFeedback.mediumImpact();
-        onTap!();
-      },
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 160),
-        opacity: onTap == null ? 0.55 : 1,
-        child: Container(
-          height: 68,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: cfg.gradientColors,
-            ),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: cfg.borderColor.withOpacity(0.7), width: 1.5),
-            boxShadow: [
-              BoxShadow(color: cfg.glowColor.withOpacity(0.35), blurRadius: 14, spreadRadius: 0, offset: const Offset(0, 4)),
-            ],
-          ),
-          child: isLoading
-              ? const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4)))
-              : Row(
-                  children: [
-                    const SizedBox(width: 18),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            cfg.label,
-                            style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900, height: 1.1),
-                          ),
-                          const SizedBox(height: 3),
-                          Text.rich(
-                            TextSpan(
-                              text: 'כניסה ${EconomyConfig.gameEntryFee} ',
-                              children: [coinSpan(size: 12)],
-                            ),
-                            style: TextStyle(color: Colors.white.withOpacity(0.60), fontSize: 11.5, fontWeight: FontWeight.w600, height: 1),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: cfg.borderColor.withOpacity(0.14),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: cfg.borderColor.withOpacity(0.38), width: 1),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'קופה',
-                            style: TextStyle(color: cfg.borderColor.withOpacity(0.70), fontSize: 9, fontWeight: FontWeight.w700, height: 1.1),
-                          ),
-                          Text.rich(
-                            TextSpan(
-                              text: '${EconomyConfig.gameEntryFee * players} ',
-                              children: [coinSpan(size: 13)],
-                            ),
-                            style: TextStyle(color: cfg.borderColor, fontSize: 13, fontWeight: FontWeight.w900, height: 1.1),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                  ],
-                ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── One clear game-type card (משחק מהיר / אותיות / חברים) ──────────────────
 
 class _GameTypeCard extends StatelessWidget {
   final String icon;
@@ -1111,66 +1017,6 @@ class _GameTypeCard extends StatelessWidget {
 }
 
 // ── Topic chip for the quick-game sheet ─────────────────────────────────────
-
-class _ContentChip extends StatelessWidget {
-  final String emoji;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ContentChip({
-    required this.emoji,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const accent = Color(0xFF4A9EFF);
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        decoration: BoxDecoration(
-          color: selected
-              ? accent.withOpacity(0.18)
-              : Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? accent : Colors.white.withOpacity(0.12),
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 21)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: selected ? Colors.white : Colors.white70,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            if (selected)
-              const Icon(Icons.check_circle_rounded, color: accent, size: 22),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _FriendsSheetOption extends StatelessWidget {
   final IconData icon;
@@ -1570,7 +1416,7 @@ class _JoinCodeDialogState extends ConsumerState<_JoinCodeDialog> {
           ref.read(currentRoomIdProvider.notifier).state = found.id;
           if (mounted) {
             Navigator.of(context).pop();
-            context.go('/game/${found.id}');
+            context.go(found.isLetters ? '/letters/${found.id}' : '/game/${found.id}');
           }
         } else {
           QaLoggerService.instance.log('HOME',
@@ -1608,7 +1454,7 @@ class _JoinCodeDialogState extends ConsumerState<_JoinCodeDialog> {
       ref.read(currentRoomIdProvider.notifier).state = room.id;
       if (mounted) {
         Navigator.of(context).pop();
-        context.go('/lobby/${room.id}');
+        context.go(room.isLetters ? '/letters/${room.id}' : '/lobby/${room.id}');
       }
     } catch (e) {
       final msg = e.toString();
