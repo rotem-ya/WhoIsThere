@@ -978,28 +978,36 @@ class _GameTypeCard extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            softWrap: false,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w900,
-                                height: 1.1),
+                          // Shrink-to-fit (instead of truncating with "…") so the
+                          // full caption shows even at large device text scales.
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              softWrap: false,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1.1),
+                            ),
                           ),
                           const SizedBox(height: 3),
-                          Text(
-                            subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            softWrap: false,
-                            style: TextStyle(
-                                color: Colors.white.withOpacity(0.62),
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                height: 1),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(
+                              subtitle,
+                              maxLines: 1,
+                              softWrap: false,
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.62),
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1),
+                            ),
                           ),
                         ],
                       ),
