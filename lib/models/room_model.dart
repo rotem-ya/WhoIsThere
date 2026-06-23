@@ -56,6 +56,10 @@ class RoomModel extends Equatable {
   final List<String> heatCategories;
   final List<String> heatImageIds;
   final int heatRoundIndex;
+  // חי-צומח-דומם: ids של שחקנים אנושיים שהצביעו להחליף את הפריט הנוכחי (כשאף אחד
+  // לא יודע את התשובה). בוטים ניטרליים — לא מצביעים ולא נספרים. מתאפס בכל החלפת
+  // פריט / מעבר סבב.
+  final List<String> skipVotes;
   // Friends-mode heat topic picks: playerId → list of chosen categoryIds.
   // Each player picks 1; when there are <3 players the host picks the extra
   // topics so the heat still has ≥3 rounds. Resolved into [heatCategories] when
@@ -134,6 +138,7 @@ class RoomModel extends Equatable {
     this.heatCategories = const [],
     this.heatImageIds = const [],
     this.heatRoundIndex = 0,
+    this.skipVotes = const [],
     this.topicChoices = const {},
     this.placementPaidPlayerIds = const [],
     this.rematchRoomId,
@@ -150,6 +155,27 @@ class RoomModel extends Equatable {
   // True when this room is a fast-game heat (more than one queued round).
   bool get isHeat => heatImageIds.length > 1;
   bool get isLastHeatRound => heatRoundIndex >= heatImageIds.length - 1;
+
+  // ── דילוג/החלפת פריט בחי-צומח-דומם (הצבעת רוב) ──────────────────────────────
+  // הצבעת דילוג מתאפשרת רק אחרי שנחשפו ≥30% מהמשבצות.
+  static const double kSkipVoteMinRevealRatio = 0.30;
+  // אפשר להציע החלפת פריט: היט פעיל, שלב משחק, ומעבר לסף החשיפה.
+  bool skipVoteEligible(double revealRatio) =>
+      isHeat &&
+      phase == GamePhase.playing &&
+      revealRatio >= kSkipVoteMinRevealRatio;
+  // שחקנים אנושיים פעילים (לא בוטים, לא הודחו) — בסיס ספירת הרוב. בוטים ניטרליים.
+  List<PlayerModel> get humanPlayers =>
+      players.values.where((p) => !p.isBot && !p.isEliminated).toList();
+  // רוב: יותר ממחצית האנושיים. 1→1, 2→2 (1-על-1 אמיתי), 3→2, 4→3.
+  int get skipVoteThreshold => (humanPlayers.length ~/ 2) + 1;
+  // מספר ההצבעות התקפות (רק שחקנים אנושיים פעילים נספרים).
+  int get skipVoteCount {
+    final humanIds = humanPlayers.map((p) => p.id).toSet();
+    return skipVotes.where(humanIds.contains).length;
+  }
+  bool get skipVotePassed =>
+      humanPlayers.isNotEmpty && skipVoteCount >= skipVoteThreshold;
 
   // Friends games are private (not public quick-match): free entry, per-game
   // scoring (not added to lifetime totalPoints), top-2 placement coin rewards.
@@ -275,6 +301,7 @@ class RoomModel extends Equatable {
       heatCategories: List<String>.from(data['heatCategories'] ?? []),
       heatImageIds: List<String>.from(data['heatImageIds'] ?? []),
       heatRoundIndex: (data['heatRoundIndex'] as num?)?.toInt() ?? 0,
+      skipVotes: List<String>.from(data['skipVotes'] ?? const []),
       topicChoices: (data['topicChoices'] as Map?)?.map(
             (k, v) => MapEntry(k.toString(), List<String>.from(v as List? ?? const [])),
           ) ??
@@ -345,6 +372,7 @@ class RoomModel extends Equatable {
         'heatCategories': heatCategories,
         'heatImageIds': heatImageIds,
         'heatRoundIndex': heatRoundIndex,
+        'skipVotes': skipVotes,
         'topicChoices': topicChoices,
         'placementPaidPlayerIds': placementPaidPlayerIds,
         'rematchRoomId': rematchRoomId,
@@ -398,6 +426,7 @@ class RoomModel extends Equatable {
     List<String>? heatCategories,
     List<String>? heatImageIds,
     int? heatRoundIndex,
+    List<String>? skipVotes,
     Map<String, List<String>>? topicChoices,
     List<String>? placementPaidPlayerIds,
     String? rematchRoomId,
@@ -458,6 +487,7 @@ class RoomModel extends Equatable {
         heatCategories: heatCategories ?? this.heatCategories,
         heatImageIds: heatImageIds ?? this.heatImageIds,
         heatRoundIndex: heatRoundIndex ?? this.heatRoundIndex,
+        skipVotes: skipVotes ?? this.skipVotes,
         topicChoices: topicChoices ?? this.topicChoices,
         placementPaidPlayerIds:
             placementPaidPlayerIds ?? this.placementPaidPlayerIds,
@@ -516,6 +546,7 @@ class RoomModel extends Equatable {
         heatCategories,
         heatImageIds,
         heatRoundIndex,
+        skipVotes,
         topicChoices,
         placementPaidPlayerIds,
         rematchRoomId,

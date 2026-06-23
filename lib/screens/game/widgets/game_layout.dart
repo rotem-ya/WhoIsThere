@@ -63,6 +63,8 @@ class GameLayout extends StatelessWidget {
   final VoidCallback? onBuyLetter;
   final int nextLetterPrice;
   final bool showBuyLetter;
+  // חי-צומח-דומם: vote to replace the current item (nobody recognizes it).
+  final VoidCallback? onVoteSkip;
 
   const GameLayout({
     required this.room,
@@ -108,6 +110,7 @@ class GameLayout extends StatelessWidget {
     this.onBuyLetter,
     this.nextLetterPrice = 0,
     this.showBuyLetter = false,
+    this.onVoteSkip,
   });
 
   @override
@@ -316,6 +319,12 @@ class GameLayout extends StatelessWidget {
               revealBuyCount: revealBuyCount,
               maxRevealBuys: maxRevealBuys,
               detectiveActions: detectiveActions,
+              showSkipVote: room.skipVoteEligible(revealRatio),
+              skipVoteCount: room.skipVoteCount,
+              skipVoteThreshold: room.skipVoteThreshold,
+              iVotedSkip:
+                  userId != null && room.skipVotes.contains(userId),
+              onVoteSkip: onVoteSkip,
             ),
           ],
         ),

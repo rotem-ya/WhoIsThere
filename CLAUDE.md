@@ -32,6 +32,15 @@
 
 ---
 
+## חי-צומח-דומם — הצבעת "החלף פריט" (כשאף אחד לא יודע)
+- אחרי שנחשפו **≥30%** מהמשבצות בסבב היט, מופיע כפתור "🔁 אף אחד לא יודע? החלף פריט" (`game_actions.dart` → `_SkipVoteButton`). לחיצה = הצבעה (toggle); chip מציג `X/סף`.
+- **דרוש רוב של שחקנים אנושיים** כדי להחליף: סף = `(מס׳_אנושיים ~/ 2) + 1`. לכן 2 בני אדם → צריך 2 (1-על-1 אמיתי), 3 → 2, 4 → 3.
+- **בוטים ניטרליים** — לא מצביעים ולא נספרים. לכן אדם בודד מול בוטים → סף 1 (מחליף לבד); ב-1-על-1 הבוט לא משפיע.
+- בעת מעבר רוב: הפריט מוחלף בפריט **אקראי חדש מאותה קטגוריה** (לא בשימוש), החשיפה מתאפסת, **מס׳ הסבבים נשמר** (אותו `heatRoundIndex`).
+- **קוד:** `RoomModel.skipVotes` (List<String>) + getters `humanPlayers`/`skipVoteThreshold`/`skipVoteCount`/`skipVotePassed`/`skipVoteEligible(ratio)` + `kSkipVoteMinRevealRatio=0.30`. שירות: `RoomService.voteSkipItem` (טרנזקציה: pre-pick תמונה מחוץ לטרנזקציה, toggle+ספירה בתוכה). `skipVotes` מתאפס ב-`_roundResetUpdates` (כל מעבר סבב/החלפה). gating בצד שרת ולקוח זהה (`room.placedPieces.length / gridSize²`).
+
+---
+
 ## כללי פיתוח
 - **ענף פיתוח / השקה (מאוחד):** `claude/qa-launch-prep-EXqLn`
   - זהו הענף המאוחד והיחיד לבנייה (iOS + Android). מכיל: 36 מקומות + טקסט עברי מבוקר, Apple Sign-in entitlement, תיקון קריסת "משחק מהיר" (ניטרול Firestore cache), חתימת AAB עם מפתח EA:3B דרך Secrets, וכל הקו הראשי (parallel guessing, quick-match, פרסומות, מפת גילויים).

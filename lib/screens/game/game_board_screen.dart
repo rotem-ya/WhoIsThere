@@ -2742,6 +2742,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       : null,
                   nextLetterPrice: _nextLetterPrice,
                   showBuyLetter: _showBuyLetter,
+                  onVoteSkip: (currentUserId != null &&
+                          !_isFinished &&
+                          room.skipVoteEligible(revealRatio))
+                      ? () {
+                          unawaited(ref.read(roomServiceProvider).voteSkipItem(
+                                roomId: room.id,
+                                userId: currentUserId,
+                              ));
+                        }
+                      : null,
                 );
               },
             ),

@@ -1173,6 +1173,8 @@ class RoomService {
       'revealCount': 0,
       'revealCycleId': FieldValue.increment(1),
       'winnerId': null,
+      // Fresh item → drop any skip-item votes from the previous one.
+      'skipVotes': <String>[],
     };
   }
 
@@ -1214,6 +1216,107 @@ class RoomService {
           (room.players.keys.isEmpty ? '' : room.players.keys.first);
     }
     return winner;
+  }
+
+  /// חי-צומח-דומם: an active human player toggles a vote to REPLACE the current
+  /// item (used when nobody recognizes it). Allowed only once ≥30% of the board
+  /// is revealed. When a majority of human players have voted, the item is
+  /// swapped for a fresh random one from the SAME category and the reveal
+  /// restarts — the round count is unchanged. Bots are neutral: they never vote
+  /// and are never counted (so a lone human vs bots needs only their own vote,
+  /// and a real 1-on-1 needs both humans).
+  Future<void> voteSkipItem({
+    required String roomId,
+    required String userId,
+  }) async {
+    try {
+      // Read once to validate and pre-pick a replacement image. The asset/
+      // exposure load is async and can't run inside the Firestore transaction,
+      // so we prepare a candidate first and only apply it if the vote carries.
+      final preDoc = await _rooms.doc(roomId).get();
+      if (!preDoc.exists) return;
+      final pre = RoomModel.fromFirestore(preDoc);
+      if (!pre.isHeat || pre.phase != GamePhase.playing) return;
+      final voter = pre.players[userId];
+      if (voter == null || voter.isBot) return; // bots are neutral
+
+      final totalCells = pre.gridSize * pre.gridSize;
+      final ratio = totalCells > 0 ? pre.placedPieces.length / totalCells : 0.0;
+      if (ratio < RoomModel.kSkipVoteMinRevealRatio) return;
+
+      final catId = (pre.heatCategories.isNotEmpty &&
+              pre.heatRoundIndex < pre.heatCategories.length)
+          ? pre.heatCategories[pre.heatRoundIndex]
+          : pre.selectedCategory;
+
+      GameImageModel? replacement;
+      try {
+        final pool = await _loadLocalImages(categoryId: catId);
+        if (pool.isNotEmpty) {
+          final usedIds = <String>{
+            ...pre.heatImageIds,
+            if (pre.selectedImageId != null) pre.selectedImageId!,
+          };
+          final fresh = pool.where((i) => !usedIds.contains(i.id)).toList();
+          final source = fresh.isNotEmpty
+              ? fresh
+              : pool.where((i) => i.id != pre.selectedImageId).toList();
+          if (source.isNotEmpty) {
+            replacement = await _pickSmartImage(source, pre.players);
+          }
+        }
+      } catch (_) {}
+
+      await _firestore.runTransaction((tx) async {
+        final doc = await tx.get(_rooms.doc(roomId));
+        if (!doc.exists) return;
+        final room = RoomModel.fromFirestore(doc);
+        if (!room.isHeat || room.phase != GamePhase.playing) return;
+        final p = room.players[userId];
+        if (p == null || p.isBot) return;
+
+        final cells = room.gridSize * room.gridSize;
+        final r = cells > 0 ? room.placedPieces.length / cells : 0.0;
+        if (r < RoomModel.kSkipVoteMinRevealRatio) return;
+
+        // Toggle this player's vote.
+        final votes = [...room.skipVotes];
+        votes.contains(userId) ? votes.remove(userId) : votes.add(userId);
+
+        // Majority of ACTIVE HUMAN players (bots excluded entirely).
+        final humanIds = room.players.values
+            .where((pl) => !pl.isBot && !pl.isEliminated)
+            .map((pl) => pl.id)
+            .toSet();
+        final validVotes = votes.where(humanIds.contains).length;
+        final threshold = (humanIds.length ~/ 2) + 1;
+        final passed = humanIds.isNotEmpty && validVotes >= threshold;
+
+        if (passed && replacement != null) {
+          final nowMs = DateTime.now().millisecondsSinceEpoch;
+          final newIds = [...room.heatImageIds];
+          if (room.heatRoundIndex < newIds.length) {
+            newIds[room.heatRoundIndex] = replacement.id;
+          }
+          tx.update(_rooms.doc(roomId), {
+            ..._roundResetUpdates(room.gridSize, nowMs),
+            'phase': GamePhase.playing.name,
+            'selectedImageId': replacement.id,
+            'selectedCategory': catId,
+            'heatImageIds': newIds,
+            'skipVotes': <String>[],
+          });
+          QaLoggerService.instance.log('HEAT',
+              'SKIP_RESOLVED votes=$validVotes/$threshold new=${replacement.id}');
+        } else {
+          tx.update(_rooms.doc(roomId), {'skipVotes': votes});
+          QaLoggerService.instance
+              .log('HEAT', 'SKIP_VOTE votes=$validVotes/$threshold');
+        }
+      });
+    } catch (e) {
+      QaLoggerService.instance.log('HEAT', 'SKIP_VOTE_ERROR $e');
+    }
   }
 
 
