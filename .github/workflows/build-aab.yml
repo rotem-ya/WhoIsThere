@@ -3,15 +3,19 @@ name: Build AAB (Google Play)
 # Builds a signed Android App Bundle (.aab) for upload to Google Play.
 # Google Play requires an .aab (not .apk) for new apps.
 #
-# Run manually from the Actions tab (workflow_dispatch). The resulting
-# app-release.aab is uploaded as a build artifact you can download and
-# upload to the Play Console (Internal testing / Production).
+# Run by pushing the .github/aab-release.txt marker on main (or pushing an
+# aab-v* tag). The resulting app-release.aab is uploaded as a build artifact
+# you can download and upload to the Play Console (Internal testing /
+# Production).
 #
-# Signing uses the dedicated Play upload keystore supplied via GitHub
-# Secrets (UPLOAD_KEYSTORE_BASE64 / UPLOAD_KEYSTORE_PASSWORD /
-# UPLOAD_KEY_ALIAS / UPLOAD_KEY_PASSWORD), whose SHA-1 is registered in
-# Firebase for Google Sign-In. Do NOT swap or regenerate these secrets —
-# it would break Google Sign-In and Play upload signing.
+# Signing uses the release keystore stored in GitHub Secrets:
+#   KEYSTORE_CONTENT     - base64 of the .jks keystore
+#   KEYSTORE_STORE_PASS  - keystore password
+#   KEYSTORE_ALIAS       - key alias
+#   KEYSTORE_KEY_PASS    - key password
+# This is the SAME key whose SHA-1 (25:C3:...) is registered in Firebase for
+# Google Sign-In and used by the QA APK builds. Do NOT swap or regenerate
+# these secrets — it would break Google Sign-In and Play upload signing.
 #
 # versionCode is set from the workflow run number so every build that lands
 # on Play has a strictly increasing code (Play rejects duplicate codes).
@@ -28,8 +32,9 @@ on:
       - 'aab-v*'
     branches:
       - main
+      - claude/google-connect-review-submit-mp11cq
     # Only build an AAB when the release marker file changes, so ordinary
-    # pushes to main don't trigger a Play build on every commit.
+    # pushes don't trigger a Play build on every commit.
     paths:
       - '.github/aab-release.txt'
 
@@ -60,9 +65,10 @@ jobs:
           echo "flutter.sdk=$FLUTTER_SDK" > android/local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
 
-      - name: Restore upload keystore from secret
+      - name: Restore release keystore from secret
         run: |
-          echo "${{ secrets.UPLOAD_KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
+          echo "${{ secrets.KEYSTORE_CONTENT }}" | base64 -d > android/app/keystore.jks
+          echo "keystore bytes: $(stat -c%s android/app/keystore.jks)"
 
       - name: Clean Flutter and pub cache
         run: |
@@ -80,9 +86,9 @@ jobs:
 
       - name: Build signed App Bundle
         env:
-          KEYSTORE_STORE_PASS: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
-          KEYSTORE_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
-          KEYSTORE_KEY_PASS: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEYSTORE_KEY_PASS: ${{ secrets.KEYSTORE_KEY_PASS }}
         run: |
           flutter build appbundle --release \
             --build-name="${{ github.event.inputs.build_name || '1.0.0' }}" \
