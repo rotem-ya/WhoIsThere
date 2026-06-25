@@ -32,7 +32,6 @@ on:
       - 'aab-v*'
     branches:
       - main
-      - claude/google-connect-review-submit-mp11cq
     # Only build an AAB when the release marker file changes, so ordinary
     # pushes don't trigger a Play build on every commit.
     paths:
