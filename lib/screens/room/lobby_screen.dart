@@ -160,10 +160,15 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
   Widget _buildHeatSetup(RoomModel room, dynamic currentUser) {
     final myId = currentUser?.id as String?;
-    final myList = myId == null
-        ? const <String>[]
-        : (room.topicChoices[myId] ?? const <String>[]);
     final isHost = myId != null && myId == room.hostId;
+    // A topic chosen by ANY participant shows as selected to everyone. The
+    // first chooser owns the slot (the picker never double-books a topic).
+    final chosenBy = <String, String>{};
+    for (final entry in room.topicChoices.entries) {
+      for (final cat in entry.value) {
+        chosenBy.putIfAbsent(cat, () => entry.key);
+      }
+    }
     // Non-host picks exactly one; the host may pick several to lengthen the heat.
     final title = isHost ? 'בחרו נושא — אפשר כמה שתרצו' : 'בחרו נושא למקצה';
     return Container(
@@ -191,7 +196,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
               for (final catId in GameCategories.fastHeat)
                 if (ContentManifestService.instance.isCategoryActive(catId))
                   _topicChip(catId,
-                      selected: myList.contains(catId), isHost: isHost),
+                      selected: chosenBy.containsKey(catId),
+                      ownerName: room.players[chosenBy[catId]]?.name),
             ],
           ),
           const SizedBox(height: 8),
@@ -211,26 +217,13 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 
   Widget _topicChip(String catId,
-      {required bool selected, required bool isHost}) {
+      {required bool selected, String? ownerName}) {
     final cat = GameCategories.byId(catId);
+    final owner = (ownerName != null && ownerName.trim().isNotEmpty)
+        ? ownerName.trim().split(' ').first
+        : null;
     return GestureDetector(
-      onTap: () {
-        final uid = ref.read(currentUserProvider).value?.id;
-        if (uid == null) return;
-        HapticFeedback.selectionClick();
-        final room = ref.read(roomStreamProvider(widget.roomId)).valueOrNull;
-        final current = [...?room?.topicChoices[uid]];
-        if (current.contains(catId)) {
-          current.remove(catId);
-        } else {
-          // Non-host picks exactly one (replace previous); host may add many.
-          if (!isHost) current.clear();
-          current.add(catId);
-        }
-        ref
-            .read(roomServiceProvider)
-            .setTopicChoices(widget.roomId, uid, current);
-      },
+      onTap: () => _onTopicTap(catId),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
@@ -255,10 +248,134 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                     color: selected ? AppStyles.cyanGlow : Colors.white,
                     fontSize: 13,
                     fontWeight: FontWeight.w700)),
+            if (selected && owner != null) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: AppStyles.cyanGlow.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(owner,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700)),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  /// Tap handler for a topic chip. A chosen topic is visible to everyone and
+  /// can only be cancelled by the host (with a confirmation). Participants pick
+  /// exactly one and can't swap it themselves afterwards; the host may pick
+  /// several (each adds a heat round) and can cancel anyone's pick.
+  void _onTopicTap(String catId) {
+    final myId = ref.read(currentUserProvider).value?.id;
+    if (myId == null) return;
+    final room = ref.read(roomStreamProvider(widget.roomId)).valueOrNull;
+    if (room == null) return;
+    final isHost = myId == room.hostId;
+    final svc = ref.read(roomServiceProvider);
+
+    // Find the current owner of this topic (first chooser), if any.
+    String? ownerId;
+    for (final e in room.topicChoices.entries) {
+      if (e.value.contains(catId)) {
+        ownerId = e.key;
+        break;
+      }
+    }
+
+    // ── Topic already chosen ────────────────────────────────────────────────
+    if (ownerId != null) {
+      if (!isHost) {
+        // Participants can't cancel — neither their own pick nor anyone else's.
+        _showOnlyHostCanCancel(alreadyPicked: ownerId == myId);
+        return;
+      }
+      if (ownerId == myId) {
+        // Host drops one of their own extra picks freely (no confirmation).
+        HapticFeedback.selectionClick();
+        final list = [...?room.topicChoices[myId]]..remove(catId);
+        svc.setTopicChoices(widget.roomId, myId, list);
+      } else {
+        // Host cancels a participant's pick — confirm first.
+        _confirmCancelChoice(room.players[ownerId], catId, ownerId);
+      }
+      return;
+    }
+
+    // ── Topic is free ───────────────────────────────────────────────────────
+    if (isHost) {
+      HapticFeedback.selectionClick();
+      final list = [...?room.topicChoices[myId], catId];
+      svc.setTopicChoices(widget.roomId, myId, list);
+      return;
+    }
+    // Non-host picks exactly one; once picked they can't change it themselves.
+    final mine = room.topicChoices[myId] ?? const <String>[];
+    if (mine.isNotEmpty) {
+      _showOnlyHostCanCancel(alreadyPicked: true);
+      return;
+    }
+    HapticFeedback.selectionClick();
+    svc.setTopicChoices(widget.roomId, myId, [catId]);
+  }
+
+  void _showOnlyHostCanCancel({bool alreadyPicked = false}) {
+    HapticFeedback.lightImpact();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      duration: const Duration(seconds: 2),
+      content: Text(alreadyPicked
+          ? 'כבר בחרת נושא — רק המארח יכול לבטל את הבחירה'
+          : 'רק המארח יכול לבטל בחירת נושא'),
+    ));
+  }
+
+  Future<void> _confirmCancelChoice(
+      PlayerModel? owner, String catId, String ownerId) async {
+    final cat = GameCategories.byId(catId);
+    final name = (owner?.name.isNotEmpty ?? false) ? owner!.name : 'השחקן';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF0D1E30),
+          title: const Text('לבטל בחירת נושא?',
+              style: TextStyle(color: Colors.white, fontSize: 17)),
+          content: Text('לבטל את "${cat.nameHe}" שבחר $name?',
+              style: const TextStyle(color: Colors.white70, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child:
+                  const Text('השאר', style: TextStyle(color: Colors.white54)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('בטל בחירה',
+                  style: TextStyle(
+                      color: Color(0xFFFF6B6B), fontWeight: FontWeight.w800)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok == true) {
+      HapticFeedback.mediumImpact();
+      final room = ref.read(roomStreamProvider(widget.roomId)).valueOrNull;
+      final list = [...?room?.topicChoices[ownerId]]..remove(catId);
+      await ref
+          .read(roomServiceProvider)
+          .setTopicChoices(widget.roomId, ownerId, list);
+    }
   }
 
   Widget _pickStatusChip(PlayerModel p, List<String> choices, int quota) {
