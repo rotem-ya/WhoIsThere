@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - docs/join.html
+      - docs/friend.html
       - docs/privacy.html
 
 jobs:
@@ -25,11 +26,14 @@ jobs:
           mkdir -p /tmp/pages/whoisthere/join
           cp docs/join.html /tmp/pages/whoisthere/join/index.html
 
+          mkdir -p /tmp/pages/whoisthere/friend
+          cp docs/friend.html /tmp/pages/whoisthere/friend/index.html
+
           mkdir -p /tmp/pages/whoisthere/privacy
           cp docs/privacy.html /tmp/pages/whoisthere/privacy/index.html
 
           cd /tmp/pages
-          git add whoisthere/join/index.html whoisthere/privacy/index.html
+          git add whoisthere/join/index.html whoisthere/friend/index.html whoisthere/privacy/index.html
           git diff --staged --quiet && echo "No changes, skipping." && exit 0
           git commit -m "sync: WhoIsThere public pages (${GITHUB_SHA::7})"
           git push
