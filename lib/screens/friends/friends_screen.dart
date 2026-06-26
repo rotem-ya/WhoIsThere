@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../models/friend_models.dart';
 import '../../providers/providers.dart';
@@ -27,6 +28,31 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   void initState() {
     super.initState();
     _loadMyCode();
+    _maybeAutoAddFromInvite();
+  }
+
+  /// If we arrived here from a friend-invite deep link, send the request to the
+  /// inviter automatically (no manual code entry needed).
+  void _maybeAutoAddFromInvite() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final code = ref.read(pendingFriendCodeProvider);
+      if (code == null) return;
+      final me = ref.read(currentUserProvider).valueOrNull;
+      if (me == null) return; // not ready yet — keep the code for a later retry
+      ref.read(pendingFriendCodeProvider.notifier).state = null; // consume once
+      try {
+        await ref.read(friendsServiceProvider).sendRequestByCode(
+              myUid: me.id,
+              myName: me.name,
+              code: code,
+            );
+        _toast('בקשת החברות נשלחה אוטומטית 🎉');
+      } on FriendException catch (e) {
+        _toast(e.message);
+      } catch (_) {
+        _toast('שגיאה בהוספת החבר');
+      }
+    });
   }
 
   Future<void> _loadMyCode() async {
@@ -80,8 +106,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     final msg = StringBuffer()
       ..writeln('בוא נשחק "מה בתמונה?" יחד 📸')
       ..writeln()
-      ..writeln('הוסיפו אותי כחבר עם הקוד: $code')
-      ..writeln('(במשחק: חברים → הוסף חבר → הזינו את הקוד)');
+      ..writeln('הוסיפו אותי כחבר בלחיצה אחת:')
+      ..writeln(AppConstants.friendInviteUrl(code))
+      ..writeln()
+      ..writeln('אין אפליקציה? הקוד שלי: $code');
     Share.share(msg.toString());
   }
 

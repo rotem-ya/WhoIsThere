@@ -105,6 +105,10 @@ final currentUserProvider = StreamProvider<UserModel?>((ref) {
 // Deep-link join code — set by AppLinks handler, consumed by JoinRoomScreen
 final pendingJoinCodeProvider = StateProvider<String?>((ref) => null);
 
+// Deep-link friend code — set by the AppLinks handler when a friend-invite link
+// is opened, consumed by FriendsScreen which auto-sends the request.
+final pendingFriendCodeProvider = StateProvider<String?>((ref) => null);
+
 // Current room
 final currentRoomIdProvider = StateProvider<String?>((ref) => null);
 

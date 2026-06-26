@@ -50,6 +50,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // preloaded and ready before the player taps (avoids a failed first tap).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) ref.read(adServiceProvider);
+      // Cold start via a friend-invite link: jump to the friends screen, which
+      // auto-sends the request. (Warm start is handled by the deep-link router.)
+      if (mounted && ref.read(pendingFriendCodeProvider) != null) {
+        context.push('/friends');
+      }
     });
   }
 

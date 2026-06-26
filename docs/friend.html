@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>מה בתמונה? – הזמנת חברות</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:       #D4AF37;
+      --gold-dark:  #B8860B;
+      --gold-glow:  rgba(212, 175, 55, 0.28);
+      --navy:       #050A14;
+      --navy-mid:   #0A1828;
+      --navy-card:  rgba(10, 24, 40, 0.97);
+      --cyan:       #87CEEB;
+      --cyan-dim:   rgba(135, 206, 235, 0.35);
+      --cyan-glow:  rgba(135, 206, 235, 0.10);
+    }
+
+    html { background: var(--navy); }
+
+    body {
+      min-height: 100vh;
+      min-height: 100svh;
+      font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+      color: #fff;
+      background:
+        radial-gradient(ellipse 70% 45% at 25% 10%, rgba(212,175,55,0.09) 0%, transparent 55%),
+        radial-gradient(ellipse 55% 40% at 75% 90%, rgba(135,206,235,0.07) 0%, transparent 55%),
+        linear-gradient(180deg, #050A14 0%, #07101F 50%, #0D2040 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+    }
+
+    .shell { width: 100%; max-width: 420px; }
+
+    .card {
+      width: 100%;
+      padding: 36px 24px 28px;
+      text-align: center;
+      border-radius: 28px;
+      background: linear-gradient(180deg,
+        rgba(10, 24, 40, 0.97) 0%,
+        rgba(5, 10, 20, 0.98) 100%);
+      border: 1.5px solid rgba(212, 175, 55, 0.18);
+      box-shadow:
+        0 0 0 1px rgba(135, 206, 235, 0.05),
+        0 30px 80px rgba(0, 0, 0, 0.60),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .logo-wrap { margin-bottom: 22px; }
+
+    .logo-icon {
+      width: 76px;
+      height: 76px;
+      margin: 0 auto 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%,
+        rgba(212,175,55,0.22) 0%,
+        rgba(212,175,55,0.05) 65%,
+        transparent 100%);
+      border: 1.5px solid rgba(212,175,55,0.38);
+      box-shadow:
+        0 0 28px rgba(212,175,55,0.18),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      line-height: 1;
+    }
+
+    h1 {
+      color: var(--gold);
+      font-size: clamp(30px, 8.5vw, 40px);
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+      text-shadow:
+        0 0 40px rgba(212,175,55,0.30),
+        0 2px 8px rgba(0,0,0,0.60);
+    }
+
+    .app-tagline {
+      margin-top: 5px;
+      color: rgba(255,255,255,0.38);
+      font-size: 12.5px;
+      font-weight: 500;
+      letter-spacing: 0.6px;
+    }
+
+    .invite {
+      color: rgba(255,255,255,0.72);
+      font-size: clamp(17px, 4.6vw, 21px);
+      font-weight: 700;
+      margin-bottom: 22px;
+      line-height: 1.3;
+    }
+
+    .code-label {
+      color: rgba(255,255,255,0.35);
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      margin-bottom: 9px;
+    }
+
+    .code-box {
+      margin-bottom: 24px;
+      padding: 18px 14px;
+      border-radius: 18px;
+      background: rgba(135,206,235,0.06);
+      border: 1.5px solid var(--cyan-dim);
+      box-shadow:
+        0 0 28px var(--cyan-glow),
+        inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .code-value {
+      direction: ltr;
+      unicode-bidi: isolate;
+      color: var(--cyan);
+      font-size: clamp(40px, 14vw, 60px);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: clamp(4px, 1.6vw, 8px);
+      text-shadow: 0 0 26px rgba(135,206,235,0.38);
+    }
+
+    .btn {
+      width: 100%;
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 22px;
+      border-radius: 999px;
+      font-family: inherit;
+      font-size: clamp(18px, 5vw, 22px);
+      font-weight: 900;
+      line-height: 1;
+      cursor: pointer;
+      text-decoration: none;
+      border: none;
+      transition: transform 0.10s ease, box-shadow 0.10s ease, opacity 0.12s ease;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .btn:active { transform: scale(0.97); opacity: 0.88; }
+
+    .btn-primary {
+      color: #07101F;
+      background: linear-gradient(160deg, #D4AF37 0%, #B8860B 100%);
+      box-shadow: 0 8px 26px rgba(212,175,55,0.35);
+      margin-bottom: 12px;
+    }
+
+    .btn-primary:active { box-shadow: 0 2px 12px rgba(212,175,55,0.22); }
+
+    .btn-secondary {
+      color: rgba(255,255,255,0.88);
+      background: rgba(7, 16, 31, 0.72);
+      border: 1.5px solid rgba(135,206,235,0.42);
+    }
+
+    .btn-secondary.copied {
+      color: #9bf6b4;
+      border-color: rgba(155,246,180,0.60);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 20px 0 16px;
+      color: rgba(255,255,255,0.28);
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+    }
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.10);
+    }
+
+    .fallback {
+      padding: 16px 18px;
+      border-radius: 16px;
+      background: rgba(5,10,20,0.68);
+      border: 1px solid rgba(135,206,235,0.14);
+    }
+
+    .fallback-title {
+      color: rgba(255,255,255,0.80);
+      font-weight: 800;
+      font-size: clamp(14px, 4vw, 16px);
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .steps {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .steps li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      color: rgba(255,255,255,0.58);
+      font-size: clamp(13px, 3.6vw, 15px);
+      line-height: 1.55;
+      text-align: right;
+    }
+
+    .num {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #050A14;
+      background: var(--cyan);
+      font-weight: 900;
+      font-size: 11px;
+      margin-top: 2px;
+      box-shadow: 0 0 10px rgba(135,206,235,0.30);
+    }
+
+    .invalid-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 18px;
+      border-radius: 16px;
+      background: rgba(8,22,37,0.78);
+      border: 1.5px solid rgba(255,80,120,0.32);
+      color: rgba(255,255,255,0.78);
+      font-size: clamp(15px, 4vw, 17px);
+      line-height: 1.5;
+      text-align: right;
+      margin-top: 16px;
+    }
+
+    .warn {
+      color: #ff5c82;
+      font-size: 26px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .footer {
+      margin-top: 22px;
+      text-align: center;
+      color: rgba(255,255,255,0.20);
+      font-size: 11.5px;
+      letter-spacing: 0.4px;
+    }
+
+    .auto-open-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      border-radius: 14px;
+      background: rgba(212,175,55,0.08);
+      border: 1px solid rgba(212,175,55,0.25);
+      color: rgba(255,255,255,0.65);
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      border: 2px solid rgba(212,175,55,0.25);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none !important; }
+
+    @media (max-height: 700px) {
+      .card { padding: 24px 20px 20px; }
+      .logo-icon { width: 58px; height: 58px; font-size: 27px; margin-bottom: 10px; }
+      h1 { font-size: 26px; }
+      .invite { font-size: 16px; margin-bottom: 16px; }
+      .code-box { padding: 13px 12px; margin-bottom: 16px; }
+      .divider { margin: 14px 0 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="card" aria-label="הזמנת חברות">
+
+      <div class="logo-wrap">
+        <div class="logo-icon" aria-hidden="true">👋</div>
+        <h1>מה בתמונה?</h1>
+        <p class="app-tagline">גלה חלקים · נחש את המקום</p>
+      </div>
+
+      <p class="invite">הוזמנת להיות חבר/ה</p>
+
+      <!-- Valid code state -->
+      <div id="validState" class="hidden">
+        <p class="code-label">קוד החבר</p>
+        <div class="code-box">
+          <div id="codeDisplay" class="code-value" role="text" aria-label="קוד החבר">------</div>
+        </div>
+
+        <div id="autoOpenBar" class="auto-open-bar hidden" aria-live="polite">
+          <div class="spinner" aria-hidden="true"></div>
+          <span id="autoOpenText">פותח את האפליקציה…</span>
+        </div>
+
+        <button id="openBtn" class="btn btn-primary" type="button">
+          <span>הוסף חבר</span>
+          <span aria-hidden="true">↗</span>
+        </button>
+
+        <button id="copyBtn" class="btn btn-secondary" type="button">
+          <span id="copyText">העתק קוד</span>
+          <span id="copyIcon" aria-hidden="true">▣</span>
+        </button>
+
+        <div class="divider">האפליקציה לא נפתחה?</div>
+
+        <div class="fallback" role="complementary">
+          <p class="fallback-title">הורד את WhoIsThere</p>
+          <ol class="steps">
+            <li>
+              <span class="num" aria-hidden="true">1</span>
+              <span>הורד את WhoIsThere מ-<strong>Google Play</strong> או <strong>App&nbsp;Store</strong>.</span>
+            </li>
+            <li>
+              <span class="num" aria-hidden="true">2</span>
+              <span>פתח את האפליקציה ולחץ על <strong>חברים</strong> 👥.</span>
+            </li>
+            <li>
+              <span class="num" aria-hidden="true">3</span>
+              <span>בחר "הוסף חבר" והזן את הקוד המוצג למעלה.</span>
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Invalid / missing code -->
+      <div id="invalidState" class="invalid-box hidden" role="alert">
+        <span class="warn" aria-hidden="true">⚠</span>
+        <span>לא נמצא קוד חבר בקישור.<br>בקש קישור חדש מהחבר שהזמין.</span>
+      </div>
+
+      <p class="footer">WhoIsThere © 2026</p>
+    </section>
+  </main>
+
+  <script>
+    'use strict';
+
+    let friendCode = '';
+
+    (function init() {
+      const params = new URLSearchParams(window.location.search);
+      const code = (params.get('code') ?? '').trim().toUpperCase();
+
+      if (!/^[A-Z0-9]{4,12}$/.test(code)) {
+        document.getElementById('invalidState').classList.remove('hidden');
+        return;
+      }
+
+      friendCode = code;
+
+      const display = document.getElementById('codeDisplay');
+      display.textContent = code;
+      display.setAttribute('aria-label', 'קוד החבר: ' + code.split('').join(' '));
+
+      document.getElementById('validState').classList.remove('hidden');
+
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isMobile) {
+        const bar = document.getElementById('autoOpenBar');
+        bar.classList.remove('hidden');
+
+        setTimeout(() => {
+          window.location.href = 'whoisthere://friend?code=' + encodeURIComponent(code);
+
+          setTimeout(() => {
+            document.getElementById('autoOpenText').textContent = 'האפליקציה לא נמצאה — הורד אותה למטה.';
+            document.querySelector('.spinner').style.display = 'none';
+          }, 2500);
+        }, 600);
+      }
+    })();
+
+    document.getElementById('openBtn')?.addEventListener('click', () => {
+      if (!friendCode) return;
+      window.location.href = 'whoisthere://friend?code=' + encodeURIComponent(friendCode);
+    });
+
+    document.getElementById('copyBtn')?.addEventListener('click', () => {
+      if (!friendCode) return;
+
+      const btn  = document.getElementById('copyBtn');
+      const icon = document.getElementById('copyIcon');
+      const text = document.getElementById('copyText');
+
+      const markCopied = () => {
+        btn.classList.add('copied');
+        icon.textContent = '✓';
+        text.textContent = 'הועתק!';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          icon.textContent = '▣';
+          text.textContent = 'העתק קוד';
+        }, 1800);
+      };
+
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(friendCode).then(markCopied).catch(() => legacyCopy(markCopied));
+      } else {
+        legacyCopy(markCopied);
+      }
+    });
+
+    function legacyCopy(callback) {
+      const el = document.createElement('textarea');
+      el.value = friendCode;
+      el.readOnly = true;
+      Object.assign(el.style, { position: 'fixed', top: 0, left: 0, opacity: 0, pointerEvents: 'none' });
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      try { document.execCommand('copy'); } catch (_) { /* visible code remains as fallback */ }
+      document.body.removeChild(el);
+      callback();
+    }
+  </script>
+</body>
+</html>
