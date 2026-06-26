@@ -1483,6 +1483,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (_rewardApplied || uid == null) return;
     _rewardApplied = true;
 
+    // Friends games: record this match for the friends leaderboard + per-game
+    // history. Each client records only its own result (idempotent per
+    // player/room); best-effort, never blocks the reward flow.
+    if (room.isFriendsGame) {
+      unawaited(ref
+          .read(friendsServiceProvider)
+          .recordMyResult(room: room, myUid: uid));
+    }
+
     final isWin = room.winnerId == uid;
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
     final timeTaken = _gameStartTime != null

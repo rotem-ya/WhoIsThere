@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -80,6 +82,11 @@ class _WinScreenState extends ConsumerState<WinScreen>
           .read(roomServiceProvider)
           .claimPlacementReward(widget.roomId, currentUser.id);
       if (mounted) setState(() => _placementReward = reward);
+      // Record this match for the friends leaderboard + per-game history.
+      // Each client records only its own result (idempotent per player/room).
+      unawaited(ref
+          .read(friendsServiceProvider)
+          .recordMyResult(room: room, myUid: currentUser.id));
     } else {
       await ref
           .read(authServiceProvider)

@@ -13,9 +13,11 @@ import '../services/local_economy_cache.dart';
 import '../services/qa_logger_service.dart';
 import '../services/room_service.dart';
 import '../services/settings_service.dart';
+import '../services/friends_service.dart';
 import '../models/user_model.dart';
 import '../models/room_model.dart';
 import '../models/game_image_model.dart';
+import '../models/friend_models.dart';
 
 // Services
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
@@ -129,6 +131,47 @@ final roomStreamProvider =
       },
     ),
   );
+});
+
+// ── Friends / social ────────────────────────────────────────────────────────
+final friendsServiceProvider = Provider<FriendsService>((ref) => FriendsService());
+
+// Accepted friends of the signed-in user.
+final friendsListProvider = StreamProvider.autoDispose<List<FriendModel>>((ref) {
+  final uid = ref.watch(firebaseUserProvider).valueOrNull?.uid;
+  if (uid == null) return Stream.value(const []);
+  return ref.watch(friendsServiceProvider).friends(uid);
+});
+
+// Incoming pending friend requests for the signed-in user.
+final friendRequestsProvider =
+    StreamProvider.autoDispose<List<FriendRequestModel>>((ref) {
+  final uid = ref.watch(firebaseUserProvider).valueOrNull?.uid;
+  if (uid == null) return Stream.value(const []);
+  return ref.watch(friendsServiceProvider).incomingRequests(uid);
+});
+
+// Cumulative friends leaderboard (me + friends, sorted by points). Recomputes
+// when my profile changes or my friends list changes; invalidate to refresh.
+final friendsLeaderboardProvider =
+    FutureProvider.autoDispose<List<FriendScore>>((ref) async {
+  final me = ref.watch(currentUserProvider).valueOrNull;
+  if (me == null) return const [];
+  // Re-run when the friends list changes.
+  ref.watch(friendsListProvider);
+  return ref.watch(friendsServiceProvider).leaderboard(
+        myUid: me.id,
+        myName: me.name,
+        myPoints: me.friendsGamePoints,
+      );
+});
+
+// Recent friends-game history for the signed-in user.
+final friendGamesProvider =
+    StreamProvider.autoDispose<List<FriendGameRecord>>((ref) {
+  final uid = ref.watch(firebaseUserProvider).valueOrNull?.uid;
+  if (uid == null) return Stream.value(const []);
+  return ref.watch(friendsServiceProvider).recentGames(uid);
 });
 
 // Selected image for game

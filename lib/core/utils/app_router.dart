@@ -9,6 +9,7 @@ import '../../screens/auth/auth_screen.dart';
 import '../../screens/game/game_board_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/profile/profile_screen.dart';
+import '../../screens/friends/friends_screen.dart';
 import '../../screens/room/create_room_screen.dart';
 import '../../screens/room/join_room_screen.dart';
 import '../../screens/room/finding_players_screen.dart';
@@ -92,6 +93,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/friends',
+        builder: (context, state) => const FriendsScreen(),
       ),
       GoRoute(
         path: '/store',

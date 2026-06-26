@@ -15,6 +15,13 @@
 - **ניקוד פר-משחק (לא מצטבר):** במשחק חברים (`room.isFriendsGame == !isPublicRoom`) הניקוד **לא** נוסף ל-`totalPoints`. טבלת הניקוד + הכרזת הזוכה מוצגות במסך הניצחון (קיים).
 - **פרסי דירוג חברים:** מקום 1 = 20🪙, מקום 2 = 5🪙 (`EconomyConfig.friendsFirstPlaceReward`/`friendsSecondPlaceReward`). מוענק ב-`RoomService.claimPlacementReward` (אידמפוטנטי דרך `placementPaidPlayerIds`), נקרא ממסך הניצחון לכל שחקן על עצמו.
 
+## מערכת חברים (Friends)
+- **מסך:** `lib/screens/friends/friends_screen.dart` (route `/friends`, כפתור 👥 במסך הבית עם נקודת התראה לבקשות ממתינות). 3 טאבים: טבלת ניקוד / חברים+בקשות / הוסף חבר.
+- **שירות:** `FriendsService` (`lib/services/friends_service.dart`). **קוד חבר אישי** (`users/{uid}.friendCode`, נוצר חד-פעמית, ייחודי) + שיתוף בוואטסאפ. הוספה: `sendRequestByCode` (אם הצד השני כבר שלח לי — מתחברים ישירות).
+- **Firestore:** `friendRequests/{toUid}_{fromUid}` (בקשות), `users/{uid}/friends/{friendUid}` (חברות, נכתבת לשני הצדדים), `users/{uid}/friendGames/{roomId}` (היסטוריית משחק פר-שחקן). כללים ב-`firestore.rules` (read/write ל-signedIn; כתיבות חוצות-משתמש לחברויות).
+- **ניקוד:** מצטבר ב-`users/{uid}.friendsGamePoints` (נפרד מ-`totalPoints`). **כל קליינט רושם רק את עצמו** ב-`recordMyResult` (אידמפוטנטי פר שחקן/חדר; Firestore מתיר כתיבה רק למסמך המשתמש של עצמך). מופעל מ-`_triggerMatchReward` (game_board_screen) ב-`room.isFriendsGame`. טבלת הניקוד = אני + חברים ממוינים לפי `friendsGamePoints` (`leaderboard`), + רשימת משחקים אחרונים.
+- ⚠️ **חוקי Firestore חדשים** — נדרס deploy (workflow `deploy-firestore-rules.yml` רץ על push ל-main).
+
 ---
 
 ## כללי פיתוח

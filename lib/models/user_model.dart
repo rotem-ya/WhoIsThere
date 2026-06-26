@@ -22,6 +22,11 @@ class UserModel extends Equatable {
   final int guessBlock10Count;
   final int blackoutCardCount;
   final bool noAds;
+  // Social: a short, shareable personal code others use to add you as a friend,
+  // and the running total of points earned across friends games (the friends
+  // leaderboard is built from this — separate from [totalPoints]).
+  final String? friendCode;
+  final int friendsGamePoints;
 
   const UserModel({
     required this.id,
@@ -42,6 +47,8 @@ class UserModel extends Equatable {
     this.guessBlock10Count = 0,
     this.blackoutCardCount = 0,
     this.noAds = false,
+    this.friendCode,
+    this.friendsGamePoints = 0,
   });
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -65,6 +72,8 @@ class UserModel extends Equatable {
       guessBlock10Count: (data['guessBlock10Count'] as int?) ?? 0,
       blackoutCardCount: (data['blackoutCardCount'] as int?) ?? 0,
       noAds: (data['noAds'] as bool?) ?? false,
+      friendCode: data['friendCode'] as String?,
+      friendsGamePoints: (data['friendsGamePoints'] as int?) ?? 0,
     );
   }
 
@@ -104,6 +113,8 @@ class UserModel extends Equatable {
     int? guessBlock10Count,
     int? blackoutCardCount,
     bool? noAds,
+    String? friendCode,
+    int? friendsGamePoints,
   }) =>
       UserModel(
         id: id,
@@ -124,6 +135,8 @@ class UserModel extends Equatable {
         guessBlock10Count: guessBlock10Count ?? this.guessBlock10Count,
         blackoutCardCount: blackoutCardCount ?? this.blackoutCardCount,
         noAds: noAds ?? this.noAds,
+        friendCode: friendCode ?? this.friendCode,
+        friendsGamePoints: friendsGamePoints ?? this.friendsGamePoints,
       );
 
   @override
@@ -143,5 +156,7 @@ class UserModel extends Equatable {
         guessBlock10Count,
         blackoutCardCount,
         noAds,
+        friendCode,
+        friendsGamePoints,
       ];
 }
