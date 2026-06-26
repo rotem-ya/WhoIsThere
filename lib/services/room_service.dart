@@ -541,6 +541,22 @@ class RoomService {
     });
   }
 
+  /// True if EVERY image baked into [room] is still admin-active. A waiting room
+  /// created before an admin hide keeps its baked content (selectedImageId /
+  /// heatImageIds / letters secret), so reusing it would resurrect a hidden
+  /// item. Skipping such rooms makes every game mode honor admin hides — the
+  /// joiner just gets a fresh room whose content is picked through the active
+  /// filter (_loadLocalImages). Items the manifest doesn't list stay active.
+  bool _roomContentActive(RoomModel room) {
+    final manifest = ContentManifestService.instance;
+    final ids = room.heatImageIds.isNotEmpty
+        ? room.heatImageIds
+        : (room.selectedImageId == null || room.selectedImageId!.isEmpty
+            ? const <String>[]
+            : <String>[room.selectedImageId!]);
+    return ids.every((id) => manifest.isActive(id, localDefault: true));
+  }
+
   /// Finds a waiting public room for quick match where playerRound matches.
   /// Requires Firestore composite index: phase + isPublicRoom + playerRound + createdAt
   Future<RoomModel?> findPublicRoom(int playerRound) async {
@@ -555,6 +571,8 @@ class RoomService {
       if (snap.docs.isEmpty) return null;
       final room = RoomModel.fromFirestore(snap.docs.first);
       if (room.players.length >= GameConstants.maxPlayers) return null;
+      // Don't reuse a room whose baked image was hidden by the admin.
+      if (!_roomContentActive(room)) return null;
       return room;
     } catch (_) {
       return null;
@@ -577,6 +595,8 @@ class RoomService {
       for (final doc in snap.docs) {
         final room = RoomModel.fromFirestore(doc);
         if (room.players.length >= GameConstants.maxPlayers) continue;
+        // Skip rooms whose baked image was hidden by the admin after creation.
+        if (!_roomContentActive(room)) continue;
         final imgId = room.selectedImageId;
         if (imgId == null || imgId.isEmpty) continue;
         final myExp = myExposure[imgId] ?? 0;
@@ -2796,6 +2816,9 @@ class RoomService {
         if (room.hostId == userId) continue;
         if (room.players.containsKey(userId)) continue;
         if (room.players.length >= 2) continue;
+        // Skip a room whose secret word's item was hidden by the admin after
+        // the room was created (startLettersGame also re-picks as a safety net).
+        if (!_roomContentActive(room)) continue;
         return room;
       }
     } catch (e) {
@@ -2808,6 +2831,25 @@ class RoomService {
   /// and flips to playing. When [addBotIfAlone] and only the host is present, a
   /// bot is added so a quick-match never strands the player. Host-only caller.
   Future<void> startLettersGame(String roomId, {bool addBotIfAlone = false}) async {
+    // Safety net for admin hides: if the secret word's item was deactivated
+    // after this room was created, pick a fresh active replacement BEFORE the
+    // transaction (image loading is async). Guarantees a started game never
+    // uses a hidden item, even for friends rooms created before the hide.
+    GameImageModel? replacement;
+    try {
+      final pre = await _rooms.doc(roomId).get();
+      if (pre.exists) {
+        final room = RoomModel.fromFirestore(pre);
+        if (room.isLetters &&
+            room.phase == GamePhase.waiting &&
+            !_roomContentActive(room)) {
+          replacement = await _pickRandomLettersImage(room.players);
+          QaLoggerService.instance.log('LETTERS',
+              'SECRET_REPLACED_HIDDEN old=${room.selectedImageId} new=${replacement?.id}');
+        }
+      }
+    } catch (_) {}
+
     await _firestore.runTransaction((tx) async {
       final roomDoc = await tx.get(_rooms.doc(roomId));
       if (!roomDoc.exists) return;
@@ -2816,6 +2858,10 @@ class RoomService {
 
       final players = Map<String, PlayerModel>.from(room.players);
       final updates = <String, dynamic>{};
+      if (replacement != null) {
+        updates['secretWord'] = replacement!.answer;
+        updates['selectedImageId'] = replacement!.id;
+      }
 
       if (players.length < 2) {
         if (!addBotIfAlone) return; // can't start a duel alone yet

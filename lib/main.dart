@@ -204,6 +204,29 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
   }
 
   void _handleDeepLink(Uri uri, {required bool coldStart}) {
+    // ── Friend-invite links — add the inviter as a friend automatically ──────
+    final isFriendScheme = uri.scheme == 'whoisthere' && uri.host == 'friend';
+    final isFriendAppLink = uri.scheme == 'https' &&
+        uri.host == 'rotem-ya.github.io' &&
+        uri.path.startsWith('/apps-share-pages/whoisthere/friend');
+    if (isFriendScheme || isFriendAppLink) {
+      final rawF = uri.queryParameters['code'] ?? '';
+      final friendCode = rawF.trim().toUpperCase();
+      // Friend codes are 6–8 uppercase letters/digits.
+      if (!RegExp(r'^[A-Z0-9]{4,12}$').hasMatch(friendCode)) return;
+      ref.read(pendingFriendCodeProvider.notifier).state = friendCode;
+      if (!coldStart) {
+        final router = ref.read(routerProvider);
+        final currentPath = router.routeInformationProvider.value.uri.path;
+        final inActiveGame = currentPath.startsWith('/game/') ||
+            currentPath.startsWith('/vote-') ||
+            currentPath.startsWith('/win/') ||
+            currentPath.startsWith('/lobby/');
+        if (!inActiveGame) router.go('/friends');
+      }
+      return;
+    }
+
     final isCustomScheme = uri.scheme == 'whoisthere' && uri.host == 'join';
     final isAppLink = uri.scheme == 'https' &&
         uri.host == 'rotem-ya.github.io' &&
