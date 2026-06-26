@@ -24,11 +24,19 @@
 - **מס׳ סבבים:** משחק מהיר = `max(שחקנים, 3)`. חברים = `max(max(שחקנים,3), סה״כ נושאים שנבחרו)` — כל בחירה נוספת של המארח מאריכה את ההיט, עם רצפה של 3/מס׳ שחקנים.
 - **בחירת נושאים:**
   - **גלובלי (משחק מהיר):** אקראי אוטומטי, `count = max(targetPlayers, 3)` (4 שחקנים → 4 נושאים). נבנה ב-`createRoom` (`heatRounds` param → `_buildHeat`).
-  - **חברים:** **כל משתתף בוחר נושא אחד; המארח יכול לבחור כמה שירצה** (כל בחירה נוספת = סבב נוסף). `topicChoices: Map<playerId, List<categoryId>>`. ב-UI: לא-מארח = בחירה יחידה (לחיצה על נושא אחר מחליפה), מארח = ללא הגבלה. ההיט נבנה ב-`startGameDirectly` מ-`_buildFriendsHeat` (מארח ראשון עם כל בחירותיו, אחר כך כל שאר השחקנים בלוקח-אחד; סלוטים חסרים → אקראי).
+  - **חברים:** **כל משתתף בוחר נושא אחד; המארח יכול לבחור כמה שירצה** (כל בחירה נוספת = סבב נוסף). `topicChoices: Map<playerId, List<categoryId>>`. ב-UI (`lobby_screen.dart` → `_onTopicTap`): **נושא שנבחר ע"י כל משתתף מוצג כנבחר אצל כולם עם שם הבוחר** (chip מודגש). לא-מארח: בוחר נושא אחד **ולא יכול לבטל/להחליף בעצמו** — לחיצה אחרי שבחר מציגה snackbar "רק המארח יכול לבטל". מארח: בוחר ללא הגבלה, ו**רק הוא יכול לבטל בחירה של משתתף — עם דיאלוג אישור** (`_confirmCancelChoice`); ביטול בחירה עצמית של המארח הוא חופשי (ללא דיאלוג). ההיט נבנה ב-`startGameDirectly` מ-`_buildFriendsHeat` (מארח ראשון עם כל בחירותיו, אחר כך כל שאר השחקנים בלוקח-אחד; סלוטים חסרים → אקראי).
   - דיאלוג בלובי כשלא כולם השלימו מכסה: "בחר אקראית והתחל" / "המתן".
 - **משחק עם חברים = חינם:** `_createPrivateRoom` יוצר עם `entryFee: 0`, ללא בדיקת מטבעות.
 - **ניקוד פר-משחק (לא מצטבר):** במשחק חברים (`room.isFriendsGame == !isPublicRoom`) הניקוד **לא** נוסף ל-`totalPoints`. טבלת הניקוד + הכרזת הזוכה מוצגות במסך הניצחון (קיים).
 - **פרסי דירוג חברים:** מקום 1 = 20🪙, מקום 2 = 5🪙 (`EconomyConfig.friendsFirstPlaceReward`/`friendsSecondPlaceReward`). מוענק ב-`RoomService.claimPlacementReward` (אידמפוטנטי דרך `placementPaidPlayerIds`), נקרא ממסך הניצחון לכל שחקן על עצמו.
+
+## מערכת חברים (Friends)
+- **מסך:** `lib/screens/friends/friends_screen.dart` (route `/friends`, כפתור 👥 במסך הבית עם נקודת התראה לבקשות ממתינות). 3 טאבים: טבלת ניקוד / חברים+בקשות / הוסף חבר.
+- **שירות:** `FriendsService` (`lib/services/friends_service.dart`). **קוד חבר אישי** (`users/{uid}.friendCode`, נוצר חד-פעמית, ייחודי) + שיתוף בוואטסאפ. הוספה: `sendRequestByCode` (אם הצד השני כבר שלח לי — מתחברים ישירות).
+- **אוטומציה בשיתוף (deep link):** קישור הזמנה `AppConstants.friendInviteUrl(code)` → דף נחיתה `docs/friend.html` (מסונכרן ע"י `sync-join-page.yml` ל-`apps-share-pages/whoisthere/friend/`). הדף פותח אוטומטית `whoisthere://friend?code=` (scheme רשום ב-AndroidManifest host=`friend` + iOS). `main.dart._handleDeepLink` מזהה friend → `pendingFriendCodeProvider`; `FriendsScreen` שולח את הבקשה **אוטומטית** בכניסה (`_maybeAutoAddFromInvite`). cold-start: `HomeScreen` מנווט ל-`/friends`.
+- **Firestore:** `friendRequests/{toUid}_{fromUid}` (בקשות), `users/{uid}/friends/{friendUid}` (חברות, נכתבת לשני הצדדים), `users/{uid}/friendGames/{roomId}` (היסטוריית משחק פר-שחקן). כללים ב-`firestore.rules` (read/write ל-signedIn; כתיבות חוצות-משתמש לחברויות).
+- **ניקוד:** מצטבר ב-`users/{uid}.friendsGamePoints` (נפרד מ-`totalPoints`). **כל קליינט רושם רק את עצמו** ב-`recordMyResult` (אידמפוטנטי פר שחקן/חדר; Firestore מתיר כתיבה רק למסמך המשתמש של עצמך). מופעל מ-`_triggerMatchReward` (game_board_screen) ב-`room.isFriendsGame`. טבלת הניקוד = אני + חברים ממוינים לפי `friendsGamePoints` (`leaderboard`), + רשימת משחקים אחרונים.
+- ⚠️ **חוקי Firestore חדשים** — נדרס deploy (workflow `deploy-firestore-rules.yml` רץ על push ל-main).
 
 ---
 

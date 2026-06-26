@@ -23,6 +23,11 @@ class UserModel extends Equatable {
   final int blackoutCardCount;
   final int peekCardCount;
   final bool noAds;
+  // Social: a short, shareable personal code others use to add you as a friend,
+  // and the running total of points earned across friends games (the friends
+  // leaderboard is built from this — separate from [totalPoints]).
+  final String? friendCode;
+  final int friendsGamePoints;
 
   const UserModel({
     required this.id,
@@ -44,6 +49,8 @@ class UserModel extends Equatable {
     this.blackoutCardCount = 0,
     this.peekCardCount = 0,
     this.noAds = false,
+    this.friendCode,
+    this.friendsGamePoints = 0,
   });
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -68,6 +75,8 @@ class UserModel extends Equatable {
       blackoutCardCount: (data['blackoutCardCount'] as int?) ?? 0,
       peekCardCount: (data['peekCardCount'] as int?) ?? 0,
       noAds: (data['noAds'] as bool?) ?? false,
+      friendCode: data['friendCode'] as String?,
+      friendsGamePoints: (data['friendsGamePoints'] as int?) ?? 0,
     );
   }
 
@@ -108,6 +117,8 @@ class UserModel extends Equatable {
     int? blackoutCardCount,
     int? peekCardCount,
     bool? noAds,
+    String? friendCode,
+    int? friendsGamePoints,
   }) =>
       UserModel(
         id: id,
@@ -129,6 +140,8 @@ class UserModel extends Equatable {
         blackoutCardCount: blackoutCardCount ?? this.blackoutCardCount,
         peekCardCount: peekCardCount ?? this.peekCardCount,
         noAds: noAds ?? this.noAds,
+        friendCode: friendCode ?? this.friendCode,
+        friendsGamePoints: friendsGamePoints ?? this.friendsGamePoints,
       );
 
   @override
@@ -149,5 +162,7 @@ class UserModel extends Equatable {
         blackoutCardCount,
         peekCardCount,
         noAds,
+        friendCode,
+        friendsGamePoints,
       ];
 }

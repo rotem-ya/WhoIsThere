@@ -1,3 +1,4 @@
-Release AAB build requested: 2026-06-05T12:50:39Z
+Release AAB build requested: 2026-06-25T18:35:00Z
 version: 1.0.0
-includes: game-start fix, exposure rotation, hebrew app name, hidden hints
+signing: embedded release keystore, SHA-1 25:C3 (matches run #4, QA APKs, Firebase)
+note: corrected signing key — KEYSTORE_CONTENT secret held a different key (7F:E5)

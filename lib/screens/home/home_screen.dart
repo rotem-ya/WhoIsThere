@@ -52,6 +52,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // preloaded and ready before the player taps (avoids a failed first tap).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) ref.read(adServiceProvider);
+      // Cold start via a friend-invite link: jump to the friends screen, which
+      // auto-sends the request. (Warm start is handled by the deep-link router.)
+      if (mounted && ref.read(pendingFriendCodeProvider) != null) {
+        context.push('/friends');
+      }
     });
   }
 
@@ -721,6 +726,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 const SizedBox(width: 8),
                                 const _StoreIconButton(),
                                 const SizedBox(width: 8),
+                                const _FriendsIconButton(),
+                                const SizedBox(width: 8),
                                 const _SettingsIconButton(),
                                 const SizedBox(width: 8),
                                 const CoinDisplay(),
@@ -1326,6 +1333,73 @@ class _StoreIconButton extends StatelessWidget {
                 color: Colors.white70,
                 size: 20,
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Friends icon button (top bar) — shows a dot when requests are pending ──
+
+class _FriendsIconButton extends ConsumerWidget {
+  const _FriendsIconButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pending =
+        ref.watch(friendRequestsProvider).valueOrNull?.isNotEmpty ?? false;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          QaLoggerService.instance.log('HOME', 'TAP_FRIENDS');
+          context.push('/friends');
+        },
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF050A14).withOpacity(0.60),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.15),
+                      width: 1.0,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.group_rounded,
+                    color: Colors.white70,
+                    size: 20,
+                  ),
+                ),
+                if (pending)
+                  Positioned(
+                    right: -1,
+                    top: -1,
+                    child: Container(
+                      width: 11,
+                      height: 11,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF5252),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: const Color(0xFF050A14), width: 1.5),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),

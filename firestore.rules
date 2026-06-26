@@ -66,6 +66,27 @@ service cloud.firestore {
       match /exposure_history/{document} {
         allow read, write: if signedIn();
       }
+
+      // Friends list — any authenticated user may read AND write. Cross-user by
+      // design: accepting a request writes the friendship onto BOTH users'
+      // lists, and removing deletes both sides. Non-sensitive (name + date).
+      match /friends/{friendUid} {
+        allow read, write: if signedIn();
+      }
+
+      // Friends-game history — each player records their OWN finished games
+      // (read open to signed-in so a friend's history could be shown later).
+      match /friendGames/{gameId} {
+        allow read, write: if signedIn();
+      }
+    }
+
+    // ── Friend requests ───────────────────────────────────────────────────────
+    // A pending request between two users (id = "{toUid}_{fromUid}"). Any
+    // signed-in user may create/read/delete — the sender creates it, the
+    // recipient accepts (deletes + writes the friendship) or declines (deletes).
+    match /friendRequests/{requestId} {
+      allow read, create, update, delete: if signedIn();
     }
 
     // ── Place / image catalogue ───────────────────────────────────────────────
