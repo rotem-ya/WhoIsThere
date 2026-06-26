@@ -32,6 +32,7 @@ on:
       - 'aab-v*'
     branches:
       - main
+      - claude/qa-launch-prep-EXqLn
     # Only build an AAB when the release marker file changes, so ordinary
     # pushes don't trigger a Play build on every commit.
     paths:
