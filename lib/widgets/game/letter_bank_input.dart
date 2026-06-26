@@ -22,11 +22,38 @@ String normalizeHebrewFinals(String s) => stripGeresh(s)
     .replaceAll('ץ', 'צ')
     .replaceAll(' ', '');
 
+// The keyboard holds only the 22 base letters — never the final forms
+// (ך ם ן ף ץ). Guesses are matched case-insensitively to final forms
+// (see [normalizeHebrewFinals]), so a base letter is always sufficient, and
+// showing both forms only duplicated keys and confused players. The correct
+// final form is rendered automatically in the answer slots (see [_finalForm]).
 const List<List<String>> _keyboardRows = [
-  ['פ', 'ם', 'ן', 'ו', 'ט', 'א', 'ר', 'ק'],
-  ['ף', 'ך', 'ל', 'ח', 'י', 'ע', 'כ', 'ג', 'ד', 'ש'],
-  ['ץ', 'ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז'],
+  ['פ', 'ו', 'ט', 'א', 'ר', 'ק'],
+  ['ל', 'ח', 'י', 'ע', 'כ', 'ג', 'ד', 'ש'],
+  ['ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז'],
 ];
+
+// Base → final form, applied only to the last letter of a word so the built
+// word reads correctly even though the keyboard offers base letters only.
+const Map<String, String> _finalForm = {
+  'כ': 'ך',
+  'מ': 'ם',
+  'נ': 'ן',
+  'פ': 'ף',
+  'צ': 'ץ',
+};
+const Map<String, String> _baseForm = {
+  'ך': 'כ',
+  'ם': 'מ',
+  'ן': 'נ',
+  'ף': 'פ',
+  'ץ': 'צ',
+};
+
+/// Display form of a letter for an answer slot: final form at a word's end,
+/// base form anywhere else (mid-word final forms are never valid Hebrew).
+String _displayLetter(String letter, {required bool wordEnd}) =>
+    wordEnd ? (_finalForm[letter] ?? letter) : (_baseForm[letter] ?? letter);
 
 class LetterBankInput extends StatefulWidget {
   final String answer;
@@ -248,7 +275,10 @@ class _AnswerSlots extends StatelessWidget {
           final slots = <Widget>[];
           for (var i = 0; i < len; i++) {
             if (i > 0) slots.add(const SizedBox(width: slotGap));
-            slots.add(_Slot(letter: idx < filled.length ? filled[idx] : null, size: slotSize));
+            final raw = idx < filled.length ? filled[idx] : null;
+            final shown =
+                raw == null ? null : _displayLetter(raw, wordEnd: i == len - 1);
+            slots.add(_Slot(letter: shown, size: slotSize));
             idx++;
           }
           words.add(Row(textDirection: TextDirection.rtl, mainAxisSize: MainAxisSize.min, children: slots));
