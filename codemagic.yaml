@@ -10,6 +10,16 @@
 workflows:
   ios-testflight:
     name: WhoIsThere iOS — TestFlight
+    # Controlled trigger: push a tag like `ios-v3` to build + ship to TestFlight.
+    # (No per-commit iOS builds — mac minutes are limited.) You can also run it
+    # manually from the Codemagic UI. Requires the one-time setup to be done
+    # (repo connected in Codemagic + the `Apple_Key_Trivia` ASC API key added).
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: 'ios-v*'
+          include: true
     instance_type: mac_mini_m2
     max_build_duration: 90
     integrations:
