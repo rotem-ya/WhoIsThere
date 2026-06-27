@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
-import '../../widgets/game/letter_bank_input.dart'
-    show stripGeresh, normalizeHebrewFinals;
+import '../../widgets/game/letter_bank_input.dart' show canonicalizeGeresh;
 
 /// Pure logic for the letters game (משחק האותיות) — a Wordle-style per-slot
 /// letter duel. No Flutter/UI dependencies so it stays trivially testable.
@@ -23,9 +22,11 @@ const int kLettersGridSize = 8;
 enum LetterFeedback { exact, present, absent }
 
 /// A prepared puzzle: one entry per letter slot, aligned across the three lists.
-/// [displayChars] keeps the original (geresh-stripped) letter for showing in a
-/// solved slot; [matchChars] is the normalized form (finals folded) used for
-/// all comparisons. [wordLengths] drives the multi-word slot layout.
+/// Matching is EXACT per letter form: a base letter (e.g. מ) and its final form
+/// (ם) are distinct, so guessing one never marks the other. [displayChars] and
+/// [matchChars] are therefore identical (the canonical letter, with geresh kept
+/// as its own slot); both are retained so callers stay explicit about intent.
+/// [wordLengths] drives the multi-word slot layout.
 class LettersPuzzle {
   final List<String> displayChars;
   final List<String> matchChars;
@@ -44,33 +45,30 @@ class LettersPuzzle {
 }
 
 /// Builds a puzzle from a Hebrew answer, splitting on whitespace into words,
-/// stripping geresh, folding final letters, and capping at [kLettersMaxSlots].
-/// The slot index used everywhere else refers to a position in the returned
-/// (space-free) lists.
+/// canonicalizing geresh (kept as a real slot), and capping at
+/// [kLettersMaxSlots]. Letter forms are kept EXACT (no final-letter folding),
+/// so each slot must be guessed with its precise letter. The slot index used
+/// everywhere else refers to a position in the returned (space-free) lists.
 LettersPuzzle buildLettersPuzzle(String answer) {
-  final words = stripGeresh(answer)
+  final words = canonicalizeGeresh(answer)
       .trim()
       .split(RegExp(r'\s+'))
       .where((w) => w.isNotEmpty);
-  final display = <String>[];
-  final match = <String>[];
+  final chars = <String>[];
   final wordLengths = <int>[];
   var total = 0;
   for (final word in words) {
     if (total >= kLettersMaxSlots) break;
-    // Hebrew letters are single BMP code units, so a plain split is safe here
-    // (geresh marks were already stripped above).
-    final chars = word.split('');
-    final allowed = math.min(chars.length, kLettersMaxSlots - total);
+    // Hebrew letters and the geresh are single BMP code units, so a plain
+    // split is safe here.
+    final wordChars = word.split('');
+    final allowed = math.min(wordChars.length, kLettersMaxSlots - total);
     if (allowed <= 0) continue;
     var added = 0;
     for (var i = 0; i < allowed; i++) {
-      final ch = chars[i];
-      final norm = normalizeHebrewFinals(ch);
-      // normalizeHebrewFinals also drops spaces; skip if the char vanished.
-      if (norm.isEmpty) continue;
-      display.add(ch);
-      match.add(norm);
+      final ch = wordChars[i];
+      if (ch.trim().isEmpty) continue;
+      chars.add(ch);
       added++;
     }
     if (added > 0) {
@@ -79,19 +77,22 @@ LettersPuzzle buildLettersPuzzle(String answer) {
     }
   }
   return LettersPuzzle(
-    displayChars: display,
-    matchChars: match,
+    // Matching is exact, so the display and match lists are the same letters.
+    displayChars: List<String>.of(chars),
+    matchChars: chars,
     wordLengths: wordLengths.isEmpty ? const [1] : wordLengths,
   );
 }
 
-/// Feedback for guessing [guessedLetter] at [slotIndex].
+/// Feedback for guessing [guessedLetter] at [slotIndex]. Matching is exact —
+/// only geresh marks are canonicalized; base and final letter forms are
+/// distinct, so guessing מ never matches a ם slot.
 LetterFeedback evaluateGuess(
   LettersPuzzle puzzle,
   int slotIndex,
   String guessedLetter,
 ) {
-  final g = normalizeHebrewFinals(guessedLetter);
+  final g = canonicalizeGeresh(guessedLetter).trim();
   if (g.isEmpty) return LetterFeedback.absent;
   if (slotIndex >= 0 &&
       slotIndex < puzzle.length &&
@@ -124,14 +125,14 @@ enum KeyStatus { neutral, solved, present, absent }
 
 /// Status of [letter] given the player's solved slots and guessed letters
 /// (both relative to this player's own board). [guessedLetters] must be the
-/// normalized forms the player has tried.
+/// canonical (geresh-normalized) forms the player has tried.
 KeyStatus keyStatusFor(
   LettersPuzzle puzzle,
   String letter,
   Set<int> solvedSlots,
   Set<String> guessedLetters,
 ) {
-  final g = normalizeHebrewFinals(letter);
+  final g = canonicalizeGeresh(letter).trim();
   for (final s in solvedSlots) {
     if (s >= 0 && s < puzzle.length && puzzle.matchChars[s] == g) {
       return KeyStatus.solved;

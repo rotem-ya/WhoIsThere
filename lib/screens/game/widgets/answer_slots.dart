@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_styles.dart';
-import '../../../widgets/game/letter_bank_input.dart' show stripGeresh;
+import '../../../widgets/game/letter_bank_input.dart' show canonicalizeGeresh;
 
 class AnswerSlots extends StatelessWidget {
   final String answer;
@@ -11,7 +11,7 @@ class AnswerSlots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final chars = stripGeresh(answer).trim().characters.toList();
+    final chars = canonicalizeGeresh(answer).trim().characters.toList();
     if (chars.isEmpty) return const SizedBox.shrink();
 
     return Padding(

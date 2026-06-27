@@ -1358,7 +1358,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     QaLoggerService.instance.log('BOT', 'BOT_SUBMIT_GUESS correct=$isCorrect');
 
-    final botName = room.players[botId]?.name ?? 'בוט';
+    final botName = room.players[botId]?.name ?? 'יריב';
     // Endgame threat: at ≥75% revealed the banner becomes a red alarm so the
     // player feels the bot closing in (regardless of whether this guess is the
     // correct one — keeps every late attempt tense).

@@ -216,7 +216,7 @@ class _SpectatorBodyState extends State<_SpectatorBody> {
     });
 
     // Build word-length list from answer (mirror LetterBankInput logic)
-    final words = stripGeresh(widget.answer).trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final words = canonicalizeGeresh(widget.answer).trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
     var total = 0;
     final lengths = <int>[];
     for (final word in words) {

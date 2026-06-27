@@ -3,18 +3,17 @@ import 'package:whois_there/core/utils/letters_matcher.dart';
 
 void main() {
   group('buildLettersPuzzle', () {
-    test('single word folds finals and keeps display chars', () {
+    test('single word keeps exact chars', () {
       final p = buildLettersPuzzle('חתול');
       expect(p.length, 4);
       expect(p.matchChars, ['ח', 'ת', 'ו', 'ל']);
       expect(p.wordLengths, [4]);
     });
 
-    test('final letters are folded for matching but shown as-is', () {
-      // עורב? use a word ending in a sofit: "ירוק" no sofit; use "חלון" → ן
+    test('final letters are kept exact (no folding)', () {
       final p = buildLettersPuzzle('חלון');
       expect(p.displayChars, ['ח', 'ל', 'ו', 'ן']);
-      expect(p.matchChars, ['ח', 'ל', 'ו', 'נ']); // ן folded to נ
+      expect(p.matchChars, ['ח', 'ל', 'ו', 'ן']); // ן stays ן (distinct from נ)
     });
 
     test('multi-word: lengths per word, spaces dropped', () {
@@ -24,10 +23,16 @@ void main() {
       expect(p.matchChars.contains(' '), isFalse);
     });
 
-    test('geresh stripped (ג\'ירפה -> גירפה)', () {
+    test("geresh kept as a real slot (ג'ירפה)", () {
       final p = buildLettersPuzzle("ג'ירפה");
-      expect(p.length, 5);
-      expect(p.matchChars.first, 'ג');
+      expect(p.length, 6); // ג ' י ר פ ה
+      expect(p.matchChars, ['ג', "'", 'י', 'ר', 'פ', 'ה']);
+    });
+
+    test('hebrew geresh ׳ canonicalized to apostrophe slot (צ׳ילה)', () {
+      final p = buildLettersPuzzle('צ׳ילה');
+      expect(p.length, 5); // צ ' י ל ה
+      expect(p.matchChars, ['צ', "'", 'י', 'ל', 'ה']);
     });
   });
 
@@ -52,12 +57,18 @@ void main() {
       expect(tilesForFeedback(f), 0);
     });
 
-    test('final-form guess matches folded slot', () {
-      final pn = buildLettersPuzzle('חלון'); // slot 3 = ן -> נ
-      // guessing the non-final נ at slot 3 should be exact
-      expect(evaluateGuess(pn, 3, 'נ'), LetterFeedback.exact);
-      // guessing the final ן should also normalize and be exact
+    test('base and final forms are distinct', () {
+      final pn = buildLettersPuzzle('חלון'); // slot 3 = ן (final form)
+      // guessing the exact final ן at slot 3 is exact
       expect(evaluateGuess(pn, 3, 'ן'), LetterFeedback.exact);
+      // guessing the base נ must NOT match — נ is not in the word at all
+      expect(evaluateGuess(pn, 3, 'נ'), LetterFeedback.absent);
+    });
+
+    test('geresh slot is guessed with the apostrophe key', () {
+      final pg = buildLettersPuzzle("ג'ירפה"); // slot 1 = '
+      expect(evaluateGuess(pg, 1, "'"), LetterFeedback.exact);
+      expect(evaluateGuess(pg, 1, '׳'), LetterFeedback.exact); // canonicalized
     });
   });
 
@@ -75,6 +86,13 @@ void main() {
       expect(keyStatusFor(p, 'ח', solved, guessed), KeyStatus.solved);
       expect(keyStatusFor(p, 'ר', solved, guessed), KeyStatus.absent);
       expect(keyStatusFor(p, 'ת', solved, guessed), KeyStatus.neutral); // not yet guessed
+    });
+
+    test('final-form key is independent of its base form', () {
+      final pn = buildLettersPuzzle('חלון'); // has ן, not נ
+      // The base נ was guessed and is absent; the final ן key stays neutral.
+      expect(keyStatusFor(pn, 'נ', const {}, {'נ'}), KeyStatus.absent);
+      expect(keyStatusFor(pn, 'ן', const {}, {'נ'}), KeyStatus.neutral);
     });
 
     test('present: guessed, in word, not yet locked anywhere', () {
