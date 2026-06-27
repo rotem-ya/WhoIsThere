@@ -1,4 +1,4 @@
-Release AAB build requested: 2026-06-26T18:05:00Z
+Release AAB build requested: 2026-06-27T10:00:00Z
 version: 1.0.0
 signing: embedded release keystore, SHA-1 25:C3
-note: unified launch — 3 games (incl. Letters/Wordle) + friends system + latest heat images
+note: launch build — 3 games + friends + admin-respect + LIVE admin sync
