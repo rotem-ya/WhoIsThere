@@ -18,7 +18,7 @@ import '../core/constants/game_categories.dart';
 import '../core/constants/game_constants.dart';
 import '../core/utils/room_code_generator.dart';
 import '../core/utils/letters_matcher.dart';
-import '../widgets/game/letter_bank_input.dart' show normalizeHebrewFinals;
+import '../widgets/game/letter_bank_input.dart' show canonicalizeGeresh;
 import 'content_manifest_service.dart';
 import 'qa_logger_service.dart';
 
@@ -2928,7 +2928,9 @@ class RoomService {
 
       accepted = true;
       feedback = evaluateGuess(puzzle, slotIndex, letter);
-      final norm = normalizeHebrewFinals(letter);
+      // Store the exact (geresh-canonical) letter the player tried, so the
+      // keyboard colors a base letter and its final form independently.
+      final norm = canonicalizeGeresh(letter).trim();
 
       final updates = <String, dynamic>{
         'lettersGuessed.$userId': FieldValue.arrayUnion([norm]),

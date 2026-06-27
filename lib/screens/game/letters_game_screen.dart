@@ -32,11 +32,12 @@ class LettersGameScreen extends ConsumerStatefulWidget {
   ConsumerState<LettersGameScreen> createState() => _LettersGameScreenState();
 }
 
-// Hebrew keyboard layout (matches the letter bank's key set).
+// Hebrew keyboard layout (matches the letter bank's key set): all base letters,
+// the five final forms, and a geresh key (') for words like ג'ירפה.
 const List<List<String>> _kKeyboardRows = [
   ['פ', 'ם', 'ן', 'ו', 'ט', 'א', 'ר', 'ק'],
   ['ף', 'ך', 'ל', 'ח', 'י', 'ע', 'כ', 'ג', 'ד', 'ש'],
-  ['ץ', 'ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז'],
+  ['ץ', 'ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז', "'"],
 ];
 
 const Color _kGold = Color(0xFFD4AF37);
@@ -382,7 +383,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
               const Text('מחפש יריב…',
                   style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
-              const Text('אם לא יימצא יריב, תשחק מול הבוט',
+              const Text('מחברים אותך למשחק…',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white54, fontSize: 13)),
             ] else if (isHost) ...[
@@ -433,7 +434,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
               const SizedBox(height: 18),
               TextButton(
                 onPressed: _playVsBotNow,
-                child: const Text('שחק מול הבוט עכשיו',
+                child: const Text('התחל משחק עכשיו',
                     style: TextStyle(color: _kGoldLight, fontSize: 16, fontWeight: FontWeight.w800)),
               ),
             ] else ...[
