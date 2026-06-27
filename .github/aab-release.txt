@@ -1,4 +1,4 @@
-Release AAB build requested: 2026-06-27T18:15:00Z
+Release AAB build requested: 2026-06-27T19:05:00Z
 version: 1.0.0
 signing: embedded release keystore, SHA-1 25:C3
-note: LAUNCH AAB — 3 games + friends + admin-respect + live-sync + top-bar/daily-reward fix
+note: LAUNCH AAB — full Hebrew keyboard (finals+geresh) in all games, exact letter matching in Letters game, bot reveal removed (PR #59), on top of 3 games + friends + admin-respect + live-sync + top-bar/daily-reward fix
