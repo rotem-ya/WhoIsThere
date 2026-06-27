@@ -1,4 +1,4 @@
-Release AAB build requested: 2026-06-27T10:00:00Z
+Release AAB build requested: 2026-06-27T18:15:00Z
 version: 1.0.0
 signing: embedded release keystore, SHA-1 25:C3
-note: launch build — 3 games + friends + admin-respect + LIVE admin sync
+note: LAUNCH AAB — 3 games + friends + admin-respect + live-sync + top-bar/daily-reward fix
