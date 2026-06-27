@@ -14,6 +14,7 @@ import '../services/qa_logger_service.dart';
 import '../services/room_service.dart';
 import '../services/settings_service.dart';
 import '../services/friends_service.dart';
+import '../services/content_manifest_service.dart';
 import '../models/user_model.dart';
 import '../models/room_model.dart';
 import '../models/game_image_model.dart';
@@ -100,6 +101,22 @@ final currentUserProvider = StreamProvider<UserModel?>((ref) {
   final authUser = ref.watch(firebaseUserProvider).valueOrNull;
   if (authUser == null) return Stream.value(null);
   return ref.watch(authServiceProvider).userModelStreamForUid(authUser.uid);
+});
+
+// Emits whenever the live content manifest changes (admin edit). Screens that
+// render admin-controlled content (topic active/labels, places) watch this to
+// rebuild immediately — no app restart needed.
+final contentManifestRevisionProvider = StreamProvider<int>((ref) {
+  final notifier = ContentManifestService.instance.revision;
+  final controller = StreamController<int>();
+  void emit() => controller.add(notifier.value);
+  emit(); // seed with the current value
+  notifier.addListener(emit);
+  ref.onDispose(() {
+    notifier.removeListener(emit);
+    controller.close();
+  });
+  return controller.stream;
 });
 
 // Deep-link join code — set by AppLinks handler, consumed by JoinRoomScreen
