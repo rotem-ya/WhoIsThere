@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -123,6 +124,11 @@ class ContentManifestService {
   final Map<String, String> _topicLabels = {};
   bool _loaded = false;
 
+  // Bumped on every manifest change (startup, live update). Widgets/providers can
+  // listen to rebuild so admin edits show immediately without an app restart.
+  final ValueNotifier<int> revision = ValueNotifier<int>(0);
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _liveSub;
+
   bool get isLoaded => _loaded;
   bool get hasManifest => _activeById.isNotEmpty;
 
@@ -230,55 +236,91 @@ class ContentManifestService {
         _loaded = true;
         return;
       }
-      final data = snap.data() ?? {};
-      final placesRaw = data['places'];
-      final places = (placesRaw is List)
-          ? placesRaw.map(_ManifestPlace.tryParse).whereType<_ManifestPlace>().toList()
-          : <_ManifestPlace>[];
-
-      // Whole-topic active flags (optional; absent map = every topic active).
-      final topics = <String, bool>{};
-      final topicsRaw = data['topicsActive'];
-      if (topicsRaw is Map) {
-        topicsRaw.forEach((k, v) {
-          if (v is bool) topics[k.toString()] = v;
-        });
-      }
-
-      // Per-topic display-name overrides (optional; absent map = built-in names).
-      final labels = <String, String>{};
-      final labelsRaw = data['topicLabels'];
-      if (labelsRaw is Map) {
-        labelsRaw.forEach((k, v) {
-          if (v is String && v.isNotEmpty) labels[k.toString()] = v;
-        });
-      }
-
-      // Persist for offline use before doing any (slow) downloads.
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-            _prefsKey, jsonEncode(places.map((p) => p.toJson()).toList()));
-        await prefs.setString(_topicsPrefsKey, jsonEncode(topics));
-        await prefs.setString(_topicLabelsPrefsKey, jsonEncode(labels));
-      } catch (_) {}
-
-      _topicsActive
-        ..clear()
-        ..addAll(topics);
-      _topicLabels
-        ..clear()
-        ..addAll(labels);
-
-      await _apply(places, downloadMissing: true);
-      _loaded = true;
-      QaLoggerService.instance.log('CONTENT',
-          'MANIFEST_SYNCED places=${places.length} remoteReady=${_remoteReadyCount} v=${(data['version'] ?? '?')}');
+      await _ingest(snap.data() ?? {});
     } catch (e) {
       // Network/Firebase failure — keep whatever loadCached() already set.
       _loaded = true;
       QaLoggerService.instance.log('CONTENT', 'MANIFEST_SYNC_FAILED $e');
     }
+  }
+
+  /// Live sync: subscribes to the manifest doc so admin edits propagate to the
+  /// running game IMMEDIATELY (no app restart). The first snapshot also serves
+  /// as the initial sync, so this replaces the one-shot [sync] at startup. Every
+  /// update re-applies state and bumps [revision] so open screens can refresh.
+  /// Idempotent — calling twice keeps a single subscription.
+  void startRealtime() {
+    if (_liveSub != null) return;
+    _liveSub = FirebaseFirestore.instance
+        .doc(_docPath)
+        .snapshots()
+        .listen((snap) {
+      if (!snap.exists) {
+        _loaded = true;
+        QaLoggerService.instance.log('CONTENT', 'MANIFEST_NONE (live, no doc)');
+        return;
+      }
+      // Fire-and-forget; _ingest awaits its own image pre-warm and bumps revision.
+      unawaited(_ingest(snap.data() ?? {}));
+    }, onError: (e) {
+      _loaded = true;
+      QaLoggerService.instance.log('CONTENT', 'MANIFEST_LIVE_ERROR $e');
+    });
+  }
+
+  /// Stops the live subscription (rarely needed; the manifest is app-lifelong).
+  void stopRealtime() {
+    _liveSub?.cancel();
+    _liveSub = null;
+  }
+
+  /// Applies one manifest document's data: parse, persist (offline), pre-warm
+  /// images, then notify listeners. Shared by [sync] and [startRealtime].
+  Future<void> _ingest(Map<String, dynamic> data) async {
+    final placesRaw = data['places'];
+    final places = (placesRaw is List)
+        ? placesRaw.map(_ManifestPlace.tryParse).whereType<_ManifestPlace>().toList()
+        : <_ManifestPlace>[];
+
+    // Whole-topic active flags (optional; absent map = every topic active).
+    final topics = <String, bool>{};
+    final topicsRaw = data['topicsActive'];
+    if (topicsRaw is Map) {
+      topicsRaw.forEach((k, v) {
+        if (v is bool) topics[k.toString()] = v;
+      });
+    }
+
+    // Per-topic display-name overrides (optional; absent map = built-in names).
+    final labels = <String, String>{};
+    final labelsRaw = data['topicLabels'];
+    if (labelsRaw is Map) {
+      labelsRaw.forEach((k, v) {
+        if (v is String && v.isNotEmpty) labels[k.toString()] = v;
+      });
+    }
+
+    // Persist for offline use before doing any (slow) downloads.
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+          _prefsKey, jsonEncode(places.map((p) => p.toJson()).toList()));
+      await prefs.setString(_topicsPrefsKey, jsonEncode(topics));
+      await prefs.setString(_topicLabelsPrefsKey, jsonEncode(labels));
+    } catch (_) {}
+
+    _topicsActive
+      ..clear()
+      ..addAll(topics);
+    _topicLabels
+      ..clear()
+      ..addAll(labels);
+
+    await _apply(places, downloadMissing: true);
+    _loaded = true;
+    revision.value++; // notify listeners so open screens refresh immediately
+    QaLoggerService.instance.log('CONTENT',
+        'MANIFEST_SYNCED places=${places.length} remoteReady=${_remoteReadyCount} v=${(data['version'] ?? '?')}');
   }
 
   /// Loads the persisted `topicsActive` map (best-effort) into memory.
