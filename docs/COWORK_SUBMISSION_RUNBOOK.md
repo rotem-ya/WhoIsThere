@@ -9,6 +9,9 @@
 - **Bundle / Application ID:** `com.rotem.whoisthere`
 - **פרויקט Firebase:** `whoisthere-380fa`
 - **שם האפליקציה:** מה בתמונה?
+- **אימייל תמיכה/פרטיות:** `askthekids.app@gmail.com`
+- **מדיניות פרטיות (URL):** `https://rotem-ya.github.io/apps-share-pages/whoisthere/privacy/`
+  ⚠️ העמוד עודכן (הצהרת AdMob) ב-PR #60 ל-`main` — **חייב להתמזג** לפני שמשתמשים ב-URL בטפסים.
 
 ---
 
@@ -83,7 +86,7 @@ Play Console → `מה בתמונה?` → **Production** (או Closed/Internal t
 הורידו עכשיו, אספו מטבעות, ותגלו מי באמת יודע מה בתמונה! 🏆
 ```
 
-### מילות מפתch (Apple Keywords, ≤100 תווים, מופרד בפסיקים)
+### מילות מפתח (Apple Keywords, ≤100 תווים, מופרד בפסיקים)
 ```
 ניחוש,תמונות,חידון,טריוויה,מילים,וורדל,חברים,מקומות,חיות,משחק,עברית,מולטיפלייר,חינם
 ```
@@ -98,21 +101,23 @@ Play Console → `מה בתמונה?` → **Production** (או Closed/Internal t
 ```
 
 ### Data safety (Google) / App Privacy (Apple) — תשובות
-האפליקציה משתמשת ב-Firebase Auth/Firestore ובפרסומות AdMob.
-- **נאסף:** מזהה משתמש (חשבון Google או אורח אנונימי), נתוני משחק (ניקוד, התקדמות), מזהי מכשיר לפרסום (AdMob).
+האפליקציה משתמשת ב-Firebase Auth/Firestore ובפרסומות **Google AdMob**.
+- **נאסף:** מזהה משתמש (חשבון Google/Apple או אורח אנונימי), נתוני משחק (ניקוד, התקדמות, חברים),
+  **מזהה פרסום (Advertising ID) דרך AdMob**.
 - **שיתוף עם צד שלישי:** Google AdMob (פרסום).
-- **הצפנה במעבר:** כן. **מחיקת חשבון:** זמינה לבקשה.
-- **אין:** מידע רגיש, מיקום מדויק, אנשי קשר, בריאות.
-- **Apple Privacy "Data Used to Track You":** Identifiers (פרסום, אם AdMob non-personalized — סמן בהתאם).
+- **הצפנה במעבר:** כן. **מחיקת חשבון:** זמינה (אימייל ייעודי, מחיקה תוך 30 יום — ראה מדיניות פרטיות).
+- **אין:** מידע רגיש, מיקום מדויק, אנשי קשר, בריאות, גישה לתמונות/מצלמה.
+- **Apple "Data Used to Track You":** Identifiers (מזהה פרסום מ-AdMob). סמן Tracking בהתאם להגדרת AdMob (personalized/non-personalized).
 
 ### Content rating / Target audience
-- **דירוג גיל:** מתאים לכולם / Everyone (אין אלימות, אין תוכן מיני, אין הימורים אמיתיים — מטבעות וירטואליים בלבד).
-- **קהל יעד (Google Target audience):** 13+ (בשל פרסומות וחשבונות). אם רוצים ילדים — צריך להתאים AdMob ל-child-directed; כברירת מחדל בחר 13+.
-- **שאלון Google content rating:** ענה "לא" על אלימות/מין/סמים/הימורים; "כן" שיש פרסומות; רכישות וירטואליות — מטבעות במשחק (לא כסף אמיתי, אלא אם יש IAP בפועל).
+- **דירוג גיל:** מתאים לכולם / Everyone (אין אלימות/מין/הימורים אמיתיים — מטבעות וירטואליים בלבד).
+- **קהל יעד (Google Target audience):** 13+ (בשל פרסומות וחשבונות).
+- **שאלון Google content rating:** "לא" על אלימות/מין/סמים/הימורים; **"כן" שיש פרסומות**; רכישות — מטבעות וירטואליים במשחק.
 
 ### קישורים נדרשים
-- **מדיניות פרטיות (Privacy Policy URL):** השתמש בקיים בקונסולה. אם חסר — השתמש בעמוד GitHub Pages של הפרויקט או צור עמוד פרטיות סטנדרטי ופרסם תחת `apps-share-pages`.
-- **Support URL / אימייל תמיכה:** `rot4735@gmail.com`.
+- **מדיניות פרטיות:** `https://rotem-ya.github.io/apps-share-pages/whoisthere/privacy/` (אחרי מיזוג PR #60).
+- **Support URL / אימייל תמיכה:** `askthekids.app@gmail.com`.
+- **Account deletion URL (Google):** אותו עמוד פרטיות (סעיף "מחיקת חשבון ונתונים").
 
 ---
 
@@ -123,3 +128,16 @@ Play Console → `מה בתמונה?` → **Production** (או Closed/Internal t
 4. עדכן את רותם רק כשצריך את לחיצת ה-Submit הסופית או אם חסר Secret/הרשאה.
 
 > הערה ל-cowork: אם דחיפת התג נכשלת אצלך גם ב-403, פתח את Codemagic UI והרץ **Start new build** על workflow `WhoIsThere iOS — TestFlight` (ענף `claude/qa-launch-prep-EXqLn`).
+
+---
+
+## חלק ה׳ — נכסים והשלמות אנושיות (מה שרותם צריך לספק)
+אלה הפריטים היחידים שאי אפשר להפיק בקוד — רותם יספק/יאשר:
+1. **מזג PR #60** ל-`main` (מתקן מדיניות פרטיות → AdMob). חובה לפני מילוי Data Safety.
+2. **צילומי מסך (Screenshots):**
+   - Google Play: 2–8 צילומים, JPEG/PNG, מינ׳ 320px, יחס 16:9 או 9:16 (טלפון).
+   - Apple: חובה 6.7" (1290×2796) ו-6.5" (1242×2688) — לפחות 3 לכל גודל. ל-iPad לא חובה אם לא תומכים.
+   - תוכן מומלץ: מסך בית, משחק זיהוי תמונות, חי-צומח-דומם, משחק האותיות, מסך ניצחון, חנות.
+3. **Feature graphic (Google):** 1024×500 PNG/JPEG (באנר ראשי בחנות).
+4. **App icon חנות:** Google 512×512 PNG; Apple 1024×1024 (כבר באפליקציה — לוודא ללא שקיפות).
+5. **Secrets שכבר אמורים להיות מוגדרים:** Codemagic ASC key `Apple_Key_Trivia`; Android upload keystore (מוטמע ב-`build-aab.yml`).
