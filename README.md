@@ -22,6 +22,7 @@
 - תיקון מקלדת אותיות סופיות (רק 22 אותיות בסיס; הצורה הסופית מוצגת אוטומטית בסוף מילה).
 - בחירת נושאים בלובי: נבחר מוצג לכולם + ביטול רק ע"י המארח (עם דיאלוג).
 - **חתימת AAB = 25:C3** (מוטמע ב-`build-aab.yml`; בונה על marker ב-main **ו**ב-qa-launch-prep).
+- **iOS → TestFlight = Codemagic** (`codemagic.yaml`, workflow `ios-testflight`). טריגר: דחיפת תג **`ios-v*`** מענף ההשקה (לא GitHub Actions). מפתח ASC ב-Codemagic חייב להיקרא `Apple_Key_Trivia`. מדריך: `IOS_TESTFLIGHT_SETUP.md`.
 
 ### ⭐ עיקרון: כל המשחקים מכבדים את האדמין
 בחירת תוכן עוברת **תמיד** דרך נקודת חנק אחת: `RoomService._loadLocalImages(categoryId)` → `ContentManifestService.isActive(id)`. בנוסף, **חדר ממתין שתוכנו המוטמע הושבת ע"י האדמין אחרי שנוצר — נפסל** (`_roomContentActive`, ב-`findPublicRoom`/`findMatchRoom`/`findLettersMatch`), ומשחק האותיות **בוחר מילה סודית מחדש** ב-`startLettersGame` אם הפריט הושבת. אל תוסיף מסלול בחירת-תוכן שעוקף את `_loadLocalImages`.

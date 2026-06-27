@@ -224,6 +224,19 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 
 ## העלאה ל-App Store (iOS / TestFlight)
 
+### ✅ המסלול הקנוני: Codemagic (לא GitHub Actions)
+ה-iOS נבנה ומועלה ל-TestFlight דרך **Codemagic** (`codemagic.yaml`, workflow `ios-testflight`), **לא** דרך build-ios.yml (זה מסלול legacy/גיבוי — ראה למטה).
+- **טריגר:** דחיפת תג **`ios-v*`** (למשל `ios-v1`) מענף ההשקה → בונה IPA חתום ומעלה אוטומטית ל-TestFlight (`submit_to_testflight: true`). אפשר גם Start build ידני ב-Codemagic UI.
+  ```bash
+  git tag ios-v1 origin/claude/qa-launch-prep-EXqLn && git push origin ios-v1
+  ```
+- **חתימה:** אוטומטית ע"י Codemagic (`xcode-project use-profiles`), distribution_type=app_store, bundle `com.rotem.whoisthere`.
+- **מפתח ASC:** integration ב-Codemagic בשם **בדיוק `Apple_Key_Trivia`** (Key ID 995PSX889V) — חייב להתאים ל-`codemagic.yaml`, אחרת "key not found".
+- **build:** name `1.0.0`, number אוטומטי (`$PROJECT_BUILD_NUMBER`). כבר מטופל: שיטוח alpha באייקון, תיקון נתיב assets, תאימות gRPC/Firebase.
+- **הקמה חד-פעמית + צעד-אחר-צעד:** `IOS_TESTFLIGHT_SETUP.md`.
+- ⚠️ cowork לא יכול ללחוץ בממשק Codemagic — הוא דוחף תג `ios-v*` ומדריך את רותם לצעדים האנושיים (הוספת בודק ב-TestFlight וכו').
+
+### (legacy) מסלול GitHub Actions
 בנייה והעלאה ל-TestFlight רצות **כולן ב-CI** (GitHub Actions, runner macOS) — אין צורך לפתוח Xcode במחשב. ה-workflow הוא `.github/workflows/build-ios.yml`, שמריץ את fastlane lane `beta` (קבצים: `ios/fastlane/Fastfile`, `ios/fastlane/Appfile`, `ios/ExportOptions.plist`). מספר ה-build נלקח אוטומטית ממספר ריצת ה-workflow, והאימות מול App Store Connect הוא דרך App Store Connect API Key (ולא סיסמת Apple ID).
 
 ### 7 ה-Secrets הנדרשים
