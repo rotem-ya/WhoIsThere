@@ -74,8 +74,9 @@
 
 1. מצא **App Store Connect** ברשימת ה-Integrations → לחץ **Manage keys** / **Add key**.
 2. מלא:
-   - **App Store Connect API key name**: הקלד בדיוק 👉 `WhoIsThere ASC Key`
-     ⚠️ חייב להיות **בדיוק** השם הזה — ככה זה כתוב בקובץ `codemagic.yaml`.
+   - **App Store Connect API key name**: הקלד בדיוק 👉 `Apple_Key_Trivia`
+     ⚠️ חייב להיות **בדיוק** השם הזה — ככה זה כתוב בקובץ `codemagic.yaml`
+     (`integrations: app_store_connect: Apple_Key_Trivia`). שם אחר → הבנייה תיכשל "key not found".
    - **Issuer ID**: הדבק את מה שרשמת בשלב 3.
    - **Key ID**: הדבק את מה שרשמת בשלב 3.
    - **API key**: העלה את קובץ ה-`AuthKey_XXXXXX.p8` מהשלב 3.
