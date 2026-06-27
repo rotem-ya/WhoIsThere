@@ -724,16 +724,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             Row(
                               textDirection: TextDirection.ltr,
                               children: [
-                                const _ProfileIconButton(),
-                                const SizedBox(width: 8),
-                                const _StoreIconButton(),
-                                const SizedBox(width: 8),
-                                const _FriendsIconButton(),
-                                const SizedBox(width: 8),
-                                const _SettingsIconButton(),
+                                // Icons take the flexible space and scroll if
+                                // ever cramped, so the wallet cluster (coins +
+                                // daily reward) is ALWAYS visible on the right.
+                                Expanded(
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      children: const [
+                                        _ProfileIconButton(),
+                                        SizedBox(width: 8),
+                                        _StoreIconButton(),
+                                        SizedBox(width: 8),
+                                        _FriendsIconButton(),
+                                        SizedBox(width: 8),
+                                        _SettingsIconButton(),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                                 const SizedBox(width: 8),
                                 const CoinDisplay(),
-                                const Spacer(),
+                                const SizedBox(width: 8),
                                 const _DailyRewardButton(),
                               ],
                             ),
