@@ -720,36 +720,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         children: [
                           SizedBox(height: verySmall ? 4 : 8),
                           // ── Top bar ──────────────────────────────────
+                          // Row 1: nav icons (left) + daily reward (right).
                           _step(
                             Row(
                               textDirection: TextDirection.ltr,
-                              children: [
-                                // Icons take the flexible space and scroll if
-                                // ever cramped, so the wallet cluster (coins +
-                                // daily reward) is ALWAYS visible on the right.
-                                Expanded(
-                                  child: SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Row(
-                                      children: const [
-                                        _ProfileIconButton(),
-                                        SizedBox(width: 8),
-                                        _StoreIconButton(),
-                                        SizedBox(width: 8),
-                                        _FriendsIconButton(),
-                                        SizedBox(width: 8),
-                                        _SettingsIconButton(),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const CoinDisplay(),
-                                const SizedBox(width: 8),
-                                const _DailyRewardButton(),
+                              children: const [
+                                _ProfileIconButton(),
+                                SizedBox(width: 8),
+                                _StoreIconButton(),
+                                SizedBox(width: 8),
+                                _FriendsIconButton(),
+                                SizedBox(width: 8),
+                                _SettingsIconButton(),
+                                Spacer(),
+                                _DailyRewardButton(),
                               ],
                             ),
                             delayMs: 0, durationMs: 380, dy: -10,
+                          ),
+                          // Row 2: coins on its own line — keeps the top bar from
+                          // overflowing (which had hidden the daily-reward button)
+                          // and the wide coins capsule from overlapping the icons.
+                          const SizedBox(height: 8),
+                          _step(
+                            const Center(child: CoinDisplay()),
+                            delayMs: 40, durationMs: 380, dy: -10,
                           ),
                           // ── Hero grid takes all remaining vertical space ──
                           Expanded(
