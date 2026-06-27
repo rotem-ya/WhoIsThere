@@ -108,10 +108,12 @@ void main() async {
   }
 
   // Hybrid content manifest — apply the last-known state instantly (offline-safe)
-  // then refresh from Firestore in the background. Best-effort: never blocks
-  // startup or game start; on any failure the game uses bundled content.
+  // then subscribe LIVE to Firestore so admin edits appear immediately in the
+  // running game (no restart). Best-effort: never blocks startup or game start;
+  // on any failure the game uses bundled content. The live listener's first
+  // event also serves as the initial refresh (replaces the one-shot sync()).
   await ContentManifestService.instance.loadCached();
-  unawaited(ContentManifestService.instance.sync());
+  ContentManifestService.instance.startRealtime();
 
   runApp(const ProviderScope(child: GuessThePlaceApp()));
 }

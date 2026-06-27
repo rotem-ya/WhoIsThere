@@ -462,6 +462,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   Widget build(BuildContext context) {
     final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
     final currentUser = ref.watch(currentUserProvider).value;
+    // Rebuild the topic picker live when the admin hides a topic / edits labels.
+    ref.watch(contentManifestRevisionProvider);
 
     ref.listen(roomStreamProvider(widget.roomId), (prev, next) {
       final prevCount = prev?.valueOrNull?.players.length ?? 0;

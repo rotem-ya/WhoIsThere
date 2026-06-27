@@ -669,6 +669,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Rebuild live when the admin changes content (active topics / labels).
+    ref.watch(contentManifestRevisionProvider);
     ref.listen<bool>(firstTimeBonusProvider, (_, next) {
       if (!next || !mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
