@@ -8,6 +8,7 @@ on:
       - docs/friend.html
       - docs/privacy.html
       - docs/support.html
+      - docs/download.html
 
 jobs:
   sync:
@@ -36,8 +37,11 @@ jobs:
           mkdir -p /tmp/pages/whoisthere/support
           cp docs/support.html /tmp/pages/whoisthere/support/index.html
 
+          mkdir -p /tmp/pages/whoisthere/download
+          cp docs/download.html /tmp/pages/whoisthere/download/index.html
+
           cd /tmp/pages
-          git add whoisthere/join/index.html whoisthere/friend/index.html whoisthere/privacy/index.html whoisthere/support/index.html
+          git add whoisthere/join/index.html whoisthere/friend/index.html whoisthere/privacy/index.html whoisthere/support/index.html whoisthere/download/index.html
           git diff --staged --quiet && echo "No changes, skipping." && exit 0
           git commit -m "sync: WhoIsThere public pages (${GITHUB_SHA::7})"
           git push
