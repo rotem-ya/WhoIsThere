@@ -15,6 +15,7 @@ SRC = os.path.join(ROOT, "google-play-assets", "graphics", "screenshots")
 OUT = os.path.join(ROOT, "google-play-assets", "graphics", "screenshots-apple")
 
 TARGETS = [
+    ("iphone_6_9_1320x2868", 1320, 2868),
     ("iphone_6_7_1290x2796", 1290, 2796),
     ("iphone_6_5_1242x2688", 1242, 2688),
 ]
