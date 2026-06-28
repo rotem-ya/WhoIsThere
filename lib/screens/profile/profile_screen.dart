@@ -5,8 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/build_info.dart';
+import '../../services/app_update_service.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
@@ -345,6 +347,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               const SizedBox(height: AppSpacing.sm),
 
+              // ── Update available (always reachable, even after "later") ──
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: _UpdateBanner(),
+              ),
+
               // ── Support code — what the player gives the admin to be found ──
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -392,6 +400,62 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accent)),
         error: (e, _) => Center(child: Text('שגיאה: $e', style: AppTextStyles.subtitleLight)),
+      ),
+    );
+  }
+}
+
+/// Permanent "update available" row — shows whenever the remote config
+/// advertises a newer build than this one, so the player can always update
+/// even after dismissing the home-screen popup with "later".
+class _UpdateBanner extends ConsumerWidget {
+  const _UpdateBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final info = ref.watch(appUpdateInfoProvider).valueOrNull;
+    if (info == null || !info.enabled || kBuildNumber >= info.latestBuild) {
+      return const SizedBox.shrink();
+    }
+    final storeUrl = Platform.isIOS ? info.iosUrl : info.androidUrl;
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF34D399).withOpacity(0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF34D399).withOpacity(0.40)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.system_update_rounded, color: Color(0xFF34D399)),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text('גרסה חדשה זמינה',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800)),
+          ),
+          FilledButton(
+            onPressed: storeUrl.isEmpty
+                ? null
+                : () async {
+                    final uri = Uri.tryParse(storeUrl);
+                    if (uri != null) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF34D399),
+              foregroundColor: const Color(0xFF07101F),
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('עדכן',
+                style: TextStyle(fontWeight: FontWeight.w900)),
+          ),
+        ],
       ),
     );
   }

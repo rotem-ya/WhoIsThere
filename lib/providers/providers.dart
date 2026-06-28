@@ -27,6 +27,11 @@ final roomServiceProvider = Provider<RoomService>((ref) => RoomService());
 final appUpdateServiceProvider =
     Provider<AppUpdateService>((ref) => AppUpdateService());
 
+// One-shot fetch of the remote update config — watched by the home notice and
+// the profile "update available" row so they share a single read.
+final appUpdateInfoProvider = FutureProvider.autoDispose<AppUpdateInfo?>(
+    (ref) => ref.watch(appUpdateServiceProvider).fetch());
+
 // AdMob — single long-lived instance. Preloads rewarded + interstitial on
 // creation so the first show is instant.
 final adServiceProvider = Provider<AdService>((ref) {
