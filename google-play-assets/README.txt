@@ -6,8 +6,8 @@
 google-play-assets/
 ├── texts/
 │   ├── app_title.txt            ← שם האפליקציה (10/30 תווים)
-│   ├── short_description.txt    ← תיאור קצר (71/80 תווים)
-│   ├── full_description.txt     ← תיאור מלא (689/4000 תווים)
+│   ├── short_description.txt    ← תיאור קצר (74/80 תווים)
+│   ├── full_description.txt     ← תיאור מלא (880/4000 תווים)
 │   └── privacy_policy_url.txt   ← קישור מדיניות פרטיות
 ├── graphics/
 │   ├── icon_512x512.png         ← אייקון 512×512 PNG (32-bit)
@@ -16,7 +16,8 @@ google-play-assets/
 │       ├── phone_screenshot_1.png   (1080×1920)
 │       ├── phone_screenshot_2.png   (1080×1920)
 │       ├── phone_screenshot_3.png   (1080×1920)
-│       └── phone_screenshot_4.png   (1080×1920)
+│       ├── phone_screenshot_4.png   (1080×1920)
+│       └── phone_screenshot_5.png   (1080×1920)
 └── README.txt                   ← הקובץ הזה
 
 איפה להדביק כל פריט ב-Play Console
@@ -52,7 +53,7 @@ Play Console → בחר את האפליקציה → Grow → Store presence → 
 7) Privacy policy URL (מדיניות פרטיות)
    • App content → Privacy policy → הדבק את הקישור מ-
      texts/privacy_policy_url.txt :
-     https://rotem-ya.github.io/WhoIsThere/privacy.html
+     https://rotem-ya.github.io/apps-share-pages/whoisthere/privacy/
    • דרוש פעם אחת: הפעל GitHub Pages (Settings → Pages → Branch: main, Folder: /docs).
 
 תזכורת מידות מדויקות
