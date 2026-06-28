@@ -172,6 +172,14 @@ final friendRequestsProvider =
   return ref.watch(friendsServiceProvider).incomingRequests(uid);
 });
 
+// Incoming game invites ("X invited you to play") for the signed-in user.
+final gameInvitesProvider =
+    StreamProvider.autoDispose<List<GameInviteModel>>((ref) {
+  final uid = ref.watch(firebaseUserProvider).valueOrNull?.uid;
+  if (uid == null) return Stream.value(const []);
+  return ref.watch(friendsServiceProvider).incomingGameInvites(uid);
+});
+
 // Cumulative friends leaderboard (me + friends, sorted by points). Recomputes
 // when my profile changes or my friends list changes; invalidate to refresh.
 final friendsLeaderboardProvider =

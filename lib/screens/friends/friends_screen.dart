@@ -9,6 +9,7 @@ import '../../core/theme/app_styles.dart';
 import '../../models/friend_models.dart';
 import '../../providers/providers.dart';
 import '../../services/friends_service.dart';
+import '../../widgets/chat/chat_sheet.dart';
 
 /// Friends hub: a cumulative leaderboard, the friends list with pending
 /// requests, and an "add friend" tab (personal code + WhatsApp invite).
@@ -448,12 +449,25 @@ class _FriendsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final requests = ref.watch(friendRequestsProvider).valueOrNull ?? const [];
+    final invites = ref.watch(gameInvitesProvider).valueOrNull ?? const [];
     final friends = ref.watch(friendsListProvider).valueOrNull ?? const [];
     final me = ref.watch(currentUserProvider).valueOrNull;
 
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
+        if (invites.isNotEmpty) ...[
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            child: Text('הזמנות למשחק',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800)),
+          ),
+          for (final inv in invites) _inviteRow(context, ref, inv),
+          const SizedBox(height: 14),
+        ],
         if (requests.isNotEmpty) ...[
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
@@ -564,6 +578,24 @@ class _FriendsTab extends ConsumerWidget {
                     fontSize: 16,
                     fontWeight: FontWeight.w700)),
           ),
+          // Chat with this friend (outside a game).
+          IconButton(
+            tooltip: 'צ׳אט',
+            icon: const Icon(Icons.chat_bubble_outline_rounded,
+                color: AppStyles.cyanGlow, size: 20),
+            onPressed: myUid == null
+                ? null
+                : () => _openDmChat(context, ref, f, myUid),
+          ),
+          // Invite this friend to a new game.
+          IconButton(
+            tooltip: 'הזמן למשחק',
+            icon: const Icon(Icons.sports_esports_rounded,
+                color: Color(0xFF34D399), size: 22),
+            onPressed: myUid == null
+                ? null
+                : () => _inviteToGame(context, ref, f),
+          ),
           IconButton(
             icon: const Icon(Icons.person_remove_rounded,
                 color: Colors.white38, size: 20),
@@ -574,6 +606,130 @@ class _FriendsTab extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Builds a private (free) friends room, sends [f] an in-app invite, also
+  /// offers a WhatsApp share, and takes the host to the lobby to wait.
+  Future<void> _inviteToGame(
+      BuildContext context, WidgetRef ref, FriendModel f) async {
+    final me = ref.read(currentUserProvider).valueOrNull;
+    if (me == null) return;
+    onToast('יוצר חדר ושולח הזמנה…');
+    try {
+      final room = await ref.read(roomServiceProvider).createRoom(
+            hostId: me.id,
+            hostName: me.name,
+            hostPhotoUrl: me.photoUrl,
+            entryFee: 0, // friends games are free
+          );
+      await ref.read(friendsServiceProvider).sendGameInvite(
+            fromUid: me.id,
+            fromName: me.name,
+            toUid: f.uid,
+            roomId: room.id,
+            code: room.code,
+          );
+      final msg = StringBuffer()
+        ..writeln('הזמנתי אותך למשחק "מה בתמונה?" 🎮')
+        ..writeln()
+        ..writeln('הצטרף עכשיו:')
+        ..writeln(AppConstants.joinUrlForCode(room.code))
+        ..writeln()
+        ..writeln('קוד החדר: ${room.code}');
+      Share.share(msg.toString());
+      ref.read(currentRoomIdProvider.notifier).state = room.id;
+      if (context.mounted) context.go('/lobby/${room.id}');
+    } catch (_) {
+      onToast('שגיאה ביצירת ההזמנה');
+    }
+  }
+
+  /// Opens the friend-to-friend chat sheet (works outside a game).
+  void _openDmChat(
+      BuildContext context, WidgetRef ref, FriendModel f, String myUid) {
+    final myName = ref.read(currentUserProvider).valueOrNull?.name ?? 'אני';
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ChatSheet(
+        stream: ref.read(friendsServiceProvider).directMessages(myUid, f.uid),
+        myUid: myUid,
+        onSend: (text) => ref.read(friendsServiceProvider).sendDirectMessage(
+              myUid: myUid,
+              myName: myName,
+              friendUid: f.uid,
+              text: text,
+            ),
+      ),
+    );
+  }
+
+  Widget _inviteRow(BuildContext context, WidgetRef ref, GameInviteModel inv) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF34D399).withOpacity(0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF34D399).withOpacity(0.35)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.sports_esports_rounded,
+              color: Color(0xFF34D399), size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+                '${inv.fromName.isEmpty ? 'חבר' : inv.fromName} הזמין אותך למשחק',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700)),
+          ),
+          TextButton(
+            onPressed: () => _acceptInvite(context, ref, inv),
+            child: const Text('הצטרף',
+                style: TextStyle(
+                    color: Color(0xFF34D399),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15)),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close_rounded,
+                color: Colors.white38, size: 20),
+            onPressed: () =>
+                ref.read(friendsServiceProvider).deleteGameInvite(inv.id),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Joins the room from a game invite, clears the invite, and opens the lobby.
+  Future<void> _acceptInvite(
+      BuildContext context, WidgetRef ref, GameInviteModel inv) async {
+    final me = ref.read(currentUserProvider).valueOrNull;
+    if (me == null) return;
+    try {
+      final room = await ref.read(roomServiceProvider).joinRoom(
+            code: inv.code,
+            userId: me.id,
+            userName: me.name,
+            userPhotoUrl: me.photoUrl,
+          );
+      await ref.read(friendsServiceProvider).deleteGameInvite(inv.id);
+      if (room == null) {
+        onToast('המשחק כבר לא זמין');
+        return;
+      }
+      ref.read(currentRoomIdProvider.notifier).state = room.id;
+      if (context.mounted) context.go('/lobby/${room.id}');
+    } catch (_) {
+      onToast('שגיאה בהצטרפות למשחק');
+    }
   }
 
   Future<void> _confirmRemove(

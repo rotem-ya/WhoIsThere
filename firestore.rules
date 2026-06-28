@@ -89,6 +89,21 @@ service cloud.firestore {
       allow read, create, update, delete: if signedIn();
     }
 
+    // ── Game invites ──────────────────────────────────────────────────────────
+    // A pending "join my game" invite from one friend to another
+    // (id = "{toUid}_{fromUid}"). Any signed-in user may create/read/delete —
+    // the host creates it, the recipient reads + deletes it when they join.
+    match /gameInvites/{inviteId} {
+      allow read, create, update, delete: if signedIn();
+    }
+
+    // ── Direct messages (friend-to-friend chat, outside a game) ───────────────
+    // Conversation id = the two uids sorted + joined ("{a}_{b}"). Any signed-in
+    // user may read/write; messages live under the conversation document.
+    match /directMessages/{convoId}/{document=**} {
+      allow read, write: if signedIn();
+    }
+
     // ── Place / image catalogue ───────────────────────────────────────────────
     // Read: any signed-in player (the app loads the catalogue at game start).
     // Write: admins only — a user carrying the custom claim { admin: true },
