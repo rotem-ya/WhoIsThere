@@ -24,6 +24,8 @@
       color: #07101F; text-decoration: none; font-weight: 900; font-size: 20px;
       padding: 18px 22px; border-radius: 16px; box-shadow: 0 8px 24px rgba(212,175,55,.35);
     }
+    .btn.ios { background: linear-gradient(180deg,#eef3ff,#aebfe0); box-shadow: 0 8px 24px rgba(120,150,210,.30); }
+    .btn.disabled { background: rgba(255,255,255,.10); color:#8aa0c4; box-shadow:none; cursor: default; }
     .note { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
       border-radius: 14px; padding: 14px; margin-top: 18px; font-size: 13px; color: #cfd8ec; text-align: right; }
     .small { color:#8aa0c4; font-size:12px; margin-top:16px; }
@@ -33,7 +35,8 @@
   <div class="card">
     <h1>מה בתמונה? 📸</h1>
     <p>הורדת הגרסה האחרונה לבדיקה (Android)</p>
-    <a class="btn" href="https://github.com/rotem-ya/WhoIsThere/releases/download/qa-launch/app-release.apk">⬇️ הורד את הבילד האחרון</a>
+    <a class="btn" href="https://github.com/rotem-ya/WhoIsThere/releases/download/qa-launch/app-release.apk">⬇️ הורד ל-Android</a>
+    <a id="ios-btn" class="btn ios" href="#">🍏 התקן ב-TestFlight (iPhone)</a>
     <p class="small">הקישור תמיד מצביע על הגרסה העדכנית ביותר.</p>
     <div class="note">
       <strong>התקנה:</strong><br/>
@@ -44,5 +47,22 @@
     </div>
     <p class="small">💡 כדי לשמור קיצור: בתפריט הדפדפן (⋮) → "הוספה למסך הבית".</p>
   </div>
+
+  <script>
+    // ⬇️⬇️ כשהבילד יעלה ל-TestFlight, הדבק כאן את קישור ההזמנה הציבורי
+    //      (נראה כך: https://testflight.apple.com/join/XXXXXXXX) ושמור. ⬇️⬇️
+    var TESTFLIGHT_URL = "";
+
+    (function () {
+      var b = document.getElementById('ios-btn');
+      if (TESTFLIGHT_URL) {
+        b.href = TESTFLIGHT_URL;
+      } else {
+        b.classList.add('disabled');
+        b.removeAttribute('href');
+        b.textContent = '🍏 iOS — בקרוב ב-TestFlight';
+      }
+    })();
+  </script>
 </body>
 </html>
