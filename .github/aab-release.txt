@@ -1,5 +1,5 @@
-Release AAB build requested: 2026-06-28T19:00:00Z (final launch AAB r11 — adds profile update button)
+Release AAB build requested: 2026-06-28T21:00:00Z (launch AAB r12 — adds latest admin vehicle images)
 version: 1.0.0
 signing: embedded release keystore, SHA-1 25:C3
 package: com.whoisthere.app (matches Play Console)
-note: LAUNCH AAB r11 — friends invite + friend chat + in-app update notice (popup + permanent Profile button), full Hebrew keyboard (finals+geresh), exact letters matching, bot hidden, 3 games, admin-respect, live-sync, top-bar/daily-reward fix
+note: LAUNCH AAB r12 — r11 + 5 new admin vehicle images bundled (limousine, tank, wheelbarrow, segway, cement mixer), routed through the repo because the admin Storage upload is failing. Includes everything from r11: friends invite + friend chat + in-app update notice (popup + permanent Profile button), full Hebrew keyboard (finals+geresh), exact letters matching, bot hidden, 3 games, admin-respect, live-sync, top-bar/daily-reward fix
