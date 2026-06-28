@@ -100,3 +100,16 @@ jobs:
           body: "Latest QA APK — commit ${{ github.sha }}"
           files: build/app/outputs/flutter-apk/app-release.apk
           make_latest: true
+
+      # Direct, mobile-friendly download for the LAUNCH branch builds (which carry
+      # all the latest features — unlike main). Stable URL, no login / no unzip:
+      #   https://github.com/rotem-ya/WhoIsThere/releases/download/qa-launch/app-release.apk
+      - name: Publish APK to qa-launch release
+        if: github.ref == 'refs/heads/claude/friends-invite-chat' || github.ref == 'refs/heads/claude/qa-launch-prep-EXqLn'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: qa-launch
+          name: QA build (launch branch — latest features)
+          body: "Latest launch APK — branch ${{ github.ref_name }}, commit ${{ github.sha }}"
+          files: build/app/outputs/flutter-apk/app-release.apk
+          make_latest: false
