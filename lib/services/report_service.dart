@@ -50,6 +50,9 @@ class ReportService {
         'uid': _uid(),
         'name': name,
         'text': body,
+        // Recent device log — turns "it doesn't work" complaints into
+        // diagnosable reports, same as crash_reports carry.
+        'log': QaLoggerService.instance.recentLog(),
         'build': kBuildLabel,
         'version': kAppVersion,
         'platform': _platform(),
