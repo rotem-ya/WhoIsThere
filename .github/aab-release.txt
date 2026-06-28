@@ -1,4 +1,5 @@
-Release AAB build requested: 2026-06-28T12:00:00Z (re-trigger for PR #61 features)
+Release AAB build requested: 2026-06-28T19:00:00Z (final launch AAB r11 — adds profile update button)
 version: 1.0.0
 signing: embedded release keystore, SHA-1 25:C3
-note: LAUNCH AAB — full Hebrew keyboard (finals+geresh) in all games, exact letter matching in Letters game, bot reveal removed (PR #59), on top of 3 games + friends + admin-respect + live-sync + top-bar/daily-reward fix
+package: com.whoisthere.app (matches Play Console)
+note: LAUNCH AAB r11 — friends invite + friend chat + in-app update notice (popup + permanent Profile button), full Hebrew keyboard (finals+geresh), exact letters matching, bot hidden, 3 games, admin-respect, live-sync, top-bar/daily-reward fix
