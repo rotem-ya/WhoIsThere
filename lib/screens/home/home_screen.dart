@@ -1,17 +1,22 @@
+import 'dart:io' show Platform;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/ad_constants.dart';
+import '../../core/constants/build_info.dart';
 import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
+import '../../services/app_update_service.dart';
 import '../../widgets/common/banner_ad_widget.dart';
 import '../../services/feedback_service.dart';
 import '../../services/qa_logger_service.dart';
@@ -57,7 +62,99 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (mounted && ref.read(pendingFriendCodeProvider) != null) {
         context.push('/friends');
       }
+      _maybeShowUpdateNotice();
     });
+  }
+
+  // Shows the in-app update notice at most once per app session.
+  static bool _updateChecked = false;
+
+  /// Checks the remote update config and, if this build is older than the
+  /// advertised one, shows a notice. A build below `minBuild` gets a blocking
+  /// (forced) dialog; a build below `latestBuild` gets a dismissible one that
+  /// won't nag again for the same version. Entirely fail-safe — any error or a
+  /// missing/disabled config simply shows nothing.
+  Future<void> _maybeShowUpdateNotice() async {
+    if (_HomeScreenState._updateChecked) return;
+    _HomeScreenState._updateChecked = true;
+
+    final AppUpdateInfo? info =
+        await ref.read(appUpdateServiceProvider).fetch();
+    if (!mounted || info == null || !info.enabled) return;
+
+    final forced = kBuildNumber < info.minBuild;
+    final soft = kBuildNumber < info.latestBuild;
+    if (!forced && !soft) return;
+
+    if (!forced) {
+      // Respect a previous "later" tap for this same version.
+      final prefs = await SharedPreferences.getInstance();
+      final dismissed = prefs.getInt('update_dismissed_build') ?? 0;
+      if (dismissed >= info.latestBuild) return;
+    }
+    if (!mounted) return;
+
+    final storeUrl = Platform.isIOS ? info.iosUrl : info.androidUrl;
+    QaLoggerService.instance
+        .log('UPDATE', 'NOTICE_SHOWN forced=$forced latest=${info.latestBuild}');
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: !forced,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: PopScope(
+          canPop: !forced,
+          child: AlertDialog(
+            backgroundColor: const Color(0xFF0D1E30),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20)),
+            title: Text(forced ? 'נדרש עדכון' : 'יש גרסה חדשה 🎉',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900)),
+            content: Text(info.message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 15)),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              if (!forced)
+                TextButton(
+                  onPressed: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setInt(
+                        'update_dismissed_build', info.latestBuild);
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                  child: const Text('אחר כך',
+                      style: TextStyle(color: Colors.white54, fontSize: 15)),
+                ),
+              FilledButton(
+                onPressed: storeUrl.isEmpty
+                    ? null
+                    : () async {
+                        final uri = Uri.tryParse(storeUrl);
+                        if (uri != null) {
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
+                        }
+                      },
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppStyles.cyanGlow,
+                  foregroundColor: const Color(0xFF07101F),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+                child: const Text('עדכן עכשיו',
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// Quick-game sheet: choose the topic (places / חי-צומח-דומם) AND the number

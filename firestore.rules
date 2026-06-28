@@ -123,6 +123,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ── App config (in-app update notice) ─────────────────────────────────────
+    // Read: any signed-in player — fetched on the home screen to decide whether
+    // to show the "new version available" notice. Write: admins only (the owner
+    // edits app_config/app to push a notice without shipping new code).
+    match /app_config/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
     // ── Deny everything else ─────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
