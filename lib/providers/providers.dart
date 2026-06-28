@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../core/constants/ad_constants.dart';
 import '../models/economy/user_economy_model.dart';
 import '../services/ad_service.dart';
+import '../services/app_update_service.dart';
 import '../services/auth_service.dart';
 import '../services/economy_service.dart';
 import '../services/hint_economy_guard.dart';
@@ -23,6 +24,8 @@ import '../models/friend_models.dart';
 // Services
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 final roomServiceProvider = Provider<RoomService>((ref) => RoomService());
+final appUpdateServiceProvider =
+    Provider<AppUpdateService>((ref) => AppUpdateService());
 
 // AdMob — single long-lived instance. Preloads rewarded + interstitial on
 // creation so the first show is instant.
