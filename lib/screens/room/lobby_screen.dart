@@ -14,6 +14,7 @@ import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/player_model.dart';
 import '../../models/room_model.dart';
+import '../../models/friend_models.dart';
 import '../../core/constants/game_categories.dart';
 import '../../core/utils/chat_filter.dart';
 import '../../widgets/chat/chat_sheet.dart';
@@ -458,6 +459,22 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     Share.share(msg.toString());
   }
 
+  /// Opens the "invite a friend" picker (friends list + search) for this room.
+  void _openInviteFriends(RoomModel room) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _InviteFriendsSheet(
+        roomId: room.id,
+        code: room.code,
+        existingPlayerIds: room.players.keys.toSet(),
+        onShareCode: () => _shareToWhatsApp(room.code),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
@@ -572,6 +589,10 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                             _PlayerGrid(
                               players: room.players.values.toList(),
                               currentUserId: currentUser?.id,
+                              // Friends games only — invite friends into open slots.
+                              onInviteTap: room.isFriendsGame
+                                  ? () => _openInviteFriends(room)
+                                  : null,
                             ),
                             if (room.selectedDifficulty == Difficulty.giant) ...[
                               const SizedBox(height: 8),
@@ -850,8 +871,11 @@ class _GlossyRoomCode extends StatelessWidget {
 class _PlayerGrid extends StatelessWidget {
   final List<PlayerModel> players;
   final String? currentUserId;
+  // Tapping an empty slot opens the "invite a friend" picker (null = disabled).
+  final VoidCallback? onInviteTap;
 
-  const _PlayerGrid({required this.players, this.currentUserId});
+  const _PlayerGrid(
+      {required this.players, this.currentUserId, this.onInviteTap});
 
   @override
   Widget build(BuildContext context) {
@@ -873,7 +897,7 @@ class _PlayerGrid extends StatelessWidget {
             delay: Duration(milliseconds: 120 + index * 55),
           );
         }
-        return const _EmptyPlayerTile();
+        return _EmptyPlayerTile(onTap: onInviteTap);
       },
     );
   }
@@ -979,46 +1003,308 @@ class _PlayerAvatarTile extends StatelessWidget {
   }
 }
 
-// ── Empty waiting slot ─────────────────────────────────────────────────────
+// ── Invite-a-friend picker (friends list + search) ─────────────────────────
 
-class _EmptyPlayerTile extends StatelessWidget {
-  const _EmptyPlayerTile();
+class _InviteFriendsSheet extends ConsumerStatefulWidget {
+  final String roomId;
+  final String code;
+  final Set<String> existingPlayerIds;
+  final VoidCallback onShareCode;
+
+  const _InviteFriendsSheet({
+    required this.roomId,
+    required this.code,
+    required this.existingPlayerIds,
+    required this.onShareCode,
+  });
+
+  @override
+  ConsumerState<_InviteFriendsSheet> createState() =>
+      _InviteFriendsSheetState();
+}
+
+class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+  final Set<String> _invited = {};
+  String? _busyUid;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _invite(FriendModel f) async {
+    final me = ref.read(currentUserProvider).valueOrNull;
+    if (me == null || _busyUid != null) return;
+    setState(() => _busyUid = f.uid);
+    try {
+      await ref.read(friendsServiceProvider).sendGameInvite(
+            fromUid: me.id,
+            fromName: me.name,
+            toUid: f.uid,
+            roomId: widget.roomId,
+            code: widget.code,
+          );
+      if (mounted) setState(() => _invited.add(f.uid));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('שגיאה בשליחת ההזמנה')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busyUid = null);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.white.withOpacity(0.04),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.08),
-          width: 1,
+    final friends =
+        ref.watch(friendsListProvider).valueOrNull ?? const <FriendModel>[];
+    final q = _query.trim();
+    final filtered =
+        q.isEmpty ? friends : friends.where((f) => f.name.contains(q)).toList();
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.72,
+          decoration: const BoxDecoration(
+            color: Color(0xFF0D1E30),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text('הזמן חברים למשחק',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _searchCtrl,
+                onChanged: (v) => setState(() => _query = v),
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'חיפוש חבר…',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  prefixIcon:
+                      const Icon(Icons.search_rounded, color: Colors.white38),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.06),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: friends.isEmpty
+                    ? _emptyState()
+                    : (filtered.isEmpty
+                        ? const Center(
+                            child: Text('לא נמצא חבר בשם הזה',
+                                style: TextStyle(color: Colors.white54)))
+                        : ListView.separated(
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (_, i) => _friendRow(filtered[i]),
+                          )),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _friendRow(FriendModel f) {
+    final inRoom = widget.existingPlayerIds.contains(f.uid);
+    final invited = _invited.contains(f.uid);
+    final busy = _busyUid == f.uid;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.10)),
+      ),
       child: Row(
-        textDirection: TextDirection.rtl,
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.06),
-              border: Border.all(color: Colors.white12, width: 1.5),
-            ),
-            child: const Icon(Icons.add, color: Colors.white24, size: 20),
-          ),
+          PlayerAvatar(name: f.name, photoUrl: f.photoUrl, radius: 18),
           const SizedBox(width: 10),
-          SoftPulse(
-            minOpacity: 0.35,
-            maxOpacity: 0.70,
-            child: Text(
-              'ממתין...',
-              style: AppStyles.bodySmall.copyWith(color: Colors.white24),
+          Expanded(
+            child: Text(f.name.isEmpty ? 'שחקן' : f.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700)),
+          ),
+          if (inRoom)
+            const Text('בחדר',
+                style: TextStyle(color: Colors.white38, fontSize: 13))
+          else if (invited)
+            const Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.check_circle_rounded,
+                  color: Color(0xFF34D399), size: 18),
+              SizedBox(width: 4),
+              Text('הוזמן',
+                  style: TextStyle(
+                      color: Color(0xFF34D399),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700)),
+            ])
+          else
+            IconButton(
+              onPressed: busy ? null : () => _invite(f),
+              icon: busy
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppStyles.cyanGlow))
+                  : Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppStyles.cyanGlow.withOpacity(0.14),
+                        border: Border.all(
+                            color: AppStyles.cyanGlow.withOpacity(0.6),
+                            width: 1.5),
+                      ),
+                      child: const Icon(Icons.add,
+                          color: AppStyles.cyanGlow, size: 20),
+                    ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('עדיין אין לך חברים',
+              style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          const Text('הוסיפו חברים במסך החברים, או שתפו קוד חדר',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white38, fontSize: 13)),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              widget.onShareCode();
+            },
+            icon: const Icon(Icons.share_rounded, size: 18),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppStyles.cyanGlow,
+              foregroundColor: const Color(0xFF07101F),
+            ),
+            label: const Text('שתף קוד חדר',
+                style: TextStyle(fontWeight: FontWeight.w900)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Empty waiting slot ─────────────────────────────────────────────────────
+
+class _EmptyPlayerTile extends StatelessWidget {
+  // When set, the slot is tappable and opens the invite-a-friend picker.
+  final VoidCallback? onTap;
+  const _EmptyPlayerTile({this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final invitable = onTap != null;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: Colors.white.withOpacity(0.04),
+            border: Border.all(
+              color: invitable
+                  ? AppStyles.cyanGlow.withOpacity(0.30)
+                  : Colors.white.withOpacity(0.08),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            textDirection: TextDirection.rtl,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: invitable
+                      ? AppStyles.cyanGlow.withOpacity(0.12)
+                      : Colors.white.withOpacity(0.06),
+                  border: Border.all(
+                      color: invitable
+                          ? AppStyles.cyanGlow.withOpacity(0.55)
+                          : Colors.white12,
+                      width: 1.5),
+                ),
+                child: Icon(Icons.add,
+                    color: invitable ? AppStyles.cyanGlow : Colors.white24,
+                    size: 20),
+              ),
+              const SizedBox(width: 10),
+              if (invitable)
+                Expanded(
+                  child: Text(
+                    'הזמן חבר',
+                    style: AppStyles.bodySmall
+                        .copyWith(color: AppStyles.cyanGlow, fontWeight: FontWeight.w700),
+                  ),
+                )
+              else
+                SoftPulse(
+                  minOpacity: 0.35,
+                  maxOpacity: 0.70,
+                  child: Text(
+                    'ממתין...',
+                    style: AppStyles.bodySmall.copyWith(color: Colors.white24),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
