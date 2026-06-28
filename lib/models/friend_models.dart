@@ -53,6 +53,40 @@ class FriendRequestModel {
   }
 }
 
+/// A pending "join my game" invite, stored at `gameInvites/{toUid}_{fromUid}`.
+class GameInviteModel {
+  final String id;
+  final String fromUid;
+  final String fromName;
+  final String toUid;
+  final String roomId;
+  final String code;
+  final DateTime? createdAt;
+
+  const GameInviteModel({
+    required this.id,
+    required this.fromUid,
+    required this.fromName,
+    required this.toUid,
+    required this.roomId,
+    required this.code,
+    this.createdAt,
+  });
+
+  factory GameInviteModel.fromDoc(DocumentSnapshot doc) {
+    final data = (doc.data() as Map<String, dynamic>?) ?? const {};
+    return GameInviteModel(
+      id: doc.id,
+      fromUid: (data['fromUid'] as String?) ?? '',
+      fromName: (data['fromName'] as String?) ?? '',
+      toUid: (data['toUid'] as String?) ?? '',
+      roomId: (data['roomId'] as String?) ?? '',
+      code: (data['code'] as String?) ?? '',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+    );
+  }
+}
+
 /// One row in the friends leaderboard: a friend (or me) and their cumulative
 /// friends-game points.
 class FriendScore {

@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../models/chat_message.dart';
 import '../models/friend_models.dart';
 import '../models/room_model.dart';
 
@@ -31,6 +32,16 @@ class FriendsService {
   CollectionReference<Map<String, dynamic>> get _users => _db.collection('users');
   CollectionReference<Map<String, dynamic>> get _requests =>
       _db.collection('friendRequests');
+  CollectionReference<Map<String, dynamic>> get _gameInvites =>
+      _db.collection('gameInvites');
+  CollectionReference<Map<String, dynamic>> get _dms =>
+      _db.collection('directMessages');
+
+  /// Stable conversation id for a pair of users (order-independent).
+  String _convoId(String a, String b) {
+    final pair = [a, b]..sort();
+    return '${pair[0]}_${pair[1]}';
+  }
 
   // Unambiguous alphabet (no 0/O/1/I) for readable, shareable codes.
   static const _alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -229,4 +240,67 @@ class FriendsService {
       // Best-effort; never block the win flow on a scoreboard write.
     }
   }
+
+  // ── Game invites ────────────────────────────────────────────────────────────
+
+  /// Invites [toUid] to join the room the host just created. One pending invite
+  /// per (recipient, sender) — re-inviting overwrites the previous one.
+  Future<void> sendGameInvite({
+    required String fromUid,
+    required String fromName,
+    required String toUid,
+    required String roomId,
+    required String code,
+  }) async {
+    await _gameInvites.doc('${toUid}_$fromUid').set({
+      'fromUid': fromUid,
+      'fromName': fromName,
+      'toUid': toUid,
+      'roomId': roomId,
+      'code': code,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Pending game invites addressed to [uid].
+  Stream<List<GameInviteModel>> incomingGameInvites(String uid) => _gameInvites
+      .where('toUid', isEqualTo: uid)
+      .snapshots()
+      .map((s) => s.docs.map(GameInviteModel.fromDoc).toList());
+
+  Future<void> deleteGameInvite(String id) => _gameInvites.doc(id).delete();
+
+  // ── Direct messages (friend-to-friend chat, outside a game) ─────────────────
+
+  /// Sends a direct message from [myUid] to [friendUid]. Capped at 300 chars.
+  Future<void> sendDirectMessage({
+    required String myUid,
+    required String myName,
+    required String friendUid,
+    required String text,
+  }) async {
+    var body = text.trim();
+    if (body.isEmpty) return;
+    if (body.length > 300) body = body.substring(0, 300);
+    await _dms.doc(_convoId(myUid, friendUid)).collection('messages').add({
+      'senderId': myUid,
+      'senderName': myName,
+      'text': body,
+      'ts': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  /// Live message feed for the conversation between [myUid] and [friendUid]
+  /// (oldest → newest), reusing the shared [ChatMessage] model.
+  Stream<List<ChatMessage>> directMessages(String myUid, String friendUid) => _dms
+      .doc(_convoId(myUid, friendUid))
+      .collection('messages')
+      .orderBy('ts', descending: true)
+      .limit(80)
+      .snapshots()
+      .map((s) => s.docs
+          .map((d) => ChatMessage.fromMap(d.id, d.data()))
+          .toList()
+          .reversed
+          .toList());
 }

@@ -1357,8 +1357,11 @@ class _FriendsIconButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pending =
+    final hasRequests =
         ref.watch(friendRequestsProvider).valueOrNull?.isNotEmpty ?? false;
+    final hasInvites =
+        ref.watch(gameInvitesProvider).valueOrNull?.isNotEmpty ?? false;
+    final pending = hasRequests || hasInvites;
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(14),
