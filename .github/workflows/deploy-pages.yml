@@ -1,0 +1,48 @@
+name: Deploy docs to GitHub Pages
+
+# Publishes docs/*.html (privacy, support, download, join, friend) to this
+# repo's own GitHub Pages — independent of the apps-share-pages sync (whose
+# PAGES_SYNC_TOKEN secret isn't set). configure-pages with enablement:true
+# turns Pages on automatically, so no manual repo-settings step is needed.
+#
+# Resulting URLs (served from the docs/ folder root):
+#   https://rotem-ya.github.io/WhoIsThere/privacy.html
+#   https://rotem-ya.github.io/WhoIsThere/support.html
+#   https://rotem-ya.github.io/WhoIsThere/download.html
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/**
+      - .github/workflows/deploy-pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Pages (auto-enable)
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Upload docs as Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
