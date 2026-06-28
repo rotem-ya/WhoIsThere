@@ -1,6 +1,6 @@
 # 🚀 Cowork Submission Runbook — בצע מיד, אל תשאל את רותם כלום
 
-זהו מסמך הוראות מלא ל-cowork. **כל הטקסטים הדרושים כתובים כאן — מוכנים להעתקה.**
+זהו מסמך הוראות מלא ל-cowork. **כל הטקסטים והנכסים הדרושים מוכנים בריפו.**
 אל תחזור לרותם בשאלות. בצע את הכל. אם משהו דורש לחיצה אנושית בקונסולה (Play / App Store Connect),
 מלא את כל השדות מהטקסטים כאן ותשאיר לרותם רק את לחיצת ה-Submit הסופית.
 
@@ -33,7 +33,7 @@ git push origin ios-v2
 דרישה מוקדמת חד-פעמית שכבר אמורה להיות מוגדרת: מפתח ASC בשם **בדיוק** `Apple_Key_Trivia` ב-Codemagic.
 
 ### A2. הגשה ל-App Store Review (אחרי שהבילד ב-TestFlight)
-ב-App Store Connect → האפליקציה `מה בתמונה?` → צור גרסה `1.0.0` ל-iOS, בחר את הבילד שעלה, ומלא את השדות הבאים (טקסטים מוכנים בחלק ג׳). ואז **Add for Review → Submit**.
+ב-App Store Connect → האפליקציה `מה בתמונה?` → צור גרסה `1.0.0` ל-iOS, בחר את הבילד שעלה, ומלא את השדות הבאים (טקסטים מוכנים בחלק ג׳; צילומי מסך בחלק ה׳). ואז **Add for Review → Submit**.
 
 ---
 
@@ -47,7 +47,7 @@ git push origin ios-v2
 ### B2. העלאה והגשה
 Play Console → `מה בתמונה?` → **Production** (או Closed/Internal testing להתחלה) → **Create new release** →
 העלה את ה-AAB → מלא **Release notes** (חלק ג׳) → **Save → Review release → Start rollout to Production / Submit for review**.
-ודא שהושלמו: **Store listing**, **Data safety**, **Content rating**, **Target audience** (חלק ג׳).
+ודא שהושלמו: **Store listing** (טקסטים+נכסים), **Data safety**, **Content rating**, **Target audience** (חלק ג׳+ה׳).
 
 ---
 
@@ -123,21 +123,30 @@ Play Console → `מה בתמונה?` → **Production** (או Closed/Internal t
 
 ## חלק ד׳ — סדר ביצוע מומלץ (התחל עכשיו)
 1. **iOS:** דחוף `ios-v2` (A1) → ממתין לבנייה ב-Codemagic.
-2. **Android:** במקביל — הורד AAB (B1), העלה ל-Play (B2), מלא Store listing + Data safety + Content rating (חלק ג׳), הגש.
-3. כשה-iOS ב-TestFlight — מלא ASC (A2 + חלק ג׳) והגש ל-Review.
+2. **Android:** במקביל — הורד AAB (B1), העלה ל-Play (B2), מלא Store listing + נכסים (חלק ה׳) + Data safety + Content rating, הגש.
+3. כשה-iOS ב-TestFlight — מלא ASC (A2 + חלק ג׳+ה׳) והגש ל-Review.
 4. עדכן את רותם רק כשצריך את לחיצת ה-Submit הסופית או אם חסר Secret/הרשאה.
 
 > הערה ל-cowork: אם דחיפת התג נכשלת אצלך גם ב-403, פתח את Codemagic UI והרץ **Start new build** על workflow `WhoIsThere iOS — TestFlight` (ענף `claude/qa-launch-prep-EXqLn`).
 
 ---
 
-## חלק ה׳ — נכסים והשלמות אנושיות (מה שרותם צריך לספק)
-אלה הפריטים היחידים שאי אפשר להפיק בקוד — רותם יספק/יאשר:
-1. **מזג PR #60** ל-`main` (מתקן מדיניות פרטיות → AdMob). חובה לפני מילוי Data Safety.
-2. **צילומי מסך (Screenshots):**
-   - Google Play: 2–8 צילומים, JPEG/PNG, מינ׳ 320px, יחס 16:9 או 9:16 (טלפון).
-   - Apple: חובה 6.7" (1290×2796) ו-6.5" (1242×2688) — לפחות 3 לכל גודל. ל-iPad לא חובה אם לא תומכים.
-   - תוכן מומלץ: מסך בית, משחק זיהוי תמונות, חי-צומח-דומם, משחק האותיות, מסך ניצחון, חנות.
-3. **Feature graphic (Google):** 1024×500 PNG/JPEG (באנר ראשי בחנות).
-4. **App icon חנות:** Google 512×512 PNG; Apple 1024×1024 (כבר באפליקציה — לוודא ללא שקיפות).
-5. **Secrets שכבר אמורים להיות מוגדרים:** Codemagic ASC key `Apple_Key_Trivia`; Android upload keystore (מוטמע ב-`build-aab.yml`).
+## חלק ה׳ — נכסים גרפיים (✅ מוכנים בריפו)
+כל הנכסים ל-Google Play מוכנים תחת `google-play-assets/graphics/` (נוצרים ע"י `build_play_assets.py`):
+- **אייקון:** `icon_512x512.png` (512×512)
+- **Feature graphic:** `feature_graphic_1024x500.png` (1024×500)
+- **צילומי מסך טלפון (5, 1080×1920):** `screenshots/phone_screenshot_1..5.png`
+  1. נחשו את המקום! (מקומות) · 2. מי שמזהה ראשון — מנצח! / **מול חברים בזמן אמת** (ללא חשיפת בוט) ·
+  3. לא רק מקומות! (חי-צומח-דומם) · 4. הרוויחו מטבעות וטפסו בדרגות · 5. עשרות אתרים מרהיבים.
+
+**אפל (App Store) — גדלים נדרשים:** העלה את אותם 5 צילומים ב-6.7″ (1290×2796) ו-6.5″ (1242×2688).
+הצילומים שלנו הם 1080×1920 (יחס 9:16) — צריך לשנות-גודל/למסגר אותם ל-2 הגדלים של אפל
+(אפשר להריץ resize/letterbox; היחס זהה כך שאין חיתוך). אם תרצה, רותם יספק צילומים אמיתיים מהמכשיר.
+
+**הערה:** אלה צילומי מוקאפ שיווקיים תקפים להשקה. מומלץ בהמשך להחליפם בצילומים אמיתיים מהמכשיר
+(בית, משחק האותיות, מצב חברים, מסך ניצחון, חנות) — אפשר ללכוד מ-TestFlight/APK.
+
+### מה שעדיין דורש אישור/פעולה אנושית
+1. **מזג PR #60** ל-`main` (מדיניות פרטיות + צילומי מסך מעודכנים).
+2. **דחיפת תג `ios-v2`** (A1) — אם cowork חסום, רותם דוחף או Codemagic UI.
+3. Secrets שכבר אמורים להיות מוגדרים: Codemagic ASC `Apple_Key_Trivia`; Android keystore (מוטמע ב-`build-aab.yml`).
