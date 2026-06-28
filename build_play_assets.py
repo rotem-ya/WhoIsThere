@@ -12,7 +12,7 @@ IMG_DIR = os.path.join(ROOT, "assets", "game_places", "images")
 
 FONT_BOLD = "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"
 FONT_REG = "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
-PRIVACY_URL = "https://rotem-ya.github.io/WhoIsThere/privacy.html"
+PRIVACY_URL = "https://rotem-ya.github.io/apps-share-pages/whoisthere/privacy/"
 
 # ───────────────────────── helpers ─────────────────────────
 def F(size, bold=True):
@@ -139,7 +139,8 @@ print("feature graphic:", Image.open(fg_path).size)
 SW, SH = 1080, 1920
 specs = [
     ("western_wall.jpg", "נחשו את המקום!", "המשבצות נחשפות אחת-אחת", 0.45),
-    ("dead_sea.jpg", "מי שמזהה ראשון — מנצח!", "מול שחקנים אמיתיים ובוטים", 0.20),
+    ("dead_sea.jpg", "מי שמזהה ראשון — מנצח!", "מול חברים בזמן אמת", 0.20),
+    ("animals_giraffe.jpg", "לא רק מקומות!", "חיות, צמחים, ספורט ועוד", 0.35),
     ("masada.jpg", "הרוויחו מטבעות וטפסו בדרגות", "7 דרגות: מ\"עיוור\" ועד \"אגדה\"", 0.0),
     ("ramon_crater.jpg", "עשרות אתרים מרהיבים", "מכל רחבי ישראל", 0.0),
 ]
@@ -274,7 +275,8 @@ google-play-assets/
 │       ├── phone_screenshot_1.png   (1080×1920)
 │       ├── phone_screenshot_2.png   (1080×1920)
 │       ├── phone_screenshot_3.png   (1080×1920)
-│       └── phone_screenshot_4.png   (1080×1920)
+│       ├── phone_screenshot_4.png   (1080×1920)
+│       └── phone_screenshot_5.png   (1080×1920)
 └── README.txt                   ← הקובץ הזה
 
 איפה להדביק כל פריט ב-Play Console
