@@ -123,6 +123,16 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ── Card skins (tile-back designs) ────────────────────────────────────────
+    // Read: any signed-in player — the game streams active card skins
+    // (firestoreSkinsProvider) for the tile-back catalog. Write: admins only
+    // (the admin app publishes/edits skins live). Without this rule the
+    // catch-all below blocks both, breaking live skin management.
+    match /card_skins/{skinId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
     // ── App config (in-app update notice) ─────────────────────────────────────
     // Read: any signed-in player — fetched on the home screen to decide whether
     // to show the "new version available" notice. Write: admins only (the owner
