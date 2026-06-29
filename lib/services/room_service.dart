@@ -2694,6 +2694,9 @@ class RoomService {
     final cats = <String>{GameCategories.israelPlaces, ...GameCategories.fastHeat};
     final pool = <GameImageModel>[];
     for (final c in cats) {
+      // Respect admin/default topic disabling — a disabled topic (e.g. birds,
+      // plants) must not supply letters-game answers either.
+      if (!ContentManifestService.instance.isCategoryActive(c)) continue;
       pool.addAll(await _loadLocalImages(categoryId: c));
     }
     if (pool.isEmpty) return null;

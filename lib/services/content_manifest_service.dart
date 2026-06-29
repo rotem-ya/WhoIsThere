@@ -141,10 +141,19 @@ class ContentManifestService {
   bool isActive(String id, {required bool localDefault}) =>
       _activeById[id] ?? localDefault;
 
-  /// Active-state for a whole category/topic. A category absent from the
-  /// manifest `topicsActive` map counts as active (backward compatible — no
-  /// map means every topic shows, exactly like before).
-  bool isCategoryActive(String categoryId) => _topicsActive[categoryId] ?? true;
+  /// Categories that ship DISABLED by default (not launch-ready). The admin can
+  /// still turn them on explicitly via the manifest `topicsActive` map; this is
+  /// only the fallback when the manifest doesn't say. Keeping it in code (not
+  /// just the server manifest) guarantees they stay hidden even on a fresh
+  /// install before the manifest loads, and offline.
+  static const Set<String> _defaultDisabledCategories = {'birds', 'plants'};
+
+  /// Active-state for a whole category/topic. The manifest `topicsActive` value
+  /// wins when present (admin can enable or disable explicitly); otherwise the
+  /// category is active unless it's in [_defaultDisabledCategories].
+  bool isCategoryActive(String categoryId) =>
+      _topicsActive[categoryId] ??
+      !_defaultDisabledCategories.contains(categoryId);
 
   /// Admin display-name override for a topic, or null when none is set (callers
   /// then fall back to the bundled default name from GameCategories §8). A
