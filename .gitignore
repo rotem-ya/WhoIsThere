@@ -32,3 +32,4 @@ ios/Flutter/ephemeral/
 # Python (asset/uploader tooling)
 __pycache__/
 *.pyc
+submission-assets-*.zip
