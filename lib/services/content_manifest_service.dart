@@ -105,6 +105,14 @@ class ContentManifestService {
   static const _topicLabelsPrefsKey = 'content_topic_labels_v1';
   static const _docPath = 'content_manifest/places_v1';
 
+  // LAUNCH SAFETY: when true, the game uses ONLY bundled images — every cloud
+  // image override (bundled-item override AND remote-only place) is ignored, so
+  // no temporary/placeholder image that may sit in Storage can ever appear.
+  // The admin's topic enable/disable, display-name and text overrides still
+  // apply. Flip back to false once Storage uploads are healthy and the cloud
+  // catalogue is curated. See resolveBundled / availableRemoteImages.
+  static const bool kBundledImagesOnly = true;
+
   // id → isActive override (covers bundled + remote).
   final Map<String, bool> _activeById = {};
   // id → full manifest entry (covers bundled + remote). Drives per-item override
@@ -160,7 +168,10 @@ class ContentManifestService {
   /// Copy, never null.
   List<GameImageModel> availableRemoteImages(
           [String categoryId = 'israel_places']) =>
-      List<GameImageModel>.unmodifiable(_remoteByCategory[categoryId] ?? const []);
+      kBundledImagesOnly
+          ? const []
+          : List<GameImageModel>.unmodifiable(
+              _remoteByCategory[categoryId] ?? const []);
 
   /// Applies any live admin override to a BUNDLED place. For every id the
   /// manifest may carry overrides that win over the built-in JSON/asset:
@@ -176,8 +187,9 @@ class ContentManifestService {
     if (o == null) return bundled;
 
     final overrideUrl = o.effectiveUrl;
-    final useImage =
-        overrideUrl != null && _readyOverrideUrls.contains(overrideUrl);
+    final useImage = !kBundledImagesOnly &&
+        overrideUrl != null &&
+        _readyOverrideUrls.contains(overrideUrl);
 
     final name = o.nameHe.isNotEmpty ? o.nameHe : bundled.name;
     final answer = o.answerHe.isNotEmpty ? o.answerHe : bundled.answer;
