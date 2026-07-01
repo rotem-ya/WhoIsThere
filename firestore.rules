@@ -44,7 +44,9 @@ service cloud.firestore {
       // Admin writes power the separate admin app (grant coins/skins/cards).
       allow create, update: if signedIn() &&
         (request.auth.uid == userId || isAdmin());
-      allow delete: if false;
+      // Users may delete their OWN profile doc — required for in-app account
+      // deletion (App Store Guideline 5.1.1(v)).
+      allow delete: if signedIn() && request.auth.uid == userId;
 
       // Economy wallet — own user or admin (read+write: coins/totalEarned/…)
       match /economy/{document} {
