@@ -1,5 +1,6 @@
-Release AAB build requested: 2026-07-01T09:00:00Z (launch AAB r14 — Apple-review fixes)
+Release AAB build requested: 2026-07-01T21:00:00Z (launch AAB r15 — Apple-review fixes)
 version: 1.0.0
 signing: embedded release keystore, SHA-1 25:C3
 package: com.whoisthere.app (matches Play Console)
-note: LAUNCH AAB r14 — adds the Apple-rejection fixes (also required for Google): removed non-functional real-money purchase UI (no IAP shipped; coins are in-game only), in-app account deletion (מחק חשבון in Profile + Firestore self-delete rule), ATT prompt before AdMob (iOS). Everything prior from r13: bundled-images-only safety, letters-game topic gating, 5 admin vehicle images, friends invite + chat, in-app update notice, full Hebrew keyboard, exact letters matching, bot hidden, 3 games, admin-respect, live-sync.
+note: LAUNCH AAB r15 — adds the Apple-rejection fixes (also required for Google): removed non-functional real-money purchase UI (no IAP shipped; coins are in-game only), in-app account deletion (מחק חשבון in Profile + Firestore self-delete rule), ATT prompt before AdMob (iOS). Everything prior from r13: bundled-images-only safety, letters-game topic gating, 5 admin vehicle images, friends invite + chat, in-app update notice, full Hebrew keyboard, exact letters matching, bot hidden, 3 games, admin-respect, live-sync.
+. r15 also adds the Apple sign-in Pigeon-cast recovery fix.
