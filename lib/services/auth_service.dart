@@ -149,6 +149,17 @@ class AuthService {
     }
   }
 
+  /// True for the known firebase_auth Pigeon codec bug where a successful native
+  /// sign-in throws `type 'List<Object?>' is not a subtype of type
+  /// 'PigeonUserDetails?'` in the Dart layer. The auth actually succeeded; we
+  /// recover via the auth-state stream / currentUser.
+  static bool _isPigeonCastError(Object e) {
+    final s = e.toString();
+    return s.contains('PigeonUserDetails') ||
+        s.contains("subtype of type 'PigeonUserDetails?'") ||
+        (s.contains('List<Object?>') && s.contains('is not a subtype'));
+  }
+
   /// Waits for Firebase Auth to emit a non-anonymous user after a Pigeon cast
   /// error from signInWithCredential. The native sign-in already completed, so
   /// the auth state change arrives within ~1-3 seconds.
@@ -216,6 +227,27 @@ class AuthService {
 
     // Mirrors the Google link-and-upgrade strategy: anonymous accounts are
     // upgraded in-place so the UID, wallet, and Firestore data are preserved.
+    // Wrapped so the firebase_auth Pigeon cast bug (native sign-in succeeds but
+    // the Dart layer throws a List→PigeonUserDetails cast error) recovers via
+    // the auth-state stream instead of surfacing a bogus "error" to the user.
+    try {
+      return await _appleSignInInner(appleCredential, oauthCredential);
+    } catch (e) {
+      if (_isPigeonCastError(e)) {
+        QaLoggerService.instance.log('AUTH', 'AUTH_APPLE_TYPEERROR_RECOVER');
+        final recovered = await _recoverFromSignInError('AUTH_APPLE_typeerror');
+        if (recovered != null) return recovered;
+      }
+      rethrow;
+    }
+  }
+
+  /// The link-or-sign-in body of [signInWithApple], split out so its Pigeon
+  /// cast errors can be caught and recovered in one place.
+  Future<UserModel?> _appleSignInInner(
+    AuthorizationCredentialAppleID appleCredential,
+    OAuthCredential oauthCredential,
+  ) async {
     final anonUser = _auth.currentUser;
     UserCredential userCredential;
 
