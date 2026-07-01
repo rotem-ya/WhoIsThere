@@ -33,6 +33,56 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _upgrading = false;
+  bool _deleting = false;
+
+  /// App Store 5.1.1(v): lets the user permanently delete their account and
+  /// data from within the app. Confirms first (destructive + irreversible),
+  /// then deletes and returns to the auth screen.
+  Future<void> _confirmDeleteAccount() async {
+    HapticFeedback.lightImpact();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF10182E),
+        title: const Text('מחיקת חשבון', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'הפעולה תמחק לצמיתות את החשבון שלך וכל הנתונים (מטבעות, פריטים, '
+          'התקדמות, חברים). לא ניתן לשחזר. להמשיך?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('ביטול', style: TextStyle(color: Colors.white70)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('מחק לצמיתות',
+                style: TextStyle(
+                    color: Color(0xFFE06B6B), fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _deleting = true);
+    try {
+      await ref.read(authServiceProvider).deleteAccount();
+      if (!mounted) return;
+      context.go('/auth');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _deleting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('מחיקת החשבון נכשלה. התחבר מחדש ונסה שוב.'),
+          backgroundColor: Color(0xFF8A2A2A),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
 
   Future<void> _showEditNameDialog(BuildContext context, String userId, String currentName) async {
     await showDialog<void>(
@@ -342,6 +392,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   },
                   onUpgrade: _upgrading ? null : _upgradeWithGoogle,
                   onUpgradeApple: _upgrading ? null : _upgradeWithApple,
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.sm),
+
+              // ── Delete account (App Store 5.1.1(v) — in-app deletion) ──
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Center(
+                  child: TextButton.icon(
+                    onPressed: _deleting ? null : _confirmDeleteAccount,
+                    icon: const Icon(Icons.delete_forever_rounded,
+                        size: 16, color: Color(0xFFE06B6B)),
+                    label: Text(
+                      _deleting ? 'מוחק…' : 'מחק חשבון',
+                      style: const TextStyle(
+                          color: Color(0xFFE06B6B),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700),
+                    ),
+                  ),
                 ),
               ),
 

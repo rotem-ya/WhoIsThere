@@ -83,9 +83,15 @@ workflows:
         script: xcode-project use-profiles
       - name: Build signed IPA
         script: |
+          # Offset the Codemagic build counter by 1000 so the CFBundleVersion is
+          # always > 55 (TestFlight already has build 55 from the legacy path)
+          # while staying strictly increasing across builds. Apple rejects a
+          # resubmit whose build number isn't higher than the last one.
+          BUILD_NUMBER=$((PROJECT_BUILD_NUMBER + 1000))
+          echo "Using iOS build number: $BUILD_NUMBER"
           flutter build ipa --release \
             --build-name=1.0.0 \
-            --build-number=$PROJECT_BUILD_NUMBER \
+            --build-number=$BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa

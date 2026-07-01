@@ -118,7 +118,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
             labelStyle: const TextStyle(
                 fontWeight: FontWeight.w800, fontSize: 13),
             tabs: const [
-              Tab(text: '💎 רכישה'),
+              Tab(text: '🎁 מטבעות'),
               Tab(text: '🃏 כרטיסים'),
               Tab(text: '🎨 עיצובים'),
             ],
@@ -158,60 +158,64 @@ class _PurchaseTab extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
       children: [
-        // ── Coin packages ─────────────────────────────────────────────────
-        _SectionLabel(label: 'קנה מטבעות', iconWidget: const CoinIcon(size: 16)),
+        // Coins are earned in-game (daily reward, wins, discoveries) — never
+        // sold for real money. How to earn:
+        _SectionLabel(label: 'איך מרוויחים מטבעות', iconWidget: const CoinIcon(size: 16)),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _CoinPackageTile(
-                coins: 40,
-                priceIls: '₪0.99',
-                color: const Color(0xFF4A9EFF),
-              ).animate(delay: 60.ms).fadeIn(duration: 280.ms).slideY(begin: 0.07, end: 0, duration: 280.ms),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _CoinPackageTile(
-                coins: 90,
-                priceIls: '₪1.99',
-                color: const Color(0xFF3DCCAA),
-                badge: 'פופולרי',
-              ).animate(delay: 100.ms).fadeIn(duration: 280.ms).slideY(begin: 0.07, end: 0, duration: 280.ms),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _CoinPackageTile(
-                coins: 200,
-                priceIls: '₪3.99',
-                color: const Color(0xFFD4AF37),
-                badge: 'מומלץ',
-              ).animate(delay: 140.ms).fadeIn(duration: 280.ms).slideY(begin: 0.07, end: 0, duration: 280.ms),
-            ),
-          ],
-        ),
-        // Ad-related store items (ad-removal pack + rewarded-ad tile) are shown
-        // only when ads are enabled. With ads off at launch, advertising
-        // shouldn't be referenced anywhere in the UI (and would fail review).
+        const _EarnCoinsInfo()
+            .animate(delay: 60.ms)
+            .fadeIn(duration: 300.ms)
+            .slideY(begin: 0.06, end: 0, duration: 300.ms),
+
+        // Rewarded ad (free coins for watching) — the only "get more" option,
+        // shown when ads are enabled. No real-money purchase anywhere.
         if (AdConstants.adsEnabled) ...[
           const SizedBox(height: AppSpacing.lg),
-
-          // ── Ad removal pack ─────────────────────────────────────────────
-          _SectionLabel(label: 'חבילות', icon: '🎁'),
+          _SectionLabel(label: 'צפה והרווח', icon: '🎬'),
           const SizedBox(height: 10),
-          _AdRemovalCard()
-              .animate(delay: 180.ms)
-              .fadeIn(duration: 340.ms, curve: Curves.easeOut)
-              .slideY(begin: 0.06, end: 0, duration: 340.ms, curve: Curves.easeOut),
-          const SizedBox(height: AppSpacing.md),
-
-          // ── Rewarded Ad ─────────────────────────────────────────────────
           _RewardedAdTile(ref: ref)
-              .animate(delay: 260.ms)
+              .animate(delay: 160.ms)
               .fadeIn(duration: 300.ms, curve: Curves.easeOut)
               .slideY(begin: 0.06, end: 0, duration: 300.ms, curve: Curves.easeOut),
         ],
       ],
+    );
+  }
+}
+
+// Short "how to earn coins" card — replaces the removed real-money packages.
+class _EarnCoinsInfo extends StatelessWidget {
+  const _EarnCoinsInfo();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget row(String emoji, String text) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          child: Row(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(text,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              ),
+            ],
+          ),
+        );
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        children: [
+          row('🎁', 'פרס יומי — התחבר כל יום'),
+          row('🏆', 'ניצחונות ונקודות במשחקים'),
+          row('🗺️', 'גילוי מקומות חדשים'),
+        ],
+      ),
     );
   }
 }
@@ -246,110 +250,6 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-// ── Coin package tile ─────────────────────────────────────────────────────────
-
-class _CoinPackageTile extends StatelessWidget {
-  final int coins;
-  final String priceIls;
-  final Color color;
-  final String? badge;
-
-  const _CoinPackageTile({
-    required this.coins,
-    required this.priceIls,
-    required this.color,
-    this.badge,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PressableScale(
-      onTap: () => HapticFeedback.lightImpact(),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [color.withOpacity(0.22), const Color(0xFF04091A)],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.60), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.20),
-              blurRadius: 10,
-              spreadRadius: 0,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (badge != null) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.22),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: color.withOpacity(0.5), width: 0.8),
-                ),
-                child: Text(
-                  badge!,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-            ],
-            const CoinIcon(size: 26),
-            const SizedBox(height: 6),
-            Text(
-              '$coins',
-              style: TextStyle(
-                color: color,
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                height: 1,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'מטבעות',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.50),
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 7),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                priceIls,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF07101F),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // ── Tab 2: כרטיסים ────────────────────────────────────────────────────────────
 
@@ -1073,132 +973,6 @@ class _DesignCard extends StatelessWidget {
   }
 }
 
-// ── Ad Removal Pack ───────────────────────────────────────────────────────────
-
-class _AdRemovalCard extends StatelessWidget {
-  const _AdRemovalCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A1060), Color(0xFF0D0730)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-            color: const Color(0xFFD4AF37).withOpacity(0.55), width: 1.4),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD4AF37).withOpacity(0.14),
-            blurRadius: 22,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Title row
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD4AF37).withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.35)),
-                ),
-                child: const Center(
-                  child: Text('🚫', style: TextStyle(fontSize: 22, height: 1)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text(
-                    'הסרת פרסומות',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      height: 1.1,
-                    ),
-                    maxLines: 1,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _PackFeature(text: '500 מטבעות'),
-          const SizedBox(height: 2),
-          _PackFeature(text: 'ללא פרסומות לצמיתות'),
-          const SizedBox(height: 14),
-          // Full-width buy button
-          PressableScale(
-            onTap: () => HapticFeedback.lightImpact(),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: FilledButton(
-                onPressed: () => HapticFeedback.lightImpact(),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  foregroundColor: const Color(0xFF07101F),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  minimumSize: const Size.fromHeight(46),
-                ),
-                child: const Text('רכישה • ₪9.99'),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PackFeature extends StatelessWidget {
-  final String text;
-  const _PackFeature({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle_rounded,
-              color: Color(0xFFD4AF37), size: 14),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.78),
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ── Rewarded Ad ───────────────────────────────────────────────────────────────
 

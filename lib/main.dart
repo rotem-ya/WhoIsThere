@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:app_links/app_links.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'core/constants/ad_constants.dart';
 import 'core/constants/build_info.dart';
 import 'core/theme/app_styles.dart';
@@ -36,13 +37,10 @@ void main() async {
     firebaseError = e;
   }
 
-  // Only initialize the AdMob SDK when ads are actually enabled. With ads off
-  // (launch default) we skip init entirely so the SDK never collects the
-  // advertising identifier — keeping the store privacy declaration at
-  // "no ads / no tracking" and avoiding any ATT requirement.
-  if (AdConstants.adsEnabled) {
-    MobileAds.instance.initialize();
-  }
+  // AdMob is initialized AFTER the App Tracking Transparency prompt (see
+  // _GuessThePlaceAppState._initTrackingThenAds) so, on iOS, the ATT dialog is
+  // shown before any ad SDK reads the advertising identifier. Not initialized
+  // here.
 
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -187,6 +185,33 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
   void initState() {
     super.initState();
     _initDeepLinks();
+    _initTrackingThenAds();
+  }
+
+  /// iOS App Tracking Transparency: request authorization once the app is
+  /// active (a post-frame callback guarantees it's foregrounded), THEN
+  /// initialize AdMob. Apple requires the ATT prompt to appear before any ad
+  /// SDK reads the advertising identifier. Fail-soft and a no-op when ads are
+  /// disabled; on Android requestTrackingAuthorization simply returns.
+  Future<void> _initTrackingThenAds() async {
+    if (!AdConstants.adsEnabled) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final status =
+            await AppTrackingTransparency.trackingAuthorizationStatus;
+        if (status == TrackingStatus.notDetermined) {
+          // Small delay so the prompt lands after the first frame is visible
+          // (iOS silently drops it if requested while not yet active).
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+          await AppTrackingTransparency.requestTrackingAuthorization();
+        }
+      } catch (_) {
+        // Non-iOS or plugin error — proceed to ads regardless.
+      }
+      try {
+        MobileAds.instance.initialize();
+      } catch (_) {}
+    });
   }
 
   Future<void> _initDeepLinks() async {

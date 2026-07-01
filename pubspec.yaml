@@ -53,6 +53,7 @@ dependencies:
   url_launcher: ^6.3.0
   wakelock_plus: ^1.1.4
   google_mobile_ads: '>=5.2.0 <5.3.0'
+  app_tracking_transparency: ^2.0.4  # iOS ATT prompt before ad tracking
 
 # Pin google_sign_in_ios to the last release on GoogleSignIn 7 / GoogleUtilities 7.
 # 5.8.0+ moved to GoogleSignIn 8 / GoogleUtilities 8, which conflicts with

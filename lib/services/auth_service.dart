@@ -554,4 +554,85 @@ class AuthService {
     await _googleSignIn.signOut();
     await _auth.signOut();
   }
+
+  /// Permanently deletes the signed-in user's account — their Firestore data
+  /// and their Firebase Auth user. Required by App Store Guideline 5.1.1(v):
+  /// an account created in-app must be deletable from within the app.
+  ///
+  /// Firebase requires a recent login to delete an account; if the session is
+  /// stale we re-authenticate with the same provider and retry once. Throws on
+  /// failure so the UI can surface a message.
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    final uid = user.uid;
+
+    // 1) Remove the user's Firestore data (best-effort per sub-collection; a
+    //    failed sub-doc delete must not block deleting the auth account).
+    await _deleteUserData(uid);
+
+    // 2) Delete the auth user, re-authenticating if the session is too old.
+    try {
+      await user.delete();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        await _reauthenticate(user);
+        await user.delete();
+      } else {
+        rethrow;
+      }
+    }
+
+    // 3) Clear the provider session so the next launch starts clean.
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {}
+    QaLoggerService.instance.log('AUTH', 'ACCOUNT_DELETED uid=$uid');
+  }
+
+  Future<void> _deleteUserData(String uid) async {
+    final userRef = _firestore.collection('users').doc(uid);
+    // The client can't recurse arbitrary sub-collections; delete the ones we
+    // know about, then the main doc.
+    for (final sub in [
+      'friends',
+      'friendGames',
+      'exposure_history',
+      'economy',
+      'economy_transactions',
+    ]) {
+      try {
+        final docs = await userRef.collection(sub).get();
+        for (final d in docs.docs) {
+          await d.reference.delete();
+        }
+      } catch (_) {}
+    }
+    try {
+      await userRef.delete();
+    } catch (e) {
+      QaLoggerService.instance.log('AUTH', 'ACCOUNT_DATA_DELETE_ERR $e');
+    }
+  }
+
+  Future<void> _reauthenticate(User user) async {
+    final providers = user.providerData.map((p) => p.providerId).toList();
+    if (providers.contains('google.com')) {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        throw FirebaseAuthException(
+            code: 'reauth-cancelled', message: 'האימות בוטל');
+      }
+      final googleAuth = await googleUser.authentication;
+      final cred = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+        accessToken: googleAuth.accessToken,
+      );
+      await user.reauthenticateWithCredential(cred);
+    } else if (providers.contains('apple.com')) {
+      final (_, oauthCredential) = await _acquireAppleCredential();
+      await user.reauthenticateWithCredential(oauthCredential);
+    }
+    // Anonymous users have no provider and don't require recent login.
+  }
 }
