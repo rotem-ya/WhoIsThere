@@ -18,6 +18,7 @@ import 'firebase_options.dart';
 import 'providers/providers.dart';
 import 'services/content_manifest_service.dart';
 import 'services/qa_logger_service.dart';
+import 'services/report_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'services/settings_service.dart';
 
@@ -67,11 +68,15 @@ void main() async {
     final msg = details.exceptionAsString();
     QaLoggerService.instance.log(
         'CRASH', 'FLUTTER_ERROR ${msg.length > 160 ? msg.substring(0, 160) : msg}');
+    // Auto-send the crash + recent log to Firestore (throttled, fail-soft).
+    ReportService.instance.reportCrash(
+        kind: 'flutter', error: details.exception, stack: details.stack);
   };
   WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
     final msg = error.toString();
     QaLoggerService.instance.log(
         'CRASH', 'UNCAUGHT ${msg.length > 160 ? msg.substring(0, 160) : msg}');
+    ReportService.instance.reportCrash(kind: 'uncaught', error: error, stack: stack);
     return true; // handled — keep the app running
   };
 

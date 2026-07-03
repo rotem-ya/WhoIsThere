@@ -15,6 +15,7 @@ import '../../core/ui/app_text_styles.dart';
 import '../../core/utils/display_name_sanitizer.dart';
 import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
+import '../../services/report_service.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
 import 'discovered_images_screen.dart';
@@ -82,6 +83,80 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       );
     }
+  }
+
+  /// Free-text feedback dialog → ReportService writes it to Firestore.
+  Future<void> _showFeedbackDialog(BuildContext context, String userName) async {
+    HapticFeedback.lightImpact();
+    final controller = TextEditingController();
+    var sending = false;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          backgroundColor: const Color(0xFF10182E),
+          title: const Text('שלח משוב', style: TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('ספר לנו מה אהבת, מה חסר, או על תקלה שנתקלת בה:',
+                  style: TextStyle(color: Colors.white70, fontSize: 13)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLines: 4,
+                maxLength: 2000,
+                autofocus: true,
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'המשוב שלך…',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.06),
+                  counterStyle: const TextStyle(color: Colors.white24),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: sending ? null : () => Navigator.of(ctx).pop(),
+              child: const Text('ביטול', style: TextStyle(color: Colors.white70)),
+            ),
+            TextButton(
+              onPressed: sending
+                  ? null
+                  : () async {
+                      if (controller.text.trim().isEmpty) return;
+                      setLocal(() => sending = true);
+                      final ok = await ReportService.instance
+                          .submitFeedback(text: controller.text, name: userName);
+                      if (!ctx.mounted) return;
+                      Navigator.of(ctx).pop();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(ok ? 'תודה! המשוב נשלח 🙏' : 'שליחת המשוב נכשלה, נסה שוב'),
+                            backgroundColor:
+                                ok ? const Color(0xFF1B5E20) : const Color(0xFF8A2A2A),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+              child: Text(sending ? 'שולח…' : 'שלח',
+                  style: const TextStyle(
+                      color: Color(0xFF4A9EFF), fontWeight: FontWeight.w800)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _showEditNameDialog(BuildContext context, String userId, String currentName) async {
@@ -432,6 +507,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ? user.email!
                       : user.id,
                   isEmail: user.email != null && user.email!.isNotEmpty,
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.sm),
+
+              // ── Send feedback ────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Center(
+                  child: TextButton.icon(
+                    onPressed: () => _showFeedbackDialog(context, user.name),
+                    icon: const Icon(Icons.chat_bubble_outline_rounded,
+                        size: 18, color: Color(0xFF4A9EFF)),
+                    label: const Text('שלח משוב',
+                        style: TextStyle(
+                            color: Color(0xFF4A9EFF),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700)),
+                  ),
                 ),
               ),
 
