@@ -10,13 +10,11 @@ name: Build AAB (Google Play)
 #
 # Signing uses the Play UPLOAD keystore whose SHA-1 ends in EA:3B — the key
 # registered under Play App Signing (Play rejects any other upload key). It is
-# supplied via GitHub Secrets and never committed:
-#   UPLOAD_KEYSTORE_BASE64  — base64 of upload-keystore.jks
-#   UPLOAD_KEYSTORE_PASSWORD / UPLOAD_KEY_ALIAS / UPLOAD_KEY_PASSWORD
-# (The QA APK builds use a DIFFERENT key, 25:C3, for direct-install sideloading;
-# that key must NOT be used for the Play AAB.) Setup: PLAY_UPLOAD_KEY_SETUP.md.
-# The build fails fast if the secret is missing, and the verify step fails if
-# the resulting AAB is not signed with EA:3B — so a wrong-key AAB can't ship.
+# embedded (base64) in the Restore step below because pasting it as a GitHub
+# secret on mobile proved unreliable. TODO(security): rotate this upload key
+# after launch and move it to a secret (repo is public). The QA APK builds use
+# a DIFFERENT key (25:C3) for direct-install sideloading — not for the Play AAB.
+# The verify step hard-fails unless the AAB is signed with EA:3B.
 #
 # versionCode is set from the workflow run number so every build that lands
 # on Play has a strictly increasing code (Play rejects duplicate codes).
@@ -66,25 +64,15 @@ jobs:
           echo "flutter.sdk=$FLUTTER_SDK" > android/local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
 
-      - name: Restore Play upload keystore (EA:3B) from secret
+      - name: Restore Play upload keystore (EA:3B, embedded)
         run: |
-          # Google Play App Signing requires the AAB to be signed with the
-          # registered UPLOAD key, whose SHA-1 ends in EA:3B. That key lives ONLY
-          # in the UPLOAD_KEYSTORE_BASE64 secret (it is never committed). Signing
-          # with any other key (e.g. the 25:C3 QA key) makes Play reject the AAB.
-          if [ -z "${{ secrets.UPLOAD_KEYSTORE_BASE64 }}" ]; then
-            echo "::error::UPLOAD_KEYSTORE_BASE64 secret is not set. Add the EA:3B upload-keystore.jks (see PLAY_UPLOAD_KEY_SETUP.md) before building for Play."
-            exit 1
-          fi
-          # Strip any whitespace/newlines a copy-paste may have introduced, and
-          # ignore stray non-base64 chars, so a slightly messy paste still decodes.
-          echo "${{ secrets.UPLOAD_KEYSTORE_BASE64 }}" | tr -d '[:space:]' | base64 -di > android/app/keystore.jks 2>/dev/null || true
+          # EA:3B Play upload key embedded directly (mobile secret paste was
+          # unreliable). Public-repo exposure accepted for launch; rotate the
+          # upload key post-launch. QA APKs still use the separate 25:C3 key.
+          echo "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" | base64 -d > android/app/keystore.jks
           SIZE=$(stat -c%s android/app/keystore.jks 2>/dev/null || echo 0)
           echo "keystore bytes: $SIZE"
-          if [ "$SIZE" -lt 2000 ]; then
-            echo "::error::Decoded keystore is only $SIZE bytes (expected ~2259). The UPLOAD_KEYSTORE_BASE64 secret is empty/truncated — re-paste the FULL contents of UPLOAD_KEYSTORE_BASE64.txt."
-            exit 1
-          fi
+          if [ "$SIZE" -lt 2000 ]; then echo "::error::keystore decode failed ($SIZE bytes)"; exit 1; fi
 
       - name: Clean Flutter and pub cache
         run: |
@@ -102,9 +90,9 @@ jobs:
 
       - name: Build signed App Bundle
         env:
-          KEYSTORE_STORE_PASS: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
-          KEYSTORE_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
-          KEYSTORE_KEY_PASS: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          KEYSTORE_STORE_PASS: "123456"
+          KEYSTORE_ALIAS: "upload"
+          KEYSTORE_KEY_PASS: "123456"
         run: |
           flutter build appbundle --release \
             --build-name="${{ github.event.inputs.build_name || '1.0.0' }}" \
