@@ -21,12 +21,14 @@
 - `build-aab.yml` חותם ב-EA:3B (כרגע **מוטמע** ב-workflow כי הדבקת secret בנייד נכשלה) + שלב אימות שנכשל אם ה-AAB לא EA:3B.
 - **⚠️ TODO אבטחה אחרי ההשקה:** המפתח EA:3B מוטמע בריפו **ציבורי**. לאחר אישור: לאפס upload key ב-Play למפתח טרי, לאחסן כ-secret (ממחשב), ולהסיר את המוטמע. **אין להפוך את הריפו לפרטי** בלי לפתור קודם את דפי ה-Pages (privacy/support ב-`rotem-ya.github.io/WhoIsThere/` — לא עובד בריפו פרטי ב-Free; שתי החנויות מצביעות עליהם).
 
-### v1.1 — מטלות הבאות (בעבודה)
-1. משוב (feedback) בתוך האפליקציה.
-2. שליחת לוג אוטומטית בזיהוי באג/תקלה/קריסה.
-3. שיתוף האפליקציה עם חברים + קישורי הורדה מהחנויות.
-4. רשימת האפליקציות שלנו ("שאלו את הילדים" עברית+אנגלית) עם קישורי חנות.
-- (מוכן חלקית בענף `claude/push-invites`: פוש להזמנות — דורש Blaze+APNs.)
+### v1.1 — מומש (ענף `claude/google-connect-review-submit-mp11cq`, גרסה 1.1.0)
+- [x] **משוב (feedback)** — כפתור "שלח משוב" בפרופיל → `ReportService.submitFeedback` → `feedback/{id}`.
+- [x] **שליחת לוג אוטומטית** — `ReportService.reportCrash` (מ-`FlutterError.onError`/`platformDispatcher.onError` ב-main) → `crash_reports/{id}` עם `QaLogger.recentLog()`, throttled/deduped/fail-soft.
+- [x] **שיתוף האפליקציה** — כפתור "שתף את האפליקציה" בפרופיל → `Share.share` עם `AppConstants.shareMessage`. קישור Play נגזר מה-package; קישור App Store מ-`app_config/app.iosUrl` (אדמין).
+- [x] **רשימת האפליקציות שלנו** — מסך `OurAppsScreen`, **נשלט מהאדמין** דרך `app_config/app.ourApps` (list של name/subtitle/emoji/androidUrl/iosUrl). השורה בפרופיל מופיעה רק כשיש ≥1 אפליקציה — אין hardcode, הרשימה גדלה בלי בילד.
+- [x] **הגירת אורח→חשבון** — אורח שמתחבר לגוגל/אפל קיים: נתוני האורח נלכדים, האורח **נמחק** (עוד כאורח, כי rules מתירים מחיקת-עצמי), ואז הנתונים נכתבים על החשבון (`_captureGuestData`+`_writeMergedData`+`_GuestSnapshot`). אורח→חשבון חדש = שדרוג-במקום.
+- **בנייה:** גרסה `1.1.0` (build_info + build-aab default + codemagic). Build APK CI ירוק (compile מאומת). ⚠️ **בניות החנות דורשות הפעלה ידנית** (ל-cowork/agent אין הרשאת Actions/tag): AAB דרך Actions→Build AAB→Run workflow (build_name=1.1.0) או תג `aab-v2`; iOS דרך תג `ios-v3` או Start build ב-Codemagic. ⚠️ v1.0 עדיין ב-review בשתי החנויות — cowork יחליט על תזמון הגשת v1.1.
+- (עתידי — ענף `claude/push-invites`: פוש להזמנות — דורש Blaze+APNs.)
 
 ---
 
