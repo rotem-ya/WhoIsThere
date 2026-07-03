@@ -118,13 +118,19 @@ class AuthService {
             // Sign into the existing account (UID will change).
             QaLoggerService.instance.log(
               'AUTH', 'AUTH_GOOGLE_LINK_CONFLICT code=${e.code} → signIn');
+            // The Google account exists under its own UID, so we sign into it
+            // (UID changes) and carry the guest's progress across. Capture +
+            // delete the guest data BEFORE switching accounts (Firestore rules
+            // only let a user delete their own doc), then write it onto the
+            // Google account.
+            final anonUid = anonUser.uid;
+            final guest = await _captureGuestData(anonUid);
+            await _deleteUserData(anonUid);
             userCredential = await _auth.signInWithCredential(
                 e.credential ?? credential);
-            // Preserve the anonymous user's progress by merging it into the
-            // newly signed-in Google account.
             final newUid = userCredential.user?.uid;
-            if (anonUser.uid != newUid && newUid != null) {
-              await _mergeAnonymousData(anonUser.uid, newUid);
+            if (guest != null && newUid != null && newUid != anonUid) {
+              await _writeMergedData(guest, newUid);
             }
           } else {
             rethrow;
@@ -270,6 +276,12 @@ class AuthService {
           // email-already-in-use (e.credential == null) we must re-acquire a
           // fresh Apple credential, otherwise sign-in fails with
           // missing-or-invalid-nonce ("Duplicate credential received").
+          // Capture + delete the guest data BEFORE switching accounts (rules
+          // only let a user delete their own doc), then carry it onto the
+          // Apple account after sign-in.
+          final anonUid = anonUser.uid;
+          final guest = await _captureGuestData(anonUid);
+          await _deleteUserData(anonUid);
           final conflictCredential = e.credential;
           if (conflictCredential != null) {
             userCredential =
@@ -280,8 +292,8 @@ class AuthService {
             userCredential = await _auth.signInWithCredential(freshOauth);
           }
           final newUid = userCredential.user?.uid;
-          if (anonUser.uid != newUid && newUid != null) {
-            await _mergeAnonymousData(anonUser.uid, newUid);
+          if (guest != null && newUid != null && newUid != anonUid) {
+            await _writeMergedData(guest, newUid);
           }
         } else {
           rethrow;
@@ -454,111 +466,79 @@ class AuthService {
   /// Called only when linkWithCredential fails (credential-already-in-use),
   /// meaning the user has a pre-existing Google/Apple UID. Both accounts may
   /// have real data; we take the best of each field to avoid losing progress.
-  Future<void> _mergeAnonymousData(String fromUid, String toUid) async {
-    QaLoggerService.instance.log('AUTH', 'MERGE_ANON_START from=$fromUid to=$toUid');
+  /// Reads the guest (anonymous) user's mergeable data BEFORE we switch to an
+  /// existing social account. Returns null when the guest has no doc.
+  Future<_GuestSnapshot?> _captureGuestData(String fromUid) async {
     try {
-      // ── Read source docs in parallel ───────────────────────────────────
       final results = await Future.wait([
         _firestore.doc('users/$fromUid').get(),
         _firestore.doc('users/$fromUid/economy/wallet').get(),
         _firestore.doc('users/$fromUid/exposure_history/data').get(),
+      ]);
+      if (!results[0].exists) return null;
+      return _GuestSnapshot(
+        user: results[0].data() ?? {},
+        wallet: results[1].data(),
+        exposure: results[2].data(),
+      );
+    } catch (e) {
+      QaLoggerService.instance.log('AUTH', 'GUEST_CAPTURE_ERROR $e');
+      return null;
+    }
+  }
+
+  /// Merges a captured guest [snap] into the signed-in social account [toUid]:
+  /// owned lists unioned, points/coins maxed, matches summed, exposure maxed.
+  Future<void> _writeMergedData(_GuestSnapshot snap, String toUid) async {
+    QaLoggerService.instance.log('AUTH', 'MERGE_ANON_START to=$toUid');
+    try {
+      final results = await Future.wait([
         _firestore.doc('users/$toUid').get(),
         _firestore.doc('users/$toUid/economy/wallet').get(),
         _firestore.doc('users/$toUid/exposure_history/data').get(),
       ]);
+      final src = snap.user;
+      final tgt = results[0].data() ?? {};
+      final srcW = snap.wallet ?? {};
+      final tgtW = results[1].data() ?? {};
+      final tgtExp = results[2];
 
-      final srcUser   = results[0];
-      final srcWallet = results[1];
-      final srcExp    = results[2];
-      final tgtUser   = results[3];
-      final tgtWallet = results[4];
-      final tgtExp    = results[5];
+      List<String> union(String key) => {
+            ...List<String>.from(src[key] ?? []),
+            ...List<String>.from(tgt[key] ?? []),
+          }.toList();
 
-      if (!srcUser.exists) return; // nothing to merge
-
-      final src  = srcUser.data()!;
-      final tgt  = tgtUser.data() ?? {};
-      final srcW = srcWallet.data() ?? {};
-      final tgtW = tgtWallet.data() ?? {};
-
-      // ── Merge user document fields ──────────────────────────────────────
-      final mergedDiscovered = {
-        ...List<String>.from(src['discoveredImageIds'] ?? []),
-        ...List<String>.from(tgt['discoveredImageIds'] ?? []),
-      }.toList();
-
-      final mergedSkins = {
-        'default',
-        ...List<String>.from(src['ownedSkins'] ?? []),
-        ...List<String>.from(tgt['ownedSkins'] ?? []),
-      }.toList();
-
-      final mergedFrames = {
-        ...List<String>.from(src['ownedFrames'] ?? []),
-        ...List<String>.from(tgt['ownedFrames'] ?? []),
-      }.toList();
-
-      final mergedNameStyles = {
-        ...List<String>.from(src['ownedNameStyles'] ?? []),
-        ...List<String>.from(tgt['ownedNameStyles'] ?? []),
-      }.toList();
-
-      final mergedWinEffects = {
-        ...List<String>.from(src['ownedWinEffects'] ?? []),
-        ...List<String>.from(tgt['ownedWinEffects'] ?? []),
-      }.toList();
-
-      final mergedBoardSkins = {
-        ...List<String>.from(src['ownedBoardSkins'] ?? []),
-        ...List<String>.from(tgt['ownedBoardSkins'] ?? []),
-      }.toList();
-
-      final mergedAvatars = {
-        ...List<String>.from(src['ownedAvatars'] ?? []),
-        ...List<String>.from(tgt['ownedAvatars'] ?? []),
-      }.toList();
-
-      final mergedPoints = math.max(
-        (src['totalPoints'] as num?)?.toInt() ?? 0,
-        (tgt['totalPoints'] as num?)?.toInt() ?? 0,
-      );
+      final mergedDiscovered = union('discoveredImageIds');
+      final mergedSkins = {'default', ...union('ownedSkins')}.toList();
 
       await _firestore.doc('users/$toUid').set({
-        'totalPoints': mergedPoints,
+        'totalPoints': math.max(
+          (src['totalPoints'] as num?)?.toInt() ?? 0,
+          (tgt['totalPoints'] as num?)?.toInt() ?? 0,
+        ),
         'discoveredImageIds': mergedDiscovered,
         'ownedSkins': mergedSkins,
-        'ownedFrames': mergedFrames,
-        'ownedNameStyles': mergedNameStyles,
-        'ownedWinEffects': mergedWinEffects,
-        'ownedBoardSkins': mergedBoardSkins,
-        'ownedAvatars': mergedAvatars,
+        'ownedFrames': union('ownedFrames'),
+        'ownedNameStyles': union('ownedNameStyles'),
+        'ownedWinEffects': union('ownedWinEffects'),
+        'ownedBoardSkins': union('ownedBoardSkins'),
+        'ownedAvatars': union('ownedAvatars'),
       }, SetOptions(merge: true));
 
-      // ── Merge wallet ────────────────────────────────────────────────────
-      if (srcWallet.exists) {
-        final srcCoins   = (srcW['coins'] as num?)?.toInt() ?? 0;
-        final srcEarned  = (srcW['totalEarned'] as num?)?.toInt() ?? 0;
-        final srcPlayed  = (srcW['totalMatchesPlayed'] as num?)?.toInt() ?? 0;
-        final srcWon     = (srcW['totalMatchesWon'] as num?)?.toInt() ?? 0;
-        final srcHints   = (srcW['totalHintsUsed'] as num?)?.toInt() ?? 0;
-        final tgtCoins   = (tgtW['coins'] as num?)?.toInt() ?? 0;
-        final tgtEarned  = (tgtW['totalEarned'] as num?)?.toInt() ?? 0;
-        final tgtPlayed  = (tgtW['totalMatchesPlayed'] as num?)?.toInt() ?? 0;
-        final tgtWon     = (tgtW['totalMatchesWon'] as num?)?.toInt() ?? 0;
-        final tgtHints   = (tgtW['totalHintsUsed'] as num?)?.toInt() ?? 0;
-
+      if (snap.wallet != null) {
+        int s(String k) => (srcW[k] as num?)?.toInt() ?? 0;
+        int t(String k) => (tgtW[k] as num?)?.toInt() ?? 0;
         await _firestore.doc('users/$toUid/economy/wallet').set({
-          'coins':               math.max(srcCoins, tgtCoins),
-          'totalEarned':         math.max(srcEarned, tgtEarned),
-          'totalMatchesPlayed':  srcPlayed + tgtPlayed,
-          'totalMatchesWon':     srcWon + tgtWon,
-          'totalHintsUsed':      srcHints + tgtHints,
+          'coins':              math.max(s('coins'), t('coins')),
+          'totalEarned':        math.max(s('totalEarned'), t('totalEarned')),
+          'totalMatchesPlayed': s('totalMatchesPlayed') + t('totalMatchesPlayed'),
+          'totalMatchesWon':    s('totalMatchesWon') + t('totalMatchesWon'),
+          'totalHintsUsed':     s('totalHintsUsed') + t('totalHintsUsed'),
         }, SetOptions(merge: true));
       }
 
-      // ── Merge exposure history (max per image) ──────────────────────────
-      if (srcExp.exists) {
-        final srcMap = srcExp.data() ?? {};
+      if (snap.exposure != null) {
+        final srcMap = snap.exposure!;
         final tgtMap = tgtExp.data() ?? {};
         final merged = <String, int>{};
         for (final key in {...srcMap.keys, ...tgtMap.keys}) {
@@ -574,10 +554,9 @@ class AuthService {
         }
       }
 
-      QaLoggerService.instance.log('AUTH', 'MERGE_ANON_OK from=$fromUid to=$toUid '
-          'discovered=${mergedDiscovered.length} skins=${mergedSkins.length}');
+      QaLoggerService.instance.log('AUTH',
+          'MERGE_ANON_OK to=$toUid discovered=${mergedDiscovered.length} skins=${mergedSkins.length}');
     } catch (e) {
-      // Non-fatal: user continues with the Google account even if merge fails.
       QaLoggerService.instance.log('AUTH', 'MERGE_ANON_ERROR $e');
     }
   }
@@ -667,4 +646,16 @@ class AuthService {
     }
     // Anonymous users have no provider and don't require recent login.
   }
+}
+
+/// Immutable snapshot of a guest (anonymous) account's mergeable data, captured
+/// BEFORE the account is deleted and we switch to an existing social account.
+/// [user] is the users/{uid} doc; [wallet] the economy/wallet doc; [exposure]
+/// the exposure_history/data doc (both nullable when the guest never created
+/// them).
+class _GuestSnapshot {
+  final Map<String, dynamic> user;
+  final Map<String, dynamic>? wallet;
+  final Map<String, dynamic>? exposure;
+  _GuestSnapshot({required this.user, this.wallet, this.exposure});
 }
