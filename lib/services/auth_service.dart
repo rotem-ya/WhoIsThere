@@ -488,7 +488,9 @@ class AuthService {
   }
 
   /// Merges a captured guest [snap] into the signed-in social account [toUid]:
-  /// owned lists unioned, points/coins maxed, matches summed, exposure maxed.
+  /// owned lists unioned, points/coins/earned + matches SUMMED (the guest's
+  /// progress is added to the existing account, not just the larger of the
+  /// two), exposure maxed per image.
   Future<void> _writeMergedData(_GuestSnapshot snap, String toUid) async {
     QaLoggerService.instance.log('AUTH', 'MERGE_ANON_START to=$toUid');
     try {
@@ -512,10 +514,8 @@ class AuthService {
       final mergedSkins = {'default', ...union('ownedSkins')}.toList();
 
       await _firestore.doc('users/$toUid').set({
-        'totalPoints': math.max(
-          (src['totalPoints'] as num?)?.toInt() ?? 0,
-          (tgt['totalPoints'] as num?)?.toInt() ?? 0,
-        ),
+        'totalPoints': ((src['totalPoints'] as num?)?.toInt() ?? 0) +
+            ((tgt['totalPoints'] as num?)?.toInt() ?? 0),
         'discoveredImageIds': mergedDiscovered,
         'ownedSkins': mergedSkins,
         'ownedFrames': union('ownedFrames'),
@@ -529,8 +529,8 @@ class AuthService {
         int s(String k) => (srcW[k] as num?)?.toInt() ?? 0;
         int t(String k) => (tgtW[k] as num?)?.toInt() ?? 0;
         await _firestore.doc('users/$toUid/economy/wallet').set({
-          'coins':              math.max(s('coins'), t('coins')),
-          'totalEarned':        math.max(s('totalEarned'), t('totalEarned')),
+          'coins':              s('coins') + t('coins'),
+          'totalEarned':        s('totalEarned') + t('totalEarned'),
           'totalMatchesPlayed': s('totalMatchesPlayed') + t('totalMatchesPlayed'),
           'totalMatchesWon':    s('totalMatchesWon') + t('totalMatchesWon'),
           'totalHintsUsed':     s('totalHintsUsed') + t('totalHintsUsed'),
