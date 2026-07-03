@@ -4,6 +4,32 @@
 
 ---
 
+## 🚀 סטטוס השקה — הוגש לשתי החנויות (2026-07-03)
+- **Google Play:** בבדיקה — Closed testing (Alpha), **versionCode 22**, חתום **EA:3B**, ללא EU-27, 22 בודקים, כל ההצהרות ירוקות. אישור עד ~7 ימים.
+- **App Store:** Waiting for Review — **build 1059** (r15), עם הקלטת מסך (מחיקת חשבון + ATT) ב-App Review Notes.
+- **ענף השקה:** `claude/qa-launch-prep-EXqLn`. בילד אחרון: `build-20260701-launch-r15` ואילך (r20/vc23 נבנה כגיבוי, לא נדרש).
+
+### תיקוני דחיית אפל (מומשו, בשתי החנויות)
+1. **2.1(b) IAP:** הוסר ממשק רכישת-כסף לא-פעיל מהחנות (`store_screen.dart`, טאב "🎁 מטבעות"). מטבעות = מטבע-משחק בלבד. **אין IAP** — קנייה אמיתית דחויה ל-v1.1.
+2. **5.1.1(v) מחיקת חשבון:** כפתור "מחק חשבון" בפרופיל → `AuthService.deleteAccount()` (מוחק Firestore + Auth, re-auth ל-Google/Apple). כלל Firestore: `allow delete: if request.auth.uid == userId` (נפרס ל-main).
+3. **2.1 ATT:** `app_tracking_transparency` — בקשה אחרי frame ראשון, **לפני** איתחול AdMob (`main.dart._initTrackingThenAds`).
+4. **תיקון Apple sign-in:** התאוששות מבאג Pigeon (`_isPigeonCastError` → `_recoverFromSignInError`) — כמו במסלול Google.
+
+### ⚠️ חתימת Play — קריטי (EA:3B)
+- מפתח ההעלאה ה**נכון** ל-Play הוא **SHA1 EA:3B:59:B9:2D:4D:F2:58:77:4C:33:55:76:F3:42:46:CC:11:D0:75** (alias `upload`, סיסמאות `123456`). התעודה נושאת CN="ask the kids" (שם קוסמטי — המפתח הוא הנכון).
+- ה-25:C3 הוא מפתח ה-**QA APK** בלבד — **לא** מתקבל ב-Play.
+- `build-aab.yml` חותם ב-EA:3B (כרגע **מוטמע** ב-workflow כי הדבקת secret בנייד נכשלה) + שלב אימות שנכשל אם ה-AAB לא EA:3B.
+- **⚠️ TODO אבטחה אחרי ההשקה:** המפתח EA:3B מוטמע בריפו **ציבורי**. לאחר אישור: לאפס upload key ב-Play למפתח טרי, לאחסן כ-secret (ממחשב), ולהסיר את המוטמע. **אין להפוך את הריפו לפרטי** בלי לפתור קודם את דפי ה-Pages (privacy/support ב-`rotem-ya.github.io/WhoIsThere/` — לא עובד בריפו פרטי ב-Free; שתי החנויות מצביעות עליהם).
+
+### v1.1 — מטלות הבאות (בעבודה)
+1. משוב (feedback) בתוך האפליקציה.
+2. שליחת לוג אוטומטית בזיהוי באג/תקלה/קריסה.
+3. שיתוף האפליקציה עם חברים + קישורי הורדה מהחנויות.
+4. רשימת האפליקציות שלנו ("שאלו את הילדים" עברית+אנגלית) עם קישורי חנות.
+- (מוכן חלקית בענף `claude/push-invites`: פוש להזמנות — דורש Blaze+APNs.)
+
+---
+
 ## מערכת קוסמטיקה (cosmetics) — נרכשת במטבעות, ללא pay-to-win
 ארבעה סוגי קוסמטיקה, כולם באותו דפוס: model+קטלוג בקוד (`lib/models/`), מסך חנות (`lib/screens/store/`) עם providers `selectedXProvider`/`ownedXProvider` (StreamProvider על `users/{uid}`), קנייה = טרנזקציית Firestore (`coins` − מחיר + `totalSpent` increment, `ownedX` arrayUnion), הצמדה = `selectedX` על user doc. באנר בטאב 🎨 (`store_screen.dart` → `_DesignBanner`). מיזוג ב-`auth_service` במעבר אורח→Google (`ownedX`). דרגות לפי מחיר: בסיסי 50–150 / נדיר 300–500 / פרימיום 1000.
 
