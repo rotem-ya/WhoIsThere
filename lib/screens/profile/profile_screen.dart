@@ -6,9 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/constants/build_info.dart';
 import '../../services/app_update_service.dart';
+import 'our_apps_screen.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
@@ -157,6 +160,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  /// Shares the app with a friend via the OS share sheet. Uses the remote
+  /// store links (app_config/app) when present, falling back to the derivable
+  /// Play URL — so it always works, even before the App Store link is set.
+  Future<void> _shareApp() async {
+    HapticFeedback.lightImpact();
+    QaLoggerService.instance.log('SHARE', 'SHARE_APP_TAP');
+    final info = ref.read(appUpdateInfoProvider).valueOrNull;
+    final message = AppConstants.shareMessage(
+      androidUrl: info?.androidUrl,
+      iosUrl: info?.iosUrl,
+    );
+    try {
+      await Share.share(message, subject: 'מה בתמונה?');
+    } catch (e) {
+      QaLoggerService.instance.log('SHARE', 'SHARE_APP_ERROR $e');
+    }
   }
 
   Future<void> _showEditNameDialog(BuildContext context, String userId, String currentName) async {
@@ -531,6 +552,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               const SizedBox(height: AppSpacing.sm),
 
+              // ── Share the app ────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Center(
+                  child: TextButton.icon(
+                    onPressed: _shareApp,
+                    icon: const Icon(Icons.ios_share_rounded,
+                        size: 18, color: Color(0xFF3DCCAA)),
+                    label: const Text('שתף את האפליקציה',
+                        style: TextStyle(
+                            color: Color(0xFF3DCCAA),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ),
+
+              // ── Our other apps (admin-controlled list) ───────────────
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: _OurAppsRow(),
+              ),
+
+              const SizedBox(height: AppSpacing.sm),
+
               // ── QA row ───────────────────────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -621,6 +667,74 @@ class _UpdateBanner extends ConsumerWidget {
                 style: TextStyle(fontWeight: FontWeight.w900)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "האפליקציות שלנו" entry — only appears when the admin has configured at
+/// least one other app (app_config/app → ourApps). Tapping opens the list.
+class _OurAppsRow extends ConsumerWidget {
+  const _OurAppsRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final apps = ref.watch(appUpdateInfoProvider).valueOrNull?.ourApps ?? const [];
+    if (apps.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          QaLoggerService.instance.log('OUR_APPS', 'OPEN count=${apps.length}');
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const OurAppsScreen()),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A1828),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+                color: const Color(0xFFD4AF37).withOpacity(0.25), width: 0.8),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(
+                    child: Text('✨', style: TextStyle(fontSize: 22))),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('האפליקציות שלנו',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800)),
+                    Text('עוד משחקים שיצרנו בשבילכם',
+                        style: TextStyle(
+                            color: Color(0xFF4A8BAA),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: Color(0xFF4A8BAA), size: 22),
+            ],
+          ),
+        ),
       ),
     );
   }
