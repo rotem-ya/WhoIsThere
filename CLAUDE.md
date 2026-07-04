@@ -30,6 +30,13 @@
 - **בנייה:** גרסה `1.1.0` (build_info + build-aab default + codemagic). Build APK CI ירוק (compile מאומת). ⚠️ **בניות החנות דורשות הפעלה ידנית** (ל-cowork/agent אין הרשאת Actions/tag): AAB דרך Actions→Build AAB→Run workflow (build_name=1.1.0) או תג `aab-v2`; iOS דרך תג `ios-v3` או Start build ב-Codemagic. ⚠️ v1.0 עדיין ב-review בשתי החנויות — cowork יחליט על תזמון הגשת v1.1.
 - (עתידי — ענף `claude/push-invites`: פוש להזמנות — דורש Blaze+APNs.)
 
+### עדכוני סשן 2026-07-04 (על ענף ההשקה, אחרי מיזוג v1.1)
+- **ענף ההשקה `claude/qa-launch-prep-EXqLn` הוא המקור היחיד** — מוזג אליו כל v1.1 (mp11cq) + כל תיקוני הסשן. `claude/rematch-bug-investigation-az4n6h` מצביע על אותו קומיט. בוצעה ביקורת ענפים מלאה: כל קוד יוני ממוזג (הזמנות+צ'אט חברים, שורת עדכון בפרופיל, מקלדת סופיות, 73 תמונות מעודכנות, שיתוף, OurApps); ענפי מאי = היסטוריה ישנה; `claude/push-invites` = עתידי מכוון.
+- **באג "משחק חוזר" תוקן** (3 כשלים): הצטרפות כושלת ניווטה ללובי זר; "שחק שוב" באותיות יצר חדר סולו נפרד (עכשיו rematchRoomId כמו במשחק הראשי + איפוס State ב-didUpdateWidget כי GoRouter ממחזר את המסך בין /letters/A ל-B); מרוץ שני לוחצים מפצל קבוצה (עכשיו טרנזקציה `_claimRematchSlot`).
+- **סנכרון סבבים בחי-צומח-דומם:** ניחוש נכון סוגר את ההקלדה אצל כולם (cycle advance) + guard `stale_image` ב-submitAnswer (ניחוש נשפט רק מול התמונה שעבורה הוקלד). **מסך ביניים** 4ש׳ בין תמונות (`roundInterludeUntilMs`/`lastRoundImageId`/`lastRoundWinnerName` על החדר, `_RoundInterludeOverlay`) — החשיפה הראשונה של הסבב הבא נדחית מעבר להשהיה.
+- **בחירת נושאים:** מארח שכיסה את כל הסבבים מבטל את חובת הבחירה לשאר (`_picksCoverHeat`, מכסה 0); מילוי סלוטים חסרים = **מחזורי מהנושאים שנבחרו** (אקראי רק כשאין בחירות) → קטגוריה אחת = כל המקצה בקטגוריה. כפתור "ביטול" בחלון ההקלדה (`onGuessCancel`).
+- **חברים:** קישור ההזמנה עבר ל-Pages של הריפו (`rotem-ya.github.io/WhoIsThere/friend.html`) כי הסנכרון ל-apps-share-pages שבור (ראה למטה); retry לאוטו-הוספה כשהמשתמש נטען אחרי הקישור; UX ברור בטאב הוספה (העתק/הדבק/הסברים); **באנר גלובלי `FriendRequestBanner`** (מעל הראוטר ב-main.dart) לבקשות ממתינות מכל מסך.
+
 ---
 
 ## מערכת קוסמטיקה (cosmetics) — נרכשת במטבעות, ללא pay-to-win
@@ -52,8 +59,9 @@
 - **מס׳ סבבים:** משחק מהיר = `max(שחקנים, 3)`. חברים = `max(max(שחקנים,3), סה״כ נושאים שנבחרו)` — כל בחירה נוספת של המארח מאריכה את ההיט, עם רצפה של 3/מס׳ שחקנים.
 - **בחירת נושאים:**
   - **גלובלי (משחק מהיר):** אקראי אוטומטי, `count = max(targetPlayers, 3)` (4 שחקנים → 4 נושאים). נבנה ב-`createRoom` (`heatRounds` param → `_buildHeat`).
-  - **חברים:** **כל משתתף בוחר נושא אחד; המארח יכול לבחור כמה שירצה** (כל בחירה נוספת = סבב נוסף). `topicChoices: Map<playerId, List<categoryId>>`. ב-UI (`lobby_screen.dart` → `_onTopicTap`): **נושא שנבחר ע"י כל משתתף מוצג כנבחר אצל כולם עם שם הבוחר** (chip מודגש). לא-מארח: בוחר נושא אחד **ולא יכול לבטל/להחליף בעצמו** — לחיצה אחרי שבחר מציגה snackbar "רק המארח יכול לבטל". מארח: בוחר ללא הגבלה, ו**רק הוא יכול לבטל בחירה של משתתף — עם דיאלוג אישור** (`_confirmCancelChoice`); ביטול בחירה עצמית של המארח הוא חופשי (ללא דיאלוג). ההיט נבנה ב-`startGameDirectly` מ-`_buildFriendsHeat` (מארח ראשון עם כל בחירותיו, אחר כך כל שאר השחקנים בלוקח-אחד; סלוטים חסרים → אקראי).
-  - דיאלוג בלובי כשלא כולם השלימו מכסה: "בחר אקראית והתחל" / "המתן".
+  - **חברים:** **כל משתתף בוחר נושא אחד; המארח יכול לבחור כמה שירצה** (כל בחירה נוספת = סבב נוסף). `topicChoices: Map<playerId, List<categoryId>>`. ב-UI (`lobby_screen.dart` → `_onTopicTap`): **נושא שנבחר ע"י כל משתתף מוצג כנבחר אצל כולם עם שם הבוחר** (chip מודגש). לא-מארח: בוחר נושא אחד **ולא יכול לבטל/להחליף בעצמו** — לחיצה אחרי שבחר מציגה snackbar "רק המארח יכול לבטל". מארח: בוחר ללא הגבלה, ו**רק הוא יכול לבטל בחירה של משתתף — עם דיאלוג אישור** (`_confirmCancelChoice`); ביטול בחירה עצמית של המארח הוא חופשי (ללא דיאלוג). ההיט נבנה ב-`startGameDirectly` מ-`_buildFriendsHeat` (מארח ראשון עם כל בחירותיו, אחר כך כל שאר השחקנים בלוקח-אחד; סלוטים חסרים → **מילוי מחזורי מהנושאים שנבחרו**, אקראי רק כשאין בחירות כלל — כך קטגוריה אחת = כל המקצה בה).
+  - **פטור מבחירה:** כשהבחירות כבר מכסות את כל הסבבים (`_picksCoverHeat` — ספירה מארח-כל-בחירותיו/אחרים-אחת מול רצפת `max(שחקנים,3)`), המכסה של כולם יורדת ל-0 — אין דיאלוג חוסם והצ'יפים ירוקים.
+  - דיאלוג בלובי כשלא כולם השלימו מכסה: "השלם והתחל" / "המתן".
 - **משחק עם חברים = חינם:** `_createPrivateRoom` יוצר עם `entryFee: 0`, ללא בדיקת מטבעות.
 - **ניקוד פר-משחק (לא מצטבר):** במשחק חברים (`room.isFriendsGame == !isPublicRoom`) הניקוד **לא** נוסף ל-`totalPoints`. טבלת הניקוד + הכרזת הזוכה מוצגות במסך הניצחון (קיים).
 - **פרסי דירוג חברים:** מקום 1 = 20🪙, מקום 2 = 5🪙 (`EconomyConfig.friendsFirstPlaceReward`/`friendsSecondPlaceReward`). מוענק ב-`RoomService.claimPlacementReward` (אידמפוטנטי דרך `placementPaidPlayerIds`), נקרא ממסך הניצחון לכל שחקן על עצמו.
@@ -61,7 +69,7 @@
 ## מערכת חברים (Friends)
 - **מסך:** `lib/screens/friends/friends_screen.dart` (route `/friends`, כפתור 👥 במסך הבית עם נקודת התראה לבקשות ממתינות). 3 טאבים: טבלת ניקוד / חברים+בקשות / הוסף חבר.
 - **שירות:** `FriendsService` (`lib/services/friends_service.dart`). **קוד חבר אישי** (`users/{uid}.friendCode`, נוצר חד-פעמית, ייחודי) + שיתוף בוואטסאפ. הוספה: `sendRequestByCode` (אם הצד השני כבר שלח לי — מתחברים ישירות).
-- **אוטומציה בשיתוף (deep link):** קישור הזמנה `AppConstants.friendInviteUrl(code)` → דף נחיתה `docs/friend.html` (מסונכרן ע"י `sync-join-page.yml` ל-`apps-share-pages/whoisthere/friend/`). הדף פותח אוטומטית `whoisthere://friend?code=` (scheme רשום ב-AndroidManifest host=`friend` + iOS). `main.dart._handleDeepLink` מזהה friend → `pendingFriendCodeProvider`; `FriendsScreen` שולח את הבקשה **אוטומטית** בכניסה (`_maybeAutoAddFromInvite`). cold-start: `HomeScreen` מנווט ל-`/friends`.
+- **אוטומציה בשיתוף (deep link):** קישור הזמנה `AppConstants.friendInviteUrl(code)` → דף נחיתה `docs/friend.html` המוגש מ-**Pages של הריפו הזה**: `https://rotem-ya.github.io/WhoIsThere/friend.html` (⚠️ הסנכרון ל-`apps-share-pages` **שבור** — כל ריצות `sync-join-page.yml` נכשלו כי `PAGES_SYNC_TOKEN` בלי הרשאת כתיבה (403); דף החבר שם מעולם לא עלה = 404. לתקן: PAT חדש עם Contents:RW על apps-share-pages). הדף פותח אוטומטית `whoisthere://friend?code=` (scheme רשום ב-AndroidManifest host=`friend` + iOS; ה-handler וה-manifest מזהים את **שני** ה-hosts). `main.dart._handleDeepLink` מזהה friend → `pendingFriendCodeProvider`; `FriendsScreen` שולח את הבקשה **אוטומטית** בכניסה (`_maybeAutoAddFromInvite` + retry דרך `ref.listen(currentUserProvider)` ל-cold-start). cold-start: `HomeScreen` מנווט ל-`/friends`. **באנר גלובלי** `FriendRequestBanner` (main.dart builder) מציג בקשות ממתינות מכל מסך.
 - **Firestore:** `friendRequests/{toUid}_{fromUid}` (בקשות), `users/{uid}/friends/{friendUid}` (חברות, נכתבת לשני הצדדים), `users/{uid}/friendGames/{roomId}` (היסטוריית משחק פר-שחקן). כללים ב-`firestore.rules` (read/write ל-signedIn; כתיבות חוצות-משתמש לחברויות).
 - **ניקוד:** מצטבר ב-`users/{uid}.friendsGamePoints` (נפרד מ-`totalPoints`). **כל קליינט רושם רק את עצמו** ב-`recordMyResult` (אידמפוטנטי פר שחקן/חדר; Firestore מתיר כתיבה רק למסמך המשתמש של עצמך). מופעל מ-`_triggerMatchReward` (game_board_screen) ב-`room.isFriendsGame`. טבלת הניקוד = אני + חברים ממוינים לפי `friendsGamePoints` (`leaderboard`), + רשימת משחקים אחרונים.
 - ⚠️ **חוקי Firestore חדשים** — נדרס deploy (workflow `deploy-firestore-rules.yml` רץ על push ל-main).
@@ -79,8 +87,9 @@
 
 ## כללי פיתוח
 - **ענף פיתוח / השקה (מאוחד):** `claude/qa-launch-prep-EXqLn`
-  - זהו הענף המאוחד והיחיד לבנייה (iOS + Android). מכיל: 36 מקומות + טקסט עברי מבוקר, Apple Sign-in entitlement, תיקון קריסת "משחק מהיר" (ניטרול Firestore cache), חתימת AAB עם מפתח EA:3B דרך Secrets, וכל הקו הראשי (parallel guessing, quick-match, פרסומות, מפת גילויים).
-  - ⚠️ **לבנות אך ורק מהענף הזה.** אין לבנות מ-`stability-compensation-logging` (ענף תקוע/מיושן) או מ-`hebrew-text-review` (מוזג לכאן).
+  - זהו הענף המאוחד והיחיד לבנייה (iOS + Android). נכון ל-2026-07-04 מכיל את **הכל**: הקו הראשי, כל v1.1 (mp11cq), תיקוני "משחק חוזר", סנכרון סבבים + מסך ביניים, ותיקוני החברים. ענף `claude/rematch-bug-investigation-az4n6h` זהה לו.
+  - ⚠️ **לבנות אך ורק מהענף הזה.** אין לבנות מ-`stability-compensation-logging` (ענף תקוע/מיושן) או מ-`hebrew-text-review` (מוזג לכאן). ענפי מאי (`lc-*`, `loop-*` וכו') = היסטוריה ישנה שנכתבה מחדש — לא למזג מהם.
+  - `main` משמש רק לתשתית שנפרסת ממנו: Firestore rules (`deploy-firestore-rules.yml`), GitHub Pages (docs/), וסנכרון דפי share. קוד האפליקציה חי בענף ההשקה.
 - מאגר: `rotem-ya/whoisthere`
 
 ## דף הצטרפות לחדר (Join Page)
@@ -211,6 +220,14 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 - סנכרון בהפעלה (`loadCached` + `sync`) ב-`main.dart` — תשתית משותפת, רצה פעם אחת לכל המצבים.
 - **המשחק הרגיל** (זיהוי מקומות) משתמש בקטגוריה `israel_places`. **חי צומח דומם** (מקצה) משתמש ב-`animals`/`plants`/`objects` דרך `_buildHeat` → אותו `_loadLocalImages(categoryId)`. לכן הוספת/השבתת תמונה מהאדמין עובדת **גם** בחי צומח דומם, ללא קוד נוסף.
 - **חוזה אדמין (קריטי לאחידות):** כל מקום remote במניפסט חייב לשאת שדה `category` עם אחד מה-ids: `israel_places` / `animals` / `plants` / `objects` (וגם `world_sites` / `israel_figures` / `world_figures` לעתיד). ברירת מחדל בהיעדר השדה = `israel_places` (כלומר ייכנס רק למשחק הרגיל). ids חייבים להיות זהים בדיוק ל-`GameCategories` ב-`lib/core/constants/game_categories.dart`.
+
+### מודל התוכן (החלטת רוטם, 2026-07-04): אדמין חי + הטמעה בעדכון גרסה
+- **האדמין שולט בזמן אמת, בלי עדכון גרסה:** `kBundledImagesOnly = false` (`content_manifest_service.dart`) — דריסות תמונה ומקומות remote חדשים שהאדמין מפרסם במניפסט מופיעים במשחק מיד (אחרי cache). `true` = בלם חירום בלבד (מתעלם מכל תמונת ענן; הסתרה/שמות/נושאים ממשיכים לעבוד).
+- **בכל עדכון גרסה "אופים" את תוכן הענן פנימה** כדי לחסוך מקום/egress ב-Firestore/Storage. צ'קליסט שחרור:
+  1. להוריד את התמונות של כל הפריטים במניפסט עם `imageUrl` פעיל (דריסות + remote) אל `assets/game_places/images/` בשמות לפי המוסכמה, ולעדכן/להוסיף רשומות ב-`assets/game_places/data/<category>.json`.
+  2. לבנות ולהפיץ את הגרסה.
+  3. **אחרי** שהגרסה בחוץ: באדמין — לנקות `imageUrl` מהדריסות שהוטמעו ולהעביר פריטי remote ל-`source:'bundled'` (או למחוק את הרשומה). הקליינט נופל אוטומטית לנכס המוטמע (`resolveBundled` מחזיר bundled כשאין override), ואפשר למחוק את הקבצים מ-Storage.
+  - ⚠️ אל תנקו את המניפסט לפני שהגרסה החדשה זמינה — משתמשי הגרסה הישנה עדיין קוראים ממנו.
 
 ### צ'אט (טקסט חופשי + אימוג'ים) — אחיד לכל המצבים
 - `RoomService.sendChatMessage` / `chatMessagesStream` על תת-אוסף `rooms/{id}/messages` (rules מכוסה ב-`{document=**}`).

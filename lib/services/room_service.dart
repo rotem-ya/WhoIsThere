@@ -2943,9 +2943,10 @@ class RoomService {
 
       final players = Map<String, PlayerModel>.from(room.players);
       final updates = <String, dynamic>{};
-      if (replacement != null) {
-        updates['secretWord'] = replacement!.answer;
-        updates['selectedImageId'] = replacement!.id;
+      final replacementImage = replacement;
+      if (replacementImage != null) {
+        updates['secretWord'] = replacementImage.answer;
+        updates['selectedImageId'] = replacementImage.id;
       }
 
       if (players.length < 2) {

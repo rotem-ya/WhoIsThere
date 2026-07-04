@@ -105,13 +105,15 @@ class ContentManifestService {
   static const _topicLabelsPrefsKey = 'content_topic_labels_v1';
   static const _docPath = 'content_manifest/places_v1';
 
-  // LAUNCH SAFETY: when true, the game uses ONLY bundled images — every cloud
-  // image override (bundled-item override AND remote-only place) is ignored, so
-  // no temporary/placeholder image that may sit in Storage can ever appear.
-  // The admin's topic enable/disable, display-name and text overrides still
-  // apply. Flip back to false once Storage uploads are healthy and the cloud
-  // catalogue is curated. See resolveBundled / availableRemoteImages.
-  static const bool kBundledImagesOnly = true;
+  // Content model (per Rotem): the ADMIN is the live source of truth — image
+  // overrides and remote-only places published in the manifest appear in the
+  // game immediately, no app update needed. At each APP RELEASE the current
+  // remote images are baked into the bundled assets and their overrides are
+  // cleared from the manifest, so long-term serving stays local on-device and
+  // Firestore/Storage only carries the delta since the last release (see
+  // CLAUDE.md → "תוכן מהענן"). Set to true ONLY as an emergency brake that
+  // ignores every cloud image (topic/text/hide admin controls still apply).
+  static const bool kBundledImagesOnly = false;
 
   // id → isActive override (covers bundled + remote).
   final Map<String, bool> _activeById = {};
