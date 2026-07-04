@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -158,7 +160,23 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   /// Minimum topics a participant must pick to be "ready": exactly one — for
   /// everyone. The host may pick MORE (see [_topicChip]) to add heat rounds;
   /// the extra picks are optional, so the required count stays 1.
-  int _topicQuota(RoomModel room, String playerId) => 1;
+  /// EXCEPT when the picks already cover every heat round (e.g. the host
+  /// selected topics for the whole group) — then nobody else is required to
+  /// pick and the quota drops to 0.
+  int _topicQuota(RoomModel room, String playerId) =>
+      _picksCoverHeat(room) ? 0 : 1;
+
+  /// Whether the topics picked so far already fill every heat round. Counts
+  /// picks the same way [_buildFriendsHeat] consumes them — the host keeps all
+  /// of theirs, every other player contributes at most one — against the
+  /// round floor of max(players, 3).
+  bool _picksCoverHeat(RoomModel room) {
+    var total = 0;
+    room.topicChoices.forEach((pid, picks) {
+      total += pid == room.hostId ? picks.length : min(picks.length, 1);
+    });
+    return total >= max(room.players.length, 3);
+  }
 
   Widget _buildHeatSetup(RoomModel room, dynamic currentUser) {
     final myId = currentUser?.id as String?;
@@ -172,7 +190,13 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
       }
     }
     // Non-host picks exactly one; the host may pick several to lengthen the heat.
-    final title = isHost ? 'בחרו נושא — אפשר כמה שתרצו' : 'בחרו נושא למקצה';
+    // When the picks already cover every round, the others' pick is optional.
+    final covered = _picksCoverHeat(room);
+    final title = isHost
+        ? 'בחרו נושא — אפשר כמה שתרצו'
+        : (covered
+            ? 'הנושאים למקצה כבר נבחרו — אפשר להוסיף עוד'
+            : 'בחרו נושא למקצה');
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 8),
@@ -389,7 +413,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         choices.map((c) => GameCategories.byId(c).emoji).join(' ');
     final label = choices.isNotEmpty
         ? '$name $emojis${complete ? '' : ' …'}'
-        : (p.isBot ? '$name 🎲' : '$name …');
+        : (p.isBot ? '$name 🎲' : (complete ? name : '$name …'));
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -425,7 +449,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           title: const Text('לא כולם בחרו נושא',
               style: TextStyle(color: Colors.white, fontSize: 17)),
           content: Text(
-            'השחקנים הבאים עדיין לא בחרו נושא:\n$names\n\nאפשר לבחור עבורם נושא אקראי ולהתחיל, או להמתין שיבחרו.',
+            'השחקנים הבאים עדיין לא בחרו נושא:\n$names\n\nאפשר להשלים את הסבבים מהנושאים שכבר נבחרו ולהתחיל, או להמתין שיבחרו.',
             style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
           actions: [
@@ -436,7 +460,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('בחר אקראית והתחל',
+              child: const Text('השלם והתחל',
                   style: TextStyle(
                       color: Color(0xFF22D3EE), fontWeight: FontWeight.w800)),
             ),

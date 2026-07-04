@@ -1200,9 +1200,15 @@ class RoomService {
     }
     // Round count grows with the host's picks, but never below 3 / players.
     final rounds = max(max(room.players.length, 3), topics.length);
-    // Fill any remaining slots randomly (min floor / unchosen players).
+    // Fill any remaining slots (min floor / unchosen players) by CYCLING the
+    // topics that were chosen — so picking a single category gives a whole
+    // heat in that category (a different image per round). Only when nothing
+    // at all was chosen do the slots fall back to random topics.
+    final chosen = List<String>.from(topics);
+    var fillIdx = 0;
     while (topics.length < rounds) {
-      topics.add(randTopic());
+      topics.add(
+          chosen.isEmpty ? randTopic() : chosen[fillIdx++ % chosen.length]);
     }
     return _buildHeatForTopics(topics, room.players);
   }
@@ -1246,15 +1252,28 @@ class RoomService {
     };
   }
 
+  /// Short synced pause between heat rounds: every client shows the finished
+  /// image + answer + solver until this many ms pass, then the next round's
+  /// reveals begin together (the reveal deadline is pushed past the pause).
+  static const int heatInterludeMs = 4000;
+
   /// Update map that advances a heat to its next round (next image/category).
-  Map<String, dynamic> _heatAdvanceUpdates(RoomModel room, int nowMs) {
+  /// [winnerName] is the solver's display name (null when the board filled
+  /// with no correct guess) — shown on the between-rounds interlude.
+  Map<String, dynamic> _heatAdvanceUpdates(RoomModel room, int nowMs,
+      {String? winnerName}) {
     final next = room.heatRoundIndex + 1;
     return {
-      ..._roundResetUpdates(room.gridSize, nowMs),
+      // Base the round reset at the END of the interlude so the first reveal
+      // of the new image fires after the pause — synchronized for everyone.
+      ..._roundResetUpdates(room.gridSize, nowMs + heatInterludeMs),
       'phase': GamePhase.playing.name,
       'heatRoundIndex': next,
       'selectedImageId': room.heatImageIds[next],
       'selectedCategory': room.heatCategories[next],
+      'roundInterludeUntilMs': nowMs + heatInterludeMs,
+      'lastRoundImageId': room.selectedImageId,
+      'lastRoundWinnerName': winnerName,
     };
   }
 
@@ -2385,6 +2404,17 @@ class RoomService {
         return;
       }
 
+      // Parallel-guessing race: the round may have advanced (someone else
+      // solved it) between this player opening the input and submitting.
+      // Their guess targets the PREVIOUS image — never judge it against the
+      // new round (it could wrongly penalise, or worse, "solve" a round the
+      // player hasn't even seen).
+      if (room.selectedImageId != null && image.id != room.selectedImageId) {
+        QaLoggerService.instance.log('GUESS',
+            'TX_ABORT name=submitAnswer reason=stale_image submitted=${image.id} current=${room.selectedImageId}');
+        return;
+      }
+
       isCorrect = image.isCorrectAnswer(guess);
 
       if (isCorrect) {
@@ -2392,7 +2422,11 @@ class RoomService {
         // Heat mid-round: award score, then advance to the next round (board
         // reset) instead of finishing. Cumulative score persists.
         if (room.isHeat && !room.isLastHeatRound) {
-          final adv = _heatAdvanceUpdates(room, DateTime.now().millisecondsSinceEpoch);
+          final adv = _heatAdvanceUpdates(
+            room,
+            DateTime.now().millisecondsSinceEpoch,
+            winnerName: room.players[userId]?.name,
+          );
           adv['players.$userId.score'] = FieldValue.increment(difficulty.winReward);
           adv['lastGuessEvent'] = {'playerId': userId, 'guess': guess, 'isCorrect': true};
           adv['guessCount'] = FieldValue.increment(1);

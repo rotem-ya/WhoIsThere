@@ -73,6 +73,16 @@ class RoomModel extends Equatable {
   // rematch". Null until someone starts a rematch. Friends games only.
   final String? rematchRoomId;
 
+  // ── Heat round interlude — short synced pause between heat rounds ─────────
+  // Stamped by the round-advance transaction: until this wall-clock ms every
+  // client shows the finished image + its answer + who solved it, so the next
+  // image is revealed to everyone together.
+  final int? roundInterludeUntilMs;
+  final String? lastRoundImageId;
+  // Display name of the round's solver; null when the board filled with no
+  // correct guess.
+  final String? lastRoundWinnerName;
+
   // ── Letters game (משחק האותיות) — Wordle-style image-reveal duel ──────────
   // Game mode discriminator. 'normal' is the classic/heat reveal game (default
   // so existing rooms deserialize unchanged); 'letters' is the turn-based
@@ -142,6 +152,9 @@ class RoomModel extends Equatable {
     this.topicChoices = const {},
     this.placementPaidPlayerIds = const [],
     this.rematchRoomId,
+    this.roundInterludeUntilMs,
+    this.lastRoundImageId,
+    this.lastRoundWinnerName,
     this.mode = 'normal',
     this.secretWord,
     this.lettersRevealedTiles = const {},
@@ -309,6 +322,9 @@ class RoomModel extends Equatable {
       placementPaidPlayerIds:
           List<String>.from(data['placementPaidPlayerIds'] ?? const []),
       rematchRoomId: data['rematchRoomId'] as String?,
+      roundInterludeUntilMs: (data['roundInterludeUntilMs'] as num?)?.toInt(),
+      lastRoundImageId: data['lastRoundImageId'] as String?,
+      lastRoundWinnerName: data['lastRoundWinnerName'] as String?,
       mode: (data['mode'] as String?) ?? 'normal',
       secretWord: data['secretWord'] as String?,
       lettersRevealedTiles: (data['lettersRevealedTiles'] as Map?)?.map(
@@ -376,6 +392,11 @@ class RoomModel extends Equatable {
         'topicChoices': topicChoices,
         'placementPaidPlayerIds': placementPaidPlayerIds,
         'rematchRoomId': rematchRoomId,
+        if (roundInterludeUntilMs != null)
+          'roundInterludeUntilMs': roundInterludeUntilMs,
+        if (lastRoundImageId != null) 'lastRoundImageId': lastRoundImageId,
+        if (lastRoundWinnerName != null)
+          'lastRoundWinnerName': lastRoundWinnerName,
         'mode': mode,
         if (secretWord != null) 'secretWord': secretWord,
         'lettersRevealedTiles': lettersRevealedTiles,
@@ -430,6 +451,9 @@ class RoomModel extends Equatable {
     Map<String, List<String>>? topicChoices,
     List<String>? placementPaidPlayerIds,
     String? rematchRoomId,
+    int? roundInterludeUntilMs,
+    String? lastRoundImageId,
+    String? lastRoundWinnerName,
     String? mode,
     String? secretWord,
     Map<String, List<int>>? lettersRevealedTiles,
@@ -492,6 +516,10 @@ class RoomModel extends Equatable {
         placementPaidPlayerIds:
             placementPaidPlayerIds ?? this.placementPaidPlayerIds,
         rematchRoomId: rematchRoomId ?? this.rematchRoomId,
+        roundInterludeUntilMs:
+            roundInterludeUntilMs ?? this.roundInterludeUntilMs,
+        lastRoundImageId: lastRoundImageId ?? this.lastRoundImageId,
+        lastRoundWinnerName: lastRoundWinnerName ?? this.lastRoundWinnerName,
         mode: mode ?? this.mode,
         secretWord: secretWord ?? this.secretWord,
         lettersRevealedTiles: lettersRevealedTiles ?? this.lettersRevealedTiles,
@@ -550,6 +578,9 @@ class RoomModel extends Equatable {
         topicChoices,
         placementPaidPlayerIds,
         rematchRoomId,
+        roundInterludeUntilMs,
+        lastRoundImageId,
+        lastRoundWinnerName,
         mode,
         secretWord,
         lettersRevealedTiles,

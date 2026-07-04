@@ -36,6 +36,8 @@ class GameLayout extends StatelessWidget {
   final VoidCallback? onBuySecondHint;
   final VoidCallback? onGuess;
   final Future<bool> Function(String)? onGuessSubmit;
+  // Cancels the locally-opened guess input without submitting (no penalty).
+  final VoidCallback? onGuessCancel;
   // Parallel guessing: the guess input overlay is driven by a LOCAL flag so each
   // player can open their own input independently (no shared exclusive lock).
   final bool showGuessInput;
@@ -86,6 +88,7 @@ class GameLayout extends StatelessWidget {
     required this.onRevealHint,
     required this.onGuess,
     required this.onGuessSubmit,
+    this.onGuessCancel,
     this.showGuessInput = false,
     this.localGuessDeadlineMs,
     this.purchasedHintCount = 0,
@@ -340,6 +343,7 @@ class GameLayout extends StatelessWidget {
             deadlineMs: localGuessDeadlineMs,
             answer: image?.answer ?? '',
             onSubmit: onGuessSubmit,
+            onCancel: onGuessCancel,
             revealedLetterCount: revealedLetterCount,
             onBuyLetter: onBuyLetter,
             nextLetterPrice: nextLetterPrice,

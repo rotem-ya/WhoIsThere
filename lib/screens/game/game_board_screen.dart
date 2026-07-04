@@ -156,6 +156,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   bool _showRoundIntro = false;
   bool _roundIntroTriggered = false;
 
+  // Heat round interlude — synced between-rounds pause showing the finished
+  // image, its answer and who solved it (driven by room.roundInterludeUntilMs).
+  GameImageModel? _interludeImage;
+  String? _interludeImageLoadingId;
+  int? _interludeDismissedUntilMs;
+  Timer? _interludeTimer;
+
   // Bot typing simulation
   bool _showBotTyping = false;
   String _botTypingName = '';
@@ -986,6 +993,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _bgPlayerStateSub?.cancel();
     _expiryTimer?.cancel();
     _localGuessTimer?.cancel();
+    _interludeTimer?.cancel();
     _spotlightTimer?.cancel();
     _botReactionTimer?.cancel();
     _chatSub?.cancel();
@@ -1998,6 +2006,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     }
   }
 
+  /// Loads the previous round's image for the between-rounds interlude.
+  Future<void> _ensureInterludeImage(String id) async {
+    if (_interludeImage?.id == id || _interludeImageLoadingId == id) return;
+    _interludeImageLoadingId = id;
+    final img = await ref.read(roomServiceProvider).getImage(id);
+    if (!mounted) return;
+    setState(() {
+      _interludeImage = img;
+      _interludeImageLoadingId = null;
+    });
+  }
+
   Future<void> _showExitConfirmation(BuildContext context) async {
     QaLoggerService.instance.log('GAME', 'GAME_BACK_CONFIRM_SHOWN');
     await showDialog<void>(
@@ -2310,6 +2330,28 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   }
                 }
                 _lastKnownCycleId = room.revealCycleId;
+
+                // ── Round advanced (someone solved it / item swapped) ───────────────
+                // Parallel guessing: force-close this client's open guess input and
+                // any bot-typing banner — they target the previous image. This is
+                // what makes the next image appear for everyone together instead of
+                // hiding behind a stale typing overlay.
+                if (_prevCycle != null &&
+                    room.revealCycleId != _prevCycle &&
+                    (_localGuessOpen || _showBotTyping)) {
+                  QaLoggerService.instance
+                      .log('GUESS', 'LOCAL_GUESS_CLOSED_ROUND_ADVANCED');
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    _closeLocalGuess();
+                    if (_showBotTyping) {
+                      setState(() {
+                        _showBotTyping = false;
+                        _botTypingIsThreat = false;
+                      });
+                    }
+                  });
+                }
 
                 // ── Timer lifecycle — reveal deadline ───────────────────────────────
                 if (room.revealDeadlineMs != null &&
@@ -2682,7 +2724,33 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   }
                 }
 
-                return GameLayout(
+                // ── Heat round interlude ────────────────────────────────────
+                // Short synced pause after a round is solved: everyone sees the
+                // finished image + answer + solver, then the next image starts
+                // revealing together (its reveal deadline is already pushed
+                // past the pause server-side).
+                final interludeUntil = room.roundInterludeUntilMs;
+                final interludeActive = room.isHeat &&
+                    room.phase == GamePhase.playing &&
+                    interludeUntil != null &&
+                    DateTime.now().millisecondsSinceEpoch < interludeUntil &&
+                    room.lastRoundImageId != null &&
+                    _interludeDismissedUntilMs != interludeUntil;
+                if (interludeActive) {
+                  unawaited(_ensureInterludeImage(room.lastRoundImageId!));
+                  _interludeTimer?.cancel();
+                  final msLeft = interludeUntil -
+                      DateTime.now().millisecondsSinceEpoch;
+                  _interludeTimer =
+                      Timer(Duration(milliseconds: msLeft + 50), () {
+                    if (mounted) {
+                      setState(
+                          () => _interludeDismissedUntilMs = interludeUntil);
+                    }
+                  });
+                }
+
+                final gameLayout = GameLayout(
                   room: room,
                   image: _image,
                   currentUserId: currentUserId,
@@ -2729,6 +2797,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   onGuessSubmit: (currentUserId != null && _localGuessOpen)
                       ? (value) => _submitGuess(room, currentUserId, value)
                       : null,
+                  onGuessCancel: () {
+                    QaLoggerService.instance
+                        .log('GUESS', 'LOCAL_GUESS_CANCELLED_BY_USER');
+                    _closeLocalGuess();
+                  },
                   stunCardCount: room.isHeat ? 0 : (user?.stunCardCount ?? 0),
                   onStunCard: (currentUserId == null || room.isHeat) ? null : (targetId) async {
                     final success = await ref.read(roomServiceProvider).applyStunCard(
@@ -2772,6 +2845,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                               ));
                         }
                       : null,
+                );
+
+                if (!interludeActive) return gameLayout;
+                return Stack(
+                  children: [
+                    gameLayout,
+                    _RoundInterludeOverlay(
+                      image: _interludeImage?.id == room.lastRoundImageId
+                          ? _interludeImage
+                          : null,
+                      winnerName: room.lastRoundWinnerName,
+                    ),
+                  ],
                 );
               },
             ),
@@ -2989,6 +3075,97 @@ class _RoundStartOverlayState extends State<_RoundStartOverlay> {
                 shadows: [
                   Shadow(color: color.withOpacity(0.6), blurRadius: 24),
                   const Shadow(color: Colors.black87, blurRadius: 8),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Heat between-rounds interlude: a full-screen pause showing the image that
+/// was just solved, its answer and who guessed it. Timing is server-driven
+/// (room.roundInterludeUntilMs) so all clients see it — and leave it — together.
+class _RoundInterludeOverlay extends StatelessWidget {
+  final GameImageModel? image;
+  final String? winnerName;
+
+  const _RoundInterludeOverlay({required this.image, required this.winnerName});
+
+  @override
+  Widget build(BuildContext context) {
+    final url = image?.imageUrl;
+    final name = winnerName?.trim();
+    return Positioned.fill(
+      child: AbsorbPointer(
+        child: Container(
+          color: Colors.black.withOpacity(0.9),
+          alignment: Alignment.center,
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 320),
+              curve: Curves.easeOutBack,
+              builder: (context, t, child) => Opacity(
+                opacity: t.clamp(0.0, 1.0),
+                child: Transform.scale(scale: 0.85 + 0.15 * t, child: child),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    (name != null && name.isNotEmpty)
+                        ? '🎉 $name ניחש נכון!'
+                        : 'אף אחד לא ניחש הפעם',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (url != null)
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFD4AF37).withOpacity(0.35),
+                            blurRadius: 28,
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: SizedBox(
+                          width: 210,
+                          height: 210,
+                          child: url.startsWith('assets/')
+                              ? Image.asset(url, fit: BoxFit.cover)
+                              : CachedNetworkImage(
+                                  imageUrl: url, fit: BoxFit.cover),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+                  Text(
+                    image?.answer ?? '',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFFFFE082),
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  const Text(
+                    'התמונה הבאה עוד רגע…',
+                    style: TextStyle(color: Colors.white54, fontSize: 14),
+                  ),
                 ],
               ),
             ),
