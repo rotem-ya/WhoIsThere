@@ -6,7 +6,7 @@
 
 ## 🚀 סטטוס השקה — הוגש לשתי החנויות (2026-07-03)
 - **Google Play:** בבדיקה — Closed testing (Alpha), **versionCode 22**, חתום **EA:3B**, ללא EU-27, 22 בודקים, כל ההצהרות ירוקות. אישור עד ~7 ימים.
-- **App Store:** Waiting for Review — **build 1059** (r15), עם הקלטת מסך (מחיקת חשבון + ATT) ב-App Review Notes.
+- **App Store:** ✅ **אושר (Approved / Ready for distribution, 2026-07-03)** — "מה בתמונה?", **build 1059** (r15). **Apple ID: `6776076758`** · קישור: https://apps.apple.com/app/id6776076758 (מקובע ב-`AppConstants.appStoreUrl`).
 - **ענף השקה:** `claude/qa-launch-prep-EXqLn`. בילד אחרון: `build-20260701-launch-r15` ואילך (r20/vc23 נבנה כגיבוי, לא נדרש).
 
 ### תיקוני דחיית אפל (מומשו, בשתי החנויות)

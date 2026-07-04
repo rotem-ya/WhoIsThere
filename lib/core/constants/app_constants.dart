@@ -10,11 +10,12 @@ class AppConstants {
   static const googlePlayUrl =
       'https://play.google.com/store/apps/details?id=$androidPackage';
 
-  /// App Store listing URL. The numeric Apple ID is only known once the app
-  /// record is created in App Store Connect, so this is filled from the remote
-  /// config (app_config/app → iosUrl). Empty until then; sharing simply omits
-  /// the iOS line while it's blank.
-  static const appStoreUrl = '';
+  /// App Store listing URL. Apple ID 6776076758 ("מה בתמונה?", approved
+  /// 2026-07-03). A remote override (app_config/app → iosUrl) still wins when
+  /// present.
+  static const appStoreId = '6776076758';
+
+  static const appStoreUrl = 'https://apps.apple.com/app/id$appStoreId';
 
   /// Best store URL for the current platform, preferring a remote override.
   static String storeUrl({String? androidOverride, String? iosOverride}) {
