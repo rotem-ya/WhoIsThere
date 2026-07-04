@@ -19,6 +19,7 @@ import 'providers/providers.dart';
 import 'services/content_manifest_service.dart';
 import 'services/qa_logger_service.dart';
 import 'services/report_service.dart';
+import 'widgets/common/friend_request_banner.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'services/settings_service.dart';
 
@@ -240,7 +241,8 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
     final isFriendScheme = uri.scheme == 'whoisthere' && uri.host == 'friend';
     final isFriendAppLink = uri.scheme == 'https' &&
         uri.host == 'rotem-ya.github.io' &&
-        uri.path.startsWith('/apps-share-pages/whoisthere/friend');
+        (uri.path.startsWith('/apps-share-pages/whoisthere/friend') ||
+            uri.path.startsWith('/WhoIsThere/friend'));
     if (isFriendScheme || isFriendAppLink) {
       final rawF = uri.queryParameters['code'] ?? '';
       final friendCode = rawF.trim().toUpperCase();
@@ -315,7 +317,14 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
       builder: (context, child) {
         return Directionality(
           textDirection: TextDirection.rtl,
-          child: child ?? const SizedBox.shrink(),
+          // The friend-request banner floats above the router so a pending
+          // request is noticeable from ANY screen (not just the home dot).
+          child: Stack(
+            children: [
+              child ?? const SizedBox.shrink(),
+              const FriendRequestBanner(),
+            ],
+          ),
         );
       },
     );

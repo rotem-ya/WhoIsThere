@@ -33,13 +33,15 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   }
 
   /// If we arrived here from a friend-invite deep link, send the request to the
-  /// inviter automatically (no manual code entry needed).
+  /// inviter automatically (no manual code entry needed). When the user isn't
+  /// loaded yet (cold start straight from the link), the pending code is kept
+  /// and a currentUserProvider listener in [build] retries once it resolves.
   void _maybeAutoAddFromInvite() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final code = ref.read(pendingFriendCodeProvider);
       if (code == null) return;
       final me = ref.read(currentUserProvider).valueOrNull;
-      if (me == null) return; // not ready yet — keep the code for a later retry
+      if (me == null) return; // not ready yet — retried via ref.listen
       ref.read(pendingFriendCodeProvider.notifier).state = null; // consume once
       try {
         await ref.read(friendsServiceProvider).sendRequestByCode(
@@ -100,6 +102,18 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     }
   }
 
+  /// Pastes a friend code from the clipboard into the add-by-code field.
+  Future<void> _pasteCode() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = (data?.text ?? '').trim().toUpperCase();
+    if (text.isEmpty) {
+      _toast('אין קוד בלוח ההעתקה');
+      return;
+    }
+    _codeController.text = text;
+    HapticFeedback.selectionClick();
+  }
+
   void _shareInvite() {
     final code = _myCode;
     if (code == null) return;
@@ -116,6 +130,15 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Cold-start deep link: the invite code often lands before the user model
+    // finishes loading, so initState's attempt bails out. Retry the auto-add
+    // the moment the user resolves (the code is consumed exactly once).
+    ref.listen(currentUserProvider, (prev, next) {
+      if (next.valueOrNull != null &&
+          ref.read(pendingFriendCodeProvider) != null) {
+        _maybeAutoAddFromInvite();
+      }
+    });
     return DefaultTabController(
       length: 3,
       child: Directionality(
@@ -191,7 +214,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
             decoration: AppStyles.glassCard(radius: 18, opacity: 0.14),
             child: Column(
               children: [
-                const Text('הקוד שלי',
+                const Text('הקוד האישי שלי',
                     style: TextStyle(
                         color: Colors.white70,
                         fontSize: 13,
@@ -201,17 +224,34 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   onTap: () {
                     if (_myCode == null) return;
                     Clipboard.setData(ClipboardData(text: _myCode!));
-                    _toast('הקוד הועתק');
+                    HapticFeedback.selectionClick();
+                    _toast('הקוד הועתק — שלחו אותו לחבר');
                   },
-                  child: Text(
-                    _myCode ?? '· · · · · ·',
-                    style: const TextStyle(
-                      color: AppStyles.bananaYellow,
-                      fontSize: 34,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 6,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _myCode ?? '· · · · · ·',
+                        style: const TextStyle(
+                          color: AppStyles.bananaYellow,
+                          fontSize: 34,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 6,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Icon(Icons.copy_rounded,
+                          color: AppStyles.bananaYellow.withOpacity(0.7),
+                          size: 22),
+                    ],
                   ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'לחיצה על הקוד מעתיקה אותו. שלחו אותו לחבר —\nהוא יזין אותו למטה אצלו ותתחברו.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -240,6 +280,11 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   color: Colors.white,
                   fontSize: 15,
                   fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          const Text(
+            'קיבלתם קוד מחבר? הקלידו או הדביקו אותו כאן ושלחו בקשה.',
+            style: TextStyle(color: Colors.white54, fontSize: 12),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: _codeController,
@@ -255,6 +300,12 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               hintStyle: const TextStyle(color: Colors.white38),
               filled: true,
               fillColor: Colors.white.withOpacity(0.06),
+              suffixIcon: IconButton(
+                onPressed: _pasteCode,
+                tooltip: 'הדבק קוד',
+                icon: const Icon(Icons.content_paste_rounded,
+                    color: AppStyles.cyanGlow, size: 22),
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),

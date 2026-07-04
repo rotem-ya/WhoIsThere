@@ -48,6 +48,10 @@
                     android:scheme="https"
                     android:host="rotem-ya.github.io"
                     android:pathPrefix="/apps-share-pages/whoisthere/friend"/>
+                <data
+                    android:scheme="https"
+                    android:host="rotem-ya.github.io"
+                    android:pathPrefix="/WhoIsThere/friend"/>
             </intent-filter>
         </activity>
 

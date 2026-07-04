@@ -55,9 +55,14 @@ class AppConstants {
   /// Direct-join deep link for a given room code.
   static String joinUrlForCode(String code) => '$joinPageUrl?code=$code';
 
-  /// Production GitHub Pages friend-invite page (synced from docs/friend.html).
+  /// Production friend-invite page. Served by THIS repo's own GitHub Pages
+  /// (docs/friend.html on main) — the apps-share-pages mirror at
+  /// /apps-share-pages/whoisthere/friend/ has never deployed because the
+  /// sync workflow's PAGES_SYNC_TOKEN lacks write permission (every run
+  /// failed with 403), so invite links pointed at a 404. The deep-link
+  /// handler still recognizes BOTH hosts.
   static const friendPageUrl =
-      'https://rotem-ya.github.io/apps-share-pages/whoisthere/friend/';
+      'https://rotem-ya.github.io/WhoIsThere/friend.html';
 
   /// Friend-invite deep link for a given personal friend code. Opening it adds
   /// the inviter as a friend automatically (see FriendsScreen).
