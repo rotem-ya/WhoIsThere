@@ -490,8 +490,56 @@ class RoomService {
       isPublicRoom: false,
       difficulty: old.selectedDifficulty ?? Difficulty.easy,
     );
-    await oldDoc.reference.update({'rematchRoomId': newRoom.id});
-    return newRoom.id;
+    return _claimRematchSlot(oldDoc.reference, newRoom.id);
+  }
+
+  /// "Play again" for the letters duel. Same contract as [createRematch] but
+  /// clones a letters room (private, no bot) so the human opponent can rejoin
+  /// via the stamped [rematchRoomId]. Returns null if the old room is gone.
+  Future<String?> createLettersRematch({
+    required String oldRoomId,
+    required String hostId,
+    required String hostName,
+    String? hostPhotoUrl,
+  }) async {
+    final oldDoc = await _rooms.doc(oldRoomId).get();
+    if (!oldDoc.exists) return null;
+    final old = RoomModel.fromFirestore(oldDoc);
+    final existing = old.rematchRoomId;
+    if (existing != null && existing.isNotEmpty) return existing;
+
+    final newRoom = await createLettersRoom(
+      hostId: hostId,
+      hostName: hostName,
+      hostPhotoUrl: hostPhotoUrl,
+      solo: false,
+      isPublicRoom: false,
+    );
+    return _claimRematchSlot(oldDoc.reference, newRoom.id);
+  }
+
+  /// Stamps [newRoomId] as the old room's rematch target — atomically, so two
+  /// players tapping "play again" at the same moment can't split the group
+  /// across two rooms. The race loser's duplicate room is deleted and the
+  /// winner's id is returned; callers must join whatever id comes back.
+  Future<String> _claimRematchSlot(
+      DocumentReference oldRef, String newRoomId) async {
+    final winner = await _firestore.runTransaction<String>((tx) async {
+      final snap = await tx.get(oldRef);
+      final data = snap.data() as Map<String, dynamic>?;
+      final current = data?['rematchRoomId'] as String?;
+      if (current != null && current.isNotEmpty) return current;
+      tx.update(oldRef, {'rematchRoomId': newRoomId});
+      return newRoomId;
+    });
+    if (winner != newRoomId) {
+      try {
+        await _rooms.doc(newRoomId).delete();
+      } catch (_) {}
+      QaLoggerService.instance.log(
+          'ROOM', 'REMATCH_RACE_LOST dup=$newRoomId winner=$winner');
+    }
+    return winner;
   }
 
   /// Joins a rematch room created via [createRematch] (looked up by id, then

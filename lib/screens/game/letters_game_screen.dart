@@ -54,6 +54,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   String? _lastBotTurnKey;
   bool _winSoundPlayed = false;
   bool _startTriggered = false;
+  bool _rematchBusy = false;
   Timer? _randomFallbackTimer;
 
   static final AudioPlayer _bgPlayer = AudioPlayer(playerId: 'letters-bg');
@@ -78,6 +79,26 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
     } catch (_) {
       // Audio is non-critical.
     }
+  }
+
+  /// Navigating /letters/A → /letters/B ("play again") reuses this State —
+  /// the GoRoute page key is per-route, not per-roomId — so every per-room
+  /// flag must be reset here or the new duel inherits stale state (e.g.
+  /// _startTriggered=true would block the rematch room from ever starting).
+  @override
+  void didUpdateWidget(covariant LettersGameScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.roomId == widget.roomId) return;
+    _randomFallbackTimer?.cancel();
+    _randomFallbackTimer = null;
+    _image = null;
+    _loadingImageId = null;
+    _selectedSlot = null;
+    _submitting = false;
+    _lastBotTurnKey = null;
+    _winSoundPlayed = false;
+    _startTriggered = false;
+    _startMusic(); // the finished overlay stopped the bg music
   }
 
   @override
@@ -227,19 +248,65 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
     });
   }
 
-  Future<void> _playAgain() async {
+  /// "Play again". Solo (vs bot): spin up a fresh bot duel immediately.
+  /// Vs a human: rematch via [RoomModel.rematchRoomId] — the first tapper
+  /// creates a private letters room and stamps its id on the finished room;
+  /// the opponent's button flips to "join rematch" via the room stream, so
+  /// both land in the SAME new room instead of two separate empty ones.
+  Future<void> _playAgain(RoomModel room) async {
+    if (_rematchBusy) return;
     final uid = _myUid;
     final me = ref.read(currentUserProvider).valueOrNull;
     if (uid == null || me == null) {
       if (mounted) context.go('/home');
       return;
     }
-    final room = await ref.read(roomServiceProvider).createLettersRoom(
+    setState(() => _rematchBusy = true);
+    final svc = ref.read(roomServiceProvider);
+    try {
+      final vsHuman =
+          room.players.values.any((p) => !p.isBot && p.id != uid);
+      if (!vsHuman) {
+        final newRoom = await svc.createLettersRoom(
           hostId: me.id,
           hostName: me.name,
           hostPhotoUrl: me.photoUrl,
         );
-    if (mounted) context.go('/letters/${room.id}');
+        if (mounted) context.go('/letters/${newRoom.id}');
+        return;
+      }
+
+      var targetId = room.rematchRoomId;
+      if (targetId == null || targetId.isEmpty) {
+        targetId = await svc.createLettersRematch(
+          oldRoomId: room.id,
+          hostId: me.id,
+          hostName: me.name,
+          hostPhotoUrl: me.photoUrl,
+        );
+      }
+      // Join whatever room won the rematch slot (no-op for its creator).
+      // Null means the rematch already started without us or is gone.
+      RoomModel? joined;
+      if (targetId != null && targetId.isNotEmpty) {
+        joined = await svc.joinRematch(
+          rematchRoomId: targetId,
+          userId: me.id,
+          userName: me.name,
+          userPhotoUrl: me.photoUrl,
+        );
+      }
+      if (!mounted) return;
+      if (joined == null || targetId == null || targetId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('המשחק החוזר כבר התחיל או שאינו זמין')),
+        );
+        return;
+      }
+      context.go('/letters/$targetId');
+    } finally {
+      if (mounted) setState(() => _rematchBusy = false);
+    }
   }
 
   @override
@@ -525,7 +592,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _playAgain,
+                onPressed: _rematchBusy ? null : () => _playAgain(room),
                 style: FilledButton.styleFrom(
                   backgroundColor: _kGold,
                   foregroundColor: const Color(0xFF07101F),
@@ -533,7 +600,10 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                   textStyle:
                       const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
                 ),
-                child: const Text('שחק שוב'),
+                child: Text(
+                    (room.rematchRoomId != null && room.rematchRoomId!.isNotEmpty)
+                        ? 'הצטרף למשחק חוזר'
+                        : 'שחק שוב'),
               ),
             ),
             const SizedBox(height: 10),

@@ -1474,26 +1474,37 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final user = ref.read(currentUserProvider).value;
     if (user == null) return;
     final svc = ref.read(roomServiceProvider);
+    RoomModel? joined;
     var targetId = room.rematchRoomId;
-    if (targetId == null || targetId.isEmpty) {
-      targetId = await svc.createRematch(
-        oldRoomId: room.id,
-        hostId: user.id,
-        hostName: user.name,
-        hostPhotoUrl: user.photoUrl,
-      );
-    } else {
-      await svc.joinRematch(
-        rematchRoomId: targetId,
-        userId: user.id,
-        userName: user.name,
-        userPhotoUrl: user.photoUrl,
-      );
+    try {
+      if (targetId == null || targetId.isEmpty) {
+        targetId = await svc.createRematch(
+          oldRoomId: room.id,
+          hostId: user.id,
+          hostName: user.name,
+          hostPhotoUrl: user.photoUrl,
+        );
+      }
+      // Join whatever room won the rematch slot — for the creator this is a
+      // no-op (already a player); for everyone else it actually adds them.
+      // A null result means the rematch already started or is gone, so
+      // navigating to its lobby would strand the player in a room they're
+      // not part of.
+      if (targetId != null && targetId.isNotEmpty) {
+        joined = await svc.joinRematch(
+          rematchRoomId: targetId,
+          userId: user.id,
+          userName: user.name,
+          userPhotoUrl: user.photoUrl,
+        );
+      }
+    } catch (e) {
+      QaLoggerService.instance.log('ROOM', 'REMATCH_FAILED error=$e');
     }
     if (!mounted) return;
-    if (targetId == null || targetId.isEmpty) {
+    if (joined == null || targetId == null || targetId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('לא ניתן לפתוח משחק חוזר')),
+        const SnackBar(content: Text('המשחק החוזר כבר התחיל או שאינו זמין')),
       );
       return;
     }

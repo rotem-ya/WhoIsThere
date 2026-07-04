@@ -113,18 +113,24 @@ class _WinScreenState extends ConsumerState<WinScreen>
           hostName: user.name,
           hostPhotoUrl: user.photoUrl,
         );
-      } else {
-        await svc.joinRematch(
+      }
+      // Join whatever room won the rematch slot — a no-op for its creator,
+      // an actual join for everyone else. Null means the rematch already
+      // started (or is gone); navigating to its lobby would strand us in a
+      // room we're not a member of.
+      RoomModel? joined;
+      if (targetId != null && targetId.isNotEmpty) {
+        joined = await svc.joinRematch(
           rematchRoomId: targetId,
           userId: user.id,
           userName: user.name,
           userPhotoUrl: user.photoUrl,
         );
       }
-      if (targetId == null || targetId.isEmpty) {
+      if (joined == null || targetId == null || targetId.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('לא ניתן לפתוח משחק חוזר')),
+            const SnackBar(content: Text('המשחק החוזר כבר התחיל או שאינו זמין')),
           );
           setState(() => _busyRematch = false);
         }
