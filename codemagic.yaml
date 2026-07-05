@@ -10,6 +10,16 @@
 workflows:
   ios-testflight:
     name: WhoIsThere iOS — TestFlight
+    # Controlled trigger: push a tag like `ios-v3` to build + ship to TestFlight.
+    # (No per-commit iOS builds — mac minutes are limited.) You can also run it
+    # manually from the Codemagic UI. Requires the one-time setup to be done
+    # (repo connected in Codemagic + the `Apple_Key_Trivia` ASC API key added).
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: 'ios-v*'
+          include: true
     instance_type: mac_mini_m2
     max_build_duration: 90
     integrations:
@@ -73,9 +83,15 @@ workflows:
         script: xcode-project use-profiles
       - name: Build signed IPA
         script: |
+          # Offset the Codemagic build counter by 1000 so the CFBundleVersion is
+          # always > 55 (TestFlight already has build 55 from the legacy path)
+          # while staying strictly increasing across builds. Apple rejects a
+          # resubmit whose build number isn't higher than the last one.
+          BUILD_NUMBER=$((PROJECT_BUILD_NUMBER + 1000))
+          echo "Using iOS build number: $BUILD_NUMBER"
           flutter build ipa --release \
-            --build-name=1.0.0 \
-            --build-number=$PROJECT_BUILD_NUMBER \
+            --build-name=1.1.1 \
+            --build-number=$BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa

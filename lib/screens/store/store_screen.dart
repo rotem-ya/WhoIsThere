@@ -11,10 +11,21 @@ import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
+import '../../services/analytics_service.dart';
+import '../../services/sfx_service.dart';
 import '../../widgets/common/app_feedback.dart';
+import '../../widgets/common/board_skin_background.dart';
+import '../../widgets/common/player_avatar.dart';
+import '../../widgets/common/player_name_text.dart';
 import '../../widgets/common/pressable_scale.dart';
+import '../../widgets/common/win_effect_overlay.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_icon.dart';
+import 'avatars_screen.dart' show selectedAvatarProvider;
+import 'avatar_frames_screen.dart' show selectedFrameProvider;
+import 'name_styles_screen.dart' show selectedNameStyleProvider;
+import 'win_effects_screen.dart' show selectedWinEffectProvider;
+import 'board_skins_screen.dart' show selectedBoardSkinProvider;
 
 class StoreScreen extends ConsumerStatefulWidget {
   const StoreScreen({super.key});
@@ -31,6 +42,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
   void initState() {
     super.initState();
     _tab = TabController(length: 3, vsync: this);
+    AnalyticsService.instance.storeView();
   }
 
   @override
@@ -108,7 +120,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
             labelStyle: const TextStyle(
                 fontWeight: FontWeight.w800, fontSize: 13),
             tabs: const [
-              Tab(text: '💎 רכישה'),
+              Tab(text: '🎁 מטבעות'),
               Tab(text: '🃏 כרטיסים'),
               Tab(text: '🎨 עיצובים'),
             ],
@@ -148,60 +160,64 @@ class _PurchaseTab extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
       children: [
-        // ── Coin packages ─────────────────────────────────────────────────
-        _SectionLabel(label: 'קנה מטבעות', iconWidget: const CoinIcon(size: 16)),
+        // Coins are earned in-game (daily reward, wins, discoveries) — never
+        // sold for real money. How to earn:
+        _SectionLabel(label: 'איך מרוויחים מטבעות', iconWidget: const CoinIcon(size: 16)),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _CoinPackageTile(
-                coins: 40,
-                priceIls: '₪0.99',
-                color: const Color(0xFF4A9EFF),
-              ).animate(delay: 60.ms).fadeIn(duration: 280.ms).slideY(begin: 0.07, end: 0, duration: 280.ms),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _CoinPackageTile(
-                coins: 90,
-                priceIls: '₪1.99',
-                color: const Color(0xFF3DCCAA),
-                badge: 'פופולרי',
-              ).animate(delay: 100.ms).fadeIn(duration: 280.ms).slideY(begin: 0.07, end: 0, duration: 280.ms),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _CoinPackageTile(
-                coins: 200,
-                priceIls: '₪3.99',
-                color: const Color(0xFFD4AF37),
-                badge: 'מומלץ',
-              ).animate(delay: 140.ms).fadeIn(duration: 280.ms).slideY(begin: 0.07, end: 0, duration: 280.ms),
-            ),
-          ],
-        ),
-        // Ad-related store items (ad-removal pack + rewarded-ad tile) are shown
-        // only when ads are enabled. With ads off at launch, advertising
-        // shouldn't be referenced anywhere in the UI (and would fail review).
+        const _EarnCoinsInfo()
+            .animate(delay: 60.ms)
+            .fadeIn(duration: 300.ms)
+            .slideY(begin: 0.06, end: 0, duration: 300.ms),
+
+        // Rewarded ad (free coins for watching) — the only "get more" option,
+        // shown when ads are enabled. No real-money purchase anywhere.
         if (AdConstants.adsEnabled) ...[
           const SizedBox(height: AppSpacing.lg),
-
-          // ── Ad removal pack ─────────────────────────────────────────────
-          _SectionLabel(label: 'חבילות', icon: '🎁'),
+          _SectionLabel(label: 'צפה והרווח', icon: '🎬'),
           const SizedBox(height: 10),
-          _AdRemovalCard()
-              .animate(delay: 180.ms)
-              .fadeIn(duration: 340.ms, curve: Curves.easeOut)
-              .slideY(begin: 0.06, end: 0, duration: 340.ms, curve: Curves.easeOut),
-          const SizedBox(height: AppSpacing.md),
-
-          // ── Rewarded Ad ─────────────────────────────────────────────────
           _RewardedAdTile(ref: ref)
-              .animate(delay: 260.ms)
+              .animate(delay: 160.ms)
               .fadeIn(duration: 300.ms, curve: Curves.easeOut)
               .slideY(begin: 0.06, end: 0, duration: 300.ms, curve: Curves.easeOut),
         ],
       ],
+    );
+  }
+}
+
+// Short "how to earn coins" card — replaces the removed real-money packages.
+class _EarnCoinsInfo extends StatelessWidget {
+  const _EarnCoinsInfo();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget row(String emoji, String text) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          child: Row(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(text,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              ),
+            ],
+          ),
+        );
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        children: [
+          row('🎁', 'פרס יומי — התחבר כל יום'),
+          row('🏆', 'ניצחונות ונקודות במשחקים'),
+          row('🗺️', 'גילוי מקומות חדשים'),
+        ],
+      ),
     );
   }
 }
@@ -236,110 +252,6 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-// ── Coin package tile ─────────────────────────────────────────────────────────
-
-class _CoinPackageTile extends StatelessWidget {
-  final int coins;
-  final String priceIls;
-  final Color color;
-  final String? badge;
-
-  const _CoinPackageTile({
-    required this.coins,
-    required this.priceIls,
-    required this.color,
-    this.badge,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PressableScale(
-      onTap: () => HapticFeedback.lightImpact(),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [color.withOpacity(0.22), const Color(0xFF04091A)],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.60), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.20),
-              blurRadius: 10,
-              spreadRadius: 0,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (badge != null) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.22),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: color.withOpacity(0.5), width: 0.8),
-                ),
-                child: Text(
-                  badge!,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-            ],
-            const CoinIcon(size: 26),
-            const SizedBox(height: 6),
-            Text(
-              '$coins',
-              style: TextStyle(
-                color: color,
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                height: 1,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'מטבעות',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.50),
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 7),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                priceIls,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF07101F),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // ── Tab 2: כרטיסים ────────────────────────────────────────────────────────────
 
@@ -355,6 +267,7 @@ class _CardsTab extends StatelessWidget {
     final block5Count = user?.guessBlock5Count ?? 0;
     final block10Count = user?.guessBlock10Count ?? 0;
     final blackoutCount = user?.blackoutCardCount ?? 0;
+    final peekCount = user?.peekCardCount ?? 0;
     final discovered = user?.discoveredImageIds.length ?? 0;
 
     return Padding(
@@ -366,21 +279,20 @@ class _CardsTab extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 6),
             child: Text(
-              'לחץ על שחקן במשחק כדי להפעיל כרטיס',
+              'כרטיסי התקפה — לחץ על שחקן במשחק · כרטיסי עזר — בתפריט הכלים',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white54, fontSize: 12),
             ),
           ),
           Expanded(
             child: GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.62,
+              crossAxisCount: 3,
+              crossAxisSpacing: 9,
+              mainAxisSpacing: 9,
+              childAspectRatio: 0.74,
               children: [
                 _PlayingCard(
                   title: 'חסימה 5 שניות',
-                  description: 'מונע ניחוש מיריב למשך 5 שניות',
                   emoji: '⏱️',
                   iconData: Icons.timer_outlined,
                   illustrationGradient: const [Color(0xFF1890D0), Color(0xFF0060A0)],
@@ -394,7 +306,6 @@ class _CardsTab extends StatelessWidget {
                 ).animate(delay: 60.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
                 _PlayingCard(
                   title: 'החשכה',
-                  description: 'מחשיך את הלוח של יריב ל-5 שניות',
                   emoji: '🕶️',
                   iconData: Icons.visibility_off_outlined,
                   illustrationGradient: const [Color(0xFF3A3A4A), Color(0xFF1A1A2E)],
@@ -408,7 +319,6 @@ class _CardsTab extends StatelessWidget {
                 ).animate(delay: 120.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
                 _PlayingCard(
                   title: 'חסימה 10 שניות',
-                  description: 'מונע ניחוש מיריב למשך 10 שניות',
                   emoji: '⏰',
                   iconData: Icons.timer,
                   illustrationGradient: const [Color(0xFF1060A0), Color(0xFF003080)],
@@ -422,7 +332,6 @@ class _CardsTab extends StatelessWidget {
                 ).animate(delay: 180.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
                 _PlayingCard(
                   title: 'כרטיס עצור',
-                  description: 'חוסם שחקן אחד מניחוש לתור שלם',
                   emoji: '🔒',
                   iconData: Icons.lock_outline,
                   illustrationGradient: const [Color(0xFF8B4FBF), Color(0xFF5A1A8A)],
@@ -434,6 +343,19 @@ class _CardsTab extends StatelessWidget {
                   requiredDiscoveries: 40,
                   onBuy: () => _buyCard(context, 'stun'),
                 ).animate(delay: 240.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
+                _PlayingCard(
+                  title: 'הצצה',
+                  emoji: '👁️',
+                  iconData: Icons.visibility_outlined,
+                  illustrationGradient: const [Color(0xFF26A69A), Color(0xFF00695C)],
+                  accentColor: const Color(0xFF26A69A),
+                  owned: peekCount,
+                  price: EconomyConfig.peekCardPrice,
+                  canAfford: coins >= EconomyConfig.peekCardPrice,
+                  locked: discovered < EconomyConfig.peekCardUnlockDiscoveries,
+                  requiredDiscoveries: EconomyConfig.peekCardUnlockDiscoveries,
+                  onBuy: () => _buyCard(context, 'peek'),
+                ).animate(delay: 300.ms).fadeIn(duration: 300.ms).slideY(begin: 0.07, end: 0, duration: 300.ms),
               ],
             ),
           ),
@@ -469,6 +391,10 @@ class _CardsTab extends StatelessWidget {
       price = EconomyConfig.blackoutCardPrice;
       buyFn = () => economy.buyBlackoutCard(uid);
       label = 'כרטיס החשכה';
+    } else if (type == 'peek') {
+      price = EconomyConfig.peekCardPrice;
+      buyFn = () => economy.buyPeekCard(uid);
+      label = 'כרטיס הצצה';
     } else {
       return;
     }
@@ -483,6 +409,7 @@ class _CardsTab extends StatelessWidget {
 
     if (granted) {
       AppFeedback.success();
+      SfxService.instance.purchase();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('✅ $label נרכש!')),
       );
@@ -504,7 +431,6 @@ class _CardsTab extends StatelessWidget {
 
 class _PlayingCard extends StatelessWidget {
   final String title;
-  final String description;
   final String emoji;
   final IconData iconData;
   final List<Color> illustrationGradient;
@@ -518,7 +444,6 @@ class _PlayingCard extends StatelessWidget {
 
   const _PlayingCard({
     required this.title,
-    required this.description,
     required this.emoji,
     required this.iconData,
     required this.illustrationGradient,
@@ -557,14 +482,13 @@ class _PlayingCard extends StatelessWidget {
                 const Color(0xFF04091A),
               ],
             ),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: accentColor.withOpacity(0.70), width: 1.8),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: accentColor.withOpacity(0.45), width: 1.0),
             boxShadow: [
               BoxShadow(
-                color: accentColor.withOpacity(0.22),
-                blurRadius: 14,
-                spreadRadius: 1,
-                offset: const Offset(0, 4),
+                color: accentColor.withOpacity(0.12),
+                blurRadius: 9,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -573,19 +497,41 @@ class _PlayingCard extends StatelessWidget {
             children: [
               // ── Coloured top bar ─────────────────────────────────────────
               Container(
-                height: 7,
+                height: 4,
                 decoration: BoxDecoration(
                   color: accentColor,
                   borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(16)),
+                      const BorderRadius.vertical(top: Radius.circular(15)),
                 ),
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
+                      // Card illustration
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: illustrationGradient,
+                          ),
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Icon(iconData,
+                                color: Colors.white.withOpacity(0.22), size: 24),
+                            Text(emoji,
+                                style: const TextStyle(fontSize: 17, height: 1)),
+                          ],
+                        ),
+                      ),
                       // Title
                       Text(
                         title,
@@ -594,68 +540,19 @@ class _PlayingCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          height: 1.2,
-                        ),
-                      ),
-                      // Card illustration
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: illustrationGradient,
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: illustrationGradient.first.withOpacity(0.45),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Icon(iconData, color: Colors.white.withOpacity(0.25), size: 38),
-                            Text(emoji, style: const TextStyle(fontSize: 22, height: 1)),
-                          ],
-                        ),
-                      ),
-                      // Description
-                      Text(
-                        description,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.60),
                           fontSize: 11,
-                          height: 1.3,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
                         ),
                       ),
-                      // Owned badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: accentColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: accentColor.withOpacity(0.45), width: 1),
-                        ),
-                        child: Text(
-                          'ברשותך: $owned',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: accentColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                          ),
+                      // Owned count (compact)
+                      Text(
+                        'ברשותך $owned',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: accentColor,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -664,21 +561,21 @@ class _PlayingCard extends StatelessWidget {
               ),
               // ── Buy button ───────────────────────────────────────────────
               Container(
-                margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                padding: const EdgeInsets.symmetric(vertical: 9),
+                margin: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+                padding: const EdgeInsets.symmetric(vertical: 6),
                 decoration: BoxDecoration(
                   color: canAfford ? accentColor : Colors.white12,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text.rich(
                   TextSpan(
                     text: '$price ',
-                    children: [coinSpan(size: 14, color: canAfford ? const Color(0xFFFFC107) : Colors.white38)],
+                    children: [coinSpan(size: 12, color: canAfford ? const Color(0xFFFFC107) : Colors.white38)],
                   ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: canAfford ? Colors.white : Colors.white38,
-                    fontSize: 14,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -711,25 +608,37 @@ class _LockedCard extends StatelessWidget {
           end: Alignment.bottomCenter,
           colors: [Color(0xFF1A1A2A), Color(0xFF0A0A14)],
         ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white12, width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12, width: 1.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            height: 7,
+            height: 4,
             decoration: const BoxDecoration(
               color: Colors.white12,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
             ),
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Text(
+                        emoji,
+                        style: const TextStyle(
+                            fontSize: 32, height: 1, color: Color(0x33FFFFFF)),
+                      ),
+                      const Icon(Icons.lock_rounded,
+                          color: Colors.white54, size: 22),
+                    ],
+                  ),
                   Text(
                     title,
                     textAlign: TextAlign.center,
@@ -737,30 +646,18 @@ class _LockedCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white38,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      height: 1.2,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      height: 1.15,
                     ),
                   ),
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Text(
-                        emoji,
-                        style: const TextStyle(
-                            fontSize: 44, height: 1, color: Color(0x33FFFFFF)),
-                      ),
-                      const Icon(Icons.lock_rounded,
-                          color: Colors.white54, size: 30),
-                    ],
-                  ),
                   Text(
-                    'גלה $requiredDiscoveries מקומות\nלפתיחה',
+                    'גלה $requiredDiscoveries מקומות',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white38,
-                      fontSize: 11,
-                      height: 1.4,
+                      fontSize: 9,
+                      height: 1.2,
                     ),
                   ),
                 ],
@@ -768,22 +665,22 @@ class _LockedCard extends StatelessWidget {
             ),
           ),
           Container(
-            margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-            padding: const EdgeInsets.symmetric(vertical: 9),
+            margin: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+            padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white10,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.lock_rounded, color: Colors.white24, size: 14),
-                SizedBox(width: 4),
+                Icon(Icons.lock_rounded, color: Colors.white24, size: 12),
+                SizedBox(width: 3),
                 Text(
                   'נעול',
                   style: TextStyle(
                       color: Colors.white24,
-                      fontSize: 13,
+                      fontSize: 11,
                       fontWeight: FontWeight.w900),
                 ),
               ],
@@ -797,179 +694,182 @@ class _LockedCard extends StatelessWidget {
 
 // ── Tab 4: עיצובים ────────────────────────────────────────────────────────────
 
-class _SkinsTab extends StatelessWidget {
+class _SkinsTab extends ConsumerWidget {
   const _SkinsTab();
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        children: [
-          const SizedBox(height: AppSpacing.md),
-          // Card skins banner
-          PressableScale(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              context.push('/store/skins');
-            },
-            child: Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF0A1A2E), Color(0xFF1A0A2E)],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFF8B6FFF).withOpacity(0.55),
-                  width: 1.4,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF8B6FFF).withOpacity(0.12),
-                    blurRadius: 18,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF8B6FFF).withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: const Color(0xFF8B6FFF).withOpacity(0.40),
-                      ),
-                    ),
-                    child: const Icon(Icons.style_rounded,
-                        color: Color(0xFF8B6FFF), size: 32),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('עיצובי קלפים',
-                            style: AppTextStyles.titleLight
-                                .copyWith(fontSize: 18)),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'בחר עיצוב לכרטיסיות המשחק',
-                          style:
-                              TextStyle(color: Colors.white54, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_left_rounded,
-                      color: Colors.white38, size: 26),
-                ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final name = ref.watch(currentUserProvider).valueOrNull?.name ?? 'שחקן';
+    final avatarId = ref.watch(selectedAvatarProvider).valueOrNull ?? 'auto';
+    final frameId = ref.watch(selectedFrameProvider).valueOrNull ?? 'none';
+    final nameStyleId =
+        ref.watch(selectedNameStyleProvider).valueOrNull ?? 'none';
+    final winEffectId =
+        ref.watch(selectedWinEffectProvider).valueOrNull ?? 'none';
+    final boardSkinId =
+        ref.watch(selectedBoardSkinProvider).valueOrNull ?? 'none';
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
+      children: [
+        // ── Live "my look" preview ────────────────────────────────────────
+        _MyLookPreview(
+          name: name,
+          avatarId: avatarId,
+          frameId: frameId,
+          nameStyleId: nameStyleId,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Row(
+          children: [
+            const Icon(Icons.brush_rounded, color: Colors.white54, size: 16),
+            const SizedBox(width: 6),
+            Text('כלי העיצוב',
+                style: AppTextStyles.titleLight.copyWith(fontSize: 15)),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        // ── Category cards grid ───────────────────────────────────────────
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: AppSpacing.md,
+          mainAxisSpacing: AppSpacing.md,
+          childAspectRatio: 1.18,
+          children: [
+            _DesignCard(
+              title: 'אווטרים',
+              accent: const Color(0xFF4FC3F7),
+              route: '/store/avatars',
+              preview: PlayerAvatar(
+                  name: name, seed: name, radius: 22, avatarId: avatarId),
+            ),
+            _DesignCard(
+              title: 'מסגרות',
+              accent: const Color(0xFFD4AF37),
+              route: '/store/frames',
+              preview: PlayerAvatar(
+                  name: name, seed: name, radius: 20, frameId: frameId),
+            ),
+            _DesignCard(
+              title: 'צבעי שם',
+              accent: const Color(0xFF4DD0A0),
+              route: '/store/names',
+              preview: PlayerNameText(
+                text: name,
+                styleId: nameStyleId,
+                base: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900),
               ),
             ),
-          ),
-        ],
-      ),
+            _DesignCard(
+              title: 'אפקטי ניצחון',
+              accent: const Color(0xFFFF8A65),
+              route: '/store/effects',
+              preview: winEffectId == 'none'
+                  ? const Icon(Icons.celebration_rounded,
+                      color: Color(0xFFFF8A65), size: 34)
+                  : SizedBox(
+                      width: 64,
+                      height: 48,
+                      child: WinEffectOverlay(
+                          effectId: winEffectId, particleCount: 14),
+                    ),
+            ),
+            _DesignCard(
+              title: 'עיצובי קלפים',
+              accent: const Color(0xFF8B6FFF),
+              route: '/store/skins',
+              preview: const Icon(Icons.style_rounded,
+                  color: Color(0xFF8B6FFF), size: 34),
+            ),
+            _DesignCard(
+              title: 'רקע לוח',
+              accent: const Color(0xFF4CA1AF),
+              route: '/store/board',
+              preview: _BoardSwatch(skinId: boardSkinId),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
 
-// ── Ad Removal Pack ───────────────────────────────────────────────────────────
+// ── Live combined-look preview ──────────────────────────────────────────────────
 
-class _AdRemovalCard extends StatelessWidget {
-  const _AdRemovalCard();
+class _MyLookPreview extends StatelessWidget {
+  final String name;
+  final String avatarId;
+  final String frameId;
+  final String nameStyleId;
+
+  const _MyLookPreview({
+    required this.name,
+    required this.avatarId,
+    required this.frameId,
+    required this.nameStyleId,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1A1060), Color(0xFF0D0730)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
+          colors: [Color(0xFF0E2A4A), Color(0xFF1A0A2E)],
         ),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-            color: const Color(0xFFD4AF37).withOpacity(0.55), width: 1.4),
+            color: const Color(0xFF4FC3F7).withOpacity(0.40), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFD4AF37).withOpacity(0.14),
+            color: const Color(0xFF1890D0).withOpacity(0.18),
             blurRadius: 22,
-            spreadRadius: 2,
+            spreadRadius: 1,
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
         children: [
-          // Title row
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD4AF37).withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.35)),
-                ),
-                child: const Center(
-                  child: Text('🚫', style: TextStyle(fontSize: 22, height: 1)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text(
-                    'הסרת פרסומות',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      height: 1.1,
-                    ),
-                    maxLines: 1,
-                  ),
-                ),
-              ),
-            ],
+          PlayerAvatar(
+            name: name,
+            seed: name,
+            radius: 32,
+            avatarId: avatarId,
+            frameId: frameId,
           ),
-          const SizedBox(height: 10),
-          _PackFeature(text: '500 מטבעות'),
-          const SizedBox(height: 2),
-          _PackFeature(text: 'ללא פרסומות לצמיתות'),
-          const SizedBox(height: 14),
-          // Full-width buy button
-          PressableScale(
-            onTap: () => HapticFeedback.lightImpact(),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFE082), Color(0xFFD4AF37), Color(0xFFA1811A)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('המראה שלי',
+                    style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                PlayerNameText(
+                  text: name,
+                  styleId: nameStyleId,
+                  base: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900),
                 ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: FilledButton(
-                onPressed: () => HapticFeedback.lightImpact(),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  foregroundColor: const Color(0xFF07101F),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  minimumSize: const Size.fromHeight(46),
-                ),
-                child: const Text('רכישה • ₪9.99'),
-              ),
+                const SizedBox(height: 2),
+                const Text('כך שאר השחקנים רואים אותך',
+                    style: TextStyle(color: Colors.white38, fontSize: 11)),
+              ],
             ),
           ),
         ],
@@ -978,32 +878,103 @@ class _AdRemovalCard extends StatelessWidget {
   }
 }
 
-class _PackFeature extends StatelessWidget {
-  final String text;
-  const _PackFeature({required this.text});
+// ── Board skin colour swatch ────────────────────────────────────────────────────
+
+class _BoardSwatch extends StatelessWidget {
+  final String skinId;
+  const _BoardSwatch({required this.skinId});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle_rounded,
-              color: Color(0xFFD4AF37), size: 14),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.78),
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
+    return SizedBox(
+      width: 54,
+      height: 40,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white24, width: 0.8),
           ),
-        ],
+          child: BoardSkinBackground(skinId: skinId),
+        ),
       ),
     );
   }
 }
+
+// ── Design category card (grid tile) ────────────────────────────────────────────
+
+class _DesignCard extends StatelessWidget {
+  final String title;
+  final Color accent;
+  final String route;
+  final Widget preview;
+
+  const _DesignCard({
+    required this.title,
+    required this.accent,
+    required this.route,
+    required this.preview,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PressableScale(
+      onTap: () {
+        AppFeedback.tap();
+        context.push(route);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF0A1A2E), Color(0xFF120A24)],
+          ),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: accent.withOpacity(0.45), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: accent.withOpacity(0.10),
+              blurRadius: 14,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(child: preview),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800),
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(Icons.chevron_left_rounded,
+                    color: accent.withOpacity(0.8), size: 18),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 // ── Rewarded Ad ───────────────────────────────────────────────────────────────
 
@@ -1099,7 +1070,7 @@ class _RewardedAdTile extends ConsumerWidget {
 
     // Show the real rewarded ad first; only credit coins if the user watched
     // long enough to earn the reward.
-    final watched = await ref.read(adServiceProvider).showRewarded();
+    final watched = await ref.read(adServiceProvider).showRewarded(placement: 'store_coins');
     if (!context.mounted) return;
     if (!watched) {
       ScaffoldMessenger.of(context).showSnackBar(

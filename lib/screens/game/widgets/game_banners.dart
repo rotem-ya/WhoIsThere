@@ -55,7 +55,6 @@ class _GuessBannerState extends State<GuessBanner>
   @override
   Widget build(BuildContext context) {
     final playerId = widget.event['playerId'] as String? ?? '';
-    final guess = widget.event['guess'] as String? ?? '';
     final isCorrect = widget.event['isCorrect'] as bool? ?? false;
     final rawPlayerName = widget.players[playerId]?.name ?? '';
     final playerName = rawPlayerName.isNotEmpty ? rawPlayerName : 'שחקן';

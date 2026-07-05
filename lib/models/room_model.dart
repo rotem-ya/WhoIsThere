@@ -56,6 +56,10 @@ class RoomModel extends Equatable {
   final List<String> heatCategories;
   final List<String> heatImageIds;
   final int heatRoundIndex;
+  // חי-צומח-דומם: ids של שחקנים אנושיים שהצביעו להחליף את הפריט הנוכחי (כשאף אחד
+  // לא יודע את התשובה). בוטים ניטרליים — לא מצביעים ולא נספרים. מתאפס בכל החלפת
+  // פריט / מעבר סבב.
+  final List<String> skipVotes;
   // Friends-mode heat topic picks: playerId → list of chosen categoryIds.
   // Each player picks 1; when there are <3 players the host picks the extra
   // topics so the heat still has ≥3 rounds. Resolved into [heatCategories] when
@@ -68,6 +72,34 @@ class RoomModel extends Equatable {
   // room the group can rejoin. Lets the rest of the win screen offer "join
   // rematch". Null until someone starts a rematch. Friends games only.
   final String? rematchRoomId;
+
+  // ── Heat round interlude — short synced pause between heat rounds ─────────
+  // Stamped by the round-advance transaction: until this wall-clock ms every
+  // client shows the finished image + its answer + who solved it, so the next
+  // image is revealed to everyone together.
+  final int? roundInterludeUntilMs;
+  final String? lastRoundImageId;
+  // Display name of the round's solver; null when the board filled with no
+  // correct guess.
+  final String? lastRoundWinnerName;
+
+  // ── Letters game (משחק האותיות) — Wordle-style image-reveal duel ──────────
+  // Game mode discriminator. 'normal' is the classic/heat reveal game (default
+  // so existing rooms deserialize unchanged); 'letters' is the turn-based
+  // letter-guessing duel.
+  final String mode;
+  // The secret answer for the letters game — the Hebrew name of the chosen
+  // image (selectedImageId). Null for non-letters rooms.
+  final String? secretWord;
+  // Per-player board state for the letters game (separate board per player):
+  // uid → list of revealed tile indices on THAT player's board.
+  final Map<String, List<int>> lettersRevealedTiles;
+  // uid → list of letters that player has guessed (normalized), for keyboard
+  // coloring (present/absent).
+  final Map<String, List<String>> lettersGuessed;
+  // uid → list of slot indices the player has correctly filled (green). When a
+  // player's solved-slot count equals the answer length they win (auto-win).
+  final Map<String, List<int>> lettersSolvedSlots;
 
   const RoomModel({
     required this.id,
@@ -116,14 +148,47 @@ class RoomModel extends Equatable {
     this.heatCategories = const [],
     this.heatImageIds = const [],
     this.heatRoundIndex = 0,
+    this.skipVotes = const [],
     this.topicChoices = const {},
     this.placementPaidPlayerIds = const [],
     this.rematchRoomId,
+    this.roundInterludeUntilMs,
+    this.lastRoundImageId,
+    this.lastRoundWinnerName,
+    this.mode = 'normal',
+    this.secretWord,
+    this.lettersRevealedTiles = const {},
+    this.lettersGuessed = const {},
+    this.lettersSolvedSlots = const {},
   });
+
+  // True for the letters game (Wordle-style duel).
+  bool get isLetters => mode == 'letters';
 
   // True when this room is a fast-game heat (more than one queued round).
   bool get isHeat => heatImageIds.length > 1;
   bool get isLastHeatRound => heatRoundIndex >= heatImageIds.length - 1;
+
+  // ── דילוג/החלפת פריט בחי-צומח-דומם (הצבעת רוב) ──────────────────────────────
+  // הצבעת דילוג מתאפשרת רק אחרי שנחשפו ≥30% מהמשבצות.
+  static const double kSkipVoteMinRevealRatio = 0.30;
+  // אפשר להציע החלפת פריט: היט פעיל, שלב משחק, ומעבר לסף החשיפה.
+  bool skipVoteEligible(double revealRatio) =>
+      isHeat &&
+      phase == GamePhase.playing &&
+      revealRatio >= kSkipVoteMinRevealRatio;
+  // שחקנים אנושיים פעילים (לא בוטים, לא הודחו) — בסיס ספירת הרוב. בוטים ניטרליים.
+  List<PlayerModel> get humanPlayers =>
+      players.values.where((p) => !p.isBot && !p.isEliminated).toList();
+  // רוב: יותר ממחצית האנושיים. 1→1, 2→2 (1-על-1 אמיתי), 3→2, 4→3.
+  int get skipVoteThreshold => (humanPlayers.length ~/ 2) + 1;
+  // מספר ההצבעות התקפות (רק שחקנים אנושיים פעילים נספרים).
+  int get skipVoteCount {
+    final humanIds = humanPlayers.map((p) => p.id).toSet();
+    return skipVotes.where(humanIds.contains).length;
+  }
+  bool get skipVotePassed =>
+      humanPlayers.isNotEmpty && skipVoteCount >= skipVoteThreshold;
 
   // Friends games are private (not public quick-match): free entry, per-game
   // scoring (not added to lifetime totalPoints), top-2 placement coin rewards.
@@ -249,6 +314,7 @@ class RoomModel extends Equatable {
       heatCategories: List<String>.from(data['heatCategories'] ?? []),
       heatImageIds: List<String>.from(data['heatImageIds'] ?? []),
       heatRoundIndex: (data['heatRoundIndex'] as num?)?.toInt() ?? 0,
+      skipVotes: List<String>.from(data['skipVotes'] ?? const []),
       topicChoices: (data['topicChoices'] as Map?)?.map(
             (k, v) => MapEntry(k.toString(), List<String>.from(v as List? ?? const [])),
           ) ??
@@ -256,6 +322,23 @@ class RoomModel extends Equatable {
       placementPaidPlayerIds:
           List<String>.from(data['placementPaidPlayerIds'] ?? const []),
       rematchRoomId: data['rematchRoomId'] as String?,
+      roundInterludeUntilMs: (data['roundInterludeUntilMs'] as num?)?.toInt(),
+      lastRoundImageId: data['lastRoundImageId'] as String?,
+      lastRoundWinnerName: data['lastRoundWinnerName'] as String?,
+      mode: (data['mode'] as String?) ?? 'normal',
+      secretWord: data['secretWord'] as String?,
+      lettersRevealedTiles: (data['lettersRevealedTiles'] as Map?)?.map(
+            (k, v) => MapEntry(k.toString(), List<int>.from(v as List? ?? const [])),
+          ) ??
+          const {},
+      lettersGuessed: (data['lettersGuessed'] as Map?)?.map(
+            (k, v) => MapEntry(k.toString(), List<String>.from(v as List? ?? const [])),
+          ) ??
+          const {},
+      lettersSolvedSlots: (data['lettersSolvedSlots'] as Map?)?.map(
+            (k, v) => MapEntry(k.toString(), List<int>.from(v as List? ?? const [])),
+          ) ??
+          const {},
     );
   }
 
@@ -305,9 +388,20 @@ class RoomModel extends Equatable {
         'heatCategories': heatCategories,
         'heatImageIds': heatImageIds,
         'heatRoundIndex': heatRoundIndex,
+        'skipVotes': skipVotes,
         'topicChoices': topicChoices,
         'placementPaidPlayerIds': placementPaidPlayerIds,
         'rematchRoomId': rematchRoomId,
+        if (roundInterludeUntilMs != null)
+          'roundInterludeUntilMs': roundInterludeUntilMs,
+        if (lastRoundImageId != null) 'lastRoundImageId': lastRoundImageId,
+        if (lastRoundWinnerName != null)
+          'lastRoundWinnerName': lastRoundWinnerName,
+        'mode': mode,
+        if (secretWord != null) 'secretWord': secretWord,
+        'lettersRevealedTiles': lettersRevealedTiles,
+        'lettersGuessed': lettersGuessed,
+        'lettersSolvedSlots': lettersSolvedSlots,
       };
 
   RoomModel copyWith({
@@ -353,9 +447,18 @@ class RoomModel extends Equatable {
     List<String>? heatCategories,
     List<String>? heatImageIds,
     int? heatRoundIndex,
+    List<String>? skipVotes,
     Map<String, List<String>>? topicChoices,
     List<String>? placementPaidPlayerIds,
     String? rematchRoomId,
+    int? roundInterludeUntilMs,
+    String? lastRoundImageId,
+    String? lastRoundWinnerName,
+    String? mode,
+    String? secretWord,
+    Map<String, List<int>>? lettersRevealedTiles,
+    Map<String, List<String>>? lettersGuessed,
+    Map<String, List<int>>? lettersSolvedSlots,
   }) =>
       RoomModel(
         id: id,
@@ -408,10 +511,20 @@ class RoomModel extends Equatable {
         heatCategories: heatCategories ?? this.heatCategories,
         heatImageIds: heatImageIds ?? this.heatImageIds,
         heatRoundIndex: heatRoundIndex ?? this.heatRoundIndex,
+        skipVotes: skipVotes ?? this.skipVotes,
         topicChoices: topicChoices ?? this.topicChoices,
         placementPaidPlayerIds:
             placementPaidPlayerIds ?? this.placementPaidPlayerIds,
         rematchRoomId: rematchRoomId ?? this.rematchRoomId,
+        roundInterludeUntilMs:
+            roundInterludeUntilMs ?? this.roundInterludeUntilMs,
+        lastRoundImageId: lastRoundImageId ?? this.lastRoundImageId,
+        lastRoundWinnerName: lastRoundWinnerName ?? this.lastRoundWinnerName,
+        mode: mode ?? this.mode,
+        secretWord: secretWord ?? this.secretWord,
+        lettersRevealedTiles: lettersRevealedTiles ?? this.lettersRevealedTiles,
+        lettersGuessed: lettersGuessed ?? this.lettersGuessed,
+        lettersSolvedSlots: lettersSolvedSlots ?? this.lettersSolvedSlots,
       );
 
   @override
@@ -461,8 +574,17 @@ class RoomModel extends Equatable {
         heatCategories,
         heatImageIds,
         heatRoundIndex,
+        skipVotes,
         topicChoices,
         placementPaidPlayerIds,
         rematchRoomId,
+        roundInterludeUntilMs,
+        lastRoundImageId,
+        lastRoundWinnerName,
+        mode,
+        secretWord,
+        lettersRevealedTiles,
+        lettersGuessed,
+        lettersSolvedSlots,
       ];
 }

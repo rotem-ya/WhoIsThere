@@ -7,6 +7,7 @@ import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
 import '../../screens/auth/auth_screen.dart';
 import '../../screens/game/game_board_screen.dart';
+import '../../screens/game/letters_game_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/friends/friends_screen.dart';
@@ -18,6 +19,11 @@ import '../../screens/splash/splash_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/store/store_screen.dart';
 import '../../screens/store/card_skins_screen.dart';
+import '../../screens/store/avatar_frames_screen.dart';
+import '../../screens/store/name_styles_screen.dart';
+import '../../screens/store/win_effects_screen.dart';
+import '../../screens/store/board_skins_screen.dart';
+import '../../screens/store/avatars_screen.dart';
 import '../../screens/voting/vote_difficulty_screen.dart';
 import '../../screens/voting/vote_image_screen.dart';
 import '../../screens/win/win_screen.dart';
@@ -86,6 +92,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             GameBoardScreen(roomId: state.pathParameters['roomId']!),
       ),
       GoRoute(
+        path: '/letters/:roomId',
+        builder: (context, state) =>
+            LettersGameScreen(roomId: state.pathParameters['roomId']!),
+      ),
+      GoRoute(
         path: '/win/:roomId',
         builder: (context, state) =>
             WinScreen(roomId: state.pathParameters['roomId']!),
@@ -105,6 +116,26 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/store/skins',
         builder: (context, state) => const CardSkinsScreen(),
+      ),
+      GoRoute(
+        path: '/store/frames',
+        builder: (context, state) => const AvatarFramesScreen(),
+      ),
+      GoRoute(
+        path: '/store/names',
+        builder: (context, state) => const NameStylesScreen(),
+      ),
+      GoRoute(
+        path: '/store/effects',
+        builder: (context, state) => const WinEffectsScreen(),
+      ),
+      GoRoute(
+        path: '/store/board',
+        builder: (context, state) => const BoardSkinsScreen(),
+      ),
+      GoRoute(
+        path: '/store/avatars',
+        builder: (context, state) => const AvatarsScreen(),
       ),
       GoRoute(
         path: '/settings',
@@ -157,7 +188,7 @@ class _RouterNotifier extends ChangeNotifier {
         final wasAnonymous = prevUser?.isAnonymous ?? true;
         final isNonAnonymous = nextUser != null && !nextUser.isAnonymous;
         if (wasAnonymous && isNonAnonymous) {
-          nextUser.getIdToken(true).catchError((_) {});
+          nextUser.getIdToken(true).catchError((_) => '');
         }
 
         if (wasLoggedIn != isLoggedIn) notifyListeners();

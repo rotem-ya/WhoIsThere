@@ -13,6 +13,14 @@ class PlayerModel extends Equatable {
   final int discoveredCount;
   final int playerRound;
   final int priorExposureCount;
+  // Equipped cosmetic avatar frame id ('none' = no ring).
+  final String frameId;
+  // Equipped cosmetic name colour/gradient id ('none' = default).
+  final String nameStyleId;
+  // Equipped cosmetic win-screen celebration effect id ('none' = default).
+  final String winEffectId;
+  // Chosen avatar face id ('auto' = generated face / photo).
+  final String avatarId;
 
   const PlayerModel({
     required this.id,
@@ -27,6 +35,10 @@ class PlayerModel extends Equatable {
     this.discoveredCount = 0,
     this.playerRound = 0,
     this.priorExposureCount = 0,
+    this.frameId = 'none',
+    this.nameStyleId = 'none',
+    this.winEffectId = 'none',
+    this.avatarId = 'auto',
   });
 
   factory PlayerModel.fromMap(String id, Map<String, dynamic> data) {
@@ -43,6 +55,10 @@ class PlayerModel extends Equatable {
       discoveredCount: data['discoveredCount'] ?? 0,
       playerRound: data['playerRound'] ?? 0,
       priorExposureCount: data['priorExposureCount'] ?? 0,
+      frameId: (data['frameId'] as String?) ?? 'none',
+      nameStyleId: (data['nameStyleId'] as String?) ?? 'none',
+      winEffectId: (data['winEffectId'] as String?) ?? 'none',
+      avatarId: (data['avatarId'] as String?) ?? 'auto',
     );
   }
 
@@ -58,6 +74,10 @@ class PlayerModel extends Equatable {
         'discoveredCount': discoveredCount,
         'playerRound': playerRound,
         'priorExposureCount': priorExposureCount,
+        'frameId': frameId,
+        'nameStyleId': nameStyleId,
+        'winEffectId': winEffectId,
+        'avatarId': avatarId,
       };
 
   PlayerModel copyWith({
@@ -72,6 +92,10 @@ class PlayerModel extends Equatable {
     int? discoveredCount,
     int? playerRound,
     int? priorExposureCount,
+    String? frameId,
+    String? nameStyleId,
+    String? winEffectId,
+    String? avatarId,
   }) =>
       PlayerModel(
         id: id,
@@ -86,6 +110,10 @@ class PlayerModel extends Equatable {
         discoveredCount: discoveredCount ?? this.discoveredCount,
         playerRound: playerRound ?? this.playerRound,
         priorExposureCount: priorExposureCount ?? this.priorExposureCount,
+        frameId: frameId ?? this.frameId,
+        nameStyleId: nameStyleId ?? this.nameStyleId,
+        winEffectId: winEffectId ?? this.winEffectId,
+        avatarId: avatarId ?? this.avatarId,
       );
 
   @override
@@ -101,5 +129,9 @@ class PlayerModel extends Equatable {
         discoveredCount,
         playerRound,
         priorExposureCount,
+        frameId,
+        nameStyleId,
+        winEffectId,
+        avatarId,
       ];
 }

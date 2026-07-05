@@ -17,6 +17,8 @@ import '../core/constants/economy_config.dart';
 import '../core/constants/game_categories.dart';
 import '../core/constants/game_constants.dart';
 import '../core/utils/room_code_generator.dart';
+import '../core/utils/letters_matcher.dart';
+import '../widgets/game/letter_bank_input.dart' show canonicalizeGeresh;
 import 'content_manifest_service.dart';
 import 'qa_logger_service.dart';
 
@@ -217,6 +219,10 @@ class RoomService {
               localDefault: place['is_active'] != false,
             ))
         .map(_localPlaceToImage)
+        // Apply any live admin override (image/text) to the bundled item — the
+        // image swaps in immediately when published & cached, and falls back to
+        // the bundled asset once the admin clears the override.
+        .map(manifest.resolveBundled)
         .toList(growable: false);
 
     final merged = <GameImageModel>[
@@ -225,11 +231,13 @@ class RoomService {
     ];
     if (merged.isNotEmpty) return merged;
 
-    // Safety net — ignore the manifest and return bundled defaults.
+    // Safety net — ignore the manifest and return bundled defaults (overrides
+    // are a no-op here when the manifest is empty).
     return raw
         .where(inAllowlist)
         .where((place) => place['is_active'] != false)
         .map(_localPlaceToImage)
+        .map(manifest.resolveBundled)
         .toList(growable: false);
   }
 
@@ -292,6 +300,10 @@ class RoomService {
     final userSnap = await _firestore.doc('users/$effectiveHostId').get();
     QaLoggerService.instance.log('ROOM', 'CREATE_ROOM_USER_READ_OK exists=${userSnap.exists}');
     final cardSkinId = (userSnap.data()?['selectedCardSkin'] as String?) ?? 'default';
+    final hostFrameId = (userSnap.data()?['selectedAvatarFrame'] as String?) ?? 'none';
+    final hostNameStyleId = (userSnap.data()?['selectedNameStyle'] as String?) ?? 'none';
+    final hostWinEffectId = (userSnap.data()?['selectedWinEffect'] as String?) ?? 'none';
+    final hostAvatarId = (userSnap.data()?['selectedAvatar'] as String?) ?? 'auto';
     final hostTotalPoints = (userSnap.data()?['totalPoints'] as int?) ?? 0;
     final hostDiscoveredCount =
         (userSnap.data()?['discoveredImageIds'] as List?)?.length ?? 0;
@@ -306,6 +318,10 @@ class RoomService {
       discoveredCount: hostDiscoveredCount,
       playerRound: hostRound,
       isHost: true,
+      frameId: hostFrameId,
+      nameStyleId: hostNameStyleId,
+      winEffectId: hostWinEffectId,
+      avatarId: hostAvatarId,
     );
 
     final players = <String, PlayerModel>{effectiveHostId: host};
@@ -418,6 +434,14 @@ class RoomService {
     final joiningTotalPoints = (joiningUserSnap.data()?['totalPoints'] as int?) ?? 0;
     final joiningDiscoveredCount =
         (joiningUserSnap.data()?['discoveredImageIds'] as List?)?.length ?? 0;
+    final joiningFrameId =
+        (joiningUserSnap.data()?['selectedAvatarFrame'] as String?) ?? 'none';
+    final joiningNameStyleId =
+        (joiningUserSnap.data()?['selectedNameStyle'] as String?) ?? 'none';
+    final joiningWinEffectId =
+        (joiningUserSnap.data()?['selectedWinEffect'] as String?) ?? 'none';
+    final joiningAvatarId =
+        (joiningUserSnap.data()?['selectedAvatar'] as String?) ?? 'auto';
     final joiningRound = await computePlayerRound(userId);
 
     final newPlayer = PlayerModel(
@@ -428,6 +452,10 @@ class RoomService {
       totalPoints: joiningTotalPoints,
       discoveredCount: joiningDiscoveredCount,
       playerRound: joiningRound,
+      frameId: joiningFrameId,
+      nameStyleId: joiningNameStyleId,
+      winEffectId: joiningWinEffectId,
+      avatarId: joiningAvatarId,
     );
 
     await doc.reference.update({
@@ -462,8 +490,56 @@ class RoomService {
       isPublicRoom: false,
       difficulty: old.selectedDifficulty ?? Difficulty.easy,
     );
-    await oldDoc.reference.update({'rematchRoomId': newRoom.id});
-    return newRoom.id;
+    return _claimRematchSlot(oldDoc.reference, newRoom.id);
+  }
+
+  /// "Play again" for the letters duel. Same contract as [createRematch] but
+  /// clones a letters room (private, no bot) so the human opponent can rejoin
+  /// via the stamped [rematchRoomId]. Returns null if the old room is gone.
+  Future<String?> createLettersRematch({
+    required String oldRoomId,
+    required String hostId,
+    required String hostName,
+    String? hostPhotoUrl,
+  }) async {
+    final oldDoc = await _rooms.doc(oldRoomId).get();
+    if (!oldDoc.exists) return null;
+    final old = RoomModel.fromFirestore(oldDoc);
+    final existing = old.rematchRoomId;
+    if (existing != null && existing.isNotEmpty) return existing;
+
+    final newRoom = await createLettersRoom(
+      hostId: hostId,
+      hostName: hostName,
+      hostPhotoUrl: hostPhotoUrl,
+      solo: false,
+      isPublicRoom: false,
+    );
+    return _claimRematchSlot(oldDoc.reference, newRoom.id);
+  }
+
+  /// Stamps [newRoomId] as the old room's rematch target — atomically, so two
+  /// players tapping "play again" at the same moment can't split the group
+  /// across two rooms. The race loser's duplicate room is deleted and the
+  /// winner's id is returned; callers must join whatever id comes back.
+  Future<String> _claimRematchSlot(
+      DocumentReference oldRef, String newRoomId) async {
+    final winner = await _firestore.runTransaction<String>((tx) async {
+      final snap = await tx.get(oldRef);
+      final data = snap.data() as Map<String, dynamic>?;
+      final current = data?['rematchRoomId'] as String?;
+      if (current != null && current.isNotEmpty) return current;
+      tx.update(oldRef, {'rematchRoomId': newRoomId});
+      return newRoomId;
+    });
+    if (winner != newRoomId) {
+      try {
+        await _rooms.doc(newRoomId).delete();
+      } catch (_) {}
+      QaLoggerService.instance.log(
+          'ROOM', 'REMATCH_RACE_LOST dup=$newRoomId winner=$winner');
+    }
+    return winner;
   }
 
   /// Joins a rematch room created via [createRematch] (looked up by id, then
@@ -513,6 +589,22 @@ class RoomService {
     });
   }
 
+  /// True if EVERY image baked into [room] is still admin-active. A waiting room
+  /// created before an admin hide keeps its baked content (selectedImageId /
+  /// heatImageIds / letters secret), so reusing it would resurrect a hidden
+  /// item. Skipping such rooms makes every game mode honor admin hides — the
+  /// joiner just gets a fresh room whose content is picked through the active
+  /// filter (_loadLocalImages). Items the manifest doesn't list stay active.
+  bool _roomContentActive(RoomModel room) {
+    final manifest = ContentManifestService.instance;
+    final ids = room.heatImageIds.isNotEmpty
+        ? room.heatImageIds
+        : (room.selectedImageId == null || room.selectedImageId!.isEmpty
+            ? const <String>[]
+            : <String>[room.selectedImageId!]);
+    return ids.every((id) => manifest.isActive(id, localDefault: true));
+  }
+
   /// Finds a waiting public room for quick match where playerRound matches.
   /// Requires Firestore composite index: phase + isPublicRoom + playerRound + createdAt
   Future<RoomModel?> findPublicRoom(int playerRound) async {
@@ -527,6 +619,8 @@ class RoomService {
       if (snap.docs.isEmpty) return null;
       final room = RoomModel.fromFirestore(snap.docs.first);
       if (room.players.length >= GameConstants.maxPlayers) return null;
+      // Don't reuse a room whose baked image was hidden by the admin.
+      if (!_roomContentActive(room)) return null;
       return room;
     } catch (_) {
       return null;
@@ -549,6 +643,8 @@ class RoomService {
       for (final doc in snap.docs) {
         final room = RoomModel.fromFirestore(doc);
         if (room.players.length >= GameConstants.maxPlayers) continue;
+        // Skip rooms whose baked image was hidden by the admin after creation.
+        if (!_roomContentActive(room)) continue;
         final imgId = room.selectedImageId;
         if (imgId == null || imgId.isEmpty) continue;
         final myExp = myExposure[imgId] ?? 0;
@@ -1104,9 +1200,15 @@ class RoomService {
     }
     // Round count grows with the host's picks, but never below 3 / players.
     final rounds = max(max(room.players.length, 3), topics.length);
-    // Fill any remaining slots randomly (min floor / unchosen players).
+    // Fill any remaining slots (min floor / unchosen players) by CYCLING the
+    // topics that were chosen — so picking a single category gives a whole
+    // heat in that category (a different image per round). Only when nothing
+    // at all was chosen do the slots fall back to random topics.
+    final chosen = List<String>.from(topics);
+    var fillIdx = 0;
     while (topics.length < rounds) {
-      topics.add(randTopic());
+      topics.add(
+          chosen.isEmpty ? randTopic() : chosen[fillIdx++ % chosen.length]);
     }
     return _buildHeatForTopics(topics, room.players);
   }
@@ -1145,18 +1247,33 @@ class RoomService {
       'revealCount': 0,
       'revealCycleId': FieldValue.increment(1),
       'winnerId': null,
+      // Fresh item → drop any skip-item votes from the previous one.
+      'skipVotes': <String>[],
     };
   }
 
+  /// Short synced pause between heat rounds: every client shows the finished
+  /// image + answer + solver until this many ms pass, then the next round's
+  /// reveals begin together (the reveal deadline is pushed past the pause).
+  static const int heatInterludeMs = 4000;
+
   /// Update map that advances a heat to its next round (next image/category).
-  Map<String, dynamic> _heatAdvanceUpdates(RoomModel room, int nowMs) {
+  /// [winnerName] is the solver's display name (null when the board filled
+  /// with no correct guess) — shown on the between-rounds interlude.
+  Map<String, dynamic> _heatAdvanceUpdates(RoomModel room, int nowMs,
+      {String? winnerName}) {
     final next = room.heatRoundIndex + 1;
     return {
-      ..._roundResetUpdates(room.gridSize, nowMs),
+      // Base the round reset at the END of the interlude so the first reveal
+      // of the new image fires after the pause — synchronized for everyone.
+      ..._roundResetUpdates(room.gridSize, nowMs + heatInterludeMs),
       'phase': GamePhase.playing.name,
       'heatRoundIndex': next,
       'selectedImageId': room.heatImageIds[next],
       'selectedCategory': room.heatCategories[next],
+      'roundInterludeUntilMs': nowMs + heatInterludeMs,
+      'lastRoundImageId': room.selectedImageId,
+      'lastRoundWinnerName': winnerName,
     };
   }
 
@@ -1188,55 +1305,107 @@ class RoomService {
     return winner;
   }
 
-  Future<void> _collectEntryFees(
-    String roomId,
-    Map<String, PlayerModel> players,
-    int entryFee,
-  ) async {
-    final humanIds = players.entries
-        .where((e) => !e.value.isBot)
-        .map((e) => e.key)
-        .toList();
+  /// חי-צומח-דומם: an active human player toggles a vote to REPLACE the current
+  /// item (used when nobody recognizes it). Allowed only once ≥30% of the board
+  /// is revealed. When a majority of human players have voted, the item is
+  /// swapped for a fresh random one from the SAME category and the reveal
+  /// restarts — the round count is unchanged. Bots are neutral: they never vote
+  /// and are never counted (so a lone human vs bots needs only their own vote,
+  /// and a real 1-on-1 needs both humans).
+  Future<void> voteSkipItem({
+    required String roomId,
+    required String userId,
+  }) async {
+    try {
+      // Read once to validate and pre-pick a replacement image. The asset/
+      // exposure load is async and can't run inside the Firestore transaction,
+      // so we prepare a candidate first and only apply it if the vote carries.
+      final preDoc = await _rooms.doc(roomId).get();
+      if (!preDoc.exists) return;
+      final pre = RoomModel.fromFirestore(preDoc);
+      if (!pre.isHeat || pre.phase != GamePhase.playing) return;
+      final voter = pre.players[userId];
+      if (voter == null || voter.isBot) return; // bots are neutral
 
-    var potCollected = 0;
-    for (final uid in humanIds) {
+      final totalCells = pre.gridSize * pre.gridSize;
+      final ratio = totalCells > 0 ? pre.placedPieces.length / totalCells : 0.0;
+      if (ratio < RoomModel.kSkipVoteMinRevealRatio) return;
+
+      final catId = (pre.heatCategories.isNotEmpty &&
+              pre.heatRoundIndex < pre.heatCategories.length)
+          ? pre.heatCategories[pre.heatRoundIndex]
+          : pre.selectedCategory;
+
+      GameImageModel? replacement;
       try {
-        await _firestore.runTransaction((tx) async {
-          final walletDoc = await tx.get(_walletRef(uid));
-          final wallet = walletDoc.exists
-              ? UserEconomyModel.fromFirestore(
-                  uid, walletDoc.data() as Map<String, dynamic>)
-              : null;
-          final before = wallet?.coins ?? 0;
-          if (before < entryFee) return; // insufficient — UI should have blocked this
-          final after = before - entryFee;
-          tx.set(_walletRef(uid), {'coins': after}, SetOptions(merge: true));
-          final txId = _uuid.v4();
-          tx.set(_txRef(uid, txId), EconomyTransactionModel(
-            id: txId,
-            type: TransactionType.roomEntryFee,
-            delta: -entryFee,
-            balanceAfter: after,
-            roomId: roomId,
-            createdAt: DateTime.now().toUtc(),
-            meta: {'entryFee': entryFee},
-          ).toFirestore());
-          potCollected += entryFee;
-        });
-      } catch (e) {
-        QaLoggerService.instance.log('ECONOMY',
-            'ENTRY_FEE_COLLECT_ERROR uid=${uid.substring(0, uid.length.clamp(0, 6))} error=$e');
-      }
-    }
+        final pool = await _loadLocalImages(categoryId: catId);
+        if (pool.isNotEmpty) {
+          final usedIds = <String>{
+            ...pre.heatImageIds,
+            if (pre.selectedImageId != null) pre.selectedImageId!,
+          };
+          final fresh = pool.where((i) => !usedIds.contains(i.id)).toList();
+          final source = fresh.isNotEmpty
+              ? fresh
+              : pool.where((i) => i.id != pre.selectedImageId).toList();
+          if (source.isNotEmpty) {
+            replacement = await _pickSmartImage(source, pre.players);
+          }
+        }
+      } catch (_) {}
 
-    if (potCollected > 0) {
-      await _rooms.doc(roomId).update({
-        'potTotal': FieldValue.increment(potCollected),
+      await _firestore.runTransaction((tx) async {
+        final doc = await tx.get(_rooms.doc(roomId));
+        if (!doc.exists) return;
+        final room = RoomModel.fromFirestore(doc);
+        if (!room.isHeat || room.phase != GamePhase.playing) return;
+        final p = room.players[userId];
+        if (p == null || p.isBot) return;
+
+        final cells = room.gridSize * room.gridSize;
+        final r = cells > 0 ? room.placedPieces.length / cells : 0.0;
+        if (r < RoomModel.kSkipVoteMinRevealRatio) return;
+
+        // Toggle this player's vote.
+        final votes = [...room.skipVotes];
+        votes.contains(userId) ? votes.remove(userId) : votes.add(userId);
+
+        // Majority of ACTIVE HUMAN players (bots excluded entirely).
+        final humanIds = room.players.values
+            .where((pl) => !pl.isBot && !pl.isEliminated)
+            .map((pl) => pl.id)
+            .toSet();
+        final validVotes = votes.where(humanIds.contains).length;
+        final threshold = (humanIds.length ~/ 2) + 1;
+        final passed = humanIds.isNotEmpty && validVotes >= threshold;
+
+        if (passed && replacement != null) {
+          final nowMs = DateTime.now().millisecondsSinceEpoch;
+          final newIds = [...room.heatImageIds];
+          if (room.heatRoundIndex < newIds.length) {
+            newIds[room.heatRoundIndex] = replacement.id;
+          }
+          tx.update(_rooms.doc(roomId), {
+            ..._roundResetUpdates(room.gridSize, nowMs),
+            'phase': GamePhase.playing.name,
+            'selectedImageId': replacement.id,
+            'selectedCategory': catId,
+            'heatImageIds': newIds,
+            'skipVotes': <String>[],
+          });
+          QaLoggerService.instance.log('HEAT',
+              'SKIP_RESOLVED votes=$validVotes/$threshold new=${replacement.id}');
+        } else {
+          tx.update(_rooms.doc(roomId), {'skipVotes': votes});
+          QaLoggerService.instance
+              .log('HEAT', 'SKIP_VOTE votes=$validVotes/$threshold');
+        }
       });
-      QaLoggerService.instance.log('ECONOMY',
-          'ENTRY_FEES_COLLECTED total=$potCollected players=${humanIds.length}');
+    } catch (e) {
+      QaLoggerService.instance.log('HEAT', 'SKIP_VOTE_ERROR $e');
     }
   }
+
 
   /// Called by each player's own client when the game starts.
   /// Uses an idempotency list (entryFeePaidPlayerIds) so double-payment is impossible.
@@ -2235,6 +2404,17 @@ class RoomService {
         return;
       }
 
+      // Parallel-guessing race: the round may have advanced (someone else
+      // solved it) between this player opening the input and submitting.
+      // Their guess targets the PREVIOUS image — never judge it against the
+      // new round (it could wrongly penalise, or worse, "solve" a round the
+      // player hasn't even seen).
+      if (room.selectedImageId != null && image.id != room.selectedImageId) {
+        QaLoggerService.instance.log('GUESS',
+            'TX_ABORT name=submitAnswer reason=stale_image submitted=${image.id} current=${room.selectedImageId}');
+        return;
+      }
+
       isCorrect = image.isCorrectAnswer(guess);
 
       if (isCorrect) {
@@ -2242,7 +2422,11 @@ class RoomService {
         // Heat mid-round: award score, then advance to the next round (board
         // reset) instead of finishing. Cumulative score persists.
         if (room.isHeat && !room.isLastHeatRound) {
-          final adv = _heatAdvanceUpdates(room, DateTime.now().millisecondsSinceEpoch);
+          final adv = _heatAdvanceUpdates(
+            room,
+            DateTime.now().millisecondsSinceEpoch,
+            winnerName: room.players[userId]?.name,
+          );
           adv['players.$userId.score'] = FieldValue.increment(difficulty.winReward);
           adv['lastGuessEvent'] = {'playerId': userId, 'guess': guess, 'isCorrect': true};
           adv['guessCount'] = FieldValue.increment(1);
@@ -2574,5 +2758,326 @@ class RoomService {
     // Western Wall inside חי-צומח-דומם heats whenever an id failed to resolve.
     QaLoggerService.instance.log('GAME', 'GET_IMAGE_UNRESOLVED id=$imageId');
     return null;
+  }
+
+  // ── Letters game (משחק האותיות) ────────────────────────────────────────────
+
+  /// Grid size for the letters board. 6×6 = 36 tiles — enough that revealing
+  /// 4/2 tiles per guess builds the picture gradually without exposing it in a
+  /// couple of turns.
+  static const Difficulty _lettersDifficulty = Difficulty.easy;
+
+  /// Picks a random playable image across ALL content categories (the answer is
+  /// its Hebrew name, no topic shown). "Playable" = a normalized answer of 2..10
+  /// letters so the Wordle slots stay reasonable.
+  Future<GameImageModel?> _pickRandomLettersImage(
+    Map<String, PlayerModel> players,
+  ) async {
+    final cats = <String>{GameCategories.israelPlaces, ...GameCategories.fastHeat};
+    final pool = <GameImageModel>[];
+    for (final c in cats) {
+      // Respect admin/default topic disabling — a disabled topic (e.g. birds,
+      // plants) must not supply letters-game answers either.
+      if (!ContentManifestService.instance.isCategoryActive(c)) continue;
+      pool.addAll(await _loadLocalImages(categoryId: c));
+    }
+    if (pool.isEmpty) return null;
+    final playable = pool.where((img) {
+      final n = buildLettersPuzzle(img.answer).length;
+      return n >= 2 && n <= 10;
+    }).toList();
+    final source = playable.isNotEmpty ? playable : pool;
+    return _pickSmartImage(source, players);
+  }
+
+  /// Creates a letters duel room (mode='letters'). Three flavors:
+  ///  • solo: 1 human + 1 bot, starts immediately (phase=playing).
+  ///  • friends ([solo]=false, [isPublicRoom]=false): private waiting room with
+  ///    a join code; the 2nd human triggers the start.
+  ///  • random ([solo]=false, [isPublicRoom]=true): public waiting room for
+  ///    quick-match; a bot fills in if no one joins.
+  /// The secret image is picked at create so both players share it.
+  Future<RoomModel> createLettersRoom({
+    required String hostId,
+    required String hostName,
+    String? hostPhotoUrl,
+    bool solo = true,
+    bool isPublicRoom = false,
+  }) async {
+    final code = RoomCodeGenerator.generate();
+    final docRef = _rooms.doc();
+
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      try { await currentUser.getIdToken(true); } catch (_) {}
+    }
+    final effectiveHostId = currentUser?.uid ?? hostId;
+
+    final userSnap = await _firestore.doc('users/$effectiveHostId').get();
+    final cardSkinId = (userSnap.data()?['selectedCardSkin'] as String?) ?? 'default';
+    final hostFrameId = (userSnap.data()?['selectedAvatarFrame'] as String?) ?? 'none';
+    final hostNameStyleId = (userSnap.data()?['selectedNameStyle'] as String?) ?? 'none';
+    final hostWinEffectId = (userSnap.data()?['selectedWinEffect'] as String?) ?? 'none';
+    final hostAvatarId = (userSnap.data()?['selectedAvatar'] as String?) ?? 'auto';
+    final hostTotalPoints = (userSnap.data()?['totalPoints'] as int?) ?? 0;
+    final hostDiscoveredCount =
+        (userSnap.data()?['discoveredImageIds'] as List?)?.length ?? 0;
+    final hostRound = await computePlayerRound(effectiveHostId);
+
+    final host = PlayerModel(
+      id: effectiveHostId,
+      name: hostName,
+      photoUrl: hostPhotoUrl,
+      score: 0,
+      totalPoints: hostTotalPoints,
+      discoveredCount: hostDiscoveredCount,
+      playerRound: hostRound,
+      isHost: true,
+      frameId: hostFrameId,
+      nameStyleId: hostNameStyleId,
+      winEffectId: hostWinEffectId,
+      avatarId: hostAvatarId,
+    );
+
+    final players = <String, PlayerModel>{effectiveHostId: host};
+    if (solo) {
+      final botId = 'virtual_2_${docRef.id}';
+      final botProfile = _randomBotProfile();
+      players[botId] = PlayerModel(
+        id: botId,
+        name: _randomBotName({host.name}),
+        score: 0,
+        isBot: true,
+        discoveredCount: botProfile.discoveredCount,
+        totalPoints: botProfile.totalPoints,
+      );
+    }
+
+    final image = await _pickRandomLettersImage(players);
+    final started = solo; // solo starts now; friends/random wait for a 2nd player
+    final turnOrder = started ? (players.keys.toList()..shuffle()) : <String>[];
+
+    final room = RoomModel(
+      id: docRef.id,
+      code: code,
+      hostId: effectiveHostId,
+      players: players,
+      createdAt: DateTime.now(),
+      entryFee: 0, // letters is free
+      cardSkinId: cardSkinId,
+      isPublicRoom: isPublicRoom,
+      playerRound: hostRound,
+      phase: started ? GamePhase.playing : GamePhase.waiting,
+      selectedImageId: image?.id,
+      selectedDifficulty: _lettersDifficulty,
+      turnOrder: turnOrder,
+      currentTurnIndex: 0,
+      mode: 'letters',
+      secretWord: image?.answer,
+      lettersRevealedTiles: started ? {for (final id in players.keys) id: const []} : const {},
+      lettersGuessed: started ? {for (final id in players.keys) id: const []} : const {},
+      lettersSolvedSlots: started ? {for (final id in players.keys) id: const []} : const {},
+    );
+
+    QaLoggerService.instance.log('LETTERS',
+        'CREATE id=${docRef.id} solo=$solo public=$isPublicRoom img=${image?.id} '
+        'slots=${image == null ? 0 : buildLettersPuzzle(image.answer).length}');
+    await docRef.set(room.toMap());
+    return room;
+  }
+
+  /// Finds a public letters room waiting for an opponent (quick-match). Reuses
+  /// the existing waiting/public index and filters mode in code (no new index).
+  Future<RoomModel?> findLettersMatch(String userId) async {
+    try {
+      final snap = await _rooms
+          .where('phase', isEqualTo: GamePhase.waiting.name)
+          .where('isPublicRoom', isEqualTo: true)
+          .limit(10)
+          .get();
+      for (final doc in snap.docs) {
+        final room = RoomModel.fromFirestore(doc);
+        if (!room.isLetters) continue;
+        if (room.hostId == userId) continue;
+        if (room.players.containsKey(userId)) continue;
+        if (room.players.length >= 2) continue;
+        // Skip a room whose secret word's item was hidden by the admin after
+        // the room was created (startLettersGame also re-picks as a safety net).
+        if (!_roomContentActive(room)) continue;
+        return room;
+      }
+    } catch (e) {
+      QaLoggerService.instance.log('LETTERS', 'MATCH_FIND_FAILED $e');
+    }
+    return null;
+  }
+
+  /// Starts a waiting letters room. Initializes per-player boards + turn order
+  /// and flips to playing. When [addBotIfAlone] and only the host is present, a
+  /// bot is added so a quick-match never strands the player. Host-only caller.
+  Future<void> startLettersGame(String roomId, {bool addBotIfAlone = false}) async {
+    // Safety net for admin hides: if the secret word's item was deactivated
+    // after this room was created, pick a fresh active replacement BEFORE the
+    // transaction (image loading is async). Guarantees a started game never
+    // uses a hidden item, even for friends rooms created before the hide.
+    GameImageModel? replacement;
+    try {
+      final pre = await _rooms.doc(roomId).get();
+      if (pre.exists) {
+        final room = RoomModel.fromFirestore(pre);
+        if (room.isLetters &&
+            room.phase == GamePhase.waiting &&
+            !_roomContentActive(room)) {
+          replacement = await _pickRandomLettersImage(room.players);
+          QaLoggerService.instance.log('LETTERS',
+              'SECRET_REPLACED_HIDDEN old=${room.selectedImageId} new=${replacement?.id}');
+        }
+      }
+    } catch (_) {}
+
+    await _firestore.runTransaction((tx) async {
+      final roomDoc = await tx.get(_rooms.doc(roomId));
+      if (!roomDoc.exists) return;
+      final room = RoomModel.fromFirestore(roomDoc);
+      if (!room.isLetters || room.phase != GamePhase.waiting) return;
+
+      final players = Map<String, PlayerModel>.from(room.players);
+      final updates = <String, dynamic>{};
+      final replacementImage = replacement;
+      if (replacementImage != null) {
+        updates['secretWord'] = replacementImage.answer;
+        updates['selectedImageId'] = replacementImage.id;
+      }
+
+      if (players.length < 2) {
+        if (!addBotIfAlone) return; // can't start a duel alone yet
+        final botId = 'virtual_2_$roomId';
+        final profile = _randomBotProfile();
+        final bot = PlayerModel(
+          id: botId,
+          name: _randomBotName(players.values.map((p) => p.name).toSet()),
+          score: 0,
+          isBot: true,
+          discoveredCount: profile.discoveredCount,
+          totalPoints: profile.totalPoints,
+        );
+        players[botId] = bot;
+        updates['players.$botId'] = bot.toMap();
+      }
+
+      final ids = players.keys.toList()..shuffle();
+      updates['turnOrder'] = ids;
+      updates['currentTurnIndex'] = 0;
+      updates['phase'] = GamePhase.playing.name;
+      updates['lettersRevealedTiles'] = {for (final id in ids) id: <int>[]};
+      updates['lettersGuessed'] = {for (final id in ids) id: <String>[]};
+      updates['lettersSolvedSlots'] = {for (final id in ids) id: <int>[]};
+      tx.update(_rooms.doc(roomId), updates);
+      QaLoggerService.instance.log('LETTERS', 'START id=$roomId players=${ids.length}');
+    });
+  }
+
+  /// Result of a single letter guess in the letters game.
+  /// [accepted] is false when the guess was rejected (not your turn / slot taken
+  /// / game over) and nothing changed.
+  /// One turn = guess [letter] for [slotIndex]. Per-slot Wordle feedback drives
+  /// the per-player tile reveal; the first player to fill every slot wins.
+  Future<({bool accepted, LetterFeedback feedback, int tilesRevealed, bool win})>
+      guessLetterInLettersGame({
+    required String roomId,
+    required String userId,
+    required int slotIndex,
+    required String letter,
+  }) async {
+    var accepted = false;
+    var feedback = LetterFeedback.absent;
+    var tilesRevealed = 0;
+    var win = false;
+    String? finishedImageId;
+    Map<String, PlayerModel>? finishedPlayers;
+
+    await _firestore.runTransaction((tx) async {
+      final roomDoc = await tx.get(_rooms.doc(roomId));
+      if (!roomDoc.exists) return;
+      final room = RoomModel.fromFirestore(roomDoc);
+
+      if (room.phase != GamePhase.playing || !room.isLetters) return;
+      if (room.currentTurnUserId != userId) return; // not your turn
+      final word = room.secretWord;
+      if (word == null || word.isEmpty) return;
+
+      final puzzle = buildLettersPuzzle(word);
+      if (slotIndex < 0 || slotIndex >= puzzle.length) return;
+
+      final solved = List<int>.from(room.lettersSolvedSlots[userId] ?? const []);
+      if (solved.contains(slotIndex)) return; // slot already locked
+
+      accepted = true;
+      feedback = evaluateGuess(puzzle, slotIndex, letter);
+      // Store the exact (geresh-canonical) letter the player tried, so the
+      // keyboard colors a base letter and its final form independently.
+      final norm = canonicalizeGeresh(letter).trim();
+
+      final updates = <String, dynamic>{
+        'lettersGuessed.$userId': FieldValue.arrayUnion([norm]),
+      };
+
+      // Reveal tiles on THIS player's board only.
+      tilesRevealed = tilesForFeedback(feedback);
+      if (tilesRevealed > 0) {
+        final revealed =
+            List<int>.from(room.lettersRevealedTiles[userId] ?? const []);
+        final revealedSet = revealed.toSet();
+        const gridSize = kLettersGridSize;
+        const total = gridSize * gridSize;
+        final available = [
+          for (var i = 0; i < total; i++)
+            if (!revealedSet.contains(i)) i
+        ];
+        final rng = Random();
+        final newlyRevealed = <int>[];
+        for (var i = 0; i < tilesRevealed && available.isNotEmpty; i++) {
+          final idx = _pickCheckerboardTile(available, revealedSet, gridSize, rng);
+          available.remove(idx);
+          revealedSet.add(idx);
+          newlyRevealed.add(idx);
+        }
+        if (newlyRevealed.isNotEmpty) {
+          updates['lettersRevealedTiles.$userId'] =
+              FieldValue.arrayUnion(newlyRevealed);
+        }
+      }
+
+      if (feedback == LetterFeedback.exact) {
+        solved.add(slotIndex);
+        updates['lettersSolvedSlots.$userId'] = FieldValue.arrayUnion([slotIndex]);
+      }
+
+      if (isPuzzleComplete(puzzle, solved.toSet())) {
+        win = true;
+        finishedImageId = room.selectedImageId;
+        finishedPlayers = room.players;
+        updates['phase'] = GamePhase.finished.name;
+        updates['winnerId'] = userId;
+        updates['turnPhase'] = TurnPhase.roundOver.name;
+      } else {
+        // Pass the turn to the other player.
+        updates['currentTurnIndex'] = room.currentTurnIndex + 1;
+      }
+
+      tx.update(_rooms.doc(roomId), updates);
+    });
+
+    QaLoggerService.instance.log('LETTERS',
+        'GUESS uid=${_short(userId)} slot=$slotIndex letter=$letter '
+        'accepted=$accepted fb=${feedback.name} tiles=$tilesRevealed win=$win');
+
+    if (win && finishedImageId != null && finishedImageId!.isNotEmpty &&
+        finishedPlayers != null) {
+      // The secret image counts as discovered for the real player(s) present.
+      _recordDiscoveredForAll(finishedPlayers!, finishedImageId!);
+    }
+
+    return (accepted: accepted, feedback: feedback, tilesRevealed: tilesRevealed, win: win);
   }
 }

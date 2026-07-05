@@ -5,9 +5,23 @@ import 'package:flutter/services.dart';
 
 import '../economy/coin_icon.dart';
 
-/// Removes geresh / gershayim marks (both ASCII and Hebrew forms). There is no
-/// geresh key in the letter bank, so words like ג'ירפה are spelled and matched
-/// as גירפה — the mark is ignored on both the slots and the comparison.
+/// The single canonical geresh the geresh key inserts. The content data spells
+/// words like ג'ירפה inconsistently (Hebrew ׳ or an ASCII apostrophe), so every
+/// mark is canonicalized to this one form for both the slots and comparisons.
+const String kGeresh = "'";
+
+/// Canonicalizes geresh / gershayim marks (Hebrew ׳ ״ and ASCII ' ") to
+/// [kGeresh] — it KEEPS the mark (does not strip it) so a word like ג'ירפה
+/// keeps its geresh as a real, type-able slot.
+String canonicalizeGeresh(String s) => s
+    .replaceAll('׳', kGeresh) // ׳ Hebrew punctuation geresh
+    .replaceAll('״', kGeresh) // ״ Hebrew punctuation gershayim
+    .replaceAll('"', kGeresh) // ASCII quote
+    .replaceAll("'", kGeresh); // ASCII apostrophe (already canonical)
+
+/// Removes geresh / gershayim marks entirely. Kept for the forgiving place-name
+/// match (so גירפה and ג'ירפה compare equal there); the letter games use
+/// [canonicalizeGeresh] instead so the geresh stays a real slot.
 String stripGeresh(String s) => s
     .replaceAll('׳', '') // ׳ Hebrew punctuation geresh
     .replaceAll('״', '') // ״ Hebrew punctuation gershayim
@@ -22,38 +36,15 @@ String normalizeHebrewFinals(String s) => stripGeresh(s)
     .replaceAll('ץ', 'צ')
     .replaceAll(' ', '');
 
-// The keyboard holds only the 22 base letters — never the final forms
-// (ך ם ן ף ץ). Guesses are matched case-insensitively to final forms
-// (see [normalizeHebrewFinals]), so a base letter is always sufficient, and
-// showing both forms only duplicated keys and confused players. The correct
-// final form is rendered automatically in the answer slots (see [_finalForm]).
+// Full Hebrew keyboard — all 22 base letters, the 5 final forms (ך ם ן ף ץ),
+// and a geresh key ('). It mirrors the letters-game keyboard so every game
+// shows the same familiar layout, and the player types the exact letter form
+// they want (final forms and geresh included).
 const List<List<String>> _keyboardRows = [
-  ['פ', 'ו', 'ט', 'א', 'ר', 'ק'],
-  ['ל', 'ח', 'י', 'ע', 'כ', 'ג', 'ד', 'ש'],
-  ['ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז'],
+  ['פ', 'ם', 'ן', 'ו', 'ט', 'א', 'ר', 'ק'],
+  ['ף', 'ך', 'ל', 'ח', 'י', 'ע', 'כ', 'ג', 'ד', 'ש'],
+  ['ץ', 'ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז', kGeresh],
 ];
-
-// Base → final form, applied only to the last letter of a word so the built
-// word reads correctly even though the keyboard offers base letters only.
-const Map<String, String> _finalForm = {
-  'כ': 'ך',
-  'מ': 'ם',
-  'נ': 'ן',
-  'פ': 'ף',
-  'צ': 'ץ',
-};
-const Map<String, String> _baseForm = {
-  'ך': 'כ',
-  'ם': 'מ',
-  'ן': 'נ',
-  'ף': 'פ',
-  'ץ': 'צ',
-};
-
-/// Display form of a letter for an answer slot: final form at a word's end,
-/// base form anywhere else (mid-word final forms are never valid Hebrew).
-String _displayLetter(String letter, {required bool wordEnd}) =>
-    wordEnd ? (_finalForm[letter] ?? letter) : (_baseForm[letter] ?? letter);
 
 class LetterBankInput extends StatefulWidget {
   final String answer;
@@ -86,12 +77,7 @@ class LetterBankInput extends StatefulWidget {
 }
 
 class _LetterBankInputState extends State<LetterBankInput> {
-  static const Color _navy = Color(0xFF07101F);
-  static const Color _navySoft = Color(0xFF111B36);
-  static const Color _gold = Color(0xFFD4AF37);
   static const Color _goldLight = Color(0xFFFFE082);
-  static const Color _goldDark = Color(0xFFA1811A);
-  static const Color _cyan = Color(0xFF87CEEB);
 
   late List<int> _wordLengths;
   late List<String?> _filled;
@@ -138,7 +124,7 @@ class _LetterBankInputState extends State<LetterBankInput> {
   }
 
   void _resetForAnswer() {
-    final words = stripGeresh(widget.answer).trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
+    final words = canonicalizeGeresh(widget.answer).trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
     var total = 0;
     final lengths = <int>[];
     final letters = <String>[];
@@ -275,9 +261,7 @@ class _AnswerSlots extends StatelessWidget {
           final slots = <Widget>[];
           for (var i = 0; i < len; i++) {
             if (i > 0) slots.add(const SizedBox(width: slotGap));
-            final raw = idx < filled.length ? filled[idx] : null;
-            final shown =
-                raw == null ? null : _displayLetter(raw, wordEnd: i == len - 1);
+            final shown = idx < filled.length ? filled[idx] : null;
             slots.add(_Slot(letter: shown, size: slotSize));
             idx++;
           }

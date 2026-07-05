@@ -21,6 +21,7 @@ class UserModel extends Equatable {
   final int guessBlock5Count;
   final int guessBlock10Count;
   final int blackoutCardCount;
+  final int peekCardCount;
   final bool noAds;
   // Social: a short, shareable personal code others use to add you as a friend,
   // and the running total of points earned across friends games (the friends
@@ -46,6 +47,7 @@ class UserModel extends Equatable {
     this.guessBlock5Count = 0,
     this.guessBlock10Count = 0,
     this.blackoutCardCount = 0,
+    this.peekCardCount = 0,
     this.noAds = false,
     this.friendCode,
     this.friendsGamePoints = 0,
@@ -71,6 +73,7 @@ class UserModel extends Equatable {
       guessBlock5Count: (data['guessBlock5Count'] as int?) ?? 0,
       guessBlock10Count: (data['guessBlock10Count'] as int?) ?? 0,
       blackoutCardCount: (data['blackoutCardCount'] as int?) ?? 0,
+      peekCardCount: (data['peekCardCount'] as int?) ?? 0,
       noAds: (data['noAds'] as bool?) ?? false,
       friendCode: data['friendCode'] as String?,
       friendsGamePoints: (data['friendsGamePoints'] as int?) ?? 0,
@@ -112,6 +115,7 @@ class UserModel extends Equatable {
     int? guessBlock5Count,
     int? guessBlock10Count,
     int? blackoutCardCount,
+    int? peekCardCount,
     bool? noAds,
     String? friendCode,
     int? friendsGamePoints,
@@ -134,6 +138,7 @@ class UserModel extends Equatable {
         guessBlock5Count: guessBlock5Count ?? this.guessBlock5Count,
         guessBlock10Count: guessBlock10Count ?? this.guessBlock10Count,
         blackoutCardCount: blackoutCardCount ?? this.blackoutCardCount,
+        peekCardCount: peekCardCount ?? this.peekCardCount,
         noAds: noAds ?? this.noAds,
         friendCode: friendCode ?? this.friendCode,
         friendsGamePoints: friendsGamePoints ?? this.friendsGamePoints,
@@ -155,6 +160,7 @@ class UserModel extends Equatable {
         guessBlock5Count,
         guessBlock10Count,
         blackoutCardCount,
+        peekCardCount,
         noAds,
         friendCode,
         friendsGamePoints,

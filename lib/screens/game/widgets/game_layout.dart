@@ -5,6 +5,7 @@ import '../../../core/constants/game_categories.dart';
 import '../../../core/constants/game_constants.dart';
 import '../../../models/game_image_model.dart';
 import '../../../models/room_model.dart';
+import '../../../services/content_manifest_service.dart';
 import 'answer_slots.dart';
 import 'detective_toolbar.dart';
 import 'game_actions.dart';
@@ -35,6 +36,8 @@ class GameLayout extends StatelessWidget {
   final VoidCallback? onBuySecondHint;
   final VoidCallback? onGuess;
   final Future<bool> Function(String)? onGuessSubmit;
+  // Cancels the locally-opened guess input without submitting (no penalty).
+  final VoidCallback? onGuessCancel;
   // Parallel guessing: the guess input overlay is driven by a LOCAL flag so each
   // player can open their own input independently (no shared exclusive lock).
   final bool showGuessInput;
@@ -62,6 +65,8 @@ class GameLayout extends StatelessWidget {
   final VoidCallback? onBuyLetter;
   final int nextLetterPrice;
   final bool showBuyLetter;
+  // חי-צומח-דומם: vote to replace the current item (nobody recognizes it).
+  final VoidCallback? onVoteSkip;
 
   const GameLayout({
     required this.room,
@@ -83,6 +88,7 @@ class GameLayout extends StatelessWidget {
     required this.onRevealHint,
     required this.onGuess,
     required this.onGuessSubmit,
+    this.onGuessCancel,
     this.showGuessInput = false,
     this.localGuessDeadlineMs,
     this.purchasedHintCount = 0,
@@ -107,6 +113,7 @@ class GameLayout extends StatelessWidget {
     this.onBuyLetter,
     this.nextLetterPrice = 0,
     this.showBuyLetter = false,
+    this.onVoteSkip,
   });
 
   @override
@@ -315,6 +322,12 @@ class GameLayout extends StatelessWidget {
               revealBuyCount: revealBuyCount,
               maxRevealBuys: maxRevealBuys,
               detectiveActions: detectiveActions,
+              showSkipVote: room.skipVoteEligible(revealRatio),
+              skipVoteCount: room.skipVoteCount,
+              skipVoteThreshold: room.skipVoteThreshold,
+              iVotedSkip:
+                  userId != null && room.skipVotes.contains(userId),
+              onVoteSkip: onVoteSkip,
             ),
           ],
         ),
@@ -330,6 +343,7 @@ class GameLayout extends StatelessWidget {
             deadlineMs: localGuessDeadlineMs,
             answer: image?.answer ?? '',
             onSubmit: onGuessSubmit,
+            onCancel: onGuessCancel,
             revealedLetterCount: revealedLetterCount,
             onBuyLetter: onBuyLetter,
             nextLetterPrice: nextLetterPrice,
@@ -468,6 +482,10 @@ class _HeatTopicChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cat = GameCategories.byId(room.selectedCategory);
+    // Admin display-name override from the content manifest, else built-in name.
+    final label = ContentManifestService.instance
+            .topicLabel(room.selectedCategory) ??
+        cat.nameHe;
     final total = room.heatImageIds.length;
     final round = (room.heatRoundIndex + 1).clamp(1, total == 0 ? 1 : total);
     return Padding(
@@ -481,7 +499,7 @@ class _HeatTopicChip extends StatelessWidget {
             border: Border.all(color: const Color(0xFF20A8E0).withOpacity(0.45)),
           ),
           child: Text(
-            '${cat.emoji}  ${cat.nameHe}   ·   סבב $round/$total',
+            '${cat.emoji}  $label   ·   סבב $round/$total',
             textDirection: TextDirection.rtl,
             style: const TextStyle(
               color: Colors.white,

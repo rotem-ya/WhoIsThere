@@ -117,6 +117,13 @@ class EconomyConfig {
   static const int blackoutCardPrice = 25;
   static const int blackoutDurationMs = 5000;
 
+  // ── Peek card (self-help consumable) ──────────────────────────
+  // Owned in inventory; reveals the player's own board for a moment with no
+  // per-use coin cost (unlike the spotlight tool). Unlocks at 15 discoveries.
+  static const int peekCardPrice = 40;
+  static const int peekCardDurationMs = 2000;
+  static const int peekCardUnlockDiscoveries = 15;
+
   // ── In-game detective reveal tools (pay-per-use, personal/client-local) ─
   // Self-help reveal actions used during a round. They uncover tiles for the
   // acting player ONLY (never written to the shared board), so they work the
@@ -128,10 +135,8 @@ class EconomyConfig {
   static const int bombRevealClusterSize = 4;
   static const int maxBombUses = 2;
 
-  // 🔦 Spotlight — flashes the whole board (dim peek) for a moment, then hides.
-  static const int spotlightPrice = 50;
-  static const int spotlightDurationMs = 1500;
-  static const int maxSpotlightUses = 2;
+  // 🔦 Spotlight — removed (superseded by the 👁️ Peek card, which reveals the
+  // whole board from inventory). Constants intentionally dropped.
 
   // 🎯 Targeted reveal — player picks one specific tile to uncover.
   static const int targetedRevealPrice = 35;

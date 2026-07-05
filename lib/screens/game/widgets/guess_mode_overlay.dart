@@ -11,6 +11,9 @@ class GuessModeOverlay extends StatefulWidget {
   final int? deadlineMs;
   final String answer;
   final Future<bool> Function(String)? onSubmit;
+  // Closes the overlay without submitting (no penalty) — parallel guessing
+  // opens the input locally, so backing out is always safe.
+  final VoidCallback? onCancel;
   // Bought-letter reveal, threaded down to the letter bank.
   final int revealedLetterCount;
   final VoidCallback? onBuyLetter;
@@ -24,6 +27,7 @@ class GuessModeOverlay extends StatefulWidget {
     required this.deadlineMs,
     required this.answer,
     this.onSubmit,
+    this.onCancel,
     this.revealedLetterCount = 0,
     this.onBuyLetter,
     this.nextLetterPrice = 0,
@@ -81,7 +85,30 @@ class _GuessModeOverlayState extends State<GuessModeOverlay>
           child: SafeArea(
             child: Column(
               children: [
-                const SizedBox(height: 12),
+                // ── Cancel typing — close without submitting ──────────────
+                if (widget.isMyGuess && widget.onCancel != null)
+                  Align(
+                    alignment: AlignmentDirectional.topStart,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: TextButton.icon(
+                        onPressed: widget.onCancel,
+                        icon: const Icon(Icons.close_rounded,
+                            color: Colors.white70, size: 20),
+                        label: const Text(
+                          'ביטול',
+                          textDirection: TextDirection.rtl,
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox(height: 12),
 
                 // ── Glow ring + name ──────────────────────────────────────
                 AnimatedBuilder(
@@ -216,7 +243,7 @@ class _SpectatorBodyState extends State<_SpectatorBody> {
     });
 
     // Build word-length list from answer (mirror LetterBankInput logic)
-    final words = stripGeresh(widget.answer).trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final words = canonicalizeGeresh(widget.answer).trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
     var total = 0;
     final lengths = <int>[];
     for (final word in words) {

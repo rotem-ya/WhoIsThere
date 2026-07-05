@@ -1,4 +1,3 @@
-import 'widgets/answer_slots.dart';
 import 'widgets/game_layout.dart';
 import 'widgets/game_winner_view.dart';
 import 'dart:async';
@@ -20,8 +19,10 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_categories.dart';
 import '../../core/constants/game_constants.dart';
+import '../../models/board_skin.dart';
 import '../../models/game_image_model.dart';
-import '../../models/player_model.dart';
+import '../../widgets/common/board_skin_background.dart';
+import '../store/board_skins_screen.dart' show selectedBoardSkinProvider;
 import '../../models/room_model.dart';
 import '../../models/chat_message.dart';
 import '../../models/economy/match_reward_breakdown.dart';
@@ -29,13 +30,11 @@ import '../../core/utils/chat_filter.dart';
 import '../../widgets/chat/chat_sheet.dart';
 import '../../providers/providers.dart';
 import '../../services/settings_service.dart';
-import '../../services/hint_economy_guard.dart';
+import '../../services/analytics_service.dart';
 import '../../services/reward_calculator.dart';
+import '../../services/review_prompt_service.dart';
 import '../../services/qa_logger_service.dart';
-import '../../widgets/game/animated_reward.dart';
 import '../../widgets/game/letter_bank_input.dart';
-import 'widgets/game_top_hud.dart';
-import 'widgets/game_board_view.dart';
 import 'widgets/detective_toolbar.dart';
 
 class GameBoardScreen extends ConsumerStatefulWidget {
@@ -113,7 +112,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   bool _hasGuessedThisTurn = false;
 
   // Hint fact cycling
-  int _nextFactIndex = 0;
   List<String> _purchasedFacts = [];
 
   // Personal tile reveals — tiles this player paid to uncover for themselves
@@ -126,10 +124,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   // Detective reveal tools — pay-per-use self-help actions. Like personal
   // reveals these uncover tiles for THIS player only (client-local, never
   // written to Firestore). Per-round usage counters cap each tool; all reset
-  // when a new place loads. Spotlight flashes a transient dim peek that auto-
-  // clears after EconomyConfig.spotlightDurationMs.
+  // when a new place loads. The Peek card flashes a transient reveal of all
+  // hidden tiles that auto-clears after EconomyConfig.peekCardDurationMs
+  // (these _spotlight* fields drive that transient reveal).
   int _bombUses = 0;
-  int _spotlightUses = 0;
   int _targetedUses = 0;
   int _fastForwardUses = 0;
   final Set<int> _spotlightCells = {};
@@ -159,6 +157,13 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   // non-blocking (input passes through); the reveal engine is server-driven.
   bool _showRoundIntro = false;
   bool _roundIntroTriggered = false;
+
+  // Heat round interlude — synced between-rounds pause showing the finished
+  // image, its answer and who solved it (driven by room.roundInterludeUntilMs).
+  GameImageModel? _interludeImage;
+  String? _interludeImageLoadingId;
+  int? _interludeDismissedUntilMs;
+  Timer? _interludeTimer;
 
   // Bot typing simulation
   bool _showBotTyping = false;
@@ -287,11 +292,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int _sessionWrongGuessCount = 0;
 
   // Parallel guessing: the guess input overlay is opened LOCALLY (no global lock),
-  // so several players can race at once. _localGuessOpen drives the overlay; the
-  // local deadline auto-closes it if the player never submits.
+  // so several players can race at once. _localGuessOpen drives the overlay;
+  // it closes ONLY on submit / cancel / round advance — never by a timer
+  // (typing must not be interrupted). _localGuessDeadlineMs = opened-at
+  // marker, used as the overlay widget key.
   bool _localGuessOpen = false;
   int? _localGuessDeadlineMs;
-  Timer? _localGuessTimer;
   int _sessionWatchdogEventCount = 0;
   bool? _lastGuessEventCorrect;
 
@@ -732,7 +738,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   _lastObservedNotOwnerRevealDeadline == room.revealDeadlineMs;
               if (isRemoteStalled) {
                 final overdueMs = now - room.revealDeadlineMs!;
-                _markOpponentStuck(stalledOwner!, room.revealDeadlineMs!,
+                _markOpponentStuck(stalledOwner, room.revealDeadlineMs!,
                     overdueMs: overdueMs);
               } else {
                 _markOffline('snapshot_stale_$level');
@@ -989,7 +995,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _musicShouldBePlaying = false;
     _bgPlayerStateSub?.cancel();
     _expiryTimer?.cancel();
-    _localGuessTimer?.cancel();
+    _interludeTimer?.cancel();
     _spotlightTimer?.cancel();
     _botReactionTimer?.cancel();
     _chatSub?.cancel();
@@ -1024,12 +1030,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   Future<void> _loadImage(String imageId) async {
     if (imageId.isEmpty || imageId == _loadedImageId) return;
     _loadedImageId = imageId;
-    _nextFactIndex = 0;
     _purchasedFacts = [];
     _personalRevealedTiles.clear();
     _lettersBought = 0;
     _bombUses = 0;
-    _spotlightUses = 0;
     _targetedUses = 0;
     _fastForwardUses = 0;
     _spotlightTimer?.cancel();
@@ -1042,52 +1046,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     }
   }
 
-  Future<void> _humanRevealTile({
-    required RoomModel room,
-    required String userId,
-    required int index,
-  }) async {
-    if (_isBusy) return;
-    if (!room.availablePieceIndices.contains(index)) return;
-
-    final difficulty = room.selectedDifficulty ?? Difficulty.easy;
-    final isLastTile = room.availablePieceIndices.length == 1;
-
-    setState(() => _isBusy = true);
-    try {
-      await ref.read(roomServiceProvider).revealPiece(
-            roomId: room.id,
-            userId: userId,
-            pieceIndex: index,
-            difficulty: difficulty,
-          );
-      if (isLastTile) {
-        await ref.read(roomServiceProvider).endGameNoWinner(room.id);
-      } else {
-        if (mounted) {
-          setState(() {
-            _hasRevealedThisTurn = true;
-            _revealedAtTurnIndex = room.currentTurnIndex;
-          });
-        }
-      }
-    } catch (e) {
-      if (_isFirestoreUnavailable(e)) _markOffline('firestore_unavailable');
-    } finally {
-      if (mounted) setState(() => _isBusy = false);
-    }
-  }
-
-  Future<void> _skipTurn(RoomModel room) async {
-    if (_isBusy) return;
-    setState(() => _isBusy = true);
-    try {
-      await ref.read(roomServiceProvider).skipPiecePlacement(roomId: room.id);
-      if (mounted) setState(() => _hasRevealedThisTurn = false);
-    } finally {
-      if (mounted) setState(() => _isBusy = false);
-    }
-  }
 
   void _scheduleBotTurn(RoomModel room) {
     // In auto-reveal mode, bots no longer reveal tiles (guardian handles it).
@@ -1130,9 +1088,29 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _lastHeatBotKey = key;
 
     final botId = botEntries[_random.nextInt(botEntries.length)].key;
-    // Slower than a snap reaction so a human who recognises the image still
-    // gets the first guess. ~12–20s into the round.
-    final delayMs = 12000 + _random.nextInt(8001);
+    // Early presence attempt (~12–20s in): the bot visibly types and races,
+    // but below 50% reveal it can only be WRONG (see the attempt's guard).
+    _scheduleHeatBotAttempt(room, botId, 12000 + _random.nextInt(8001));
+    // Second wind once >50% of the board is open — the only window where a
+    // correct bot guess is allowed — so the bot stays a real late threat.
+    // Heat reveals tick at ~1 tile/sec (giant metronome), so time-to-55–73%
+    // is roughly the missing tile count in seconds.
+    final total = room.gridSize * room.gridSize;
+    final targetTiles = (total * (0.55 + _random.nextDouble() * 0.18)).round();
+    final tilesLeft =
+        (targetTiles - room.placedPieces.length).clamp(0, total);
+    _scheduleHeatBotAttempt(
+        room, botId, tilesLeft * 1000 + 1500 + _random.nextInt(2500));
+  }
+
+  /// One delayed heat-bot guess attempt. Re-reads the live room before acting
+  /// and bails if the round moved on. Correct chance is derived from the LIVE
+  /// reveal ratio at fire time — and is hard-zeroed below 50% reveal:
+  /// rule (per Rotem), a bot may never guess correctly before half the tiles
+  /// are revealed, in any game, so a human who recognises the image early
+  /// always owns the win. A wrong attempt still shows typing + a same-topic
+  /// wrong guess (then a block), keeping the race feeling alive.
+  void _scheduleHeatBotAttempt(RoomModel room, String botId, int delayMs) {
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
       final snap = await ref.read(roomServiceProvider).watchRoom(room.id).first;
@@ -1141,21 +1119,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (snap.heatRoundIndex != room.heatRoundIndex) return;
       if (snap.selectedImageId != room.selectedImageId) return;
       if (snap.isBlockedFromGuessing(botId)) return;
-      // Correct chance scales with how much is actually revealed (as a ratio so
-      // it's grid-size agnostic). The bot must NOT be an instant know-it-all:
-      // below ~8% it can never be right, so a human who recognises the image
-      // early always owns the win. When it's wrong it submits a same-topic wrong
-      // guess and gets blocked for the round, leaving the human a clear path.
       final total = snap.gridSize * snap.gridSize;
       final revealed = snap.placedPieces.length;
       final ratio = total > 0 ? revealed / total : 0.0;
-      final double correctChance = ratio < 0.08
+      final double correctChance = ratio < 0.50
           ? 0.0
-          : ratio < 0.16
-              ? 0.12
-              : ratio < 0.28
-                  ? 0.28
-                  : 0.42;
+          : ratio < 0.65
+              ? 0.30
+              : 0.45;
       await _performBotGuess(snap, botId, correctChance);
     });
   }
@@ -1410,7 +1381,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     QaLoggerService.instance.log('BOT', 'BOT_SUBMIT_GUESS correct=$isCorrect');
 
-    final botName = room.players[botId]?.name ?? 'בוט';
+    final botName = room.players[botId]?.name ?? 'יריב';
     // Endgame threat: at ≥75% revealed the banner becomes a red alarm so the
     // player feels the bot closing in (regardless of whether this guess is the
     // correct one — keeps every late attempt tense).
@@ -1494,6 +1465,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     final isWin = room.winnerId == uid;
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
+    // A win is the best moment to (rarely) ask for a store rating.
+    if (isWin) {
+      unawaited(ReviewPromptService.instance.onGameWon());
+      AnalyticsService.instance
+          .gameWin(mode: room.isHeat ? 'heat' : 'places', solo: isSolo);
+    }
     final timeTaken = _gameStartTime != null
         ? DateTime.now().difference(_gameStartTime!)
         : const Duration(seconds: 999);
@@ -1526,26 +1503,37 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final user = ref.read(currentUserProvider).value;
     if (user == null) return;
     final svc = ref.read(roomServiceProvider);
+    RoomModel? joined;
     var targetId = room.rematchRoomId;
-    if (targetId == null || targetId.isEmpty) {
-      targetId = await svc.createRematch(
-        oldRoomId: room.id,
-        hostId: user.id,
-        hostName: user.name,
-        hostPhotoUrl: user.photoUrl,
-      );
-    } else {
-      await svc.joinRematch(
-        rematchRoomId: targetId,
-        userId: user.id,
-        userName: user.name,
-        userPhotoUrl: user.photoUrl,
-      );
+    try {
+      if (targetId == null || targetId.isEmpty) {
+        targetId = await svc.createRematch(
+          oldRoomId: room.id,
+          hostId: user.id,
+          hostName: user.name,
+          hostPhotoUrl: user.photoUrl,
+        );
+      }
+      // Join whatever room won the rematch slot — for the creator this is a
+      // no-op (already a player); for everyone else it actually adds them.
+      // A null result means the rematch already started or is gone, so
+      // navigating to its lobby would strand the player in a room they're
+      // not part of.
+      if (targetId != null && targetId.isNotEmpty) {
+        joined = await svc.joinRematch(
+          rematchRoomId: targetId,
+          userId: user.id,
+          userName: user.name,
+          userPhotoUrl: user.photoUrl,
+        );
+      }
+    } catch (e) {
+      QaLoggerService.instance.log('ROOM', 'REMATCH_FAILED error=$e');
     }
     if (!mounted) return;
-    if (targetId == null || targetId.isEmpty) {
+    if (joined == null || targetId == null || targetId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('לא ניתן לפתוח משחק חוזר')),
+        const SnackBar(content: Text('המשחק החוזר כבר התחיל או שאינו זמין')),
       );
       return;
     }
@@ -1772,25 +1760,31 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     });
   }
 
-  /// 🔦 Spotlight — flashes every hidden tile as a dim peek, then auto-hides
-  /// after EconomyConfig.spotlightDurationMs.
-  Future<void> _useSpotlight(RoomModel room, String userId) async {
-    if (_spotlightUses >= EconomyConfig.maxSpotlightUses) return;
-    if (_spotlightCells.isNotEmpty) return; // a flash is already running
+  /// 👁️ Peek card — owned consumable. Reveals the player's hidden tiles for
+  /// EconomyConfig.peekCardDurationMs, consuming one card from inventory (no
+  /// coin cost). Reuses the spotlight reveal/auto-hide path.
+  Future<void> _usePeekCard(String userId) async {
+    if (_spotlightCells.isNotEmpty) return; // a peek/spotlight is already running
+    final room = _lastRoom;
+    if (room == null) return;
     final hidden = _hiddenTilesFor(room);
     if (hidden.isEmpty) return;
-    if (!await _spendForTool(room, userId, EconomyConfig.spotlightPrice)) return;
 
-    QaLoggerService.instance.log('GAME', 'TOOL_SPOTLIGHT tiles=${hidden.length}');
+    // Atomically consume one card; bail if the player has none left.
+    final consumed =
+        await ref.read(economyServiceProvider).consumePeekCard(userId);
+    if (!consumed || !mounted) return;
+
+    HapticFeedback.mediumImpact();
+    QaLoggerService.instance.log('CARD', 'PEEK_CARD_USED tiles=${hidden.length}');
     setState(() {
       _spotlightCells
         ..clear()
         ..addAll(hidden);
-      _spotlightUses++;
     });
     _spotlightTimer?.cancel();
     _spotlightTimer = Timer(
-      const Duration(milliseconds: EconomyConfig.spotlightDurationMs),
+      const Duration(milliseconds: EconomyConfig.peekCardDurationMs),
       () {
         if (mounted) setState(() => _spotlightCells.clear());
       },
@@ -2003,34 +1997,38 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (_localGuessOpen) return; // overlay already open
     QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED phase=${room.turnPhase.name}');
 
-    // Parallel guessing: open the guess input LOCALLY — no server lock, so other
-    // players can open their own input at the same time. A local timer auto-closes
-    // the overlay if the player never submits (no penalty for not guessing).
-    _localGuessTimer?.cancel();
-    final deadline = DateTime.now().millisecondsSinceEpoch + 20000;
+    // Parallel guessing: open the guess input LOCALLY — no server lock, so
+    // other players can open their own input at the same time. The overlay
+    // stays open until the player submits, taps ביטול, or the round advances
+    // (someone else solved it) — NO auto-close timer: typing an answer must
+    // never be interrupted mid-word (per Rotem, QA 2026-07-05). The stored
+    // "deadline" is just an opened-at marker used as the overlay widget key.
+    final openedAt = DateTime.now().millisecondsSinceEpoch;
     setState(() {
       _localGuessOpen = true;
-      _localGuessDeadlineMs = deadline;
-    });
-    _localGuessTimer = Timer(const Duration(milliseconds: 20000), () {
-      if (mounted && _localGuessOpen) {
-        QaLoggerService.instance.log('GUESS', 'LOCAL_GUESS_TIMEOUT_CLOSED');
-        setState(() {
-          _localGuessOpen = false;
-          _localGuessDeadlineMs = null;
-        });
-      }
+      _localGuessDeadlineMs = openedAt;
     });
   }
 
   void _closeLocalGuess() {
-    _localGuessTimer?.cancel();
     if (_localGuessOpen && mounted) {
       setState(() {
         _localGuessOpen = false;
         _localGuessDeadlineMs = null;
       });
     }
+  }
+
+  /// Loads the previous round's image for the between-rounds interlude.
+  Future<void> _ensureInterludeImage(String id) async {
+    if (_interludeImage?.id == id || _interludeImageLoadingId == id) return;
+    _interludeImageLoadingId = id;
+    final img = await ref.read(roomServiceProvider).getImage(id);
+    if (!mounted) return;
+    setState(() {
+      _interludeImage = img;
+      _interludeImageLoadingId = null;
+    });
   }
 
   Future<void> _showExitConfirmation(BuildContext context) async {
@@ -2135,6 +2133,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   Widget build(BuildContext context) {
     final roomAsync = ref.watch(roomStreamProvider(widget.roomId));
     final user = ref.watch(currentUserProvider).value;
+    final boardSkin =
+        boardSkinFor(ref.watch(selectedBoardSkinProvider).valueOrNull);
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -2148,10 +2148,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
           ),
           child: Stack(
           children: [
-            DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: AppStyles.backgroundGradient,
-              ),
+            BoardSkinBackground(
+              skinId: boardSkin.id,
               child: SafeArea(
                 top: false,
                 child: roomAsync.when(
@@ -2346,6 +2344,28 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 }
                 _lastKnownCycleId = room.revealCycleId;
 
+                // ── Round advanced (someone solved it / item swapped) ───────────────
+                // Parallel guessing: force-close this client's open guess input and
+                // any bot-typing banner — they target the previous image. This is
+                // what makes the next image appear for everyone together instead of
+                // hiding behind a stale typing overlay.
+                if (_prevCycle != null &&
+                    room.revealCycleId != _prevCycle &&
+                    (_localGuessOpen || _showBotTyping)) {
+                  QaLoggerService.instance
+                      .log('GUESS', 'LOCAL_GUESS_CLOSED_ROUND_ADVANCED');
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    _closeLocalGuess();
+                    if (_showBotTyping) {
+                      setState(() {
+                        _showBotTyping = false;
+                        _botTypingIsThreat = false;
+                      });
+                    }
+                  });
+                }
+
                 // ── Timer lifecycle — reveal deadline ───────────────────────────────
                 if (room.revealDeadlineMs != null &&
                     room.revealDeadlineMs != _lastKnownRevealDeadlineMs) {
@@ -2408,9 +2428,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
                 // Capture game-start time the first frame phase becomes 'playing'
                 if (room.phase == GamePhase.playing && _gameStartTime == null) {
+                  final startedSolo =
+                      room.players.values.where((p) => !p.isBot).length == 1;
+                  final startedMode = room.isHeat ? 'heat' : 'places';
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (mounted && _gameStartTime == null) {
                       _gameStartTime = DateTime.now();
+                      AnalyticsService.instance
+                          .gameStart(mode: startedMode, solo: startedSolo);
                     }
                   });
                 }
@@ -2450,7 +2475,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                         if (uid == null) return false;
                         final watched = await ref
                             .read(adServiceProvider)
-                            .showRewarded();
+                            .showRewarded(placement: 'game_reveal');
                         if (!watched) {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -2647,17 +2672,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       onTap: () => _useBomb(room, currentUserId),
                     ),
                     DetectiveAction(
-                      emoji: '🔦',
-                      label: 'זרקור',
-                      price: EconomyConfig.spotlightPrice,
-                      color: const Color(0xFFFFD54F),
-                      enabled: _hiddenLeft > 0 &&
-                          _spotlightCells.isEmpty &&
-                          _spotlightUses < EconomyConfig.maxSpotlightUses &&
-                          _coins >= EconomyConfig.spotlightPrice,
-                      onTap: () => _useSpotlight(room, currentUserId),
-                    ),
-                    DetectiveAction(
                       emoji: '🎯',
                       label: 'ממוקד',
                       price: EconomyConfig.targetedRevealPrice,
@@ -2678,6 +2692,20 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       onTap: () => _useFastForward(room, currentUserId),
                     ),
                   ]);
+
+                  // 👁️ Peek card — owned consumable (no per-use coin cost).
+                  // Shown only when the player has one in inventory.
+                  final peekCount = user?.peekCardCount ?? 0;
+                  if (peekCount > 0) {
+                    _detectiveActions.add(DetectiveAction(
+                      emoji: '👁️',
+                      label: 'הצצה ×$peekCount',
+                      price: 0,
+                      color: const Color(0xFF26A69A),
+                      enabled: _hiddenLeft > 0 && _spotlightCells.isEmpty,
+                      onTap: () => _usePeekCard(currentUserId),
+                    ));
+                  }
                 }
 
                 // Bought-letter (answer hint) availability in the guess input.
@@ -2705,7 +2733,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     QaLoggerService.instance.log('GAME', 'SPECTATOR_GUESS_CLOCK_VISIBLE');
                   }
                   if (!_scoreCliffSignalLogged && canGuessNow) {
-                    final _b9MyScore = currentUserId != null ? (room.players[currentUserId]?.score ?? 0) : 0;
+                    final _b9MyScore = room.players[currentUserId]?.score ?? 0;
                     final _b9LeaderScore = room.sortedPlayers.isNotEmpty ? room.sortedPlayers.first.score : 0;
                     if ((_b9LeaderScore - _b9MyScore) <= 1) {
                       _scoreCliffSignalLogged = true;
@@ -2714,7 +2742,33 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   }
                 }
 
-                return GameLayout(
+                // ── Heat round interlude ────────────────────────────────────
+                // Short synced pause after a round is solved: everyone sees the
+                // finished image + answer + solver, then the next image starts
+                // revealing together (its reveal deadline is already pushed
+                // past the pause server-side).
+                final interludeUntil = room.roundInterludeUntilMs;
+                final interludeActive = room.isHeat &&
+                    room.phase == GamePhase.playing &&
+                    interludeUntil != null &&
+                    DateTime.now().millisecondsSinceEpoch < interludeUntil &&
+                    room.lastRoundImageId != null &&
+                    _interludeDismissedUntilMs != interludeUntil;
+                if (interludeActive) {
+                  unawaited(_ensureInterludeImage(room.lastRoundImageId!));
+                  _interludeTimer?.cancel();
+                  final msLeft = interludeUntil -
+                      DateTime.now().millisecondsSinceEpoch;
+                  _interludeTimer =
+                      Timer(Duration(milliseconds: msLeft + 50), () {
+                    if (mounted) {
+                      setState(
+                          () => _interludeDismissedUntilMs = interludeUntil);
+                    }
+                  });
+                }
+
+                final gameLayout = GameLayout(
                   room: room,
                   image: _image,
                   currentUserId: currentUserId,
@@ -2751,16 +2805,21 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                           GameCategories.byId(room.selectedCategory).hasHints &&
                           _purchasedFacts.length == 1 &&
                           (_image?.facts.length ?? 0) > 1)
-                      ? () => _buySecondHint(room, currentUserId!)
+                      ? () => _buySecondHint(room, currentUserId)
                       : null,
                   onGuess: (!_isFinished && currentUserId != null)
-                      ? () => _handleGuessTap(room, currentUserId!, canGuessNow)
+                      ? () => _handleGuessTap(room, currentUserId, canGuessNow)
                       : null,
                   showGuessInput: _localGuessOpen && !_isFinished,
                   localGuessDeadlineMs: _localGuessDeadlineMs,
                   onGuessSubmit: (currentUserId != null && _localGuessOpen)
-                      ? (value) => _submitGuess(room, currentUserId!, value)
+                      ? (value) => _submitGuess(room, currentUserId, value)
                       : null,
+                  onGuessCancel: () {
+                    QaLoggerService.instance
+                        .log('GUESS', 'LOCAL_GUESS_CANCELLED_BY_USER');
+                    _closeLocalGuess();
+                  },
                   stunCardCount: room.isHeat ? 0 : (user?.stunCardCount ?? 0),
                   onStunCard: (currentUserId == null || room.isHeat) ? null : (targetId) async {
                     final success = await ref.read(roomServiceProvider).applyStunCard(
@@ -2784,16 +2843,39 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   revealBuyCount: _revealBuyCount,
                   maxRevealBuys: room.isHeat ? 0 : _maxPersonalReveals,
                   onBuyReveal: (_canBuyReveal && !room.isHeat)
-                      ? () => _buyPersonalReveal(room, currentUserId!)
+                      ? () => _buyPersonalReveal(room, currentUserId)
                       : null,
                   detectiveActions: _detectiveActions,
                   spotlightCells: _spotlightCells,
                   revealedLetterCount: _lettersBought,
                   onBuyLetter: _canBuyLetter
-                      ? () => _buyLetter(room, currentUserId!)
+                      ? () => _buyLetter(room, currentUserId)
                       : null,
                   nextLetterPrice: _nextLetterPrice,
                   showBuyLetter: _showBuyLetter,
+                  onVoteSkip: (currentUserId != null &&
+                          !_isFinished &&
+                          room.skipVoteEligible(revealRatio))
+                      ? () {
+                          unawaited(ref.read(roomServiceProvider).voteSkipItem(
+                                roomId: room.id,
+                                userId: currentUserId,
+                              ));
+                        }
+                      : null,
+                );
+
+                if (!interludeActive) return gameLayout;
+                return Stack(
+                  children: [
+                    gameLayout,
+                    _RoundInterludeOverlay(
+                      image: _interludeImage?.id == room.lastRoundImageId
+                          ? _interludeImage
+                          : null,
+                      winnerName: room.lastRoundWinnerName,
+                    ),
+                  ],
                 );
               },
             ),
@@ -3011,6 +3093,97 @@ class _RoundStartOverlayState extends State<_RoundStartOverlay> {
                 shadows: [
                   Shadow(color: color.withOpacity(0.6), blurRadius: 24),
                   const Shadow(color: Colors.black87, blurRadius: 8),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Heat between-rounds interlude: a full-screen pause showing the image that
+/// was just solved, its answer and who guessed it. Timing is server-driven
+/// (room.roundInterludeUntilMs) so all clients see it — and leave it — together.
+class _RoundInterludeOverlay extends StatelessWidget {
+  final GameImageModel? image;
+  final String? winnerName;
+
+  const _RoundInterludeOverlay({required this.image, required this.winnerName});
+
+  @override
+  Widget build(BuildContext context) {
+    final url = image?.imageUrl;
+    final name = winnerName?.trim();
+    return Positioned.fill(
+      child: AbsorbPointer(
+        child: Container(
+          color: Colors.black.withOpacity(0.9),
+          alignment: Alignment.center,
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 320),
+              curve: Curves.easeOutBack,
+              builder: (context, t, child) => Opacity(
+                opacity: t.clamp(0.0, 1.0),
+                child: Transform.scale(scale: 0.85 + 0.15 * t, child: child),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    (name != null && name.isNotEmpty)
+                        ? '🎉 $name ניחש נכון!'
+                        : 'אף אחד לא ניחש הפעם',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (url != null)
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFD4AF37).withOpacity(0.35),
+                            blurRadius: 28,
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: SizedBox(
+                          width: 210,
+                          height: 210,
+                          child: url.startsWith('assets/')
+                              ? Image.asset(url, fit: BoxFit.cover)
+                              : CachedNetworkImage(
+                                  imageUrl: url, fit: BoxFit.cover),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+                  Text(
+                    image?.answer ?? '',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFFFFE082),
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  const Text(
+                    'התמונה הבאה עוד רגע…',
+                    style: TextStyle(color: Colors.white54, fontSize: 14),
+                  ),
                 ],
               ),
             ),
@@ -3463,58 +3636,6 @@ class _NoWinnerViewState extends State<_NoWinnerView> {
   }
 }
 
-class _FactDialog extends StatelessWidget {
-  final String? fact;
-  const _FactDialog({required this.fact});
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: const Color(0xFF07101F),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.5)),
-      ),
-      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-      contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-      actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      title: const Row(
-        children: [
-          Icon(Icons.lightbulb_outline_rounded, color: Color(0xFF87CEEB), size: 20),
-          SizedBox(width: 8),
-          Text(
-            'רמז',
-            style: TextStyle(
-              color: Color(0xFF87CEEB),
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-      content: Text(
-        fact ?? 'אין רמז זמין למקום הזה',
-        textAlign: TextAlign.right,
-        textDirection: TextDirection.rtl,
-        style: TextStyle(
-          color: fact != null ? Colors.white : Colors.white54,
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          height: 1.55,
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text(
-            'הבנתי',
-            style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.w900),
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _PurchasedHintsDialog extends StatelessWidget {
   final List<String> facts;

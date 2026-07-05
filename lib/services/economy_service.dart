@@ -249,7 +249,7 @@ class EconomyService {
       );
       final data = updated.toFirestore();
       data['adRewardWindowStart'] =
-          Timestamp.fromDate(sameDay ? windowStart! : now);
+          Timestamp.fromDate(sameDay ? windowStart : now);
       tx.set(ref, data);
 
       final txId = _uuid.v4();
@@ -435,6 +435,35 @@ class EconomyService {
       QaLoggerService.instance.log('ECONOMY', 'BLACKOUT_CARD_PURCHASED uid=${uid.substring(0, uid.length.clamp(0, 6))}');
     }
     return success;
+  }
+
+  Future<bool> buyPeekCard(String uid) async {
+    const price = EconomyConfig.peekCardPrice;
+    final success = await spendCoins(uid: uid, amount: price, type: TransactionType.peekCardPurchase);
+    if (success) {
+      await _db.doc('users/$uid').update({'peekCardCount': FieldValue.increment(1)});
+      QaLoggerService.instance.log('ECONOMY', 'PEEK_CARD_PURCHASED uid=${uid.substring(0, uid.length.clamp(0, 6))}');
+    }
+    return success;
+  }
+
+  /// Atomically consumes one peek card from [uid]'s inventory (no coin cost).
+  /// Returns true only when a card was actually decremented.
+  Future<bool> consumePeekCard(String uid) async {
+    bool consumed = false;
+    try {
+      await _db.runTransaction((tx) async {
+        final ref = _db.doc('users/$uid');
+        final snap = await tx.get(ref);
+        final count = (snap.data()?['peekCardCount'] as int?) ?? 0;
+        if (count <= 0) return;
+        tx.update(ref, {'peekCardCount': FieldValue.increment(-1)});
+        consumed = true;
+      });
+    } catch (e) {
+      QaLoggerService.instance.log('ECONOMY', 'PEEK_CARD_CONSUME_ERROR $e');
+    }
+    return consumed;
   }
 
   // ── Private helpers ───────────────────────────────────────────

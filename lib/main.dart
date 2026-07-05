@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:app_links/app_links.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'core/constants/ad_constants.dart';
 import 'core/constants/build_info.dart';
 import 'core/theme/app_styles.dart';
@@ -17,6 +18,8 @@ import 'firebase_options.dart';
 import 'providers/providers.dart';
 import 'services/content_manifest_service.dart';
 import 'services/qa_logger_service.dart';
+import 'services/report_service.dart';
+import 'widgets/common/friend_request_banner.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'services/settings_service.dart';
 
@@ -36,13 +39,10 @@ void main() async {
     firebaseError = e;
   }
 
-  // Only initialize the AdMob SDK when ads are actually enabled. With ads off
-  // (launch default) we skip init entirely so the SDK never collects the
-  // advertising identifier — keeping the store privacy declaration at
-  // "no ads / no tracking" and avoiding any ATT requirement.
-  if (AdConstants.adsEnabled) {
-    MobileAds.instance.initialize();
-  }
+  // AdMob is initialized AFTER the App Tracking Transparency prompt (see
+  // _GuessThePlaceAppState._initTrackingThenAds) so, on iOS, the ATT dialog is
+  // shown before any ad SDK reads the advertising identifier. Not initialized
+  // here.
 
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -69,11 +69,15 @@ void main() async {
     final msg = details.exceptionAsString();
     QaLoggerService.instance.log(
         'CRASH', 'FLUTTER_ERROR ${msg.length > 160 ? msg.substring(0, 160) : msg}');
+    // Auto-send the crash + recent log to Firestore (throttled, fail-soft).
+    ReportService.instance.reportCrash(
+        kind: 'flutter', error: details.exception, stack: details.stack);
   };
   WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
     final msg = error.toString();
     QaLoggerService.instance.log(
         'CRASH', 'UNCAUGHT ${msg.length > 160 ? msg.substring(0, 160) : msg}');
+    ReportService.instance.reportCrash(kind: 'uncaught', error: error, stack: stack);
     return true; // handled — keep the app running
   };
 
@@ -108,10 +112,12 @@ void main() async {
   }
 
   // Hybrid content manifest — apply the last-known state instantly (offline-safe)
-  // then refresh from Firestore in the background. Best-effort: never blocks
-  // startup or game start; on any failure the game uses bundled content.
+  // then subscribe LIVE to Firestore so admin edits appear immediately in the
+  // running game (no restart). Best-effort: never blocks startup or game start;
+  // on any failure the game uses bundled content. The live listener's first
+  // event also serves as the initial refresh (replaces the one-shot sync()).
   await ContentManifestService.instance.loadCached();
-  unawaited(ContentManifestService.instance.sync());
+  ContentManifestService.instance.startRealtime();
 
   runApp(const ProviderScope(child: GuessThePlaceApp()));
 }
@@ -185,6 +191,33 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
   void initState() {
     super.initState();
     _initDeepLinks();
+    _initTrackingThenAds();
+  }
+
+  /// iOS App Tracking Transparency: request authorization once the app is
+  /// active (a post-frame callback guarantees it's foregrounded), THEN
+  /// initialize AdMob. Apple requires the ATT prompt to appear before any ad
+  /// SDK reads the advertising identifier. Fail-soft and a no-op when ads are
+  /// disabled; on Android requestTrackingAuthorization simply returns.
+  Future<void> _initTrackingThenAds() async {
+    if (!AdConstants.adsEnabled) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final status =
+            await AppTrackingTransparency.trackingAuthorizationStatus;
+        if (status == TrackingStatus.notDetermined) {
+          // Small delay so the prompt lands after the first frame is visible
+          // (iOS silently drops it if requested while not yet active).
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+          await AppTrackingTransparency.requestTrackingAuthorization();
+        }
+      } catch (_) {
+        // Non-iOS or plugin error — proceed to ads regardless.
+      }
+      try {
+        MobileAds.instance.initialize();
+      } catch (_) {}
+    });
   }
 
   Future<void> _initDeepLinks() async {
@@ -205,10 +238,18 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
 
   void _handleDeepLink(Uri uri, {required bool coldStart}) {
     // ── Friend-invite links — add the inviter as a friend automatically ──────
+    // Hosts that serve our pages: Firebase Hosting (canonical) + the two
+    // legacy GitHub Pages hosts (links shared by older builds).
+    final isOurWebHost = uri.host == 'whoisthere-380fa.web.app' ||
+        uri.host == 'whoisthere-380fa.firebaseapp.com' ||
+        uri.host == 'rotem-ya.github.io';
+
     final isFriendScheme = uri.scheme == 'whoisthere' && uri.host == 'friend';
     final isFriendAppLink = uri.scheme == 'https' &&
-        uri.host == 'rotem-ya.github.io' &&
-        uri.path.startsWith('/apps-share-pages/whoisthere/friend');
+        isOurWebHost &&
+        (uri.path.startsWith('/friend') ||
+            uri.path.startsWith('/apps-share-pages/whoisthere/friend') ||
+            uri.path.startsWith('/WhoIsThere/friend'));
     if (isFriendScheme || isFriendAppLink) {
       final rawF = uri.queryParameters['code'] ?? '';
       final friendCode = rawF.trim().toUpperCase();
@@ -229,8 +270,9 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
 
     final isCustomScheme = uri.scheme == 'whoisthere' && uri.host == 'join';
     final isAppLink = uri.scheme == 'https' &&
-        uri.host == 'rotem-ya.github.io' &&
-        uri.path.startsWith('/apps-share-pages/whoisthere/join');
+        isOurWebHost &&
+        (uri.path.startsWith('/join') ||
+            uri.path.startsWith('/apps-share-pages/whoisthere/join'));
     if (!isCustomScheme && !isAppLink) return;
 
     final raw = uri.queryParameters['code'] ?? '';
@@ -283,7 +325,14 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
       builder: (context, child) {
         return Directionality(
           textDirection: TextDirection.rtl,
-          child: child ?? const SizedBox.shrink(),
+          // The friend-request banner floats above the router so a pending
+          // request is noticeable from ANY screen (not just the home dot).
+          child: Stack(
+            children: [
+              child ?? const SizedBox.shrink(),
+              const FriendRequestBanner(),
+            ],
+          ),
         );
       },
     );

@@ -5,19 +5,27 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/constants/build_info.dart';
+import 'our_apps_screen.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../core/utils/display_name_sanitizer.dart';
 import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
-import '../../widgets/common/app_button.dart';
+import '../../services/report_service.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
 import 'discovered_images_screen.dart';
 import '../store/card_skins_screen.dart' show ownedSkinsProvider;
+import '../store/avatar_frames_screen.dart' show selectedFrameProvider;
+import '../store/name_styles_screen.dart' show selectedNameStyleProvider;
+import '../store/avatars_screen.dart' show selectedAvatarProvider;
+import '../../widgets/common/player_name_text.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -28,6 +36,148 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _upgrading = false;
+  bool _deleting = false;
+
+  /// App Store 5.1.1(v): lets the user permanently delete their account and
+  /// data from within the app. Confirms first (destructive + irreversible),
+  /// then deletes and returns to the auth screen.
+  Future<void> _confirmDeleteAccount() async {
+    HapticFeedback.lightImpact();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF10182E),
+        title: const Text('מחיקת חשבון', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'הפעולה תמחק לצמיתות את החשבון שלך וכל הנתונים (מטבעות, פריטים, '
+          'התקדמות, חברים). לא ניתן לשחזר. להמשיך?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('ביטול', style: TextStyle(color: Colors.white70)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('מחק לצמיתות',
+                style: TextStyle(
+                    color: Color(0xFFE06B6B), fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _deleting = true);
+    try {
+      await ref.read(authServiceProvider).deleteAccount();
+      if (!mounted) return;
+      context.go('/auth');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _deleting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('מחיקת החשבון נכשלה. התחבר מחדש ונסה שוב.'),
+          backgroundColor: Color(0xFF8A2A2A),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  /// Free-text feedback dialog → ReportService writes it to Firestore.
+  Future<void> _showFeedbackDialog(BuildContext context, String userName) async {
+    HapticFeedback.lightImpact();
+    final controller = TextEditingController();
+    var sending = false;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          backgroundColor: const Color(0xFF10182E),
+          title: const Text('שלח משוב', style: TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('ספר לנו מה אהבת, מה חסר, או על תקלה שנתקלת בה:',
+                  style: TextStyle(color: Colors.white70, fontSize: 13)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLines: 4,
+                maxLength: 2000,
+                autofocus: true,
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'המשוב שלך…',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.06),
+                  counterStyle: const TextStyle(color: Colors.white24),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: sending ? null : () => Navigator.of(ctx).pop(),
+              child: const Text('ביטול', style: TextStyle(color: Colors.white70)),
+            ),
+            TextButton(
+              onPressed: sending
+                  ? null
+                  : () async {
+                      if (controller.text.trim().isEmpty) return;
+                      setLocal(() => sending = true);
+                      final ok = await ReportService.instance
+                          .submitFeedback(text: controller.text, name: userName);
+                      if (!ctx.mounted) return;
+                      Navigator.of(ctx).pop();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(ok ? 'תודה! המשוב נשלח 🙏' : 'שליחת המשוב נכשלה, נסה שוב'),
+                            backgroundColor:
+                                ok ? const Color(0xFF1B5E20) : const Color(0xFF8A2A2A),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+              child: Text(sending ? 'שולח…' : 'שלח',
+                  style: const TextStyle(
+                      color: Color(0xFF4A9EFF), fontWeight: FontWeight.w800)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Shares the app with a friend via the OS share sheet. Uses the remote
+  /// store links (app_config/app) when present, falling back to the derivable
+  /// Play URL — so it always works, even before the App Store link is set.
+  Future<void> _shareApp() async {
+    HapticFeedback.lightImpact();
+    QaLoggerService.instance.log('SHARE', 'SHARE_APP_TAP');
+    final info = ref.read(appUpdateInfoProvider).valueOrNull;
+    final message = AppConstants.shareMessage(
+      androidUrl: info?.androidUrl,
+      iosUrl: info?.iosUrl,
+    );
+    try {
+      await Share.share(message, subject: 'מה בתמונה?');
+    } catch (e) {
+      QaLoggerService.instance.log('SHARE', 'SHARE_APP_ERROR $e');
+    }
+  }
 
   Future<void> _showEditNameDialog(BuildContext context, String userId, String currentName) async {
     await showDialog<void>(
@@ -100,6 +250,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
+    final selectedFrame = ref.watch(selectedFrameProvider).valueOrNull ?? 'none';
+    final selectedNameStyle =
+        ref.watch(selectedNameStyleProvider).valueOrNull ?? 'none';
+    final selectedAvatar =
+        ref.watch(selectedAvatarProvider).valueOrNull ?? 'auto';
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
@@ -159,7 +314,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: Row(
                     children: [
                       // Avatar
-                      PlayerAvatar(name: user.name, photoUrl: user.photoUrl, radius: 34),
+                      PlayerAvatar(
+                          name: user.name,
+                          photoUrl: user.photoUrl,
+                          radius: 34,
+                          frameId: selectedFrame,
+                          avatarId: selectedAvatar),
                       const SizedBox(width: 16),
                       // Name + edit
                       Expanded(
@@ -174,10 +334,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   child: FittedBox(
                                     fit: BoxFit.scaleDown,
                                     alignment: AlignmentDirectional.centerStart,
-                                    child: Text(
-                                      user.name,
-                                      maxLines: 1,
-                                      style: const TextStyle(
+                                    child: PlayerNameText(
+                                      text: user.name,
+                                      styleId: selectedNameStyle,
+                                      base: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 18,
                                         fontWeight: FontWeight.w900,
@@ -332,6 +492,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               const SizedBox(height: AppSpacing.sm),
 
+              // ── Delete account (App Store 5.1.1(v) — in-app deletion) ──
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Center(
+                  child: TextButton.icon(
+                    onPressed: _deleting ? null : _confirmDeleteAccount,
+                    icon: const Icon(Icons.delete_forever_rounded,
+                        size: 16, color: Color(0xFFE06B6B)),
+                    label: Text(
+                      _deleting ? 'מוחק…' : 'מחק חשבון',
+                      style: const TextStyle(
+                          color: Color(0xFFE06B6B),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.sm),
+
+              // ── Update available (always reachable, even after "later") ──
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: _UpdateBanner(),
+              ),
+
               // ── Support code — what the player gives the admin to be found ──
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -341,6 +528,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       : user.id,
                   isEmail: user.email != null && user.email!.isNotEmpty,
                 ),
+              ),
+
+              const SizedBox(height: AppSpacing.sm),
+
+              // ── Send feedback ────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Center(
+                  child: TextButton.icon(
+                    onPressed: () => _showFeedbackDialog(context, user.name),
+                    icon: const Icon(Icons.chat_bubble_outline_rounded,
+                        size: 18, color: Color(0xFF4A9EFF)),
+                    label: const Text('שלח משוב',
+                        style: TextStyle(
+                            color: Color(0xFF4A9EFF),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.sm),
+
+              // ── Share the app ────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Center(
+                  child: TextButton.icon(
+                    onPressed: _shareApp,
+                    icon: const Icon(Icons.ios_share_rounded,
+                        size: 18, color: Color(0xFF3DCCAA)),
+                    label: const Text('שתף את האפליקציה',
+                        style: TextStyle(
+                            color: Color(0xFF3DCCAA),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ),
+
+              // ── Our other apps (admin-controlled list) ───────────────
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: _OurAppsRow(),
               ),
 
               const SizedBox(height: AppSpacing.sm),
@@ -379,6 +610,130 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accent)),
         error: (e, _) => Center(child: Text('שגיאה: $e', style: AppTextStyles.subtitleLight)),
+      ),
+    );
+  }
+}
+
+/// Permanent "update available" row — shows whenever the remote config
+/// advertises a newer build than this one, so the player can always update
+/// even after dismissing the home-screen popup with "later".
+class _UpdateBanner extends ConsumerWidget {
+  const _UpdateBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final info = ref.watch(appUpdateInfoProvider).valueOrNull;
+    if (info == null || !info.enabled || kBuildNumber >= info.latestBuild) {
+      return const SizedBox.shrink();
+    }
+    final storeUrl = Platform.isIOS ? info.iosUrl : info.androidUrl;
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF34D399).withOpacity(0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF34D399).withOpacity(0.40)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.system_update_rounded, color: Color(0xFF34D399)),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text('גרסה חדשה זמינה',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800)),
+          ),
+          FilledButton(
+            onPressed: storeUrl.isEmpty
+                ? null
+                : () async {
+                    final uri = Uri.tryParse(storeUrl);
+                    if (uri != null) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF34D399),
+              foregroundColor: const Color(0xFF07101F),
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('עדכן',
+                style: TextStyle(fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "האפליקציות שלנו" entry — only appears when the admin has configured at
+/// least one other app (app_config/app → ourApps). Tapping opens the list.
+class _OurAppsRow extends ConsumerWidget {
+  const _OurAppsRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final apps = ref.watch(appUpdateInfoProvider).valueOrNull?.ourApps ?? const [];
+    if (apps.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          QaLoggerService.instance.log('OUR_APPS', 'OPEN count=${apps.length}');
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const OurAppsScreen()),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A1828),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+                color: const Color(0xFFD4AF37).withOpacity(0.25), width: 0.8),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(
+                    child: Text('✨', style: TextStyle(fontSize: 22))),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('האפליקציות שלנו',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800)),
+                    Text('עוד משחקים שיצרנו בשבילכם',
+                        style: TextStyle(
+                            color: Color(0xFF4A8BAA),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: Color(0xFF4A8BAA), size: 22),
+            ],
+          ),
+        ),
       ),
     );
   }

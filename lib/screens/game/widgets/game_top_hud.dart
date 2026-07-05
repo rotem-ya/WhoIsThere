@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/economy_config.dart';
 import '../../../core/constants/game_constants.dart';
 import '../../../models/player_model.dart';
 import '../../../providers/providers.dart';
 import '../../../services/reward_calculator.dart';
+import '../../../widgets/common/player_avatar.dart';
 import '../../../widgets/economy/coin_display.dart';
 
 String? _prizePressureLabel(double ratio) {
@@ -322,6 +321,14 @@ class _PlayerCell extends ConsumerWidget {
             ),
             child: Row(
               children: [
+                PlayerAvatar(
+                  name: player.name,
+                  seed: player.name,
+                  radius: 10,
+                  avatarId: player.avatarId,
+                  frameId: player.frameId,
+                ),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     name,

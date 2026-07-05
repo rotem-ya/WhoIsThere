@@ -1,4 +1,14 @@
-Release AAB build requested: 2026-06-25T18:35:00Z
-version: 1.0.0
-signing: embedded release keystore, SHA-1 25:C3 (matches run #4, QA APKs, Firebase)
-note: corrected signing key — KEYSTORE_CONTENT secret held a different key (7F:E5)
+Release AAB build requested: 2026-07-05T00:00:00Z (v1.1 update, r2)
+version: 1.1.0
+signing: Play upload key SHA-1 EA:3B (from UPLOAD_* secrets / embedded)
+package: com.whoisthere.app (matches Play Console)
+note: v1.1 UPDATE — everything from the previous marker PLUS: rematch fixes
+  (stranded-lobby join, letters play-again handshake, simultaneous-tap race),
+  synced heat round transitions (correct guess closes everyone's typing,
+  4s between-rounds interlude with image+answer+winner), topic picking QoL
+  (host coverage waives quota, single-category heats, cancel-typing button),
+  friends fixes (working invite landing page on both hosts, add-by-code UX,
+  global pending-request banner), live admin content (kBundledImagesOnly=false
+  — admin image overrides + remote places appear without an app update), and
+  bots never guess correctly before 50% of tiles are revealed (all games).
+note2: versionCode auto = build-aab run number (strictly increasing; > 23 used at launch).

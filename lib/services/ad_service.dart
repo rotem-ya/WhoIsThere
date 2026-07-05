@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../core/constants/ad_constants.dart';
+import 'analytics_service.dart';
 
 /// Loads and shows AdMob rewarded + interstitial ads. A single instance lives
 /// for the app's lifetime (see `adServiceProvider`). Each ad is preloaded so
@@ -48,7 +49,8 @@ class AdService {
   /// Shows a rewarded ad. Returns true only if the user watched long enough to
   /// earn the reward. If no ad is ready, returns false immediately (and starts
   /// preloading one for next time) so the caller can fall back gracefully.
-  Future<bool> showRewarded() async {
+  /// [placement] tags the analytics event with where the ad was offered.
+  Future<bool> showRewarded({String placement = 'unknown'}) async {
     if (!AdConstants.adsEnabled) return false;
     final ad = _rewarded;
     if (ad == null) {
@@ -63,6 +65,9 @@ class AdService {
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
         preloadRewarded();
+        if (earned) {
+          AnalyticsService.instance.rewardedAdWatched(placement: placement);
+        }
         if (!completer.isCompleted) completer.complete(earned);
       },
       onAdFailedToShowFullScreenContent: (ad, _) {

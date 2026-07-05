@@ -25,8 +25,6 @@ class AuthScreen extends ConsumerStatefulWidget {
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   static const _gold  = Color(0xFFD4AF37);
-  static const _navy  = Color(0xFF050A14);
-  static const _cyan  = Color(0xFF87CEEB);
 
   late final bool _doIntro;
   bool _isLoading  = false;

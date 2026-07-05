@@ -19,6 +19,7 @@ import '../../models/room_model.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/banner_ad_widget.dart';
 import '../../widgets/common/player_avatar.dart';
+import '../../widgets/common/win_effect_overlay.dart';
 
 class WinScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -112,18 +113,24 @@ class _WinScreenState extends ConsumerState<WinScreen>
           hostName: user.name,
           hostPhotoUrl: user.photoUrl,
         );
-      } else {
-        await svc.joinRematch(
+      }
+      // Join whatever room won the rematch slot — a no-op for its creator,
+      // an actual join for everyone else. Null means the rematch already
+      // started (or is gone); navigating to its lobby would strand us in a
+      // room we're not a member of.
+      RoomModel? joined;
+      if (targetId != null && targetId.isNotEmpty) {
+        joined = await svc.joinRematch(
           rematchRoomId: targetId,
           userId: user.id,
           userName: user.name,
           userPhotoUrl: user.photoUrl,
         );
       }
-      if (targetId == null || targetId.isEmpty) {
+      if (joined == null || targetId == null || targetId.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('לא ניתן לפתוח משחק חוזר')),
+            const SnackBar(content: Text('המשחק החוזר כבר התחיל או שאינו זמין')),
           );
           setState(() => _busyRematch = false);
         }
@@ -179,7 +186,9 @@ class _WinScreenState extends ConsumerState<WinScreen>
               isWinner ? AppColors.primaryGradient : AppColors.pageBackground,
           padding: EdgeInsets.zero,
           safeArea: false,
-          child: SafeArea(
+          child: Stack(
+            children: [
+              SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Column(
@@ -352,6 +361,12 @@ class _WinScreenState extends ConsumerState<WinScreen>
               ),
             ),
           ),
+              if (winner != null && winner.winEffectId != 'none')
+                Positioned.fill(
+                  child: WinEffectOverlay(effectId: winner.winEffectId),
+                ),
+            ],
+          ),
         ), // AppScaffold
         ); // PopScope
       },
@@ -398,7 +413,11 @@ class _ScoreRow extends StatelessWidget {
           Text(medal, style: const TextStyle(fontSize: 20)),
           const SizedBox(width: AppSpacing.sm),
           PlayerAvatar(
-              name: player.name, photoUrl: player.photoUrl, radius: 16),
+              name: player.name,
+              photoUrl: player.photoUrl,
+              radius: 16,
+              frameId: player.frameId,
+              avatarId: player.avatarId),
           const SizedBox(width: AppSpacing.sm),
           Flexible(
             child: Text(

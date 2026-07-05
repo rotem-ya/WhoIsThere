@@ -29,8 +29,10 @@ class FindingPlayersScreen extends ConsumerStatefulWidget {
 
 class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
     with TickerProviderStateMixin {
-  static const int _firstBotDelayMs = 10000;
-  static const int _botIntervalMs = 5000;
+  // Keep a short real-player search window, then fill with bots quickly so a
+  // quick game actually starts within a few seconds instead of feeling stuck.
+  static const int _firstBotDelayMs = 2500;
+  static const int _botIntervalMs = 1200;
   static const int _maxWaitMs = 60000;
 
   late final AnimationController _dotAnim;
@@ -71,7 +73,6 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
     if (currentRoom == null || !mounted) return;
 
     // Count how many humans joined since we created the room.
-    final humanCount = currentRoom.players.values.where((p) => !p.isBot).length;
     final totalNeeded = widget.targetPlayers;
     final totalNow = currentRoom.players.length;
 

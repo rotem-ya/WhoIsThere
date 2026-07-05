@@ -4,13 +4,71 @@
 
 ---
 
+## 🚀 סטטוס חנויות
+### v1.1.0 — הוגש לשתי החנויות (2026-07-05), אין בלוקרים
+- **App Store:** 1.1.0 (**build 1061**) — **Waiting for Review**. Apple ID: `6776076758` · https://apps.apple.com/app/id6776076758 (מקובע ב-`AppConstants.appStoreUrl`).
+- **Google Play:** 1.1.0 (**versionCode 25**, ריצת build-aab #25) — Closed testing (Alpha), **בבדיקה**. חתימת EA:3B תקינה, "מה חדש" הוזן, מדינות ללא EU.
+- נבנה מ-`claude/qa-launch-prep-EXqLn` קומיט `a42cf83` (iOS דרך Codemagic תג `ios-v3`; AAB דרך marker). תוכן הגרסה: ראה "עדכוני סשן 2026-07-04" + תיקון בוטים (לא מנחשים נכון לפני 50% חשיפה).
+
+### v1.0 — הושקה (2026-07-03)
+- **Google Play:** ✅ אושר — Closed testing (Alpha), versionCode 22, חתום EA:3B, ללא EU-27, 22 בודקים.
+- **App Store:** ✅ אושר (2026-07-03) — build 1059 (r15).
+- **ענף השקה:** `claude/qa-launch-prep-EXqLn`.
+
+### תיקוני דחיית אפל (מומשו, בשתי החנויות)
+1. **2.1(b) IAP:** הוסר ממשק רכישת-כסף לא-פעיל מהחנות (`store_screen.dart`, טאב "🎁 מטבעות"). מטבעות = מטבע-משחק בלבד. **אין IAP** — קנייה אמיתית דחויה ל-v1.1.
+2. **5.1.1(v) מחיקת חשבון:** כפתור "מחק חשבון" בפרופיל → `AuthService.deleteAccount()` (מוחק Firestore + Auth, re-auth ל-Google/Apple). כלל Firestore: `allow delete: if request.auth.uid == userId` (נפרס ל-main).
+3. **2.1 ATT:** `app_tracking_transparency` — בקשה אחרי frame ראשון, **לפני** איתחול AdMob (`main.dart._initTrackingThenAds`).
+4. **תיקון Apple sign-in:** התאוששות מבאג Pigeon (`_isPigeonCastError` → `_recoverFromSignInError`) — כמו במסלול Google.
+
+### ⚠️ חתימת Play — קריטי (EA:3B)
+- מפתח ההעלאה ה**נכון** ל-Play הוא **SHA1 EA:3B:59:B9:2D:4D:F2:58:77:4C:33:55:76:F3:42:46:CC:11:D0:75** (alias `upload`, סיסמאות `123456`). התעודה נושאת CN="ask the kids" (שם קוסמטי — המפתח הוא הנכון).
+- ה-25:C3 הוא מפתח ה-**QA APK** בלבד — **לא** מתקבל ב-Play.
+- `build-aab.yml` חותם ב-EA:3B (כרגע **מוטמע** ב-workflow כי הדבקת secret בנייד נכשלה) + שלב אימות שנכשל אם ה-AAB לא EA:3B.
+- **⚠️ TODO אבטחה אחרי ההשקה:** המפתח EA:3B מוטמע בריפו **ציבורי**. לאחר אישור: לאפס upload key ב-Play למפתח טרי, לאחסן כ-secret (ממחשב), ולהסיר את המוטמע.
+- **מעבר לריפו פרטי — התשתית מוכנה (2026-07-05):** כל הדפים הציבוריים (privacy/support/friend/join/download) + ה-seed לאדמין הועברו ל-`apps-share-pages` (נשאר ציבורי) והקוד עודכן. לפני ההפיכה: לעדכן את כתובות ה-privacy/support בשתי החנויות. **הצ'קליסט המלא והמחייב: `docs/GO_PRIVATE_CHECKLIST.md`.**
+
+### v1.1 — מומש (ענף `claude/google-connect-review-submit-mp11cq`, גרסה 1.1.0)
+- [x] **משוב (feedback)** — כפתור "שלח משוב" בפרופיל → `ReportService.submitFeedback` → `feedback/{id}`.
+- [x] **שליחת לוג אוטומטית** — `ReportService.reportCrash` (מ-`FlutterError.onError`/`platformDispatcher.onError` ב-main) → `crash_reports/{id}` עם `QaLogger.recentLog()`, throttled/deduped/fail-soft.
+- [x] **שיתוף האפליקציה** — כפתור "שתף את האפליקציה" בפרופיל → `Share.share` עם `AppConstants.shareMessage`. קישור Play נגזר מה-package; קישור App Store מ-`app_config/app.iosUrl` (אדמין).
+- [x] **רשימת האפליקציות שלנו** — מסך `OurAppsScreen`, **נשלט מהאדמין** דרך `app_config/app.ourApps` (list של name/subtitle/emoji/androidUrl/iosUrl). השורה בפרופיל מופיעה רק כשיש ≥1 אפליקציה — אין hardcode, הרשימה גדלה בלי בילד.
+- [x] **הגירת אורח→חשבון** — אורח שמתחבר לגוגל/אפל קיים: נתוני האורח נלכדים, האורח **נמחק** (עוד כאורח, כי rules מתירים מחיקת-עצמי), ואז הנתונים נכתבים על החשבון (`_captureGuestData`+`_writeMergedData`+`_GuestSnapshot`). אורח→חשבון חדש = שדרוג-במקום.
+- **בנייה:** גרסה `1.1.0` (build_info + build-aab default + codemagic). Build APK CI ירוק (compile מאומת). ⚠️ **בניות החנות דורשות הפעלה ידנית** (ל-cowork/agent אין הרשאת Actions/tag): AAB דרך Actions→Build AAB→Run workflow (build_name=1.1.0) או תג `aab-v2`; iOS דרך תג `ios-v3` או Start build ב-Codemagic. ⚠️ v1.0 עדיין ב-review בשתי החנויות — cowork יחליט על תזמון הגשת v1.1.
+- (עתידי — ענף `claude/push-invites`: פוש להזמנות — דורש Blaze+APNs.)
+
+### עדכוני סשן 2026-07-04 (על ענף ההשקה, אחרי מיזוג v1.1)
+- **ענף ההשקה `claude/qa-launch-prep-EXqLn` הוא המקור היחיד** — מוזג אליו כל v1.1 (mp11cq) + כל תיקוני הסשן. `claude/rematch-bug-investigation-az4n6h` מצביע על אותו קומיט. בוצעה ביקורת ענפים מלאה: כל קוד יוני ממוזג (הזמנות+צ'אט חברים, שורת עדכון בפרופיל, מקלדת סופיות, 73 תמונות מעודכנות, שיתוף, OurApps); ענפי מאי = היסטוריה ישנה; `claude/push-invites` = עתידי מכוון.
+- **באג "משחק חוזר" תוקן** (3 כשלים): הצטרפות כושלת ניווטה ללובי זר; "שחק שוב" באותיות יצר חדר סולו נפרד (עכשיו rematchRoomId כמו במשחק הראשי + איפוס State ב-didUpdateWidget כי GoRouter ממחזר את המסך בין /letters/A ל-B); מרוץ שני לוחצים מפצל קבוצה (עכשיו טרנזקציה `_claimRematchSlot`).
+- **סנכרון סבבים בחי-צומח-דומם:** ניחוש נכון סוגר את ההקלדה אצל כולם (cycle advance) + guard `stale_image` ב-submitAnswer (ניחוש נשפט רק מול התמונה שעבורה הוקלד). **מסך ביניים** 4ש׳ בין תמונות (`roundInterludeUntilMs`/`lastRoundImageId`/`lastRoundWinnerName` על החדר, `_RoundInterludeOverlay`) — החשיפה הראשונה של הסבב הבא נדחית מעבר להשהיה.
+- **בחירת נושאים:** מארח שכיסה את כל הסבבים מבטל את חובת הבחירה לשאר (`_picksCoverHeat`, מכסה 0); מילוי סלוטים חסרים = **מחזורי מהנושאים שנבחרו** (אקראי רק כשאין בחירות) → קטגוריה אחת = כל המקצה בקטגוריה. כפתור "ביטול" בחלון ההקלדה (`onGuessCancel`).
+- **חברים:** קישור ההזמנה עבר ל-Pages של הריפו (`rotem-ya.github.io/WhoIsThere/friend.html`) כי הסנכרון ל-apps-share-pages שבור (ראה למטה); retry לאוטו-הוספה כשהמשתמש נטען אחרי הקישור; UX ברור בטאב הוספה (העתק/הדבק/הסברים); **באנר גלובלי `FriendRequestBanner`** (מעל הראוטר ב-main.dart) לבקשות ממתינות מכל מסך.
+
+---
+
+## מערכת קוסמטיקה (cosmetics) — נרכשת במטבעות, ללא pay-to-win
+ארבעה סוגי קוסמטיקה, כולם באותו דפוס: model+קטלוג בקוד (`lib/models/`), מסך חנות (`lib/screens/store/`) עם providers `selectedXProvider`/`ownedXProvider` (StreamProvider על `users/{uid}`), קנייה = טרנזקציית Firestore (`coins` − מחיר + `totalSpent` increment, `ownedX` arrayUnion), הצמדה = `selectedX` על user doc. באנר בטאב 🎨 (`store_screen.dart` → `_DesignBanner`). מיזוג ב-`auth_service` במעבר אורח→Google (`ownedX`). דרגות לפי מחיר: בסיסי 50–150 / נדיר 300–500 / פרימיום 1000.
+
+| סוג | model | מסך/route | שדה user | היכן נראה | הפצה לשחקנים אחרים |
+|-----|-------|-----------|----------|-----------|---------------------|
+| מסגרות אווטר | `avatar_frame.dart` | `/store/frames` | `selectedAvatarFrame`/`ownedFrames` | לובי, ניצחון, פרופיל | `PlayerModel.frameId` (RoomService host+join) |
+| צבעי שם | `name_style.dart` | `/store/names` | `selectedNameStyle`/`ownedNameStyles` | לובי, פרופיל (לא מסך ניצחון — שם צבעי מקום) | `PlayerModel.nameStyleId` |
+| אפקטי ניצחון | `win_effect.dart` | `/store/effects` | `selectedWinEffect`/`ownedWinEffects` | מסך ניצחון (אפקט המנצח, כולם רואים) | `PlayerModel.winEffectId` |
+| רקע לוח | `board_skin.dart` | `/store/board` | `selectedBoardSkin`/`ownedBoardSkins` | מסך משחק (רקע) | **פר-צופה** (לא מופץ) — נפרד מ`card_skins` (גב כרטיסיות) |
+
+- רינדור: `PlayerAvatar.frameId` (טבעת SweepGradient), `PlayerNameText` (solid/ShaderMask), `WinEffectOverlay` (מערכת חלקיקים CustomPainter, ללא חבילות), `game_board_screen` רקע מ-`boardSkinFor(...).gradient`.
+- הוספת פריט = שורה בקטלוג בלבד. **אל תבלבל** "רקע לוח" (board_skin) עם "עיצובי כרטיסיות" (card_skins, גב המשבצות) — שתי מערכות נפרדות.
+
+---
+
 ## משחק עם חברים — בחירת נושאים + טבלת ניקוד פר-משחק
 - **מאגר נושאים (חי-צומח-דומם):** 11 קטגוריות ב-`GameCategories.fastHeat`: חיות, פרחים(=plants), דומם(=objects), ציפורים, כלי תחבורה, מקצועות, דגלים, כלי נגינה, פירות וירקות, בגדים, ספורט. כל קטגוריה = `assets/game_places/data/<id>.json` + תמונות ב-`assets/game_places/images/<id>_<name>.jpg` (id+שם קובץ ממורחבים בשם הקטגוריה כדי למנוע התנגשות בתיקייה השטוחה). תוכן מוטמע, `hasHints:false`.
 - **מס׳ סבבים:** משחק מהיר = `max(שחקנים, 3)`. חברים = `max(max(שחקנים,3), סה״כ נושאים שנבחרו)` — כל בחירה נוספת של המארח מאריכה את ההיט, עם רצפה של 3/מס׳ שחקנים.
 - **בחירת נושאים:**
   - **גלובלי (משחק מהיר):** אקראי אוטומטי, `count = max(targetPlayers, 3)` (4 שחקנים → 4 נושאים). נבנה ב-`createRoom` (`heatRounds` param → `_buildHeat`).
-  - **חברים:** **כל משתתף בוחר נושא אחד; המארח יכול לבחור כמה שירצה** (כל בחירה נוספת = סבב נוסף). `topicChoices: Map<playerId, List<categoryId>>`. ב-UI (`lobby_screen.dart` → `_onTopicTap`): **נושא שנבחר ע"י כל משתתף מוצג כנבחר אצל כולם עם שם הבוחר** (chip מודגש). לא-מארח: בוחר נושא אחד **ולא יכול לבטל/להחליף בעצמו** — לחיצה אחרי שבחר מציגה snackbar "רק המארח יכול לבטל". מארח: בוחר ללא הגבלה, ו**רק הוא יכול לבטל בחירה של משתתף — עם דיאלוג אישור** (`_confirmCancelChoice`); ביטול בחירה עצמית של המארח הוא חופשי (ללא דיאלוג). ההיט נבנה ב-`startGameDirectly` מ-`_buildFriendsHeat` (מארח ראשון עם כל בחירותיו, אחר כך כל שאר השחקנים בלוקח-אחד; סלוטים חסרים → אקראי).
-  - דיאלוג בלובי כשלא כולם השלימו מכסה: "בחר אקראית והתחל" / "המתן".
+  - **חברים:** **כל משתתף בוחר נושא אחד; המארח יכול לבחור כמה שירצה** (כל בחירה נוספת = סבב נוסף). `topicChoices: Map<playerId, List<categoryId>>`. ב-UI (`lobby_screen.dart` → `_onTopicTap`): **נושא שנבחר ע"י כל משתתף מוצג כנבחר אצל כולם עם שם הבוחר** (chip מודגש). לא-מארח: בוחר נושא אחד **ולא יכול לבטל/להחליף בעצמו** — לחיצה אחרי שבחר מציגה snackbar "רק המארח יכול לבטל". מארח: בוחר ללא הגבלה, ו**רק הוא יכול לבטל בחירה של משתתף — עם דיאלוג אישור** (`_confirmCancelChoice`); ביטול בחירה עצמית של המארח הוא חופשי (ללא דיאלוג). ההיט נבנה ב-`startGameDirectly` מ-`_buildFriendsHeat` (מארח ראשון עם כל בחירותיו, אחר כך כל שאר השחקנים בלוקח-אחד; סלוטים חסרים → **מילוי מחזורי מהנושאים שנבחרו**, אקראי רק כשאין בחירות כלל — כך קטגוריה אחת = כל המקצה בה).
+  - **פטור מבחירה:** כשהבחירות כבר מכסות את כל הסבבים (`_picksCoverHeat` — ספירה מארח-כל-בחירותיו/אחרים-אחת מול רצפת `max(שחקנים,3)`), המכסה של כולם יורדת ל-0 — אין דיאלוג חוסם והצ'יפים ירוקים.
+  - דיאלוג בלובי כשלא כולם השלימו מכסה: "השלם והתחל" / "המתן".
 - **משחק עם חברים = חינם:** `_createPrivateRoom` יוצר עם `entryFee: 0`, ללא בדיקת מטבעות.
 - **ניקוד פר-משחק (לא מצטבר):** במשחק חברים (`room.isFriendsGame == !isPublicRoom`) הניקוד **לא** נוסף ל-`totalPoints`. טבלת הניקוד + הכרזת הזוכה מוצגות במסך הניצחון (קיים).
 - **פרסי דירוג חברים:** מקום 1 = 20🪙, מקום 2 = 5🪙 (`EconomyConfig.friendsFirstPlaceReward`/`friendsSecondPlaceReward`). מוענק ב-`RoomService.claimPlacementReward` (אידמפוטנטי דרך `placementPaidPlayerIds`), נקרא ממסך הניצחון לכל שחקן על עצמו.
@@ -18,17 +76,27 @@
 ## מערכת חברים (Friends)
 - **מסך:** `lib/screens/friends/friends_screen.dart` (route `/friends`, כפתור 👥 במסך הבית עם נקודת התראה לבקשות ממתינות). 3 טאבים: טבלת ניקוד / חברים+בקשות / הוסף חבר.
 - **שירות:** `FriendsService` (`lib/services/friends_service.dart`). **קוד חבר אישי** (`users/{uid}.friendCode`, נוצר חד-פעמית, ייחודי) + שיתוף בוואטסאפ. הוספה: `sendRequestByCode` (אם הצד השני כבר שלח לי — מתחברים ישירות).
-- **אוטומציה בשיתוף (deep link):** קישור הזמנה `AppConstants.friendInviteUrl(code)` → דף נחיתה `docs/friend.html` (מסונכרן ע"י `sync-join-page.yml` ל-`apps-share-pages/whoisthere/friend/`). הדף פותח אוטומטית `whoisthere://friend?code=` (scheme רשום ב-AndroidManifest host=`friend` + iOS). `main.dart._handleDeepLink` מזהה friend → `pendingFriendCodeProvider`; `FriendsScreen` שולח את הבקשה **אוטומטית** בכניסה (`_maybeAutoAddFromInvite`). cold-start: `HomeScreen` מנווט ל-`/friends`.
+- **אוטומציה בשיתוף (deep link):** קישור הזמנה `AppConstants.friendInviteUrl(code)` → דף נחיתה `docs/friend.html` המוגש מ-**Pages של הריפו הזה**: `https://rotem-ya.github.io/WhoIsThere/friend.html` (⚠️ ה-workflow `sync-join-page.yml` **שבור** — `PAGES_SYNC_TOKEN` בלי הרשאת כתיבה (403); לתקן: PAT חדש עם Contents:RW על apps-share-pages. ב-2026-07-05 הדפים friend/join/privacy הועלו **ידנית** ל-apps-share-pages, כך שגם הקישורים הישנים בפורמט `apps-share-pages/whoisthere/friend/` עובדים — אבל עדכוני דפים עתידיים לא יסתנכרנו עד תיקון ה-PAT). הדף פותח אוטומטית `whoisthere://friend?code=` (scheme רשום ב-AndroidManifest host=`friend` + iOS; ה-handler וה-manifest מזהים את **שני** ה-hosts). `main.dart._handleDeepLink` מזהה friend → `pendingFriendCodeProvider`; `FriendsScreen` שולח את הבקשה **אוטומטית** בכניסה (`_maybeAutoAddFromInvite` + retry דרך `ref.listen(currentUserProvider)` ל-cold-start). cold-start: `HomeScreen` מנווט ל-`/friends`. **באנר גלובלי** `FriendRequestBanner` (main.dart builder) מציג בקשות ממתינות מכל מסך.
 - **Firestore:** `friendRequests/{toUid}_{fromUid}` (בקשות), `users/{uid}/friends/{friendUid}` (חברות, נכתבת לשני הצדדים), `users/{uid}/friendGames/{roomId}` (היסטוריית משחק פר-שחקן). כללים ב-`firestore.rules` (read/write ל-signedIn; כתיבות חוצות-משתמש לחברויות).
 - **ניקוד:** מצטבר ב-`users/{uid}.friendsGamePoints` (נפרד מ-`totalPoints`). **כל קליינט רושם רק את עצמו** ב-`recordMyResult` (אידמפוטנטי פר שחקן/חדר; Firestore מתיר כתיבה רק למסמך המשתמש של עצמך). מופעל מ-`_triggerMatchReward` (game_board_screen) ב-`room.isFriendsGame`. טבלת הניקוד = אני + חברים ממוינים לפי `friendsGamePoints` (`leaderboard`), + רשימת משחקים אחרונים.
 - ⚠️ **חוקי Firestore חדשים** — נדרס deploy (workflow `deploy-firestore-rules.yml` רץ על push ל-main).
 
 ---
 
+## חי-צומח-דומם — הצבעת "החלף פריט" (כשאף אחד לא יודע)
+- אחרי שנחשפו **≥30%** מהמשבצות בסבב היט, מופיע כפתור "🔁 אף אחד לא יודע? החלף פריט" (`game_actions.dart` → `_SkipVoteButton`). לחיצה = הצבעה (toggle); chip מציג `X/סף`.
+- **דרוש רוב של שחקנים אנושיים** כדי להחליף: סף = `(מס׳_אנושיים ~/ 2) + 1`. לכן 2 בני אדם → צריך 2 (1-על-1 אמיתי), 3 → 2, 4 → 3.
+- **בוטים ניטרליים** — לא מצביעים ולא נספרים. לכן אדם בודד מול בוטים → סף 1 (מחליף לבד); ב-1-על-1 הבוט לא משפיע.
+- בעת מעבר רוב: הפריט מוחלף בפריט **אקראי חדש מאותה קטגוריה** (לא בשימוש), החשיפה מתאפסת, **מס׳ הסבבים נשמר** (אותו `heatRoundIndex`).
+- **קוד:** `RoomModel.skipVotes` (List<String>) + getters `humanPlayers`/`skipVoteThreshold`/`skipVoteCount`/`skipVotePassed`/`skipVoteEligible(ratio)` + `kSkipVoteMinRevealRatio=0.30`. שירות: `RoomService.voteSkipItem` (טרנזקציה: pre-pick תמונה מחוץ לטרנזקציה, toggle+ספירה בתוכה). `skipVotes` מתאפס ב-`_roundResetUpdates` (כל מעבר סבב/החלפה). gating בצד שרת ולקוח זהה (`room.placedPieces.length / gridSize²`).
+
+---
+
 ## כללי פיתוח
 - **ענף פיתוח / השקה (מאוחד):** `claude/qa-launch-prep-EXqLn`
-  - זהו הענף המאוחד והיחיד לבנייה (iOS + Android). מכיל: 36 מקומות + טקסט עברי מבוקר, Apple Sign-in entitlement, תיקון קריסת "משחק מהיר" (ניטרול Firestore cache), חתימת AAB עם מפתח EA:3B דרך Secrets, וכל הקו הראשי (parallel guessing, quick-match, פרסומות, מפת גילויים).
-  - ⚠️ **לבנות אך ורק מהענף הזה.** אין לבנות מ-`stability-compensation-logging` (ענף תקוע/מיושן) או מ-`hebrew-text-review` (מוזג לכאן).
+  - זהו הענף המאוחד והיחיד לבנייה (iOS + Android). נכון ל-2026-07-04 מכיל את **הכל**: הקו הראשי, כל v1.1 (mp11cq), תיקוני "משחק חוזר", סנכרון סבבים + מסך ביניים, ותיקוני החברים. ענף `claude/rematch-bug-investigation-az4n6h` זהה לו.
+  - ⚠️ **לבנות אך ורק מהענף הזה.** אין לבנות מ-`stability-compensation-logging` (ענף תקוע/מיושן) או מ-`hebrew-text-review` (מוזג לכאן). ענפי מאי (`lc-*`, `loop-*` וכו') = היסטוריה ישנה שנכתבה מחדש — לא למזג מהם.
+  - `main` משמש רק לתשתית שנפרסת ממנו: Firestore rules (`deploy-firestore-rules.yml`), GitHub Pages (docs/), וסנכרון דפי share. קוד האפליקציה חי בענף ההשקה.
 - מאגר: `rotem-ya/whoisthere`
 
 ## דף הצטרפות לחדר (Join Page)
@@ -160,6 +228,14 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 - **המשחק הרגיל** (זיהוי מקומות) משתמש בקטגוריה `israel_places`. **חי צומח דומם** (מקצה) משתמש ב-`animals`/`plants`/`objects` דרך `_buildHeat` → אותו `_loadLocalImages(categoryId)`. לכן הוספת/השבתת תמונה מהאדמין עובדת **גם** בחי צומח דומם, ללא קוד נוסף.
 - **חוזה אדמין (קריטי לאחידות):** כל מקום remote במניפסט חייב לשאת שדה `category` עם אחד מה-ids: `israel_places` / `animals` / `plants` / `objects` (וגם `world_sites` / `israel_figures` / `world_figures` לעתיד). ברירת מחדל בהיעדר השדה = `israel_places` (כלומר ייכנס רק למשחק הרגיל). ids חייבים להיות זהים בדיוק ל-`GameCategories` ב-`lib/core/constants/game_categories.dart`.
 
+### מודל התוכן (החלטת רוטם, 2026-07-04): אדמין חי + הטמעה בעדכון גרסה
+- **האדמין שולט בזמן אמת, בלי עדכון גרסה:** `kBundledImagesOnly = false` (`content_manifest_service.dart`) — דריסות תמונה ומקומות remote חדשים שהאדמין מפרסם במניפסט מופיעים במשחק מיד (אחרי cache). `true` = בלם חירום בלבד (מתעלם מכל תמונת ענן; הסתרה/שמות/נושאים ממשיכים לעבוד).
+- **בכל עדכון גרסה "אופים" את תוכן הענן פנימה** כדי לחסוך מקום/egress ב-Firestore/Storage. צ'קליסט שחרור:
+  1. להוריד את התמונות של כל הפריטים במניפסט עם `imageUrl` פעיל (דריסות + remote) אל `assets/game_places/images/` בשמות לפי המוסכמה, ולעדכן/להוסיף רשומות ב-`assets/game_places/data/<category>.json`.
+  2. לבנות ולהפיץ את הגרסה.
+  3. **אחרי** שהגרסה בחוץ: באדמין — לנקות `imageUrl` מהדריסות שהוטמעו ולהעביר פריטי remote ל-`source:'bundled'` (או למחוק את הרשומה). הקליינט נופל אוטומטית לנכס המוטמע (`resolveBundled` מחזיר bundled כשאין override), ואפשר למחוק את הקבצים מ-Storage.
+  - ⚠️ אל תנקו את המניפסט לפני שהגרסה החדשה זמינה — משתמשי הגרסה הישנה עדיין קוראים ממנו.
+
 ### צ'אט (טקסט חופשי + אימוג'ים) — אחיד לכל המצבים
 - `RoomService.sendChatMessage` / `chatMessagesStream` על תת-אוסף `rooms/{id}/messages` (rules מכוסה ב-`{document=**}`).
 - ה-UI (כפתור 💬, גיליון הצ'אט, טוסטים, בוטים) ב-`game_board_screen.dart` מגודר רק על `phase == GamePhase.playing` — **לא** על `isHeat`. לכן הצ'אט קיים גם במשחק הרגיל וגם בחי צומח דומם.
@@ -167,6 +243,15 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 ### כשמוסיפים סוג משחק חדש
 - הוסף קטגוריה ב-`GameCategories` (id חדש + JSON). השתמש ב-`_loadLocalImages(categoryId)` לבחירת תמונות → תוכן הענן והאדמין מגיעים בחינם.
 - אל תגדר פיצ'רים רוחביים (צ'אט/אווטרים/תוכן) ב-`isHeat`/id ספציפי — גדר רק על `phase`/יכולת, כדי שיישארו אחידים.
+
+---
+
+## משחק האותיות (משחק חדש) — מצב + מטלות דחויות
+משחק וורדל-עם-תמונות, 1 נגד 1 תורות. התשובה = שם עברי של תמונה אקראית מכל הקטגוריות (בלי כותרת נושא). אות במיקום מדויק (ירוק) → 4 משבצות; אות שקיימת במקום אחר (צהוב) → 2; חוטא → 0. **לוח נפרד לכל שחקן**, לוח זכוכית-מט 8×8 (משבצות שהיריב חשף = זכוכית אדומה מט). ניצחון אוטומטי למשלים ראשון.
+- **קוד:** `mode:'letters'` + `secretWord`/`lettersRevealedTiles`/`lettersGuessed`/`lettersSolvedSlots` ב-`RoomModel`; לוגיקה טהורה ב-`lib/core/utils/letters_matcher.dart` (+ טסטים); שירות `createLettersRoom`/`guessLetterInLettersGame` ב-`room_service`; מסך `lib/screens/game/letters_game_screen.dart` (route `/letters/:roomId`); כניסה מהבית = כפתור "🔤 משחק האותיות".
+- **מולטיפלייר (מומש):** חברים = חדר פרטי בקוד (`createLettersRoom(solo:false, isPublicRoom:false)`, המסך מציג קוד; המארח מתחיל כשנכנס שחקן 2 דרך `startLettersGame`). אקראי = `findLettersMatch` (סינון `mode=='letters'` בקוד על אינדקס waiting+public קיים) או חדר ציבורי ממתין עם נפילה לבוט אחרי 8ש׳. כל סוגי המשחק (מקומות/חי-צומח-דומם/אותיות) נכנסים דרך מסך הבית עם בורר "נגד מי?" (אקראי/חברים).
+- **מטלות דחויות (לבקשת רוטם — להזכיר):**
+  - [ ] פוליש: אנימציות חשיפה/מחוון תור, אולי טיימר קצר לתור, בדיקה חיה על מכשיר (ביצועי ה-blur של 64 משבצות), טיפול במצב-קצה של מירוץ הצטרפות (יותר מ-2 שחקנים בחדר אותיות).
 
 ---
 
@@ -191,6 +276,19 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 
 ## העלאה ל-App Store (iOS / TestFlight)
 
+### ✅ המסלול הקנוני: Codemagic (לא GitHub Actions)
+ה-iOS נבנה ומועלה ל-TestFlight דרך **Codemagic** (`codemagic.yaml`, workflow `ios-testflight`), **לא** דרך build-ios.yml (זה מסלול legacy/גיבוי — ראה למטה).
+- **טריגר:** דחיפת תג **`ios-v*`** (למשל `ios-v1`) מענף ההשקה → בונה IPA חתום ומעלה אוטומטית ל-TestFlight (`submit_to_testflight: true`). אפשר גם Start build ידני ב-Codemagic UI.
+  ```bash
+  git tag ios-v1 origin/claude/qa-launch-prep-EXqLn && git push origin ios-v1
+  ```
+- **חתימה:** אוטומטית ע"י Codemagic (`xcode-project use-profiles`), distribution_type=app_store, bundle `com.rotem.whoisthere`.
+- **מפתח ASC:** integration ב-Codemagic בשם **בדיוק `Apple_Key_Trivia`** (Key ID 995PSX889V) — חייב להתאים ל-`codemagic.yaml`, אחרת "key not found".
+- **build:** name `1.0.0`, number אוטומטי (`$PROJECT_BUILD_NUMBER`). כבר מטופל: שיטוח alpha באייקון, תיקון נתיב assets, תאימות gRPC/Firebase.
+- **הקמה חד-פעמית + צעד-אחר-צעד:** `IOS_TESTFLIGHT_SETUP.md`.
+- ⚠️ cowork לא יכול ללחוץ בממשק Codemagic — הוא דוחף תג `ios-v*` ומדריך את רותם לצעדים האנושיים (הוספת בודק ב-TestFlight וכו').
+
+### (legacy) מסלול GitHub Actions
 בנייה והעלאה ל-TestFlight רצות **כולן ב-CI** (GitHub Actions, runner macOS) — אין צורך לפתוח Xcode במחשב. ה-workflow הוא `.github/workflows/build-ios.yml`, שמריץ את fastlane lane `beta` (קבצים: `ios/fastlane/Fastfile`, `ios/fastlane/Appfile`, `ios/ExportOptions.plist`). מספר ה-build נלקח אוטומטית ממספר ריצת ה-workflow, והאימות מול App Store Connect הוא דרך App Store Connect API Key (ולא סיסמת Apple ID).
 
 ### 7 ה-Secrets הנדרשים

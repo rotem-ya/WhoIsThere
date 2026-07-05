@@ -85,9 +85,9 @@ A picture hides behind a grid of tiles that reveal one by one. First to recogniz
 | Primary Language | Hebrew |
 | Category (Primary) | Games → **Trivia** |
 | Category (Secondary) | Games → Word (אופציונלי) |
-| Support URL | https://rotem-ya.github.io/WhoIsThere/ *(לוודא שקיים; אחרת דף תמיכה פשוט)* |
-| Marketing URL (אופציונלי) | https://rotem-ya.github.io/WhoIsThere/ |
-| Privacy Policy URL | https://rotem-ya.github.io/WhoIsThere/privacy.html |
+| Support URL | https://rotem-ya.github.io/apps-share-pages/whoisthere/support/ *(לוודא שקיים; אחרת דף תמיכה פשוט)* |
+| Marketing URL (אופציונלי) | https://rotem-ya.github.io/apps-share-pages/whoisthere/ |
+| Privacy Policy URL | https://rotem-ya.github.io/apps-share-pages/whoisthere/privacy/ |
 | Copyright | 2026 Rotem |
 | איש קשר ל-App Review | שם + טלפון + אימייל: askthekids.app@gmail.com |
 

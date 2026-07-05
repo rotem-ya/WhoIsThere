@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../core/constants/ad_constants.dart';
 import '../models/economy/user_economy_model.dart';
 import '../services/ad_service.dart';
+import '../services/app_update_service.dart';
 import '../services/auth_service.dart';
 import '../services/economy_service.dart';
 import '../services/hint_economy_guard.dart';
@@ -14,6 +15,7 @@ import '../services/qa_logger_service.dart';
 import '../services/room_service.dart';
 import '../services/settings_service.dart';
 import '../services/friends_service.dart';
+import '../services/content_manifest_service.dart';
 import '../models/user_model.dart';
 import '../models/room_model.dart';
 import '../models/game_image_model.dart';
@@ -22,6 +24,13 @@ import '../models/friend_models.dart';
 // Services
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 final roomServiceProvider = Provider<RoomService>((ref) => RoomService());
+final appUpdateServiceProvider =
+    Provider<AppUpdateService>((ref) => AppUpdateService());
+
+// One-shot fetch of the remote update config — watched by the home notice and
+// the profile "update available" row so they share a single read.
+final appUpdateInfoProvider = FutureProvider.autoDispose<AppUpdateInfo?>(
+    (ref) => ref.watch(appUpdateServiceProvider).fetch());
 
 // AdMob — single long-lived instance. Preloads rewarded + interstitial on
 // creation so the first show is instant.
@@ -102,6 +111,22 @@ final currentUserProvider = StreamProvider<UserModel?>((ref) {
   return ref.watch(authServiceProvider).userModelStreamForUid(authUser.uid);
 });
 
+// Emits whenever the live content manifest changes (admin edit). Screens that
+// render admin-controlled content (topic active/labels, places) watch this to
+// rebuild immediately — no app restart needed.
+final contentManifestRevisionProvider = StreamProvider<int>((ref) {
+  final notifier = ContentManifestService.instance.revision;
+  final controller = StreamController<int>();
+  void emit() => controller.add(notifier.value);
+  emit(); // seed with the current value
+  notifier.addListener(emit);
+  ref.onDispose(() {
+    notifier.removeListener(emit);
+    controller.close();
+  });
+  return controller.stream;
+});
+
 // Deep-link join code — set by AppLinks handler, consumed by JoinRoomScreen
 final pendingJoinCodeProvider = StateProvider<String?>((ref) => null);
 
@@ -153,6 +178,14 @@ final friendRequestsProvider =
   final uid = ref.watch(firebaseUserProvider).valueOrNull?.uid;
   if (uid == null) return Stream.value(const []);
   return ref.watch(friendsServiceProvider).incomingRequests(uid);
+});
+
+// Incoming game invites ("X invited you to play") for the signed-in user.
+final gameInvitesProvider =
+    StreamProvider.autoDispose<List<GameInviteModel>>((ref) {
+  final uid = ref.watch(firebaseUserProvider).valueOrNull?.uid;
+  if (uid == null) return Stream.value(const []);
+  return ref.watch(friendsServiceProvider).incomingGameInvites(uid);
 });
 
 // Cumulative friends leaderboard (me + friends, sorted by points). Recomputes

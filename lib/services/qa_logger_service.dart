@@ -44,10 +44,20 @@ class QaLoggerService {
   }
 
   Future<void> copyToClipboard() async {
-    final text = _events.isEmpty
-        ? '(no QA events recorded)'
-        : '=== QA LOG (${_events.length} events) ===\n${_events.join('\n')}';
-    await Clipboard.setData(ClipboardData(text: text));
+    await Clipboard.setData(ClipboardData(text: exportText()));
+  }
+
+  /// The full log as text (also used by the auto crash report + feedback).
+  String exportText() => _events.isEmpty
+      ? '(no QA events recorded)'
+      : '=== QA LOG (${_events.length} events) ===\n${_events.join('\n')}';
+
+  /// The most recent [lines] log entries as a single string — attached to
+  /// auto-sent crash reports (bounded so the Firestore doc stays small).
+  String recentLog({int lines = 120}) {
+    if (_events.isEmpty) return '';
+    final start = _events.length > lines ? _events.length - lines : 0;
+    return _events.sublist(start).join('\n');
   }
 
   void clear() {

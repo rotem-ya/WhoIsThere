@@ -43,6 +43,12 @@ class GameActions extends ConsumerWidget {
   final int maxRevealBuys;
   // Detective reveal tools (bomb / spotlight / targeted / fast-forward).
   final List<DetectiveAction> detectiveActions;
+  // חי-צומח-דומם: vote to replace the current item (shown once ≥30% revealed).
+  final bool showSkipVote;
+  final int skipVoteCount;
+  final int skipVoteThreshold;
+  final bool iVotedSkip;
+  final VoidCallback? onVoteSkip;
 
   const GameActions({
     required this.isMyTurn,
@@ -71,6 +77,11 @@ class GameActions extends ConsumerWidget {
     this.revealBuyCount = 0,
     this.maxRevealBuys = 5,
     this.detectiveActions = const [],
+    this.showSkipVote = false,
+    this.skipVoteCount = 0,
+    this.skipVoteThreshold = 0,
+    this.iVotedSkip = false,
+    this.onVoteSkip,
   });
 
   @override
@@ -207,6 +218,16 @@ class GameActions extends ConsumerWidget {
                   stunCardCount: stunCardCount,
                   targets: stunTargets,
                   onStun: onStunCard!,
+                ),
+              ],
+              // חי-צומח-דומם: propose replacing the current item (needs majority).
+              if (showSkipVote && onVoteSkip != null) ...[
+                const SizedBox(height: 6),
+                _SkipVoteButton(
+                  voteCount: skipVoteCount,
+                  threshold: skipVoteThreshold,
+                  iVoted: iVotedSkip,
+                  onTap: onVoteSkip!,
                 ),
               ],
             ],
@@ -537,6 +558,83 @@ class _RewardMeter extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Skip / replace-item vote button (חי-צומח-דומם) ─────────────────────────────
+
+/// Shown once ≥30% of the board is revealed in a heat round. Lets a player vote
+/// to replace the current item when nobody recognizes it; a majority of human
+/// players swaps in a fresh one. Tapping toggles this player's own vote.
+class _SkipVoteButton extends StatelessWidget {
+  final int voteCount;
+  final int threshold;
+  final bool iVoted;
+  final VoidCallback onTap;
+
+  const _SkipVoteButton({
+    required this.voteCount,
+    required this.threshold,
+    required this.iVoted,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFFF2B441);
+    return GestureDetector(
+      onTap: () {
+        FeedbackService.click();
+        onTap();
+      },
+      child: Container(
+        height: 42,
+        decoration: BoxDecoration(
+          color: iVoted
+              ? accent.withOpacity(0.16)
+              : const Color(0xFF07101F).withOpacity(0.56),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: accent.withOpacity(iVoted ? 0.7 : 0.4),
+            width: iVoted ? 1.2 : 0.8,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('🔁', style: TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+            Text(
+              iVoted ? 'בטל הצבעה' : 'אף אחד לא יודע? החלף פריט',
+              textDirection: TextDirection.rtl,
+              style: const TextStyle(
+                color: accent,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            if (threshold > 0) ...[
+              const SizedBox(width: 7),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.22),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Text(
+                  '$voteCount/$threshold',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
