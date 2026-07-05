@@ -16,6 +16,7 @@ import '../../core/utils/letters_matcher.dart';
 import '../../models/game_image_model.dart';
 import '../../models/room_model.dart';
 import '../../providers/providers.dart';
+import '../../services/review_prompt_service.dart';
 import '../../services/settings_service.dart';
 import '../../services/sfx_service.dart';
 
@@ -530,7 +531,11 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
       _winSoundPlayed = true;
       _bgPlayer.stop();
       SfxService.instance.win();
-      if (iWon) _confetti.play();
+      if (iWon) {
+        _confetti.play();
+        // A win is the best moment to (rarely) ask for a store rating.
+        unawaited(ReviewPromptService.instance.onGameWon());
+      }
     }
     final url = _image?.imageUrl;
     return Stack(

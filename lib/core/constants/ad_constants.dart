@@ -11,11 +11,12 @@ class AdConstants {
   /// fill instantly and are safe to click — use this to VERIFY the integration
   /// on a real device.
   ///
-  /// ⚠️ MUST be set back to false for the production / Play Store build:
-  /// test ads earn no money, and showing them to real users violates AdMob
-  /// policy. (Real ad units on a brand-new account can take a few hours to a
-  /// day before they start serving — that delay is normal.)
-  static const bool useTestAds = true;
+  /// ⚠️ Production ships with FALSE (real units, real revenue). v1.0/v1.1.0
+  /// accidentally shipped with true — zero revenue; flipped 2026-07-05.
+  /// (Real ad units on a brand-new account can take a few hours to a day
+  /// before they start serving — that delay is normal. Never click real ads
+  /// on your own device — AdMob policy.)
+  static const bool useTestAds = false;
 
   /// Banners are shown on the win screen + lobby.
   static const bool bannersEnabled = true;

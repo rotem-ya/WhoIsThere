@@ -31,6 +31,7 @@ import '../../widgets/chat/chat_sheet.dart';
 import '../../providers/providers.dart';
 import '../../services/settings_service.dart';
 import '../../services/reward_calculator.dart';
+import '../../services/review_prompt_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../widgets/game/letter_bank_input.dart';
 import 'widgets/detective_toolbar.dart';
@@ -1463,6 +1464,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     final isWin = room.winnerId == uid;
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
+    // A win is the best moment to (rarely) ask for a store rating.
+    if (isWin) unawaited(ReviewPromptService.instance.onGameWon());
     final timeTaken = _gameStartTime != null
         ? DateTime.now().difference(_gameStartTime!)
         : const Duration(seconds: 999);
