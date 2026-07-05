@@ -292,11 +292,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int _sessionWrongGuessCount = 0;
 
   // Parallel guessing: the guess input overlay is opened LOCALLY (no global lock),
-  // so several players can race at once. _localGuessOpen drives the overlay; the
-  // local deadline auto-closes it if the player never submits.
+  // so several players can race at once. _localGuessOpen drives the overlay;
+  // it closes ONLY on submit / cancel / round advance — never by a timer
+  // (typing must not be interrupted). _localGuessDeadlineMs = opened-at
+  // marker, used as the overlay widget key.
   bool _localGuessOpen = false;
   int? _localGuessDeadlineMs;
-  Timer? _localGuessTimer;
   int _sessionWatchdogEventCount = 0;
   bool? _lastGuessEventCorrect;
 
@@ -994,7 +995,6 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _musicShouldBePlaying = false;
     _bgPlayerStateSub?.cancel();
     _expiryTimer?.cancel();
-    _localGuessTimer?.cancel();
     _interludeTimer?.cancel();
     _spotlightTimer?.cancel();
     _botReactionTimer?.cancel();
@@ -1997,28 +1997,20 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (_localGuessOpen) return; // overlay already open
     QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED phase=${room.turnPhase.name}');
 
-    // Parallel guessing: open the guess input LOCALLY — no server lock, so other
-    // players can open their own input at the same time. A local timer auto-closes
-    // the overlay if the player never submits (no penalty for not guessing).
-    _localGuessTimer?.cancel();
-    final deadline = DateTime.now().millisecondsSinceEpoch + 20000;
+    // Parallel guessing: open the guess input LOCALLY — no server lock, so
+    // other players can open their own input at the same time. The overlay
+    // stays open until the player submits, taps ביטול, or the round advances
+    // (someone else solved it) — NO auto-close timer: typing an answer must
+    // never be interrupted mid-word (per Rotem, QA 2026-07-05). The stored
+    // "deadline" is just an opened-at marker used as the overlay widget key.
+    final openedAt = DateTime.now().millisecondsSinceEpoch;
     setState(() {
       _localGuessOpen = true;
-      _localGuessDeadlineMs = deadline;
-    });
-    _localGuessTimer = Timer(const Duration(milliseconds: 20000), () {
-      if (mounted && _localGuessOpen) {
-        QaLoggerService.instance.log('GUESS', 'LOCAL_GUESS_TIMEOUT_CLOSED');
-        setState(() {
-          _localGuessOpen = false;
-          _localGuessDeadlineMs = null;
-        });
-      }
+      _localGuessDeadlineMs = openedAt;
     });
   }
 
   void _closeLocalGuess() {
-    _localGuessTimer?.cancel();
     if (_localGuessOpen && mounted) {
       setState(() {
         _localGuessOpen = false;
