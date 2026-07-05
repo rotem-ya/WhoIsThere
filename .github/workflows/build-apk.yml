@@ -86,7 +86,7 @@ jobs:
         with:
           name: ${{ steps.artifact_name.outputs.name }}
           path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 14
+          retention-days: 3
 
       # Publish a direct, mobile-friendly download link. Updates a moving
       # "qa-latest" release on every main build so the URL never changes:

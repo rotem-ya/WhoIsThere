@@ -114,4 +114,4 @@ jobs:
         with:
           name: GuessThePlace-playstore-aab
           path: build/app/outputs/bundle/release/app-release.aab
-          retention-days: 30
+          retention-days: 7

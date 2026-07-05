@@ -14,7 +14,7 @@
 - כל הקוד שמוגש נמצא ב-`main` (מוזג + CI ירוק).
 - חוקי Firestore נפרסו (`deploy-firestore-rules.yml` רץ על push ל-main).
 - נכסי החנות מוכנים תחת `google-play-assets/` (כותרת, תיאורים, אייקון, feature graphic, 4 צילומי מסך, `privacy_policy_url.txt`).
-- מדיניות פרטיות חיה: `https://rotem-ya.github.io/WhoIsThere/privacy.html` — ודא שהיא נטענת.
+- מדיניות פרטיות חיה: `https://rotem-ya.github.io/apps-share-pages/whoisthere/privacy/` — ודא שהיא נטענת.
 - **הצהרת מודעות:** האפליקציה כוללת AdMob (banner/interstitial/rewarded) → חובה להצהיר על מודעות + איסוף **Advertising ID** בשני הצדדים.
 
 ---

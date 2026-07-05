@@ -7,6 +7,10 @@ on:
       - docs/join.html
       - docs/friend.html
       - docs/privacy.html
+      - docs/support.html
+      - docs/download.html
+      - docs/content_catalog_seed.json
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -32,8 +36,17 @@ jobs:
           mkdir -p /tmp/pages/whoisthere/privacy
           cp docs/privacy.html /tmp/pages/whoisthere/privacy/index.html
 
+          mkdir -p /tmp/pages/whoisthere/support
+          cp docs/support.html /tmp/pages/whoisthere/support/index.html
+
+          mkdir -p /tmp/pages/whoisthere/download
+          cp docs/download.html /tmp/pages/whoisthere/download/index.html
+
+          mkdir -p /tmp/pages/whoisthere/content
+          cp docs/content_catalog_seed.json /tmp/pages/whoisthere/content/content_catalog_seed.json
+
           cd /tmp/pages
-          git add whoisthere/join/index.html whoisthere/friend/index.html whoisthere/privacy/index.html
+          git add whoisthere/
           git diff --staged --quiet && echo "No changes, skipping." && exit 0
           git commit -m "sync: WhoIsThere public pages (${GITHUB_SHA::7})"
           git push

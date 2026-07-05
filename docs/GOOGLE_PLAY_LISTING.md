@@ -98,7 +98,7 @@
 ## 6. מדיניות פרטיות (URL — חובה)
 
 ```
-https://rotem-ya.github.io/WhoIsThere/privacy.html
+https://rotem-ya.github.io/apps-share-pages/whoisthere/privacy/
 ```
 > **דרוש פעם אחת:** הפעל GitHub Pages לריפו —
 > Settings → Pages → Source: **Deploy from a branch** → Branch: **main** → Folder: **/docs** → Save.
