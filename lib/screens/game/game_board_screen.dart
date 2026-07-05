@@ -1086,9 +1086,29 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _lastHeatBotKey = key;
 
     final botId = botEntries[_random.nextInt(botEntries.length)].key;
-    // Slower than a snap reaction so a human who recognises the image still
-    // gets the first guess. ~12–20s into the round.
-    final delayMs = 12000 + _random.nextInt(8001);
+    // Early presence attempt (~12–20s in): the bot visibly types and races,
+    // but below 50% reveal it can only be WRONG (see the attempt's guard).
+    _scheduleHeatBotAttempt(room, botId, 12000 + _random.nextInt(8001));
+    // Second wind once >50% of the board is open — the only window where a
+    // correct bot guess is allowed — so the bot stays a real late threat.
+    // Heat reveals tick at ~1 tile/sec (giant metronome), so time-to-55–73%
+    // is roughly the missing tile count in seconds.
+    final total = room.gridSize * room.gridSize;
+    final targetTiles = (total * (0.55 + _random.nextDouble() * 0.18)).round();
+    final tilesLeft =
+        (targetTiles - room.placedPieces.length).clamp(0, total);
+    _scheduleHeatBotAttempt(
+        room, botId, tilesLeft * 1000 + 1500 + _random.nextInt(2500));
+  }
+
+  /// One delayed heat-bot guess attempt. Re-reads the live room before acting
+  /// and bails if the round moved on. Correct chance is derived from the LIVE
+  /// reveal ratio at fire time — and is hard-zeroed below 50% reveal:
+  /// rule (per Rotem), a bot may never guess correctly before half the tiles
+  /// are revealed, in any game, so a human who recognises the image early
+  /// always owns the win. A wrong attempt still shows typing + a same-topic
+  /// wrong guess (then a block), keeping the race feeling alive.
+  void _scheduleHeatBotAttempt(RoomModel room, String botId, int delayMs) {
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
       final snap = await ref.read(roomServiceProvider).watchRoom(room.id).first;
@@ -1097,21 +1117,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (snap.heatRoundIndex != room.heatRoundIndex) return;
       if (snap.selectedImageId != room.selectedImageId) return;
       if (snap.isBlockedFromGuessing(botId)) return;
-      // Correct chance scales with how much is actually revealed (as a ratio so
-      // it's grid-size agnostic). The bot must NOT be an instant know-it-all:
-      // below ~8% it can never be right, so a human who recognises the image
-      // early always owns the win. When it's wrong it submits a same-topic wrong
-      // guess and gets blocked for the round, leaving the human a clear path.
       final total = snap.gridSize * snap.gridSize;
       final revealed = snap.placedPieces.length;
       final ratio = total > 0 ? revealed / total : 0.0;
-      final double correctChance = ratio < 0.08
+      final double correctChance = ratio < 0.50
           ? 0.0
-          : ratio < 0.16
-              ? 0.12
-              : ratio < 0.28
-                  ? 0.28
-                  : 0.42;
+          : ratio < 0.65
+              ? 0.30
+              : 0.45;
       await _performBotGuess(snap, botId, correctChance);
     });
   }
