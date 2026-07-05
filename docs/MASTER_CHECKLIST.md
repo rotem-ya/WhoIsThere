@@ -68,5 +68,22 @@ firebase_analytics ^10.8 + AnalyticsService; אירועים: game_start/game_win
 3. ✅ **מעבר תמונה מבטל הקלדה + חשיפה מסונכרנת לכולם** — קיים (סגירת overlay במעבר סבב, guard `stale_image`, מסך ביניים 4ש׳ שדוחה את החשיפה).
 ⚠️ **ה-APK הנכון לבדיקה:** `releases/download/qa-launch/app-release.apk` (ענף ההשקה). ה-`qa-latest` נבנה מ-main הישן — הלוג שנשלח תואם לבילד ישן (אין מסך ביניים, אין כפתור ביטול).
 
+### הפעלת הודעת "עדכון זמין" (אחרי כל שחרור) · 🎛️ אדמין / 👤
+המנגנון כבר באפליקציה (דיאלוג קופץ בכניסה מ-home + שורה קבועה בפרופיל; מתחת ל-minBuild הדיאלוג חוסם). מופעל מ-Firestore — מסמך `app_config/app`:
+```json
+{
+  "enabled": true,
+  "latestBuild": 61,
+  "minBuild": 1,
+  "message": "יצאה גרסה חדשה עם שיפורים ותיקונים — מומלץ לעדכן!",
+  "androidUrl": "https://play.google.com/store/apps/details?id=com.whoisthere.app",
+  "iosUrl": "https://apps.apple.com/app/id6776076758"
+}
+```
+אחרי כל שחרור: לעדכן `latestBuild` למספר ה-build החדש (v1.1.1 = **61**). להעלות `minBuild` רק כשרוצים לכפות עדכון. ⚠️ בילדים של v1.0/v1.1.0 יצאו עם buildNumber ישן — ההודעה תופיע להם ברגע שה-doc יוזן.
+
+### מיזוג תקופתי ל-main · 🤖
+אחרי כל צרור עבודה בענף ההשקה — למזג ל-main (בוצע לראשונה 2026-07-05). שומר את main עדכני: rules, docs, workflows, ו-qa-latest APK נבנה מקוד עדכני (הבאג שהטעה את הבדיקה הערב).
+
 ### מגרש חנייה (לא ממוספר — כשמתפנה)
 משימות יומיות · לוקליזציה לאנגלית · Firebase App Distribution ל-QA · דוח שבועי אוטומטי · ניקוי חדרים ישנים · פוליש משחק האותיות (מהרשימה הדחויה) · Crashlytics
