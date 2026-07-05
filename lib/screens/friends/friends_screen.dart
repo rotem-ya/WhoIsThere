@@ -8,6 +8,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../models/friend_models.dart';
 import '../../providers/providers.dart';
+import '../../services/analytics_service.dart';
 import '../../services/friends_service.dart';
 import '../../widgets/chat/chat_sheet.dart';
 
@@ -125,6 +126,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
       ..writeln(AppConstants.friendInviteUrl(code))
       ..writeln()
       ..writeln('אין אפליקציה? הקוד שלי: $code');
+    AnalyticsService.instance.inviteSent(kind: 'friend_code');
     Share.share(msg.toString());
   }
 

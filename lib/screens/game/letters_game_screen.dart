@@ -16,6 +16,7 @@ import '../../core/utils/letters_matcher.dart';
 import '../../models/game_image_model.dart';
 import '../../models/room_model.dart';
 import '../../providers/providers.dart';
+import '../../services/analytics_service.dart';
 import '../../services/review_prompt_service.dart';
 import '../../services/settings_service.dart';
 import '../../services/sfx_service.dart';
@@ -56,6 +57,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   bool _winSoundPlayed = false;
   bool _startTriggered = false;
   bool _rematchBusy = false;
+  bool _startLogged = false;
   Timer? _randomFallbackTimer;
 
   static final AudioPlayer _bgPlayer = AudioPlayer(playerId: 'letters-bg');
@@ -99,6 +101,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
     _lastBotTurnKey = null;
     _winSoundPlayed = false;
     _startTriggered = false;
+    _startLogged = false;
     _startMusic(); // the finished overlay stopped the bg music
   }
 
@@ -350,6 +353,13 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                   return _buildWaiting(room);
                 }
 
+                if (!_startLogged) {
+                  _startLogged = true;
+                  AnalyticsService.instance.gameStart(
+                    mode: 'letters',
+                    solo: room.players.values.any((p) => p.isBot),
+                  );
+                }
                 _maybeScheduleBotTurn(room, puzzle);
                 return _buildPlaying(room, puzzle);
               },
@@ -535,6 +545,9 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
         _confetti.play();
         // A win is the best moment to (rarely) ask for a store rating.
         unawaited(ReviewPromptService.instance.onGameWon());
+        final oppIsBot = room.players.values
+            .any((p) => p.isBot && p.id != (_myUid ?? ''));
+        AnalyticsService.instance.gameWin(mode: 'letters', solo: oppIsBot);
       }
     }
     final url = _image?.imageUrl;

@@ -20,6 +20,7 @@ import '../../models/friend_models.dart';
 import '../../core/constants/game_categories.dart';
 import '../../core/utils/chat_filter.dart';
 import '../../widgets/chat/chat_sheet.dart';
+import '../../services/analytics_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../services/settings_service.dart';
 import '../../services/content_manifest_service.dart';
@@ -69,7 +70,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   Future<void> _watchAdForCoins() async {
     final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
     if (uid == null) return;
-    final watched = await ref.read(adServiceProvider).showRewarded();
+    final watched = await ref.read(adServiceProvider).showRewarded(placement: 'lobby_coins');
     if (!mounted) return;
     if (!watched) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -480,6 +481,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     msg.writeln();
     msg.writeln('🎮 הצטרפות ישירה לחדר:');
     msg.write(AppConstants.joinUrlForCode(code));
+    AnalyticsService.instance.inviteSent(kind: 'room');
     Share.share(msg.toString());
   }
 

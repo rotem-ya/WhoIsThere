@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../core/constants/build_info.dart';
+import 'analytics_service.dart';
 import 'qa_logger_service.dart';
 
 /// User feedback + automatic crash/error reporting, both written to Firestore
@@ -55,6 +56,7 @@ class ReportService {
         'createdAt': FieldValue.serverTimestamp(),
       });
       QaLoggerService.instance.log('FEEDBACK', 'FEEDBACK_SENT len=${body.length}');
+      AnalyticsService.instance.feedbackSent();
       return true;
     } catch (e) {
       QaLoggerService.instance.log('FEEDBACK', 'FEEDBACK_FAIL $e');

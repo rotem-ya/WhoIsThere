@@ -688,7 +688,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     optBtn('📺 צפה בפרסומת (+${EconomyConfig.adRewardCoins})', const [Color(0xFF20A8E0), Color(0xFF0868A8)],
                         () => run(() async {
                           final watched =
-                              await ref.read(adServiceProvider).showRewarded();
+                              await ref.read(adServiceProvider).showRewarded(placement: 'home_coins');
                           if (!watched) return false;
                           return economy.applyAdReward(uid!);
                         }, proceed: true)),

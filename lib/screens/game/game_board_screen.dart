@@ -30,6 +30,7 @@ import '../../core/utils/chat_filter.dart';
 import '../../widgets/chat/chat_sheet.dart';
 import '../../providers/providers.dart';
 import '../../services/settings_service.dart';
+import '../../services/analytics_service.dart';
 import '../../services/reward_calculator.dart';
 import '../../services/review_prompt_service.dart';
 import '../../services/qa_logger_service.dart';
@@ -1465,7 +1466,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final isWin = room.winnerId == uid;
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
     // A win is the best moment to (rarely) ask for a store rating.
-    if (isWin) unawaited(ReviewPromptService.instance.onGameWon());
+    if (isWin) {
+      unawaited(ReviewPromptService.instance.onGameWon());
+      AnalyticsService.instance
+          .gameWin(mode: room.isHeat ? 'heat' : 'places', solo: isSolo);
+    }
     final timeTaken = _gameStartTime != null
         ? DateTime.now().difference(_gameStartTime!)
         : const Duration(seconds: 999);
@@ -2431,9 +2436,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
                 // Capture game-start time the first frame phase becomes 'playing'
                 if (room.phase == GamePhase.playing && _gameStartTime == null) {
+                  final startedSolo =
+                      room.players.values.where((p) => !p.isBot).length == 1;
+                  final startedMode = room.isHeat ? 'heat' : 'places';
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (mounted && _gameStartTime == null) {
                       _gameStartTime = DateTime.now();
+                      AnalyticsService.instance
+                          .gameStart(mode: startedMode, solo: startedSolo);
                     }
                   });
                 }
@@ -2473,7 +2483,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                         if (uid == null) return false;
                         final watched = await ref
                             .read(adServiceProvider)
-                            .showRewarded();
+                            .showRewarded(placement: 'game_reveal');
                         if (!watched) {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(

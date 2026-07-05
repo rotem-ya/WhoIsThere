@@ -11,6 +11,7 @@ import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
+import '../../services/analytics_service.dart';
 import '../../services/sfx_service.dart';
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/board_skin_background.dart';
@@ -41,6 +42,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
   void initState() {
     super.initState();
     _tab = TabController(length: 3, vsync: this);
+    AnalyticsService.instance.storeView();
   }
 
   @override
@@ -1068,7 +1070,7 @@ class _RewardedAdTile extends ConsumerWidget {
 
     // Show the real rewarded ad first; only credit coins if the user watched
     // long enough to earn the reward.
-    final watched = await ref.read(adServiceProvider).showRewarded();
+    final watched = await ref.read(adServiceProvider).showRewarded(placement: 'store_coins');
     if (!context.mounted) return;
     if (!watched) {
       ScaffoldMessenger.of(context).showSnackBar(
