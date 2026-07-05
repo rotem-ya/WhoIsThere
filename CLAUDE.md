@@ -4,10 +4,16 @@
 
 ---
 
-## 🚀 סטטוס השקה — הוגש לשתי החנויות (2026-07-03)
-- **Google Play:** בבדיקה — Closed testing (Alpha), **versionCode 22**, חתום **EA:3B**, ללא EU-27, 22 בודקים, כל ההצהרות ירוקות. אישור עד ~7 ימים.
-- **App Store:** ✅ **אושר (Approved / Ready for distribution, 2026-07-03)** — "מה בתמונה?", **build 1059** (r15). **Apple ID: `6776076758`** · קישור: https://apps.apple.com/app/id6776076758 (מקובע ב-`AppConstants.appStoreUrl`).
-- **ענף השקה:** `claude/qa-launch-prep-EXqLn`. בילד אחרון: `build-20260701-launch-r15` ואילך (r20/vc23 נבנה כגיבוי, לא נדרש).
+## 🚀 סטטוס חנויות
+### v1.1.0 — הוגש לשתי החנויות (2026-07-05), אין בלוקרים
+- **App Store:** 1.1.0 (**build 1061**) — **Waiting for Review**. Apple ID: `6776076758` · https://apps.apple.com/app/id6776076758 (מקובע ב-`AppConstants.appStoreUrl`).
+- **Google Play:** 1.1.0 (**versionCode 25**, ריצת build-aab #25) — Closed testing (Alpha), **בבדיקה**. חתימת EA:3B תקינה, "מה חדש" הוזן, מדינות ללא EU.
+- נבנה מ-`claude/qa-launch-prep-EXqLn` קומיט `a42cf83` (iOS דרך Codemagic תג `ios-v3`; AAB דרך marker). תוכן הגרסה: ראה "עדכוני סשן 2026-07-04" + תיקון בוטים (לא מנחשים נכון לפני 50% חשיפה).
+
+### v1.0 — הושקה (2026-07-03)
+- **Google Play:** ✅ אושר — Closed testing (Alpha), versionCode 22, חתום EA:3B, ללא EU-27, 22 בודקים.
+- **App Store:** ✅ אושר (2026-07-03) — build 1059 (r15).
+- **ענף השקה:** `claude/qa-launch-prep-EXqLn`.
 
 ### תיקוני דחיית אפל (מומשו, בשתי החנויות)
 1. **2.1(b) IAP:** הוסר ממשק רכישת-כסף לא-פעיל מהחנות (`store_screen.dart`, טאב "🎁 מטבעות"). מטבעות = מטבע-משחק בלבד. **אין IAP** — קנייה אמיתית דחויה ל-v1.1.
