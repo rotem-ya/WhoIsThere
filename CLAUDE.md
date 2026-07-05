@@ -131,6 +131,12 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 - Claude **אינו יכול** לדחוף ישירות ל-`apps-share-pages` — זה מטופל ע"י ה-workflow
 - עריכת הדף: ערוך `docs/join.html`, בצע push ל-main — ה-workflow ידאג לשאר
 
+## סנכרון מול אפליקציית האדמין — חובה
+- ריפו האדמין: `rotem-ya/Guess_The_Place_Admin` (אפליקציית ווב סטטית, GitHub Pages משלה; קוראת/כותבת Firestore ישירות).
+- **כל שינוי בצד המשחק שמצריך עבודה באדמין** (שדה חדש ב-Firestore, אוסף חדש, כלל rules, חוזה תוכן, כתובת שהשתנתה) — **חייב להירשם מיד** כרשומה חדשה ב-`handoff/FROM_GAME_PENDING.md` בריפו האדמין (רישום מצטבר; רותם מרוקן אותו מדי פעם ע"י בקשת מימוש). כדי לכתוב לריפו האדמין מסשן: `add_repo rotem-ya/Guess_The_Place_Admin` ואז clone/commit/push רגיל.
+- הכיוון ההפוך (אדמין→משחק): `handoff/FOR_GAME_CLAUDE.md` באותו ריפו — לבדוק אותו בתחילת סשן משחק.
+- קטלוג המשחק מוגש לאדמין מ-Hosting: `https://whoisthere-380fa.web.app/assets/game_places/...` (נארז ב-deploy-hosting מ-assets, לא ב-git) — אין להחזיר תלות ב-raw.githubusercontent.
+
 ## חוקי עבודה — חובה לפעול לפיהם
 1. **משימה אחת בכל פעם** — לא מתחילים משימה הבאה לפני שהנוכחית הושלמה
 2. **אחרי כל משימה: verify + double-check** — בדיקה שהקוד תקין, לא שובר דברים אחרים

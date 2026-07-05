@@ -33,3 +33,4 @@ ios/Flutter/ephemeral/
 __pycache__/
 *.pyc
 submission-assets-*.zip
+public/assets/
