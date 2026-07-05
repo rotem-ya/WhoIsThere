@@ -20,7 +20,8 @@ Firebase Hosting (חינם ב-Spark: 10GB אחסון, 360MB/יום תעבורה 
 2. לוודא שאין התראות אדומות בראש הדשבורד (אימות כתובת ב-PIN מגיע בדואר — לוקח שבועות, להתחיל עכשיו).
 - **אימות:** במסך Payments אין פעולות ממתינות (מלבד PIN אם טרם הגיע).
 
-## שלב 2 — 🌐 הקמת Firebase Hosting והעברת כל הדפים · 🤖 (אני)
+## שלב 2 — 🌐 הקמת Firebase Hosting והעברת כל הדפים · 🤖 — ✅ בוצע (2026-07-05)
+האתר חי: https://whoisthere-380fa.web.app — כל הדפים + app-ads.txt + seed מחזירים 200; פריסה אוטומטית עובדת (run #1 ירוק); הקוד והמניפסט עודכנו.
 1. הוספת `hosting` ל-`firebase.json` + תיקיית `public/` עם: privacy, support, friend, join, download, `app-ads.txt`, seed לאדמין, ודף בית קצר.
 2. workflow פריסה אוטומטי (על שינוי ב-public/ ב-main) עם ה-service account הקיים.
 3. עדכון הקוד: `friendPageUrl`/`joinPageUrl` → `whoisthere-380fa.web.app`, הוספת ה-host החדש ל-deep-link handler ול-AndroidManifest (שומרים זיהוי של כל ה-hosts הישנים).
@@ -31,11 +32,13 @@ Firebase Hosting (חינם ב-Spark: 10GB אחסון, 360MB/יום תעבורה 
 אחרי ששלב 2 חי: Play (Privacy policy + אתר מפתח) ו-ASC (Privacy/Support/Marketing) → כתובות ה-web.app. אתר המפתח = `https://whoisthere-380fa.web.app` (שם יושב app-ads.txt).
 - **אימות:** AdMob → Apps → "Verify app-ads.txt" מזהה את הקובץ (עד 24ש׳).
 
-## שלב 4 — 📊 Firebase Analytics · 🤖 (אני)
+## שלב 4 — 📊 Firebase Analytics · 🤖 — ✅ בוצע (2026-07-05)
+firebase_analytics ^10.8 + AnalyticsService; אירועים: game_start/game_win (places/heat/letters, solo), invite_sent (friend_code/room), ad_rewarded_watched (4 placements), feedback_sent, store_view. נותר לאמת ב-DebugView על מכשיר.
 `firebase_analytics` + ~10 אירועים: game_start/game_win (לפי מצב), invite_sent/accepted, ad_rewarded_watched, store_view, purchase_coins_spent, feedback_sent. בלי דאטה — כל החלטות הניהול עיוורות.
 - **אימות:** אירועים ב-DebugView.
 
-## שלב 5 — 🚀 הגרסה הבאה (v1.1.1) — "גרסת ההכנסות" · 🤖 בילד, 🖥️ הגשה
+## שלב 5 — 🚀 הגרסה הבאה (v1.1.1) — "גרסת ההכנסות" · 🤖 בילד, 🖥️ הגשה — ⏳ מוכן, ממתין לאישור v1.1.0
+הגרסה קודמה ל-1.1.1+61 בכל הקבצים; כל התוכן בענף ההשקה. כשה-v1.1.0 מאושרת: marker ל-AAB + תג ios-v4.
 כבר בקוד ומחכה: מודעות אמיתיות, SKAdNetwork ל-iOS, פרומפט דירוג, קישור חבר עמיד-לפרטי; יתווספו: כתובות web.app (שלב 2) + Analytics (שלב 4).
 טריגר: אחרי ש-v1.1.0 מאושרת בשתי החנויות. AAB דרך marker; iOS דרך תג `ios-v4`.
 - **אימות:** מודעות אמיתיות מופיעות במכשיר; הכנסות מתחילות להיספר ב-AdMob תוך ~48ש׳.
