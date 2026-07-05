@@ -48,21 +48,23 @@ class AppConstants {
     return b.toString().trim();
   }
 
-  /// Production GitHub Pages join page (see CLAUDE.md sync workflow).
-  static const joinPageUrl =
-      'https://rotem-ya.github.io/apps-share-pages/whoisthere/join/';
+  /// Canonical public-web host: Firebase Hosting (project whoisthere-380fa).
+  /// Independent of any GitHub repo visibility; also serves /app-ads.txt at
+  /// the domain root for AdMob. Deployed by .github/workflows/deploy-hosting
+  /// from the public/ directory. The two legacy GitHub Pages hosts
+  /// (rotem-ya.github.io/WhoIsThere and .../apps-share-pages/whoisthere) are
+  /// still recognized by the deep-link handler + AndroidManifest so links
+  /// shared by older builds keep opening the app.
+  static const webBase = 'https://whoisthere-380fa.web.app';
+
+  /// Production join page.
+  static const joinPageUrl = '$webBase/join/';
 
   /// Direct-join deep link for a given room code.
   static String joinUrlForCode(String code) => '$joinPageUrl?code=$code';
 
-  /// Production friend-invite page. Canonical host: apps-share-pages (a repo
-  /// that STAYS public — deployed manually 2026-07-05, verified live). Do NOT
-  /// point this at rotem-ya.github.io/WhoIsThere/... — that site unpublishes
-  /// when the WhoIsThere repo goes private (GitHub Free has no private
-  /// Pages). The deep-link handler + AndroidManifest still recognize BOTH
-  /// hosts, so links shared by older builds keep opening the app.
-  static const friendPageUrl =
-      'https://rotem-ya.github.io/apps-share-pages/whoisthere/friend/';
+  /// Production friend-invite page.
+  static const friendPageUrl = '$webBase/friend/';
 
   /// Friend-invite deep link for a given personal friend code. Opening it adds
   /// the inviter as a friend automatically (see FriendsScreen).

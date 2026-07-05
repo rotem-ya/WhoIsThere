@@ -238,10 +238,17 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
 
   void _handleDeepLink(Uri uri, {required bool coldStart}) {
     // ── Friend-invite links — add the inviter as a friend automatically ──────
+    // Hosts that serve our pages: Firebase Hosting (canonical) + the two
+    // legacy GitHub Pages hosts (links shared by older builds).
+    final isOurWebHost = uri.host == 'whoisthere-380fa.web.app' ||
+        uri.host == 'whoisthere-380fa.firebaseapp.com' ||
+        uri.host == 'rotem-ya.github.io';
+
     final isFriendScheme = uri.scheme == 'whoisthere' && uri.host == 'friend';
     final isFriendAppLink = uri.scheme == 'https' &&
-        uri.host == 'rotem-ya.github.io' &&
-        (uri.path.startsWith('/apps-share-pages/whoisthere/friend') ||
+        isOurWebHost &&
+        (uri.path.startsWith('/friend') ||
+            uri.path.startsWith('/apps-share-pages/whoisthere/friend') ||
             uri.path.startsWith('/WhoIsThere/friend'));
     if (isFriendScheme || isFriendAppLink) {
       final rawF = uri.queryParameters['code'] ?? '';
@@ -263,8 +270,9 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
 
     final isCustomScheme = uri.scheme == 'whoisthere' && uri.host == 'join';
     final isAppLink = uri.scheme == 'https' &&
-        uri.host == 'rotem-ya.github.io' &&
-        uri.path.startsWith('/apps-share-pages/whoisthere/join');
+        isOurWebHost &&
+        (uri.path.startsWith('/join') ||
+            uri.path.startsWith('/apps-share-pages/whoisthere/join'));
     if (!isCustomScheme && !isAppLink) return;
 
     final raw = uri.queryParameters['code'] ?? '';

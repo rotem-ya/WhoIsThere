@@ -52,6 +52,14 @@
                     android:scheme="https"
                     android:host="rotem-ya.github.io"
                     android:pathPrefix="/WhoIsThere/friend"/>
+                <data
+                    android:scheme="https"
+                    android:host="whoisthere-380fa.web.app"
+                    android:pathPrefix="/join"/>
+                <data
+                    android:scheme="https"
+                    android:host="whoisthere-380fa.web.app"
+                    android:pathPrefix="/friend"/>
             </intent-filter>
         </activity>
 
