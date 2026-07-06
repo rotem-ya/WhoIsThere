@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/ad_constants.dart';
 import '../../../core/constants/economy_config.dart';
 import '../../../core/constants/game_constants.dart';
 import '../../../models/player_model.dart';
@@ -92,10 +93,14 @@ class GameActions extends ConsumerWidget {
     );
     final guessActive = canGuessNow && !isBusy;
 
-    // Hint affordability — solo only; guard already enforces this server-side
+    // Hint affordability — solo only; guard already enforces this server-side.
+    // When coins run short and ads are on, the buttons stay enabled: the tap
+    // flow offers a rewarded ad instead of charging (hint_unlock placement).
     final wallet = isSolo ? ref.watch(walletProvider).valueOrNull : null;
-    final canAffordFirstHint = wallet != null && wallet.coins >= EconomyConfig.hintFirstPrice;
-    final canAffordSecondHint = wallet != null && wallet.coins >= EconomyConfig.hintSecondPrice;
+    final canAffordFirstHint = wallet != null &&
+        (wallet.coins >= EconomyConfig.hintFirstPrice || AdConstants.adsEnabled);
+    final canAffordSecondHint = wallet != null &&
+        (wallet.coins >= EconomyConfig.hintSecondPrice || AdConstants.adsEnabled);
 
     // Primary button label
     final _anyBlocked = isBlocked || isTimeBlocked;

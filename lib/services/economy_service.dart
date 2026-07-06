@@ -218,6 +218,60 @@ class EconomyService {
     return result;
   }
 
+  /// Doubles today's daily reward after watching a rewarded ad. Grants the
+  /// same amount the daily claim paid (recomputed from the wallet's streak).
+  /// Idempotent per UTC day via the raw `dailyDoubledAt` wallet field, and
+  /// only allowed after today's reward was actually claimed.
+  Future<int?> doubleDailyReward(String uid) async {
+    final now = DateTime.now().toUtc();
+    final ref = _walletRef(uid);
+    int? granted;
+
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) return;
+      final data = snap.data()!;
+      final wallet = UserEconomyModel.fromFirestore(uid, data);
+
+      bool sameUtcDay(DateTime? d) =>
+          d != null && d.year == now.year && d.month == now.month && d.day == now.day;
+
+      // Must have claimed today's reward, and not doubled it yet.
+      if (!sameUtcDay(wallet.lastDailyRewardAt)) return;
+      final doubledAt = (data['dailyDoubledAt'] as Timestamp?)?.toDate().toUtc();
+      if (sameUtcDay(doubledAt)) return;
+
+      // The claim already advanced dailyStreak to today's value.
+      final coins = RewardCalculator.calculateDailyReward(wallet.dailyStreak);
+
+      final updated = wallet.copyWith(
+        coins: wallet.coins + coins,
+        totalEarned: wallet.totalEarned + coins,
+      );
+      final out = updated.toFirestore();
+      out['dailyDoubledAt'] = Timestamp.fromDate(now);
+      tx.set(ref, out);
+
+      final txId = _uuid.v4();
+      tx.set(_txCol(uid).doc(txId), EconomyTransactionModel(
+        id: txId,
+        type: TransactionType.adReward,
+        delta: coins,
+        balanceAfter: updated.coins,
+        createdAt: now,
+        meta: {'reason': 'daily_double', 'streak': wallet.dailyStreak},
+      ).toFirestore());
+
+      granted = coins;
+    });
+
+    if (granted != null) {
+      QaLoggerService.instance.log('ECONOMY', 'DAILY_DOUBLE_GRANTED +$granted');
+      await _syncCache(uid);
+    }
+    return granted;
+  }
+
   // ── Ad reward ─────────────────────────────────────────────────
 
   Future<bool> applyAdReward(String uid) async {

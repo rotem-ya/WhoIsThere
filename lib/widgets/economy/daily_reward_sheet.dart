@@ -2,6 +2,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/ad_constants.dart';
 import '../../core/constants/economy_config.dart';
 import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
@@ -30,6 +31,8 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
   bool _isClaiming = false;
   bool _claimed = false;
   int _earnedCoins = 0;
+  bool _doubling = false;
+  bool _doubled = false;
 
   late final AnimationController _claimAnim;
   static final AudioPlayer _coinsPlayer = AudioPlayer(playerId: 'daily-coins');
@@ -74,8 +77,14 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
           await _coinsPlayer.setVolume(sfxScale);
           await _coinsPlayer.play(_coinsSound);
         }).ignore();
-        await Future.delayed(const Duration(milliseconds: 2200));
-        if (mounted) Navigator.pop(context);
+        if (AdConstants.adsEnabled) {
+          // Keep the sheet open with a "double via ad" offer; preload now so
+          // the ad is ready by the time the user taps.
+          ref.read(adServiceProvider).preloadRewarded();
+        } else {
+          await Future.delayed(const Duration(milliseconds: 2200));
+          if (mounted) Navigator.pop(context);
+        }
       } else {
         if (mounted) setState(() => _isClaiming = false);
       }
@@ -92,6 +101,41 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
           ),
         );
       }
+    }
+  }
+
+  Future<void> _watchAndDouble() async {
+    if (_doubling || _doubled) return;
+    setState(() => _doubling = true);
+    try {
+      final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
+      if (uid == null) return;
+      final watched = await ref
+          .read(adServiceProvider)
+          .showRewarded(placement: 'daily_double');
+      if (!watched || !mounted) return;
+      final bonus =
+          await ref.read(economyServiceProvider).doubleDailyReward(uid);
+      if (!mounted) return;
+      if (bonus != null) {
+        setState(() {
+          _doubled = true;
+          _earnedCoins += bonus;
+        });
+        final sfxScale = SettingsService.instance.sfxVolume;
+        _coinsPlayer.stop().then((_) async {
+          await _coinsPlayer.setVolume(sfxScale);
+          await _coinsPlayer.play(_coinsSound);
+        }).ignore();
+        await Future.delayed(const Duration(milliseconds: 2200));
+        if (mounted) Navigator.pop(context);
+      }
+    } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log('ECONOMY',
+          'DAILY_DOUBLE_UI_ERROR ${msg.length > 80 ? msg.substring(0, 80) : msg}');
+    } finally {
+      if (mounted) setState(() => _doubling = false);
     }
   }
 
@@ -175,7 +219,44 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
                 : _CoinsPreview(coins: coinsToday),
           ),
           const SizedBox(height: 22),
-          // Claim button
+          // After claiming (ads on): offer doubling via a rewarded ad + close.
+          if (_claimed && AdConstants.adsEnabled && !_doubled) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: FilledButton(
+                onPressed: _doubling ? null : _watchAndDouble,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF20A8E0),
+                  foregroundColor: Colors.white,
+                  textStyle: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.w900),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                ),
+                child: _doubling
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2.5),
+                      )
+                    : Text('📺 הכפל את הפרס (+$_earnedCoins)'),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'לא תודה, סגור',
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.55),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+          // Claim button (collapses once the doubling offer replaces it)
+          if (!(_claimed && AdConstants.adsEnabled))
           AnimatedOpacity(
             opacity: _claimed ? 0.0 : 1.0,
             duration: const Duration(milliseconds: 200),

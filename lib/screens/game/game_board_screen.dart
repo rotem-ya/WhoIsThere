@@ -16,6 +16,7 @@ import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/ad_constants.dart';
 import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_categories.dart';
 import '../../core/constants/game_constants.dart';
@@ -1553,17 +1554,20 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       return;
     }
 
-    // First purchase: costs 40 coins
+    // First purchase: costs 40 coins — or a rewarded ad when coins run short.
     final cost = EconomyConfig.hintFirstPrice;
     final wallet = ref.read(walletProvider).valueOrNull;
-    if (wallet == null || wallet.coins < cost) return;
-
-    final granted = await ref.read(hintEconomyGuardProvider).useHintWithCost(
-      uid: userId,
-      cost: cost,
-      wallet: wallet,
-      roomId: room.id,
-    );
+    final bool granted;
+    if (wallet == null || wallet.coins < cost) {
+      granted = await _offerHintForAd(cost);
+    } else {
+      granted = await ref.read(hintEconomyGuardProvider).useHintWithCost(
+        uid: userId,
+        cost: cost,
+        wallet: wallet,
+        roomId: room.id,
+      );
+    }
     if (!granted || !mounted) return;
 
     final fact = facts.isEmpty ? null : facts[0];
@@ -1582,14 +1586,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     final cost = EconomyConfig.hintSecondPrice;
     final wallet = ref.read(walletProvider).valueOrNull;
-    if (wallet == null || wallet.coins < cost) return;
-
-    final granted = await ref.read(hintEconomyGuardProvider).useHintWithCost(
-      uid: userId,
-      cost: cost,
-      wallet: wallet,
-      roomId: room.id,
-    );
+    final bool granted;
+    if (wallet == null || wallet.coins < cost) {
+      granted = await _offerHintForAd(cost);
+    } else {
+      granted = await ref.read(hintEconomyGuardProvider).useHintWithCost(
+        uid: userId,
+        cost: cost,
+        wallet: wallet,
+        roomId: room.id,
+      );
+    }
     if (!granted || !mounted) return;
 
     final fact = facts[_purchasedFacts.length % facts.length];
@@ -1605,6 +1612,51 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       context: context,
       builder: (_) => _PurchasedHintsDialog(facts: _purchasedFacts),
     );
+  }
+
+  /// When the player can't afford a hint (cost [cost]), offers to unlock it
+  /// for free by watching a rewarded ad. Returns true if the ad was watched.
+  Future<bool> _offerHintForAd(int cost) async {
+    if (!AdConstants.adsEnabled) return false;
+    ref.read(adServiceProvider).preloadRewarded();
+    final agreed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0D1E30),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('אין מספיק מטבעות 💡',
+            textDirection: TextDirection.rtl,
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+        content: Text(
+          'הרמז עולה $cost מטבעות. אפשר לקבל אותו חינם בצפייה בפרסומת קצרה.',
+          textDirection: TextDirection.rtl,
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('ביטול', style: TextStyle(color: Colors.white54)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF20A8E0)),
+            child: const Text('📺 צפה וקבל רמז'),
+          ),
+        ],
+      ),
+    );
+    if (agreed != true || !mounted) return false;
+    final watched = await ref
+        .read(adServiceProvider)
+        .showRewarded(placement: 'hint_unlock');
+    if (!watched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('הפרסומת לא זמינה כרגע, נסה שוב בעוד רגע')),
+      );
+    }
+    return watched;
   }
 
   // Escalating price for the Nth personal reveal already owned: 20/30/40/50/60.
