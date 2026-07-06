@@ -148,15 +148,14 @@ service cloud.firestore {
     // Any signed-in user may CREATE a feedback / crash-report doc (the app sends
     // them). Only admins may read them back (they're reviewed in the admin app).
     // No updates/deletes from clients.
+    // Admin may update (mark handled from the admin Inbox) and delete (cleanup).
     match /feedback/{docId} {
       allow create: if signedIn();
-      allow read: if isAdmin();
-      allow update, delete: if false;
+      allow read, update, delete: if isAdmin();
     }
     match /crash_reports/{docId} {
       allow create: if signedIn();
-      allow read: if isAdmin();
-      allow update, delete: if false;
+      allow read, update, delete: if isAdmin();
     }
 
     // ── Deny everything else ─────────────────────────────────────────────────
