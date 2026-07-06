@@ -1,5 +1,6 @@
 rules_version = '2';
-// Deployed via .github/workflows/deploy-storage-rules.yml (firebaserules REST API).
+// Deployed via .github/workflows/deploy-storage-rules.yml (firebaserules REST API);
+// redeployed after the default bucket was created (console creation resets rules).
 // mirroring the Firestore rules deploy. Release: firebase.storage/<bucket>.
 //
 // Holds the place-catalogue images managed by the admin app. The mobile game
