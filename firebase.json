@@ -12,6 +12,14 @@
       {
         "source": "/app-ads.txt",
         "headers": [{ "key": "Content-Type", "value": "text/plain" }]
+      },
+      {
+        "source": "/assets/**",
+        "headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }]
+      },
+      {
+        "source": "/content/**",
+        "headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }]
       }
     ]
   }

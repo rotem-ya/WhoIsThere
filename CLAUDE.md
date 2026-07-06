@@ -131,6 +131,12 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
 - Claude **אינו יכול** לדחוף ישירות ל-`apps-share-pages` — זה מטופל ע"י ה-workflow
 - עריכת הדף: ערוך `docs/join.html`, בצע push ל-main — ה-workflow ידאג לשאר
 
+## סנכרון מול אפליקציית האדמין — חובה
+- ריפו האדמין: `rotem-ya/Guess_The_Place_Admin` (אפליקציית ווב סטטית, GitHub Pages משלה; קוראת/כותבת Firestore ישירות).
+- **כל שינוי בצד המשחק שמצריך עבודה באדמין** (שדה חדש ב-Firestore, אוסף חדש, כלל rules, חוזה תוכן, כתובת שהשתנתה) — **חייב להירשם מיד** כרשומה חדשה ב-`handoff/FROM_GAME_PENDING.md` בריפו האדמין (רישום מצטבר; רותם מרוקן אותו מדי פעם ע"י בקשת מימוש). כדי לכתוב לריפו האדמין מסשן: `add_repo rotem-ya/Guess_The_Place_Admin` ואז clone/commit/push רגיל.
+- הכיוון ההפוך (אדמין→משחק): `handoff/FOR_GAME_CLAUDE.md` באותו ריפו — לבדוק אותו בתחילת סשן משחק.
+- קטלוג המשחק מוגש לאדמין מ-Hosting: `https://whoisthere-380fa.web.app/assets/game_places/...` (נארז ב-deploy-hosting מ-assets, לא ב-git) — אין להחזיר תלות ב-raw.githubusercontent.
+
 ## חוקי עבודה — חובה לפעול לפיהם
 1. **משימה אחת בכל פעם** — לא מתחילים משימה הבאה לפני שהנוכחית הושלמה
 2. **אחרי כל משימה: verify + double-check** — בדיקה שהקוד תקין, לא שובר דברים אחרים
@@ -235,6 +241,7 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
   2. לבנות ולהפיץ את הגרסה.
   3. **אחרי** שהגרסה בחוץ: באדמין — לנקות `imageUrl` מהדריסות שהוטמעו ולהעביר פריטי remote ל-`source:'bundled'` (או למחוק את הרשומה). הקליינט נופל אוטומטית לנכס המוטמע (`resolveBundled` מחזיר bundled כשאין override), ואפשר למחוק את הקבצים מ-Storage.
   - ⚠️ אל תנקו את המניפסט לפני שהגרסה החדשה זמינה — משתמשי הגרסה הישנה עדיין קוראים ממנו.
+- **חוזה ZIP מהאדמין (v113+):** `overrides_manifest.json` יכול להכיל פריטים עם `new:true` — פריטים שקיימים רק בקטלוג האדמין (למשל ז'קט, קראטה) ואינם ב-JSON של המשחק. בבייקינג: מלבד העתקת התמונה, יש **להוסיף רשומה** ל-`assets/game_places/data/<category>.json` (סכימה: `id`/`name_he`/`answer_he`(=`answerHe`)/`aliases_he`/`category`/`difficulty`(ברירת מחדל easy)/`is_active:true`/`image_asset`). לפני v113 פריטים כאלה דולגו בשקט מהייצוא.
 
 ### צ'אט (טקסט חופשי + אימוג'ים) — אחיד לכל המצבים
 - `RoomService.sendChatMessage` / `chatMessagesStream` על תת-אוסף `rooms/{id}/messages` (rules מכוסה ב-`{document=**}`).

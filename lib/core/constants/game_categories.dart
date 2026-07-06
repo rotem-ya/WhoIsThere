@@ -32,10 +32,8 @@ class GameCategories {
 
   static const String israelPlaces = 'israel_places';
   static const String animals = 'animals';
-  static const String plants = 'plants';
   static const String objects = 'objects';
   // חי-צומח-דומם topic packs (each is a selectable heat topic).
-  static const String birds = 'birds';
   static const String vehicles = 'vehicles';
   static const String professions = 'professions';
   static const String flags = 'flags';
@@ -65,24 +63,10 @@ class GameCategories {
       hasHints: false, // heat topics play without hints
     ),
     GameCategory(
-      id: plants,
-      nameHe: 'פרחים',
-      emoji: '🌸',
-      assetPath: '$_dataDir/plants.json',
-      hasHints: false,
-    ),
-    GameCategory(
       id: objects,
       nameHe: 'דומם',
       emoji: '🪑',
       assetPath: '$_dataDir/objects.json',
-      hasHints: false,
-    ),
-    GameCategory(
-      id: birds,
-      nameHe: 'ציפורים',
-      emoji: '🐦',
-      assetPath: '$_dataDir/birds.json',
       hasHints: false,
     ),
     GameCategory(
@@ -166,9 +150,7 @@ class GameCategories {
   /// without content are skipped, so the pool fills as content lands.
   static const List<String> fastHeat = [
     animals,
-    plants,
     objects,
-    birds,
     vehicles,
     professions,
     flags,

@@ -468,5 +468,15 @@
     "difficulty": "easy",
     "is_active": true,
     "image_asset": "assets/game_places/images/objects_crown.jpg"
+  },
+  {
+    "id": "objects_guitar",
+    "name_he": "גיטרה",
+    "answer_he": "גיטרה",
+    "aliases_he": [],
+    "category": "objects",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/objects_guitar.jpg"
   }
 ]

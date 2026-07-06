@@ -17,6 +17,7 @@ on:
       - 'public/**'
       - 'firebase.json'
       - '.github/workflows/deploy-hosting.yml'
+      - 'assets/game_places/**'
 
 jobs:
   deploy:
@@ -24,6 +25,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # The admin app reads the game's bundled catalog (data JSONs + images)
+      # from a public URL. Serving them from Hosting (staged at deploy time,
+      # NOT committed under public/) keeps the admin working when this repo
+      # goes private — raw.githubusercontent links die then.
+      #   https://whoisthere-380fa.web.app/assets/game_places/...
+      - name: Stage game content for the admin app
+        run: |
+          mkdir -p public/assets
+          cp -r assets/game_places public/assets/game_places
 
       - name: Deploy to Firebase Hosting (live)
         uses: FirebaseExtended/action-hosting-deploy@v0
