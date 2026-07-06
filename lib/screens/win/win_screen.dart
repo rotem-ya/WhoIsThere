@@ -10,6 +10,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
+import '../../core/constants/ad_constants.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/constants/economy_config.dart';
 import '../../providers/providers.dart';
@@ -39,6 +40,35 @@ class _WinScreenState extends ConsumerState<WinScreen>
   int? _placementReward;
   // True while a "play again" tap is in flight (creating / joining the rematch).
   bool _busyRematch = false;
+  // Loss-consolation rewarded ad: idle → busy → done (one per screen visit;
+  // the daily applyAdReward cap still applies server-side).
+  String _consolation = 'idle';
+
+  Future<void> _watchConsolation() async {
+    if (_consolation != 'idle') return;
+    final uid = ref.read(currentUserProvider).value?.id;
+    if (uid == null) return;
+    setState(() => _consolation = 'busy');
+    try {
+      final watched = await ref
+          .read(adServiceProvider)
+          .showRewarded(placement: 'loss_consolation');
+      if (!watched) {
+        if (mounted) {
+          setState(() => _consolation = 'idle');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('הפרסומת לא זמינה כרגע, נסה שוב בעוד רגע')),
+          );
+        }
+        return;
+      }
+      final granted = await ref.read(economyServiceProvider).applyAdReward(uid);
+      if (mounted) setState(() => _consolation = granted ? 'done' : 'idle');
+    } catch (_) {
+      if (mounted) setState(() => _consolation = 'idle');
+    }
+  }
 
   @override
   void initState() {
@@ -53,6 +83,8 @@ class _WinScreenState extends ConsumerState<WinScreen>
     );
     _loadImage();
     _awardPoints();
+    // Warm up a rewarded ad for the loss-consolation offer below the scores.
+    if (AdConstants.adsEnabled) ref.read(adServiceProvider).preloadRewarded();
     // Counter + shine fire once after entrance stagger settles.
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) {
@@ -326,6 +358,60 @@ class _WinScreenState extends ConsumerState<WinScreen>
                   if (room.isFriendsGame && (_placementReward ?? 0) > 0) ...[
                     const SizedBox(height: AppSpacing.sm),
                     _PlacementRewardBox(coins: _placementReward!),
+                  ],
+
+                  // ── Loss consolation: rewarded ad for non-winners ──────
+                  if (!isWinner && AdConstants.adsEnabled) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    _consolation == 'done'
+                        ? Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD4AF37).withOpacity(0.14),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                  color: const Color(0xFFD4AF37)
+                                      .withOpacity(0.45)),
+                            ),
+                            child: Text(
+                              '🪙 +${EconomyConfig.adRewardCoins} מטבעות ניחומים הופקדו!',
+                              textAlign: TextAlign.center,
+                              textDirection: TextDirection.rtl,
+                              style: const TextStyle(
+                                  color: Color(0xFFD4AF37),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900),
+                            ),
+                          )
+                        : SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: FilledButton(
+                              onPressed: _consolation == 'busy'
+                                  ? null
+                                  : _watchConsolation,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF20A8E0),
+                                foregroundColor: Colors.white,
+                                textStyle: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16)),
+                              ),
+                              child: _consolation == 'busy'
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2.5),
+                                    )
+                                  : Text(
+                                      '📺 לא נורא! צפה וקבל +${EconomyConfig.adRewardCoins} 🪙'),
+                            ),
+                          ),
                   ],
 
                   const SizedBox(height: AppSpacing.sm),
