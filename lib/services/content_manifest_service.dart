@@ -280,6 +280,15 @@ class ContentManifestService {
     }, onError: (e) {
       _loaded = true;
       QaLoggerService.instance.log('CONTENT', 'MANIFEST_LIVE_ERROR $e');
+      // A Firestore snapshot stream TERMINATES after an error (e.g. a
+      // permission-denied raced against auth restore) — without a retry the
+      // session would never receive live admin updates again. Re-subscribe
+      // after a short delay; repeated failures just keep retrying quietly.
+      _liveSub?.cancel();
+      _liveSub = null;
+      Future.delayed(const Duration(seconds: 20), () {
+        if (_liveSub == null) startRealtime();
+      });
     });
   }
 
