@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:app_links/app_links.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
@@ -17,6 +18,7 @@ import 'core/utils/app_router.dart';
 import 'firebase_options.dart';
 import 'providers/providers.dart';
 import 'services/content_manifest_service.dart';
+import 'services/notification_service.dart';
 import 'services/qa_logger_service.dart';
 import 'services/report_service.dart';
 import 'widgets/common/friend_request_banner.dart';
@@ -37,6 +39,14 @@ void main() async {
     }
   } catch (e) {
     firebaseError = e;
+  }
+
+  // Register the FCM background handler as early as possible (must be a
+  // top-level function). Best-effort — never block startup on it.
+  if (firebaseError == null) {
+    try {
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    } catch (_) {}
   }
 
   // AdMob is initialized AFTER the App Tracking Transparency prompt (see
@@ -187,11 +197,32 @@ class GuessThePlaceApp extends ConsumerStatefulWidget {
 class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
   StreamSubscription<Uri>? _linkSub;
 
+  String? _pushedTokenForUid;
+
   @override
   void initState() {
     super.initState();
     _initDeepLinks();
     _initTrackingThenAds();
+    _initPush();
+  }
+
+  Future<void> _initPush() async {
+    // Tapping a push (friend game invite) opens the friends screen, where the
+    // invite banner lets the user jump straight into the room.
+    NotificationService.instance.onMessageOpened = (message) {
+      try {
+        final router = ref.read(routerProvider);
+        final currentPath = router.routeInformationProvider.value.uri.path;
+        final inActiveGame = currentPath.startsWith('/game/') ||
+            currentPath.startsWith('/letters/') ||
+            currentPath.startsWith('/vote-') ||
+            currentPath.startsWith('/win/') ||
+            currentPath.startsWith('/lobby/');
+        if (!inActiveGame) router.go('/friends');
+      } catch (_) {}
+    };
+    await NotificationService.instance.init();
   }
 
   /// iOS App Tracking Transparency: request authorization once the app is
@@ -309,6 +340,16 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
   Widget build(BuildContext context) {
     // ref.watch keeps the Riverpod provider alive — do not remove.
     final router = ref.watch(routerProvider);
+
+    // Bind this device's FCM token to the signed-in user so the invite Cloud
+    // Function can reach them. Runs once per uid (guarded), fail-soft.
+    ref.listen(firebaseUserProvider, (prev, next) {
+      final uid = next.valueOrNull?.uid;
+      if (uid != null && uid != _pushedTokenForUid) {
+        _pushedTokenForUid = uid;
+        NotificationService.instance.registerTokenForUser(uid);
+      }
+    });
 
     return MaterialApp.router(
       title: 'Guess the Place',

@@ -61,8 +61,9 @@ firebase_analytics ^10.8 + AnalyticsService; אירועים: game_start/game_win
 - [x] **מטבעות ניחומים בהפסד** — במסך הסיום, מי שלא ניצח מקבל כפתור "📺 לא נורא! צפה וקבל +40" (placement `loss_consolation`; דרך `applyAdReward` — המכסה היומית הקיימת חלה).
 - [ ] IAP "הסר פרסומות" + חבילות מטבעות — שלב נפרד (דורש הגדרת מוצרים בחנויות).
 
-## שלב 10 — 🔔 פוש להזמנות · 🤖 (דורש Blaze 👤)
-ענף `claude/push-invites` כבר קיים. שדרוג ל-Blaze (חינם בפועל בשימוש שלנו) + APNs key. ה-retention loop החזק ביותר.
+## שלב 10 — 🔔 פוש להזמנות · 🤖 — ✅ הקוד מוזג לענף ההשקה (2026-07-06); נותרו צעדי קונסולה 👤/🖥️
+כל הקוד (firebase_messaging, NotificationService, Cloud Functions `onGameInvite`/`onFriendRequest`, ניווט מהקשה) מוזג מ-`claude/push-invites` לענף ההשקה — ייכנס ל-v1.1.1. **צעדי ההשלמה** (מדריך מלא: `PUSH_NOTIFICATIONS_SETUP.md`): Blaze (ייתכן שכבר פעיל מה-Storage) → הפעלת FCM API → **מפתח APNs + Push capability ל-App ID** → `firebase deploy --only functions`.
+⚠️ **קריטי לפני בילד iOS (תג ios-v4):** ה-entitlements כוללים עכשיו `aps-environment` — חובה להפעיל **Push Notifications capability** ב-App ID של `com.rotem.whoisthere` (Apple Developer → Identifiers) לפני הבילד, אחרת החתימה ב-Codemagic תיכשל.
 
 ---
 ### תיקוני QA מבדיקת מכשיר (2026-07-05 ערב) — שלושתם בענף ההשקה
