@@ -241,6 +241,7 @@ cd /tmp/pages && git add . && git commit -m "sync join page" && git push
   2. לבנות ולהפיץ את הגרסה.
   3. **אחרי** שהגרסה בחוץ: באדמין — לנקות `imageUrl` מהדריסות שהוטמעו ולהעביר פריטי remote ל-`source:'bundled'` (או למחוק את הרשומה). הקליינט נופל אוטומטית לנכס המוטמע (`resolveBundled` מחזיר bundled כשאין override), ואפשר למחוק את הקבצים מ-Storage.
   - ⚠️ אל תנקו את המניפסט לפני שהגרסה החדשה זמינה — משתמשי הגרסה הישנה עדיין קוראים ממנו.
+- **חוזה ZIP מהאדמין (v113+):** `overrides_manifest.json` יכול להכיל פריטים עם `new:true` — פריטים שקיימים רק בקטלוג האדמין (למשל ז'קט, קראטה) ואינם ב-JSON של המשחק. בבייקינג: מלבד העתקת התמונה, יש **להוסיף רשומה** ל-`assets/game_places/data/<category>.json` (סכימה: `id`/`name_he`/`answer_he`(=`answerHe`)/`aliases_he`/`category`/`difficulty`(ברירת מחדל easy)/`is_active:true`/`image_asset`). לפני v113 פריטים כאלה דולגו בשקט מהייצוא.
 
 ### צ'אט (טקסט חופשי + אימוג'ים) — אחיד לכל המצבים
 - `RoomService.sendChatMessage` / `chatMessagesStream` על תת-אוסף `rooms/{id}/messages` (rules מכוסה ב-`{document=**}`).
