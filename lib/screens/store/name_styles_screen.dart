@@ -61,13 +61,18 @@ class NameStylesScreen extends ConsumerWidget {
     final owned = ref.watch(ownedNameStylesProvider).valueOrNull ?? ['none'];
     final userName = ref.watch(currentUserProvider).valueOrNull?.name ?? 'את/ה';
 
-    final none = kNameStyles.firstWhere((s) => s.id == 'none');
+    // Rebuild when the admin edits the live cosmetics catalog.
+    ref.watch(cosmeticsRevisionProvider);
+    final catalog = allNameStyles.where((s) => s.active).toList();
+
+    final none = catalog.firstWhere((s) => s.id == 'none',
+        orElse: () => kNameStyles.first);
     final basic =
-        kNameStyles.where((s) => s.tier == NameStyleTier.basic).toList();
+        catalog.where((s) => s.tier == NameStyleTier.basic).toList();
     final rare =
-        kNameStyles.where((s) => s.tier == NameStyleTier.rare).toList();
+        catalog.where((s) => s.tier == NameStyleTier.rare).toList();
     final prem =
-        kNameStyles.where((s) => s.tier == NameStyleTier.premium).toList();
+        catalog.where((s) => s.tier == NameStyleTier.premium).toList();
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,

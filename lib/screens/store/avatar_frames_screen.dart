@@ -61,11 +61,16 @@ class AvatarFramesScreen extends ConsumerWidget {
     final owned = ref.watch(ownedFramesProvider).valueOrNull ?? ['none'];
     final userName = ref.watch(currentUserProvider).valueOrNull?.name ?? 'את/ה';
 
-    final basic = kAvatarFrames.where((f) => f.tier == FrameTier.basic).toList();
-    final rare = kAvatarFrames.where((f) => f.tier == FrameTier.rare).toList();
+    // Rebuild when the admin edits the live cosmetics catalog.
+    ref.watch(cosmeticsRevisionProvider);
+    final catalog = allAvatarFrames.where((f) => f.active).toList();
+
+    final basic = catalog.where((f) => f.tier == FrameTier.basic).toList();
+    final rare = catalog.where((f) => f.tier == FrameTier.rare).toList();
     final prem =
-        kAvatarFrames.where((f) => f.tier == FrameTier.premium).toList();
-    final none = kAvatarFrames.firstWhere((f) => f.id == 'none');
+        catalog.where((f) => f.tier == FrameTier.premium).toList();
+    final none = catalog.firstWhere((f) => f.id == 'none',
+        orElse: () => kAvatarFrames.first);
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,

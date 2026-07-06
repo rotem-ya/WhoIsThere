@@ -11,14 +11,24 @@ class BoardSkin {
   final int price;
   final List<Color> colors;
 
+  /// Admin-created skins may be a full background IMAGE (generated via Gemini
+  /// and hosted in Storage) instead of a gradient. When set, the game renders
+  /// the image; [colors] still provides the accent + store swatch.
+  final String? imageUrl;
+
+  /// Hidden from the store when false (still renders if already equipped).
+  final bool active;
+
   const BoardSkin({
     required this.id,
     required this.name,
     required this.price,
     this.colors = const [],
+    this.imageUrl,
+    this.active = true,
   });
 
-  bool get isNone => id == 'none' || colors.isEmpty;
+  bool get isNone => id == 'none' || (colors.isEmpty && imageUrl == null);
   bool get isFree => price == 0;
 
   BoardSkinTier get tier {
@@ -59,10 +69,18 @@ const kBoardSkins = <BoardSkin>[
   BoardSkin(id: 'emerald_dream', name: 'חלום אמרלד', price: 1000, colors: [Color(0xFF043D2E), Color(0xFF0B6E4E), Color(0xFF02120C)]),
 ];
 
+/// Live (bundled+remote merged) catalog — populated by CosmeticsCatalogService.
+/// Null until a live catalog was applied; every reader falls back to bundled.
+List<BoardSkin>? liveBoardSkins;
+
+/// The full catalog (incl. inactive, so an equipped-but-hidden skin still
+/// renders). Store screens should filter on [BoardSkin.active].
+List<BoardSkin> get allBoardSkins => liveBoardSkins ?? kBoardSkins;
+
 BoardSkin boardSkinFor(String? id) {
-  if (id == null) return kBoardSkins.first;
-  for (final s in kBoardSkins) {
+  if (id == null) return allBoardSkins.first;
+  for (final s in allBoardSkins) {
     if (s.id == id) return s;
   }
-  return kBoardSkins.first;
+  return allBoardSkins.first;
 }

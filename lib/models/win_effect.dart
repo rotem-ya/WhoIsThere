@@ -25,6 +25,9 @@ class WinEffect {
   final WinEffectMotion motion;
   final WinEffectShape shape;
 
+  /// Hidden from the store when false (still renders if already equipped).
+  final bool active;
+
   const WinEffect({
     required this.id,
     required this.name,
@@ -33,6 +36,7 @@ class WinEffect {
     this.emoji,
     this.motion = WinEffectMotion.fall,
     this.shape = WinEffectShape.rect,
+    this.active = true,
   });
 
   bool get isNone => id == 'none';
@@ -140,10 +144,16 @@ const kWinEffects = <WinEffect>[
   ),
 ];
 
+/// Live (bundled+remote merged) catalog — populated by CosmeticsCatalogService.
+List<WinEffect>? liveWinEffects;
+
+/// Full catalog incl. inactive; store screens filter on [WinEffect.active].
+List<WinEffect> get allWinEffects => liveWinEffects ?? kWinEffects;
+
 WinEffect winEffectFor(String? id) {
-  if (id == null) return kWinEffects.first;
-  for (final e in kWinEffects) {
+  if (id == null) return allWinEffects.first;
+  for (final e in allWinEffects) {
     if (e.id == id) return e;
   }
-  return kWinEffects.first;
+  return allWinEffects.first;
 }

@@ -129,6 +129,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Live store-cosmetics catalog (frames / name styles / win effects / board
+    // skins) — same pattern and same pre-auth-read reasoning as the manifest.
+    match /cosmetics_catalog/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // ── Card skins (tile-back designs) ────────────────────────────────────────
     // Read: any signed-in player — the game streams active card skins
     // (firestoreSkinsProvider) for the tile-back catalog. Write: admins only

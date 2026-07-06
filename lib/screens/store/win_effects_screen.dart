@@ -60,12 +60,17 @@ class WinEffectsScreen extends ConsumerWidget {
     final selected = ref.watch(selectedWinEffectProvider).valueOrNull ?? 'none';
     final owned = ref.watch(ownedWinEffectsProvider).valueOrNull ?? ['none'];
 
-    final none = kWinEffects.firstWhere((e) => e.id == 'none');
+    // Rebuild when the admin edits the live cosmetics catalog.
+    ref.watch(cosmeticsRevisionProvider);
+    final catalog = allWinEffects.where((e) => e.active).toList();
+
+    final none = catalog.firstWhere((e) => e.id == 'none',
+        orElse: () => kWinEffects.first);
     final basic =
-        kWinEffects.where((e) => e.tier == WinEffectTier.basic).toList();
-    final rare = kWinEffects.where((e) => e.tier == WinEffectTier.rare).toList();
+        catalog.where((e) => e.tier == WinEffectTier.basic).toList();
+    final rare = catalog.where((e) => e.tier == WinEffectTier.rare).toList();
     final prem =
-        kWinEffects.where((e) => e.tier == WinEffectTier.premium).toList();
+        catalog.where((e) => e.tier == WinEffectTier.premium).toList();
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
