@@ -428,5 +428,65 @@
     "difficulty": "easy",
     "is_active": true,
     "image_asset": "assets/game_places/images/clothing_scarf_winter.jpg"
+  },
+  {
+    "id": "clothing_jacket",
+    "name_he": "ז'קט",
+    "answer_he": "ז'קט",
+    "aliases_he": [
+      "ג'קט",
+      "זקט"
+    ],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_jacket.jpg"
+  },
+  {
+    "id": "clothing_sandals",
+    "name_he": "סנדלים",
+    "answer_he": "סנדלים",
+    "aliases_he": [
+      "סנדל"
+    ],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_sandals.jpg"
+  },
+  {
+    "id": "clothing_belt",
+    "name_he": "חגורה",
+    "answer_he": "חגורה",
+    "aliases_he": [],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_belt.jpg"
+  },
+  {
+    "id": "clothing_pajamas",
+    "name_he": "פיג'מה",
+    "answer_he": "פיג'מה",
+    "aliases_he": [
+      "פיגמה",
+      "פיז'מה"
+    ],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_pajamas.jpg"
+  },
+  {
+    "id": "clothing_robe",
+    "name_he": "חלוק",
+    "answer_he": "חלוק",
+    "aliases_he": [
+      "חלוק רחצה"
+    ],
+    "category": "clothing",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/clothing_robe.jpg"
   }
 ]

@@ -1,17 +1,17 @@
 {
-  "version": 3,
+  "version": 4,
   "_comment": "Seed snapshot of WhoIsThere BUNDLED content (baked into the app). Import once into the admin's catalog, then keep isActive in sync via content_manifest/places_v1. To hide a whole topic use the manifest's top-level topicsActive map (categoryId -> bool). 'remote' places (added by admin, image in Storage) are appended on top of these. 'category' is the GAME category id (= source filename), NOT the per-item sub-type. Regenerate from the game repo when bundled content changes.",
   "counts": {
     "israel_places": 45,
     "animals": 59,
-    "objects": 47,
+    "objects": 48,
     "vehicles": 47,
-    "professions": 48,
+    "professions": 49,
     "flags": 28,
     "instruments": 48,
     "produce": 50,
-    "clothing": 43,
-    "sports": 43
+    "clothing": 48,
+    "sports": 45
   },
   "places": [
     {
@@ -3677,6 +3677,78 @@
       "category": "sports",
       "nameHe": "שחמט",
       "answerHe": "שחמט"
+    },
+    {
+      "id": "clothing_jacket",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "ז'קט",
+      "answerHe": "ז'קט"
+    },
+    {
+      "id": "clothing_sandals",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "סנדלים",
+      "answerHe": "סנדלים"
+    },
+    {
+      "id": "clothing_belt",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "חגורה",
+      "answerHe": "חגורה"
+    },
+    {
+      "id": "clothing_pajamas",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "פיג'מה",
+      "answerHe": "פיג'מה"
+    },
+    {
+      "id": "clothing_robe",
+      "isActive": true,
+      "source": "bundled",
+      "category": "clothing",
+      "nameHe": "חלוק",
+      "answerHe": "חלוק"
+    },
+    {
+      "id": "sports_karate",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "קראטה",
+      "answerHe": "קראטה"
+    },
+    {
+      "id": "sports_snowboarding",
+      "isActive": true,
+      "source": "bundled",
+      "category": "sports",
+      "nameHe": "סנובורד",
+      "answerHe": "סנובורד"
+    },
+    {
+      "id": "objects_guitar",
+      "isActive": true,
+      "source": "bundled",
+      "category": "objects",
+      "nameHe": "גיטרה",
+      "answerHe": "גיטרה"
+    },
+    {
+      "id": "professions_gardener",
+      "isActive": true,
+      "source": "bundled",
+      "category": "professions",
+      "nameHe": "גנן",
+      "answerHe": "גנן"
     }
   ]
 }

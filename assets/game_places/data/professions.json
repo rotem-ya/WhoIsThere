@@ -478,5 +478,15 @@
     "difficulty": "easy",
     "is_active": true,
     "image_asset": "assets/game_places/images/professions_referee.jpg"
+  },
+  {
+    "id": "professions_gardener",
+    "name_he": "גנן",
+    "answer_he": "גנן",
+    "aliases_he": [],
+    "category": "professions",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/professions_gardener.jpg"
   }
 ]

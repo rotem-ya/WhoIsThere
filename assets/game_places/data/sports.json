@@ -428,5 +428,29 @@
     "difficulty": "easy",
     "is_active": true,
     "image_asset": "assets/game_places/images/sports_chess.jpg"
+  },
+  {
+    "id": "sports_karate",
+    "name_he": "קראטה",
+    "answer_he": "קראטה",
+    "aliases_he": [
+      "קרטה"
+    ],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_karate.jpg"
+  },
+  {
+    "id": "sports_snowboarding",
+    "name_he": "סנובורד",
+    "answer_he": "סנובורד",
+    "aliases_he": [
+      "גלישת שלג"
+    ],
+    "category": "sports",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/sports_snowboarding.jpg"
   }
 ]
