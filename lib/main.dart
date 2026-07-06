@@ -18,6 +18,7 @@ import 'core/utils/app_router.dart';
 import 'firebase_options.dart';
 import 'providers/providers.dart';
 import 'services/content_manifest_service.dart';
+import 'services/cosmetics_catalog_service.dart';
 import 'services/notification_service.dart';
 import 'services/qa_logger_service.dart';
 import 'services/report_service.dart';
@@ -128,6 +129,11 @@ void main() async {
   // event also serves as the initial refresh (replaces the one-shot sync()).
   await ContentManifestService.instance.loadCached();
   ContentManifestService.instance.startRealtime();
+
+  // Live store-cosmetics catalog — same architecture: cached instantly,
+  // realtime for admin edits, bundled fallback on any failure.
+  await CosmeticsCatalogService.instance.loadCached();
+  CosmeticsCatalogService.instance.startRealtime();
 
   runApp(const ProviderScope(child: GuessThePlaceApp()));
 }

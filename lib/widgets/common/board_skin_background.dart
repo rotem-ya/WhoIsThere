@@ -1,5 +1,8 @@
 import 'dart:math' as math;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
+import '../../models/board_skin.dart';
 
 /// Rich, layered background for an equipped board skin. Each skin is a bespoke
 /// composition (base gradient + radial glows + light beams + starfields +
@@ -190,8 +193,38 @@ class BoardSkinBackground extends StatelessWidget {
           _vignette(),
         ];
       case 'none':
-      default:
         // App-default deep navy board.
+        return [
+          _base(const [Color(0xFF0A1A2E), Color(0xFF04091A)]),
+        ];
+      default:
+        // Admin-created skins (live catalog): a full background image, or a
+        // generic gradient composition from the skin's colors. Unknown ids
+        // fall back to the app-default deep navy board.
+        final skin = boardSkinFor(id);
+        if (skin.id == id && skin.imageUrl != null) {
+          return [
+            Positioned.fill(
+              child: CachedNetworkImage(
+                imageUrl: skin.imageUrl!,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => DecoratedBox(
+                  decoration: BoxDecoration(gradient: skin.gradient),
+                ),
+              ),
+            ),
+            _vignette(0.40),
+          ];
+        }
+        if (skin.id == id && skin.colors.isNotEmpty) {
+          return [
+            _base(skin.colors.length == 1
+                ? [skin.colors.first, skin.colors.first]
+                : skin.colors),
+            _glow(skin.accent, Alignment.topCenter, 0.9, 0.26),
+            _vignette(0.35),
+          ];
+        }
         return [
           _base(const [Color(0xFF0A1A2E), Color(0xFF04091A)]),
         ];

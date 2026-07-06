@@ -60,13 +60,18 @@ class BoardSkinsScreen extends ConsumerWidget {
     final selected = ref.watch(selectedBoardSkinProvider).valueOrNull ?? 'none';
     final owned = ref.watch(ownedBoardSkinsProvider).valueOrNull ?? ['none'];
 
-    final none = kBoardSkins.firstWhere((s) => s.id == 'none');
+    // Rebuild when the admin edits the live cosmetics catalog.
+    ref.watch(cosmeticsRevisionProvider);
+    final catalog = allBoardSkins.where((s) => s.active).toList();
+
+    final none = catalog.firstWhere((s) => s.id == 'none',
+        orElse: () => kBoardSkins.first);
     final basic =
-        kBoardSkins.where((s) => s.tier == BoardSkinTier.basic).toList();
+        catalog.where((s) => s.tier == BoardSkinTier.basic).toList();
     final rare =
-        kBoardSkins.where((s) => s.tier == BoardSkinTier.rare).toList();
+        catalog.where((s) => s.tier == BoardSkinTier.rare).toList();
     final prem =
-        kBoardSkins.where((s) => s.tier == BoardSkinTier.premium).toList();
+        catalog.where((s) => s.tier == BoardSkinTier.premium).toList();
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,

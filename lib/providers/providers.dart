@@ -16,6 +16,7 @@ import '../services/room_service.dart';
 import '../services/settings_service.dart';
 import '../services/friends_service.dart';
 import '../services/content_manifest_service.dart';
+import '../services/cosmetics_catalog_service.dart';
 import '../models/user_model.dart';
 import '../models/room_model.dart';
 import '../models/game_image_model.dart';
@@ -116,6 +117,22 @@ final currentUserProvider = StreamProvider<UserModel?>((ref) {
 // rebuild immediately — no app restart needed.
 final contentManifestRevisionProvider = StreamProvider<int>((ref) {
   final notifier = ContentManifestService.instance.revision;
+  final controller = StreamController<int>();
+  void emit() => controller.add(notifier.value);
+  emit(); // seed with the current value
+  notifier.addListener(emit);
+  ref.onDispose(() {
+    notifier.removeListener(emit);
+    controller.close();
+  });
+  return controller.stream;
+});
+
+// Emits whenever the live cosmetics catalog changes (admin edit) — the store
+// screens watch this to show new/edited frames, name styles, win effects and
+// board skins immediately.
+final cosmeticsRevisionProvider = StreamProvider<int>((ref) {
+  final notifier = CosmeticsCatalogService.instance.revision;
   final controller = StreamController<int>();
   void emit() => controller.add(notifier.value);
   emit(); // seed with the current value

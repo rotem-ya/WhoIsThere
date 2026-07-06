@@ -21,6 +21,9 @@ class AvatarFrame {
   /// Draws a second thin inner ring with a small gap (a premium accent).
   final bool doubleRing;
 
+  /// Hidden from the store when false (still renders if already equipped).
+  final bool active;
+
   const AvatarFrame({
     required this.id,
     required this.name,
@@ -29,6 +32,7 @@ class AvatarFrame {
     this.glow = false,
     this.studs = 0,
     this.doubleRing = false,
+    this.active = true,
   });
 
   /// The "no frame" default everyone owns implicitly.
@@ -151,10 +155,16 @@ const kAvatarFrames = <AvatarFrame>[
   ),
 ];
 
+/// Live (bundled+remote merged) catalog — populated by CosmeticsCatalogService.
+List<AvatarFrame>? liveAvatarFrames;
+
+/// Full catalog incl. inactive; store screens filter on [AvatarFrame.active].
+List<AvatarFrame> get allAvatarFrames => liveAvatarFrames ?? kAvatarFrames;
+
 AvatarFrame frameFor(String? id) {
-  if (id == null) return kAvatarFrames.first;
-  for (final f in kAvatarFrames) {
+  if (id == null) return allAvatarFrames.first;
+  for (final f in allAvatarFrames) {
     if (f.id == id) return f;
   }
-  return kAvatarFrames.first;
+  return allAvatarFrames.first;
 }

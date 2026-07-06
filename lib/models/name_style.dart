@@ -13,11 +13,15 @@ class NameStyle {
   /// Several = horizontal gradient (rendered via ShaderMask).
   final List<Color> colors;
 
+  /// Hidden from the store when false (still renders if already equipped).
+  final bool active;
+
   const NameStyle({
     required this.id,
     required this.name,
     required this.price,
     this.colors = const [],
+    this.active = true,
   });
 
   bool get isNone => id == 'none' || colors.isEmpty;
@@ -59,10 +63,16 @@ const kNameStyles = <NameStyle>[
   ]),
 ];
 
+/// Live (bundled+remote merged) catalog — populated by CosmeticsCatalogService.
+List<NameStyle>? liveNameStyles;
+
+/// Full catalog incl. inactive; store screens filter on [NameStyle.active].
+List<NameStyle> get allNameStyles => liveNameStyles ?? kNameStyles;
+
 NameStyle nameStyleFor(String? id) {
-  if (id == null) return kNameStyles.first;
-  for (final s in kNameStyles) {
+  if (id == null) return allNameStyles.first;
+  for (final s in allNameStyles) {
     if (s.id == id) return s;
   }
-  return kNameStyles.first;
+  return allNameStyles.first;
 }
