@@ -20,7 +20,9 @@ const BASE = 'https://firebaserules.googleapis.com/v1';
 
 // Per-target defaults: which local file, the ruleset entry name, and the
 // release id the rules are published to.
-const STORAGE_BUCKET = process.env.STORAGE_BUCKET || `${PROJECT}.appspot.com`;
+// The default bucket for newer Firebase projects is <project>.firebasestorage.app
+// (appspot.com is the legacy name; this project has NO appspot bucket).
+const STORAGE_BUCKET = process.env.STORAGE_BUCKET || `${PROJECT}.firebasestorage.app`;
 const TARGETS = {
   firestore: { file: 'firestore.rules', entry: 'firestore.rules', release: 'cloud.firestore' },
   storage: { file: 'storage.rules', entry: 'storage.rules', release: `firebase.storage/${STORAGE_BUCKET}` },
