@@ -79,18 +79,35 @@ workflows:
               | openssl x509 -inform DER -noout -subject 2>/dev/null || true
             echo ""
           done
-      # Force App Store Connect to (re)generate a provisioning profile that
-      # reflects the App ID's CURRENT capabilities. Build #62 failed with
-      # "profile doesn't include Push / aps-environment": automatic signing had
-      # reused a stale profile created before Push was enabled on the App ID.
-      # --create regenerates it now that Push + the APNs key are in place, so
-      # the fresh profile carries aps-environment. Runs before use-profiles.
-      - name: Regenerate signing profile with current capabilities (Push)
+      # Delete any existing App Store provisioning profile for this bundle so
+      # the automatic signing below MUST create a fresh one that reflects the
+      # App ID's current capabilities (Push / aps-environment). Build #62
+      # failed because automatic signing reused a stale profile created before
+      # Push was enabled. This uses the App Store Connect API key from the
+      # integration (no certificate private key needed — that broke #63).
+      # Best-effort: never fail the build if there's nothing to delete.
+      - name: Delete stale App Store profiles (force fresh, Push-enabled)
         script: |
-          app-store-connect fetch-signing-files "com.rotem.whoisthere" \
-            --type IOS_APP_STORE \
-            --create
-      - name: Set up code signing settings on Xcode project
+          set +e
+          app-store-connect profiles list \
+            --bundle-id-identifier "com.rotem.whoisthere" \
+            --profile-type IOS_APP_STORE_ADHOC IOS_APP_STORE \
+            --json > /tmp/profiles.json 2>/dev/null
+          python3 - <<'PY' || true
+          import json
+          try:
+              data = json.load(open('/tmp/profiles.json'))
+          except Exception:
+              data = []
+          ids = [p.get('id') for p in (data or []) if p.get('id')]
+          open('/tmp/profile_ids.txt','w').write('\n'.join(ids))
+          print(f"found {len(ids)} profile(s) to delete")
+          PY
+          while read -r pid; do
+            [ -n "$pid" ] && app-store-connect profiles delete "$pid" || true
+          done < /tmp/profile_ids.txt
+          echo "stale profile cleanup done"
+      - name: Set up code signing settings on Xcode project (auto-creates fresh profile)
         script: xcode-project use-profiles
       - name: Build signed IPA
         script: |
