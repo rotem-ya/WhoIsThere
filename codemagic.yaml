@@ -79,6 +79,17 @@ workflows:
               | openssl x509 -inform DER -noout -subject 2>/dev/null || true
             echo ""
           done
+      # Force App Store Connect to (re)generate a provisioning profile that
+      # reflects the App ID's CURRENT capabilities. Build #62 failed with
+      # "profile doesn't include Push / aps-environment": automatic signing had
+      # reused a stale profile created before Push was enabled on the App ID.
+      # --create regenerates it now that Push + the APNs key are in place, so
+      # the fresh profile carries aps-environment. Runs before use-profiles.
+      - name: Regenerate signing profile with current capabilities (Push)
+        script: |
+          app-store-connect fetch-signing-files "com.rotem.whoisthere" \
+            --type IOS_APP_STORE \
+            --create
       - name: Set up code signing settings on Xcode project
         script: xcode-project use-profiles
       - name: Build signed IPA
