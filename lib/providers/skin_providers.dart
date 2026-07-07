@@ -3,29 +3,39 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/card_skin.dart';
 
-/// Streams active card skins from Firestore `card_skins` collection,
-/// ordered by `sortOrder`. Falls back to hardcoded list when empty.
+/// Streams card skins from the `card_skins` Firestore collection and MERGES
+/// them onto the bundled catalog — same live-content model as the cosmetics
+/// catalog: an admin doc whose id matches a bundled skin OVERRIDES it (price /
+/// cover image), `active:false` HIDES that skin, and a new id is appended.
 ///
-/// Firestore document schema:
-/// {
-///   "nameHe": "שם העיצוב",
-///   "price": 0,
-///   "coverImageUrl": "https://storage.googleapis.com/...",  // optional
-///   "previewImageUrl": "https://storage.googleapis.com/...", // optional
-///   "active": true,
-///   "sortOrder": 0
-/// }
+/// The whole collection is streamed with no `where`/`orderBy` so it needs no
+/// composite index and never drops docs that lack a field (the admin writes
+/// no `sortOrder`). On any error the stream is empty → bundled fallback.
+///
+/// Firestore document schema (per doc, id = skin id):
+/// { "nameHe": "...", "price": 0, "active": true,
+///   "coverImageUrl": "https://…", "previewImageUrl": "https://…" }  // urls optional
 final firestoreSkinsProvider = StreamProvider<List<CardSkin>>((ref) {
   return FirebaseFirestore.instance
       .collection('card_skins')
-      .where('active', isEqualTo: true)
-      .orderBy('sortOrder')
       .snapshots()
       .map((snap) {
     if (snap.docs.isEmpty) return kAvailableCardSkins;
-    return snap.docs
-        .map((doc) => CardSkin.fromFirestore(doc.id, doc.data()))
-        .toList();
+    final overrides = <String, CardSkin>{};
+    final hidden = <String>{};
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      if (data['active'] == false) {
+        hidden.add(doc.id);
+        continue;
+      }
+      overrides[doc.id] = CardSkin.fromFirestore(doc.id, data);
+    }
+    return <CardSkin>[
+      for (final b in kAvailableCardSkins)
+        if (!hidden.contains(b.id)) overrides.remove(b.id) ?? b,
+      ...overrides.values,
+    ];
   });
 });
 
