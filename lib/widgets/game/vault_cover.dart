@@ -1901,16 +1901,15 @@ class _CardSkinPreviewState extends State<CardSkinPreview> {
 
   @override
   Widget build(BuildContext context) {
-    // If the skin has a real image (asset or network), show the iris preview.
-    // Otherwise use the distinctive flat preview painter.
+    // If the skin has a real image (asset or admin network cover), show the
+    // FULL flat image — exactly how the card back looks closed in-game, and
+    // matching the admin preview. (Previously this drew a nearly-closed iris
+    // over the image, so image skins looked like the procedural sunburst.)
+    // Skins without an image keep the distinctive flat procedural preview.
     if (_skinImage != null) {
       return RepaintBoundary(
         child: CustomPaint(
-          painter: _AperturePainter(
-            progress: 0.08,
-            cardSkinId: widget.cardSkinId,
-            skinImage: _skinImage,
-          ),
+          painter: _ImageFillPainter(_skinImage!),
         ),
       );
     }
