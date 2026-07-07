@@ -1,14 +1,16 @@
-Release AAB build requested: 2026-07-05T00:00:00Z (v1.1 update, r2)
-version: 1.1.0
+Release AAB build requested: 2026-07-07T05:00:00Z (v1.1.1 — the revenue release)
+version: 1.1.1 (build 61)
 signing: Play upload key SHA-1 EA:3B (from UPLOAD_* secrets / embedded)
 package: com.whoisthere.app (matches Play Console)
-note: v1.1 UPDATE — everything from the previous marker PLUS: rematch fixes
-  (stranded-lobby join, letters play-again handshake, simultaneous-tap race),
-  synced heat round transitions (correct guess closes everyone's typing,
-  4s between-rounds interlude with image+answer+winner), topic picking QoL
-  (host coverage waives quota, single-category heats, cancel-typing button),
-  friends fixes (working invite landing page on both hosts, add-by-code UX,
-  global pending-request banner), live admin content (kBundledImagesOnly=false
-  — admin image overrides + remote places appear without an app update), and
-  bots never guess correctly before 50% of tiles are revealed (all games).
-note2: versionCode auto = build-aab run number (strictly increasing; > 23 used at launch).
+note: v1.1.1 — REAL ADS ON (useTestAds=false; v1.0/v1.1.0 shipped with test
+  ads = zero revenue), iOS SKAdNetwork ids, in-app review prompt, Firebase
+  Analytics core events, feedback now carries the device QA log, all pages on
+  Firebase Hosting (repo-independent), new rewarded placements (daily double,
+  hint unlock, loss consolation), FCM push for friend invites + requests,
+  live cosmetics catalog (admin-controlled store items incl. Gemini board
+  backgrounds; admin image wins over bundled rendering), live-manifest
+  listener self-heal (admin updates reach every session), text scale clamped
+  0.85-1.1 (enlarged Android fonts broke layouts), baked content: 12 new/
+  updated images (jacket, sandals, belt, pajamas, robe, karate, snowboarding,
+  guitar, gardener, lion, shirt, dress), birds+plants categories removed.
+note2: versionCode auto = build-aab run number (strictly increasing; 25 used by v1.1.0).

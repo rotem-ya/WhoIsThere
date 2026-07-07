@@ -370,15 +370,24 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       builder: (context, child) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          // The friend-request banner floats above the router so a pending
-          // request is noticeable from ANY screen (not just the home dot).
-          child: Stack(
-            children: [
-              child ?? const SizedBox.shrink(),
-              const FriendRequestBanner(),
-            ],
+        // Clamp the system text scale: game layouts are designed for ~1.0 and
+        // Android devices with enlarged fonts (1.3-2.0) blow them apart while
+        // iOS stays at 1.0 and looks right. A small allowance keeps some
+        // accessibility benefit without breaking screens.
+        final mq = MediaQuery.of(context);
+        final scale = mq.textScaler.scale(1.0).clamp(0.85, 1.1);
+        return MediaQuery(
+          data: mq.copyWith(textScaler: TextScaler.linear(scale)),
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            // The friend-request banner floats above the router so a pending
+            // request is noticeable from ANY screen (not just the home dot).
+            child: Stack(
+              children: [
+                child ?? const SizedBox.shrink(),
+                const FriendRequestBanner(),
+              ],
+            ),
           ),
         );
       },

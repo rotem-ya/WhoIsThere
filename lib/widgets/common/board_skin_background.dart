@@ -103,6 +103,23 @@ class BoardSkinBackground extends StatelessWidget {
       );
 
   List<Widget> _layersFor(String id) {
+    // An admin-attached background IMAGE (live cosmetics catalog) always wins —
+    // including for bundled ids that would otherwise hit their bespoke case.
+    final live = boardSkinFor(id);
+    if (live.id == id && live.imageUrl != null) {
+      return [
+        Positioned.fill(
+          child: CachedNetworkImage(
+            imageUrl: live.imageUrl!,
+            fit: BoxFit.cover,
+            errorWidget: (_, __, ___) => DecoratedBox(
+              decoration: BoxDecoration(gradient: live.gradient),
+            ),
+          ),
+        ),
+        _vignette(0.40),
+      ];
+    }
     switch (id) {
       case 'midnight':
         return [
@@ -198,24 +215,10 @@ class BoardSkinBackground extends StatelessWidget {
           _base(const [Color(0xFF0A1A2E), Color(0xFF04091A)]),
         ];
       default:
-        // Admin-created skins (live catalog): a full background image, or a
-        // generic gradient composition from the skin's colors. Unknown ids
-        // fall back to the app-default deep navy board.
-        final skin = boardSkinFor(id);
-        if (skin.id == id && skin.imageUrl != null) {
-          return [
-            Positioned.fill(
-              child: CachedNetworkImage(
-                imageUrl: skin.imageUrl!,
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => DecoratedBox(
-                  decoration: BoxDecoration(gradient: skin.gradient),
-                ),
-              ),
-            ),
-            _vignette(0.40),
-          ];
-        }
+        // Admin-created skins (live catalog) without an image: a generic
+        // gradient composition from the skin's colors. Unknown ids fall back
+        // to the app-default deep navy board.
+        final skin = live;
         if (skin.id == id && skin.colors.isNotEmpty) {
           return [
             _base(skin.colors.length == 1

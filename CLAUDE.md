@@ -47,6 +47,7 @@
 ---
 
 ## מערכת קוסמטיקה (cosmetics) — נרכשת במטבעות, ללא pay-to-win
+> **קטלוג חי (v1.1.1+):** האדמין שולט בכל 4 סוגי הקוסמטיקה דרך `cosmetics_catalog/catalog_v1` (קריאה ציבורית, כתיבה isAdmin) — `CosmeticsCatalogService` ממזג אל ה-hooks בקבצי המודל (`liveX`/`allX`), דריסה לפי id / הוספה / `active:false` להסתרה; רקע-לוח תומך `imageUrl` (תמונה מ-Gemini ב-Storage). מסך האדמין: "🎨 מוצרי חנות (חי)" (v117+). המסכים מתרעננים דרך `cosmeticsRevisionProvider`.
 ארבעה סוגי קוסמטיקה, כולם באותו דפוס: model+קטלוג בקוד (`lib/models/`), מסך חנות (`lib/screens/store/`) עם providers `selectedXProvider`/`ownedXProvider` (StreamProvider על `users/{uid}`), קנייה = טרנזקציית Firestore (`coins` − מחיר + `totalSpent` increment, `ownedX` arrayUnion), הצמדה = `selectedX` על user doc. באנר בטאב 🎨 (`store_screen.dart` → `_DesignBanner`). מיזוג ב-`auth_service` במעבר אורח→Google (`ownedX`). דרגות לפי מחיר: בסיסי 50–150 / נדיר 300–500 / פרימיום 1000.
 
 | סוג | model | מסך/route | שדה user | היכן נראה | הפצה לשחקנים אחרים |
