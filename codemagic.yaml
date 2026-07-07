@@ -79,35 +79,91 @@ workflows:
               | openssl x509 -inform DER -noout -subject 2>/dev/null || true
             echo ""
           done
-      # Delete any existing App Store provisioning profile for this bundle so
-      # the automatic signing below MUST create a fresh one that reflects the
-      # App ID's current capabilities (Push / aps-environment). Build #62
-      # failed because automatic signing reused a stale profile created before
-      # Push was enabled. This uses the App Store Connect API key from the
-      # integration (no certificate private key needed — that broke #63).
-      # Best-effort: never fail the build if there's nothing to delete.
-      - name: Delete stale App Store profiles (force fresh, Push-enabled)
+      # Builds #62/#64/#65 all failed at archive with "profile doesn't include
+      # aps-environment". Root cause: Codemagic's automatic signing (the
+      # environment.ios_signing block) fetches/creates the App Store profile at
+      # env-init, BEFORE any script runs, and reuses a stale Push-less profile —
+      # deleting it afterwards is too late, and the on-disk copy is what
+      # use-profiles then applies.
+      #
+      # Definitive fix: take deterministic control of the PROFILE (not the cert —
+      # ios_signing already imported the distribution cert + private key into the
+      # keychain, which is untouched here). We resolve the Bundle ID + all
+      # distribution certificate resource ids, delete stale App Store profiles,
+      # WIPE the on-disk profiles env-init fetched, then CREATE a brand-new
+      # App Store profile via `profiles create`. That command needs only
+      # certificate *resource ids* (not the private key), so it avoids the
+      # cert-key error that broke #63. A freshly created profile includes every
+      # capability enabled on the App ID — including Push. We then decode it on
+      # disk and FAIL EARLY with a clear message if aps-environment is somehow
+      # still absent (which would mean the App ID itself lacks Push).
+      - name: Create fresh Push-enabled App Store profile + verify aps-environment
         script: |
-          set +e
-          app-store-connect profiles list \
-            --bundle-id-identifier "com.rotem.whoisthere" \
-            --profile-type IOS_APP_STORE_ADHOC IOS_APP_STORE \
-            --json > /tmp/profiles.json 2>/dev/null
-          python3 - <<'PY' || true
-          import json
-          try:
-              data = json.load(open('/tmp/profiles.json'))
-          except Exception:
-              data = []
-          ids = [p.get('id') for p in (data or []) if p.get('id')]
-          open('/tmp/profile_ids.txt','w').write('\n'.join(ids))
-          print(f"found {len(ids)} profile(s) to delete")
+          set -e
+          BUNDLE_ID="com.rotem.whoisthere"
+          PROF_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+
+          echo "===== A. Resolve Bundle ID resource id ====="
+          app-store-connect bundle-ids list \
+            --bundle-id-identifier "$BUNDLE_ID" --strict-match-identifier \
+            --json > /tmp/bids.json
+          BID=$(python3 -c "import json;d=json.load(open('/tmp/bids.json'));d=d.get('data',d) if isinstance(d,dict) else d;print(d[0]['id'] if d else '')")
+          echo "Bundle ID resource id: '$BID'"
+          [ -z "$BID" ] && { echo 'ERROR: bundle id not found via API'; exit 1; }
+
+          echo "===== B. Collect ALL iOS Distribution certificate ids ====="
+          app-store-connect certificates list --type IOS_DISTRIBUTION --json > /tmp/certs.json
+          CERT_IDS=$(python3 -c "import json;d=json.load(open('/tmp/certs.json'));d=d.get('data',d) if isinstance(d,dict) else d;print(' '.join(x['id'] for x in d if x.get('id')))")
+          echo "Distribution certificate ids: '$CERT_IDS'"
+          [ -z "$CERT_IDS" ] && { echo 'ERROR: no distribution certificate in ASC'; exit 1; }
+
+          echo "===== C. Delete existing App Store profiles for this bundle id ====="
+          for T in IOS_APP_STORE IOS_APP_STORE_ADHOC; do
+            app-store-connect profiles list --bundle-id-identifier "$BUNDLE_ID" --profile-type "$T" --json > /tmp/pl_$T.json 2>/dev/null || echo '[]' > /tmp/pl_$T.json
+            for pid in $(python3 -c "import json;d=json.load(open('/tmp/pl_$T.json'));d=d.get('data',d) if isinstance(d,dict) else d;print(' '.join(x['id'] for x in d if x.get('id')))"); do
+              echo "deleting stale profile $pid ($T)"; app-store-connect profiles delete "$pid" || true
+            done
+          done
+
+          echo "===== D. Wipe on-disk profiles fetched at env-init (may be stale/Push-less) ====="
+          rm -f "$PROF_DIR/"*.mobileprovision 2>/dev/null || true
+          mkdir -p "$PROF_DIR"
+
+          echo "===== E. Create FRESH App Store profile (inherits App ID capabilities incl. Push) ====="
+          app-store-connect profiles create "$BID" \
+            --certificate-ids $CERT_IDS \
+            --type IOS_APP_STORE \
+            --name "WhoIsThere App Store CI $PROJECT_BUILD_NUMBER" \
+            --save
+
+          echo "===== F. Verify the freshly-saved profile GRANTS aps-environment ====="
+          python3 - <<'PY'
+          import glob, subprocess, plistlib, sys, os
+          prof_dir = os.path.expanduser("~/Library/MobileDevice/Provisioning Profiles")
+          files = glob.glob(prof_dir + "/*.mobileprovision")
+          if not files:
+              print("ERROR: no provisioning profile on disk after 'profiles create --save'"); sys.exit(1)
+          ok = False
+          for f in files:
+              raw = subprocess.run(["security", "cms", "-D", "-i", f], capture_output=True).stdout
+              try:
+                  pl = plistlib.loads(raw)
+              except Exception as e:
+                  print("could not decode", f, e); continue
+              ent = pl.get("Entitlements", {})
+              aps = ent.get("aps-environment")
+              print(f"  {os.path.basename(f)}  name={pl.get('Name')!r}  aps-environment={aps!r}")
+              if aps:
+                  ok = True
+          if not ok:
+              print("ERROR: the freshly created profile does NOT grant aps-environment.")
+              print("=> The App ID 'com.rotem.whoisthere' does not have Push Notifications")
+              print("   enabled for App Store distribution in the Apple Developer portal.")
+              print("   Enable Push on that App ID (Certificates, IDs & Profiles), then rebuild.")
+              sys.exit(1)
+          print("OK: a profile on disk grants aps-environment (Push). Proceeding.")
           PY
-          while read -r pid; do
-            [ -n "$pid" ] && app-store-connect profiles delete "$pid" || true
-          done < /tmp/profile_ids.txt
-          echo "stale profile cleanup done"
-      - name: Set up code signing settings on Xcode project (auto-creates fresh profile)
+      - name: Set up code signing settings on Xcode project (pins the fresh profile)
         script: xcode-project use-profiles
       - name: Build signed IPA
         script: |
