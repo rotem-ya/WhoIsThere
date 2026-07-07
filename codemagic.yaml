@@ -111,11 +111,34 @@ workflows:
           echo "Bundle ID resource id: '$BID'"
           [ -z "$BID" ] && { echo 'ERROR: bundle id not found via API'; exit 1; }
 
-          echo "===== B. Collect ALL iOS Distribution certificate ids ====="
-          app-store-connect certificates list --type IOS_DISTRIBUTION --json > /tmp/certs.json
-          CERT_IDS=$(python3 -c "import json;d=json.load(open('/tmp/certs.json'));d=d.get('data',d) if isinstance(d,dict) else d;print(' '.join(x['id'] for x in d if x.get('id')))")
+          echo "===== B. Collect ALL distribution certificate ids ====="
+          # Build #66 failed here: filtering --type IOS_DISTRIBUTION found nothing
+          # because the account signs with the *unified* "Apple Distribution"
+          # certificate, whose certificateType is DISTRIBUTION (not the legacy
+          # IOS_DISTRIBUTION). List every certificate and keep any distribution
+          # type (DISTRIBUTION or IOS_DISTRIBUTION); fall back to any non-dev
+          # cert if the type attribute is missing. Also print what we found.
+          app-store-connect certificates list --json > /tmp/certs.json 2>/dev/null || echo '[]' > /tmp/certs.json
+          CERT_IDS=$(python3 <<'PY'
+          import json
+          try:
+              d = json.load(open('/tmp/certs.json'))
+          except Exception:
+              d = []
+          if isinstance(d, dict):
+              d = d.get('data', [])
+          def ctype(c):
+              return ((c.get('attributes') or {}).get('certificateType') or '').upper()
+          for c in (d or []):
+              print('  cert', c.get('id'), '=>', ctype(c) or '(no type attr)', file=__import__('sys').stderr)
+          ids = [c['id'] for c in (d or []) if c.get('id') and ctype(c) in ('DISTRIBUTION', 'IOS_DISTRIBUTION')]
+          if not ids:  # tolerate missing/renamed type attribute — take any non-development cert
+              ids = [c['id'] for c in (d or []) if c.get('id') and 'DEVELOPMENT' not in ctype(c)]
+          print(' '.join(ids))
+          PY
+          )
           echo "Distribution certificate ids: '$CERT_IDS'"
-          [ -z "$CERT_IDS" ] && { echo 'ERROR: no distribution certificate in ASC'; exit 1; }
+          [ -z "$CERT_IDS" ] && { echo 'ERROR: no distribution certificate in ASC (checked DISTRIBUTION + IOS_DISTRIBUTION)'; exit 1; }
 
           echo "===== C. Delete existing App Store profiles for this bundle id ====="
           for T in IOS_APP_STORE IOS_APP_STORE_ADHOC; do
