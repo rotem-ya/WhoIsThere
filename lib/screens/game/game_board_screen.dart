@@ -1090,14 +1090,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     final botId = botEntries[_random.nextInt(botEntries.length)].key;
     // Early presence attempt (~12–20s in): the bot visibly types and races,
-    // but below 50% reveal it can only be WRONG (see the attempt's guard).
+    // but below 65% reveal it can only be WRONG (see the attempt's guard).
     _scheduleHeatBotAttempt(room, botId, 12000 + _random.nextInt(8001));
-    // Second wind once >50% of the board is open — the only window where a
+    // Second wind once >65% of the board is open — the only window where a
     // correct bot guess is allowed — so the bot stays a real late threat.
-    // Heat reveals tick at ~1 tile/sec (giant metronome), so time-to-55–73%
+    // Heat reveals tick at ~1 tile/sec (giant metronome), so time-to-68–85%
     // is roughly the missing tile count in seconds.
     final total = room.gridSize * room.gridSize;
-    final targetTiles = (total * (0.55 + _random.nextDouble() * 0.18)).round();
+    final targetTiles = (total * (0.68 + _random.nextDouble() * 0.17)).round();
     final tilesLeft =
         (targetTiles - room.placedPieces.length).clamp(0, total);
     _scheduleHeatBotAttempt(
@@ -1106,11 +1106,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   /// One delayed heat-bot guess attempt. Re-reads the live room before acting
   /// and bails if the round moved on. Correct chance is derived from the LIVE
-  /// reveal ratio at fire time — and is hard-zeroed below 50% reveal:
-  /// rule (per Rotem), a bot may never guess correctly before half the tiles
-  /// are revealed, in any game, so a human who recognises the image early
-  /// always owns the win. A wrong attempt still shows typing + a same-topic
-  /// wrong guess (then a block), keeping the race feeling alive.
+  /// reveal ratio at fire time — and is hard-zeroed below 65% reveal:
+  /// rule (per Rotem), a bot may never guess correctly before ~two-thirds of
+  /// the tiles are revealed, in any game, so a human who recognises the image
+  /// early always owns the win. A wrong attempt still shows typing + a
+  /// same-topic wrong guess (then a block), keeping the race feeling alive.
   void _scheduleHeatBotAttempt(RoomModel room, String botId, int delayMs) {
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
@@ -1123,9 +1123,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       final total = snap.gridSize * snap.gridSize;
       final revealed = snap.placedPieces.length;
       final ratio = total > 0 ? revealed / total : 0.0;
-      final double correctChance = ratio < 0.50
+      final double correctChance = ratio < 0.65
           ? 0.0
-          : ratio < 0.65
+          : ratio < 0.80
               ? 0.30
               : 0.45;
       await _performBotGuess(snap, botId, correctChance);
@@ -1140,7 +1140,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     // Solo duel: when the human faces bots only, the single bot opponent is the
     // whole challenge, so it plays as a sharper endgame "closer" — more accurate
     // late and a touch faster to think — while still never guessing correctly
-    // before 60% fill, preserving the human's early-guess win path.
+    // before 65% fill, preserving the human's early-guess win path.
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
 
     // Give the human player a guaranteed first-guess window on the first 2 tiles
@@ -1216,10 +1216,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (snap.phase != GamePhase.playing) return;
       if (snap.isBlockedFromGuessing(botId)) return;
 
-      // Correct guess: ≥60% revealed → 20% base; 75%+ → 35%; 85%+ → 45%.
+      // Correct guess: ≥65% revealed → 20% base; 75%+ → 35%; 85%+ → 45%.
       // Solo duel sharpens the closer: 25% / 42% / 55% so the lone bot is a
-      // genuine endgame threat (still 0% before 60%, so early guesses stay safe).
-      final double correctChance = ratio >= 0.60
+      // genuine endgame threat (still 0% before 65%, so early guesses stay safe).
+      final double correctChance = ratio >= 0.65
           ? (isSolo
               ? (isSuperEndgame ? 0.55 : isEndgameBotMode ? 0.42 : 0.25)
               : (isSuperEndgame ? 0.45 : isEndgameBotMode ? 0.35 : 0.20))
