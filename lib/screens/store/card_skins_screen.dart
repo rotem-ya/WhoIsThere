@@ -65,10 +65,33 @@ class CardSkinsScreen extends ConsumerWidget {
         .where((s) => s.active || ownedSkins.contains(s.id))
         .toList();
 
-    final freeSkins   = allSkins.where((s) => s.tier == SkinTier.free).toList();
-    final basicSkins  = allSkins.where((s) => s.tier == SkinTier.basic).toList();
-    final rareSkins   = allSkins.where((s) => s.tier == SkinTier.rare).toList();
-    final premSkins   = allSkins.where((s) => s.tier == SkinTier.premium).toList();
+    // One section per price tier (matches the admin catalog & Gemini styles).
+    const tiers = <_TierDef>[
+      _TierDef('חינם', 0, 0, Color(0xFF8090B0), Icons.star_outline_rounded, coin: false),
+      _TierDef('טבע · 50', 1, 50, Color(0xFF4DD0A0), Icons.eco_outlined),
+      _TierDef('פסיפס · 100', 51, 100, Color(0xFFD4AF37), Icons.grid_on_outlined),
+      _TierDef('ניאון · 200', 101, 200, Color(0xFF00E5FF), Icons.bolt_outlined),
+      _TierDef('קוסמי · 500', 201, 500, Color(0xFF9C27B0), Icons.auto_awesome_outlined),
+      _TierDef('זהב מלכותי · 1000', 501, 1 << 30, Color(0xFFFFD700), Icons.diamond_outlined),
+    ];
+    final sections = <Widget>[];
+    for (final t in tiers) {
+      final ts =
+          allSkins.where((s) => s.price >= t.lo && s.price <= t.hi).toList();
+      if (ts.isEmpty) continue;
+      sections.add(_SectionHeader(
+          label: t.label, trailingCoin: t.coin, icon: t.icon, color: t.color));
+      sections.add(const SizedBox(height: AppSpacing.sm));
+      sections.add(_SkinGrid(
+        skins: ts,
+        coins: coins,
+        selectedSkin: selectedSkin,
+        ownedSkins: ownedSkins,
+        onBuy: (skin) => _buySkin(context, ref, skin, coins),
+        onEquip: (skin) => _equipSkin(context, ref, skin),
+      ));
+      sections.add(const SizedBox(height: AppSpacing.lg));
+    }
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
@@ -101,66 +124,7 @@ class CardSkinsScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(
                   AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.lg),
-              children: [
-                _SectionHeader(
-                    label: 'חינמי',
-                    icon: Icons.star_outline_rounded,
-                    color: const Color(0xFF8090B0)),
-                const SizedBox(height: AppSpacing.sm),
-                _SkinGrid(
-                  skins: freeSkins,
-                  coins: coins,
-                  selectedSkin: selectedSkin,
-                  ownedSkins: ownedSkins,
-                  onBuy: (skin) => _buySkin(context, ref, skin, coins),
-                  onEquip: (skin) => _equipSkin(context, ref, skin),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                _SectionHeader(
-                    label: 'בסיסי  50–150',
-                    trailingCoin: true,
-                    icon: Icons.palette_outlined,
-                    color: const Color(0xFF4CA1AF)),
-                const SizedBox(height: AppSpacing.sm),
-                _SkinGrid(
-                  skins: basicSkins,
-                  coins: coins,
-                  selectedSkin: selectedSkin,
-                  ownedSkins: ownedSkins,
-                  onBuy: (skin) => _buySkin(context, ref, skin, coins),
-                  onEquip: (skin) => _equipSkin(context, ref, skin),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                _SectionHeader(
-                    label: 'נדיר  300–500',
-                    trailingCoin: true,
-                    icon: Icons.auto_awesome_outlined,
-                    color: const Color(0xFF00FFFF)),
-                const SizedBox(height: AppSpacing.sm),
-                _SkinGrid(
-                  skins: rareSkins,
-                  coins: coins,
-                  selectedSkin: selectedSkin,
-                  ownedSkins: ownedSkins,
-                  onBuy: (skin) => _buySkin(context, ref, skin, coins),
-                  onEquip: (skin) => _equipSkin(context, ref, skin),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                _SectionHeader(
-                    label: 'פרימיום  1000',
-                    trailingCoin: true,
-                    icon: Icons.diamond_outlined,
-                    color: const Color(0xFFFFD700)),
-                const SizedBox(height: AppSpacing.sm),
-                _SkinGrid(
-                  skins: premSkins,
-                  coins: coins,
-                  selectedSkin: selectedSkin,
-                  ownedSkins: ownedSkins,
-                  onBuy: (skin) => _buySkin(context, ref, skin, coins),
-                  onEquip: (skin) => _equipSkin(context, ref, skin),
-                ),
-              ],
+              children: sections,
             ),
           ),
         ],
@@ -577,4 +541,16 @@ class _SkinPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     return CardSkinPreview(cardSkinId: skin.id, skin: skin);
   }
+}
+
+// ── Price tier definition (one store section per coin tier) ────────────────────
+class _TierDef {
+  final String label;
+  final int lo; // inclusive
+  final int hi; // inclusive
+  final Color color;
+  final IconData icon;
+  final bool coin;
+  const _TierDef(this.label, this.lo, this.hi, this.color, this.icon,
+      {this.coin = true});
 }
