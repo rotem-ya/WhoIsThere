@@ -209,8 +209,16 @@ class _ImageFillPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final src = Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
-    canvas.drawImageRect(image, src, Offset.zero & size, Paint());
+    // BoxFit.cover: scale so the image fills the whole tile and center-crop the
+    // overflow. Avoids stretching square art into a portrait tile, and trims
+    // the white border/margin some generated cards carry at their edges.
+    final iw = image.width.toDouble(), ih = image.height.toDouble();
+    if (iw <= 0 || ih <= 0) return;
+    final scale = math.max(size.width / iw, size.height / ih);
+    final sw = size.width / scale, sh = size.height / scale;
+    final src = Rect.fromLTWH((iw - sw) / 2, (ih - sh) / 2, sw, sh);
+    canvas.drawImageRect(
+      image, src, Offset.zero & size, Paint()..filterQuality = FilterQuality.medium);
   }
 
   @override
