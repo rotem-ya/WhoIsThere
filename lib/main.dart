@@ -200,7 +200,8 @@ class GuessThePlaceApp extends ConsumerStatefulWidget {
   ConsumerState<GuessThePlaceApp> createState() => _GuessThePlaceAppState();
 }
 
-class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
+class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp>
+    with WidgetsBindingObserver {
   StreamSubscription<Uri>? _linkSub;
 
   String? _pushedTokenForUid;
@@ -208,9 +209,24 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initDeepLinks();
     _initTrackingThenAds();
     _initPush();
+    _touchLastSeen();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _touchLastSeen();
+  }
+
+  /// Refresh the signed-in user's lastSeenAt (admin "recently connected" list).
+  /// Throttled + fail-soft inside AuthService.
+  void _touchLastSeen() {
+    try {
+      ref.read(authServiceProvider).touchLastSeen();
+    } catch (_) {}
   }
 
   Future<void> _initPush() async {
@@ -338,6 +354,7 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _linkSub?.cancel();
     super.dispose();
   }

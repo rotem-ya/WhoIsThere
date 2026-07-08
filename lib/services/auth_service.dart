@@ -443,6 +443,30 @@ class AuthService {
         });
   }
 
+  DateTime? _lastSeenTouch;
+
+  /// Fire-and-forget refresh of the signed-in user's `lastSeenAt` so the admin
+  /// "recently connected" list reflects app opens, not just fresh logins.
+  /// Throttled to once per 2 minutes per session and fully fail-soft.
+  Future<void> touchLastSeen() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    final now = DateTime.now();
+    if (_lastSeenTouch != null &&
+        now.difference(_lastSeenTouch!) < const Duration(minutes: 2)) {
+      return;
+    }
+    _lastSeenTouch = now;
+    try {
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .update({'lastSeenAt': FieldValue.serverTimestamp()});
+    } catch (_) {
+      _lastSeenTouch = null; // let the next call retry
+    }
+  }
+
   Future<void> updateDisplayName(String userId, String rawName) async {
     final name = DisplayNameSanitizer.sanitize(rawName);
     if (name == null) return;
