@@ -4,14 +4,17 @@ import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../models/card_skin.dart';
+import '../../../providers/skin_providers.dart';
 import '../../../utils/game_constants.dart';
 import '../../../widgets/game/vault_cover.dart';
 
 const Duration _kApertureDuration = Duration(milliseconds: 600);
 
-class GameBoardView extends StatefulWidget {
+class GameBoardView extends ConsumerStatefulWidget {
   final int gridSize;
   final List<int> revealedCells;
   final List<int> availableCells;
@@ -45,10 +48,10 @@ class GameBoardView extends StatefulWidget {
   });
 
   @override
-  State<GameBoardView> createState() => _GameBoardViewState();
+  ConsumerState<GameBoardView> createState() => _GameBoardViewState();
 }
 
-class _GameBoardViewState extends State<GameBoardView> {
+class _GameBoardViewState extends ConsumerState<GameBoardView> {
   bool _locked = false;
 
   void _handleReveal(int index) {
@@ -62,6 +65,16 @@ class _GameBoardViewState extends State<GameBoardView> {
 
   @override
   Widget build(BuildContext context) {
+    // Resolve the equipped skin (incl. any network/baked image) once for the
+    // whole board, so every tile can slice the SAME picture.
+    final skins = ref.watch(allSkinsProvider);
+    final CardSkin? skin = skins.firstWhere(
+      (s) => s.id == widget.cardSkinId,
+      orElse: () => kAvailableCardSkins.firstWhere(
+        (s) => s.id == widget.cardSkinId,
+        orElse: () => kAvailableCardSkins.first,
+      ),
+    );
     return LayoutBuilder(
       builder: (context, constraints) {
         final side = math.min(constraints.maxWidth, constraints.maxHeight);
@@ -105,6 +118,7 @@ class _GameBoardViewState extends State<GameBoardView> {
                         onReveal: widget.onReveal != null ? _handleReveal : null,
                         onTapRevealed: widget.onTapRevealed,
                         cardSkinId: widget.cardSkinId,
+                        skin: skin,
                         isPendingReveal: index == widget.pendingRevealTileIndex,
                         revealDeadlineMs: widget.revealDeadlineMs,
                         spotlightPeek: widget.spotlightCells.contains(index),
@@ -131,6 +145,7 @@ class _Tile extends StatefulWidget {
   final void Function(int)? onReveal;
   final VoidCallback? onTapRevealed;
   final String cardSkinId;
+  final CardSkin? skin;
   final bool isPendingReveal;
   final int? revealDeadlineMs;
   final bool spotlightPeek;
@@ -146,6 +161,7 @@ class _Tile extends StatefulWidget {
     required this.onReveal,
     this.onTapRevealed,
     this.cardSkinId = 'default',
+    this.skin,
     this.isPendingReveal = false,
     this.revealDeadlineMs,
     this.spotlightPeek = false,
@@ -290,6 +306,9 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
                   isRevealed: widget.isRevealed,
                   isFocused: _canTap,
                   cardSkinId: widget.cardSkinId,
+                  skin: widget.skin,
+                  index: widget.index,
+                  gridSize: widget.gridSize,
                   child: _ImageSlice(
                     index: widget.index,
                     gridSize: widget.gridSize,

@@ -50,6 +50,12 @@ class VaultCover extends StatefulWidget {
   /// Optional full skin object — when provided, network coverImageUrl is used.
   final CardSkin? skin;
 
+  /// Board position — when [gridSize] > 1 the skin image is sliced so this tile
+  /// shows only its cell of the shared picture (the whole closed board = one
+  /// image). Defaults keep standalone/whole-image behaviour.
+  final int index;
+  final int gridSize;
+
   const VaultCover({
     super.key,
     required this.isRevealed,
@@ -57,6 +63,8 @@ class VaultCover extends StatefulWidget {
     this.isFocused = false,
     this.cardSkinId = 'default',
     this.skin,
+    this.index = 0,
+    this.gridSize = 1,
   });
 
   @override
@@ -150,7 +158,9 @@ class _VaultCoverState extends State<VaultCover>
               if (v <= 0.005) {
                 return RepaintBoundary(
                   child: _skinImage != null
-                      ? CustomPaint(painter: _ImageFillPainter(_skinImage!))
+                      ? CustomPaint(
+                          painter: _ImageFillPainter(_skinImage!,
+                              index: widget.index, gridSize: widget.gridSize))
                       : CustomPaint(painter: _SkinPreviewPainter(widget.cardSkinId)),
                 );
               }
@@ -161,6 +171,8 @@ class _VaultCoverState extends State<VaultCover>
                     progress: v,
                     cardSkinId: widget.cardSkinId,
                     skinImage: _skinImage,
+                    index: widget.index,
+                    gridSize: widget.gridSize,
                   ),
                 ),
               );
@@ -203,26 +215,48 @@ class _VaultCoverState extends State<VaultCover>
 
 // ── Simple full-fill painter for image-based skins (closed state) ─────────────
 
+/// Source rect within [image] for tile [index] of a [gridSize]² board.
+/// The image is cover-cropped into the square board (centered square of side
+/// min(w,h)), then divided into gridSize×gridSize cells — so every closed tile
+/// shows its own slice and the whole board assembles into one complete picture.
+Rect _skinSliceSrc(ui.Image image, int index, int gridSize) {
+  final iw = image.width.toDouble(), ih = image.height.toDouble();
+  final m = math.min(iw, ih);
+  final ox = (iw - m) / 2, oy = (ih - m) / 2;
+  final cell = m / gridSize;
+  final row = index ~/ gridSize, col = index % gridSize;
+  return Rect.fromLTWH(ox + col * cell, oy + row * cell, cell, cell);
+}
+
 class _ImageFillPainter extends CustomPainter {
   final ui.Image image;
-  _ImageFillPainter(this.image);
+  final int index;
+  final int gridSize;
+  _ImageFillPainter(this.image, {this.index = 0, this.gridSize = 1});
 
   @override
   void paint(Canvas canvas, Size size) {
-    // BoxFit.cover: scale so the image fills the whole tile and center-crop the
-    // overflow. Avoids stretching square art into a portrait tile, and trims
-    // the white border/margin some generated cards carry at their edges.
     final iw = image.width.toDouble(), ih = image.height.toDouble();
     if (iw <= 0 || ih <= 0) return;
-    final scale = math.max(size.width / iw, size.height / ih);
-    final sw = size.width / scale, sh = size.height / scale;
-    final src = Rect.fromLTWH((iw - sw) / 2, (ih - sh) / 2, sw, sh);
+    final Rect src;
+    if (gridSize > 1) {
+      // Board tile: draw only this tile's slice of the shared image, so the
+      // closed board forms one whole picture split across the tiles.
+      src = _skinSliceSrc(image, index, gridSize);
+    } else {
+      // Standalone (store preview): BoxFit.cover center-crop of the whole image,
+      // avoiding distortion and trimming any edge border the art carries.
+      final scale = math.max(size.width / iw, size.height / ih);
+      final sw = size.width / scale, sh = size.height / scale;
+      src = Rect.fromLTWH((iw - sw) / 2, (ih - sh) / 2, sw, sh);
+    }
     canvas.drawImageRect(
       image, src, Offset.zero & size, Paint()..filterQuality = FilterQuality.medium);
   }
 
   @override
-  bool shouldRepaint(covariant _ImageFillPainter o) => o.image != image;
+  bool shouldRepaint(covariant _ImageFillPainter o) =>
+      o.image != image || o.index != index || o.gridSize != gridSize;
 }
 
 // ── Improved iris painter ──────────────────────────────────────────────────────
@@ -231,6 +265,8 @@ class _AperturePainter extends CustomPainter {
   final double progress;
   final String cardSkinId;
   final ui.Image? skinImage;
+  final int index;
+  final int gridSize;
 
   static const int _bladeCount = 10;
 
@@ -238,6 +274,8 @@ class _AperturePainter extends CustomPainter {
     required this.progress,
     this.cardSkinId = 'default',
     this.skinImage,
+    this.index = 0,
+    this.gridSize = 1,
   });
 
   // ── Per-skin colour scheme ─────────────────────────────────────────────────
@@ -1729,8 +1767,11 @@ class _AperturePainter extends CustomPainter {
 
     // ── Base: skin image if loaded, otherwise solid colour ────────────────
     if (skinImage != null) {
-      final src = Rect.fromLTWH(
-          0, 0, skinImage!.width.toDouble(), skinImage!.height.toDouble());
+      // Slice per board tile (whole board = one image) when on a grid.
+      final src = gridSize > 1
+          ? _skinSliceSrc(skinImage!, index, gridSize)
+          : Rect.fromLTWH(
+              0, 0, skinImage!.width.toDouble(), skinImage!.height.toDouble());
       canvas.drawImageRect(skinImage!, src, rect, Paint());
     } else {
       canvas.drawRect(rect, Paint()..color = pal.base);
@@ -1834,7 +1875,9 @@ class _AperturePainter extends CustomPainter {
   bool shouldRepaint(covariant _AperturePainter old) =>
       old.progress != progress ||
       old.cardSkinId != cardSkinId ||
-      old.skinImage != skinImage;
+      old.skinImage != skinImage ||
+      old.index != index ||
+      old.gridSize != gridSize;
 }
 
 // ── Skin colour palette ───────────────────────────────────────────────────────
