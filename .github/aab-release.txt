@@ -1,16 +1,21 @@
-Release AAB build requested: 2026-07-07T06:00:00Z (v1.1.1 — the revenue release, r2: card-skin live merge fix)
-version: 1.1.1 (build 61)
+Release AAB build requested: 2026-07-08T15:30:00Z (v1.1.1 — the revenue release, r3: baked store skins + performance)
+version: 1.1.1 (build name 1.1.1; versionCode = build-aab run number, strictly increasing)
 signing: Play upload key SHA-1 EA:3B (from UPLOAD_* secrets / embedded)
 package: com.whoisthere.app (matches Play Console)
 note: v1.1.1 — REAL ADS ON (useTestAds=false; v1.0/v1.1.0 shipped with test
   ads = zero revenue), iOS SKAdNetwork ids, in-app review prompt, Firebase
-  Analytics core events, feedback now carries the device QA log, all pages on
+  Analytics core events, feedback carries the device QA log, all pages on
   Firebase Hosting (repo-independent), new rewarded placements (daily double,
   hint unlock, loss consolation), FCM push for friend invites + requests,
   live cosmetics catalog (admin-controlled store items incl. Gemini board
-  backgrounds; admin image wins over bundled rendering), live-manifest
-  listener self-heal (admin updates reach every session), text scale clamped
-  0.85-1.1 (enlarged Android fonts broke layouts), baked content: 12 new/
-  updated images (jacket, sandals, belt, pajamas, robe, karate, snowboarding,
-  guitar, gardener, lion, shirt, dress), birds+plants categories removed.
+  backgrounds + card backs; admin image wins over bundled), live-manifest
+  self-heal, text scale clamped 0.85-1.1, birds+plants categories removed.
+note-r3 (this build): 30 card-back skins BAKED into app assets (instant, no
+  cloud read — fixes slow store), each skin image sliced across the board so
+  the closed board forms one whole picture, disk-cache for any remaining
+  network skin/board images, store preview shows the flat card image, host's
+  card-back skin is shown to everyone in the room (monetization), admin:
+  gallery upload + batch Gemini (cards + board backgrounds) + image shrink +
+  full-bleed/price-scaled prompts + recently-connected users list + store ZIP
+  export. lastSeenAt refreshed on every app open (admin "last connected").
 note2: versionCode auto = build-aab run number (strictly increasing; 25 used by v1.1.0).

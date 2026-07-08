@@ -1,8 +1,8 @@
 /// Manually updated on each push. Check this label in Profile screen
 /// to verify which build is installed on a test device.
-const String kBuildLabel = 'build-20260705-v1.1.1-r1';
+const String kBuildLabel = 'build-20260708-v1.1.1-r3';
 
-const String kGitBranch = 'google-connect-review-submit';
+const String kGitBranch = 'qa-launch-prep-EXqLn';
 
 const String kAppVersion = '1.1.1+61';
 
