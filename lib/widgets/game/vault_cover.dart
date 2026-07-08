@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../../models/card_skin.dart';
 
 Future<ui.Image> _decodeUiImage(Uint8List bytes) {
@@ -12,22 +13,32 @@ Future<ui.Image> _decodeUiImage(Uint8List bytes) {
   return completer.future;
 }
 
-/// Resolves a network URL directly to a ui.Image via Flutter's image cache.
+/// Resolves a network URL to a ui.Image, DISK-caching it (same cache as remote
+/// place images) so each skin image downloads once instead of on every cold
+/// start — the skins store pulls ~30 covers at once, so this is the difference
+/// between a one-time fetch and re-downloading everything each visit.
 Future<ui.Image?> _fetchNetworkUiImage(String url) async {
   try {
-    final stream = NetworkImage(url).resolve(ImageConfiguration.empty);
-    final completer = Completer<ui.Image>();
-    late ImageStreamListener listener;
-    listener = ImageStreamListener(
-      (info, _) => completer.complete(info.image),
-      onError: (e, _) => completer.completeError(e),
-    );
-    stream.addListener(listener);
-    final image = await completer.future;
-    stream.removeListener(listener);
-    return image;
+    final file = await DefaultCacheManager().getSingleFile(url);
+    final bytes = await file.readAsBytes();
+    return await _decodeUiImage(bytes);
   } catch (_) {
-    return null;
+    // Fallback: direct network fetch (memory-cached by Flutter only).
+    try {
+      final stream = NetworkImage(url).resolve(ImageConfiguration.empty);
+      final completer = Completer<ui.Image>();
+      late ImageStreamListener listener;
+      listener = ImageStreamListener(
+        (info, _) => completer.complete(info.image),
+        onError: (e, _) => completer.completeError(e),
+      );
+      stream.addListener(listener);
+      final image = await completer.future;
+      stream.removeListener(listener);
+      return image;
+    } catch (_) {
+      return null;
+    }
   }
 }
 
