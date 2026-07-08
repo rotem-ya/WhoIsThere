@@ -40,14 +40,14 @@ final firestoreSkinsProvider = StreamProvider<List<CardSkin>>((ref) {
 });
 
 /// Merge a live Firestore skin over its bundled counterpart. The live doc wins
-/// for price/name and a cloud cover image, BUT when the doc carries no image we
-/// keep the bundled [assetPath] — so a skin whose art has been BAKED into the
-/// app renders from the local bundle (instant, no cloud read) even while a live
-/// doc still tunes its price. Bundled skins have no assetPath until baked, so
-/// today this is a no-op and behaviour is unchanged.
+/// for price/name, BUT when the skin's art is BAKED into the app
+/// ([bundled.assetPath] set) that local asset ALWAYS wins for the image —
+/// rendering instantly with no cloud read. Cloud cover images therefore only
+/// apply to skins that aren't baked (e.g. brand-new admin skins). This is what
+/// makes the periodic bake fast: once shipped, baked skins never hit Storage.
 CardSkin _mergeSkin(CardSkin? override, CardSkin bundled) {
   if (override == null) return bundled;
-  if (override.coverImageUrl == null && bundled.assetPath != null) {
+  if (bundled.assetPath != null) {
     return CardSkin(
       id: override.id,
       name: override.name,
