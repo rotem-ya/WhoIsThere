@@ -149,8 +149,17 @@ workflows:
           done
 
           echo "===== D. Wipe on-disk profiles fetched at env-init (may be stale/Push-less) ====="
-          rm -f "$PROF_DIR/"*.mobileprovision 2>/dev/null || true
-          mkdir -p "$PROF_DIR"
+          # profiles are cached in BOTH the legacy MobileDevice dir and the newer
+          # Xcode UserData dir (where `profiles create --save` actually writes on
+          # current Xcode). Wipe both so only the fresh profile from step E remains.
+          PROF_DIRS=(
+            "$HOME/Library/MobileDevice/Provisioning Profiles"
+            "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+          )
+          for d in "${PROF_DIRS[@]}"; do
+            rm -f "$d/"*.mobileprovision 2>/dev/null || true
+            mkdir -p "$d"
+          done
 
           echo "===== E. Create FRESH App Store profile (inherits App ID capabilities incl. Push) ====="
           app-store-connect profiles create "$BID" \
@@ -162,10 +171,18 @@ workflows:
           echo "===== F. Verify the freshly-saved profile GRANTS aps-environment ====="
           python3 - <<'PY'
           import glob, subprocess, plistlib, sys, os
-          prof_dir = os.path.expanduser("~/Library/MobileDevice/Provisioning Profiles")
-          files = glob.glob(prof_dir + "/*.mobileprovision")
+          # `profiles create --save` writes to the Xcode UserData dir on current
+          # Xcode; older tooling used the MobileDevice dir. Search BOTH.
+          prof_dirs = [
+              os.path.expanduser("~/Library/MobileDevice/Provisioning Profiles"),
+              os.path.expanduser("~/Library/Developer/Xcode/UserData/Provisioning Profiles"),
+          ]
+          files = []
+          for pd in prof_dirs:
+              files += glob.glob(pd + "/*.mobileprovision")
           if not files:
-              print("ERROR: no provisioning profile on disk after 'profiles create --save'"); sys.exit(1)
+              print("ERROR: no provisioning profile on disk after 'profiles create --save'")
+              print("  searched:", prof_dirs); sys.exit(1)
           ok = False
           for f in files:
               raw = subprocess.run(["security", "cms", "-D", "-i", f], capture_output=True).stdout
