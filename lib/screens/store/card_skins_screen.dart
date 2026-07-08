@@ -58,7 +58,12 @@ class CardSkinsScreen extends ConsumerWidget {
         ref.watch(selectedSkinProvider).valueOrNull ?? 'default';
     final ownedSkins =
         ref.watch(ownedSkinsProvider).valueOrNull ?? ['default'];
-    final allSkins = ref.watch(allSkinsProvider);
+    // Show active skins for sale + any inactive skin the player already owns
+    // (so a skin removed from the store stays usable for its owners).
+    final allSkins = ref
+        .watch(allSkinsProvider)
+        .where((s) => s.active || ownedSkins.contains(s.id))
+        .toList();
 
     final freeSkins   = allSkins.where((s) => s.tier == SkinTier.free).toList();
     final basicSkins  = allSkins.where((s) => s.tier == SkinTier.basic).toList();

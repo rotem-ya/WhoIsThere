@@ -21,19 +21,15 @@ final firestoreSkinsProvider = StreamProvider<List<CardSkin>>((ref) {
       .snapshots()
       .map((snap) {
     if (snap.docs.isEmpty) return kAvailableCardSkins;
+    // Keep ALL skins in the list, including ones the admin set active:false.
+    // The store screen filters inactive out of the BUY grid, but the game must
+    // still resolve an inactive skin so a player who already owns it keeps it.
     final overrides = <String, CardSkin>{};
-    final hidden = <String>{};
     for (final doc in snap.docs) {
-      final data = doc.data();
-      if (data['active'] == false) {
-        hidden.add(doc.id);
-        continue;
-      }
-      overrides[doc.id] = CardSkin.fromFirestore(doc.id, data);
+      overrides[doc.id] = CardSkin.fromFirestore(doc.id, doc.data());
     }
     return <CardSkin>[
-      for (final b in kAvailableCardSkins)
-        if (!hidden.contains(b.id)) _mergeSkin(overrides.remove(b.id), b),
+      for (final b in kAvailableCardSkins) _mergeSkin(overrides.remove(b.id), b),
       ...overrides.values,
     ];
   });
@@ -54,6 +50,7 @@ CardSkin _mergeSkin(CardSkin? override, CardSkin bundled) {
       price: override.price,
       assetPath: bundled.assetPath,
       previewImageUrl: override.previewImageUrl,
+      active: override.active,
     );
   }
   return override;

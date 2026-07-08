@@ -8,6 +8,10 @@ class CardSkin {
   final String? coverImageUrl;
   final String? previewImageUrl;
 
+  /// Hidden from the store when false, but still rendered for players who
+  /// already own it (removing a skin from sale must not break their board).
+  final bool active;
+
   const CardSkin({
     required this.id,
     required this.name,
@@ -15,6 +19,7 @@ class CardSkin {
     this.assetPath,
     this.coverImageUrl,
     this.previewImageUrl,
+    this.active = true,
   });
 
   bool get isFree => price == 0;
@@ -36,6 +41,7 @@ class CardSkin {
       price: (data['price'] as num?)?.toInt() ?? 0,
       coverImageUrl: data['coverImageUrl'] as String?,
       previewImageUrl: data['previewImageUrl'] as String?,
+      active: data['active'] != false,
     );
   }
 
