@@ -62,31 +62,31 @@ class CardSkin {
 // release; until baked they render procedurally / from a live cloud image.
 const kAvailableCardSkins = <CardSkin>[
   // ── חינם (0) — מינימליסטי ────────────────────────────────────────────────────
-  // 'default' = Israeli flag, always owned, procedural (no image).
-  CardSkin(id: 'default',        name: 'דגל ישראל',  price: 0),
-  CardSkin(id: 'minimal_lines',  name: 'קווים נקיים', price: 0),
-  CardSkin(id: 'minimal_calm',   name: 'רוגע',        price: 0),
+  CardSkin(id: 'default',        name: 'דגל ישראל',  price: 0, assetPath: 'assets/skins/card_default.jpg'),
+  CardSkin(id: 'minimal_lines',  name: 'קווים נקיים', price: 0, assetPath: 'assets/skins/card_minimal_lines.jpg'),
+  CardSkin(id: 'minimal_calm',   name: 'רוגע',        price: 0, assetPath: 'assets/skins/card_minimal_calm.jpg'),
 
   // ── 50 — טבע ישראלי ──────────────────────────────────────────────────────────
-  CardSkin(id: 'nature_leaves',  name: 'עלי זית',  price: 50),
-  CardSkin(id: 'nature_waves',   name: 'גלי ים',   price: 50),
-  CardSkin(id: 'nature_anemone', name: 'כלניות',   price: 50),
+  CardSkin(id: 'nature_leaves',  name: 'עלי זית',  price: 50, assetPath: 'assets/skins/card_nature_leaves.jpg'),
+  CardSkin(id: 'nature_waves',   name: 'גלי ים',   price: 50, assetPath: 'assets/skins/card_nature_waves.jpg'),
+  CardSkin(id: 'nature_anemone', name: 'כלניות',   price: 50, assetPath: 'assets/skins/card_nature_anemone.jpg'),
 
   // ── 100 — פסיפס מזרחי ────────────────────────────────────────────────────────
-  CardSkin(id: 'mosaic_arabesque', name: 'ערבסק',        price: 100),
-  CardSkin(id: 'mosaic_tiles',     name: 'פסיפס אריחים', price: 100),
-  CardSkin(id: 'mosaic_star',      name: 'כוכב מזרחי',   price: 100),
+  CardSkin(id: 'mosaic_arabesque', name: 'ערבסק',        price: 100, assetPath: 'assets/skins/card_mosaic_arabesque.jpg'),
+  CardSkin(id: 'mosaic_tiles',     name: 'פסיפס אריחים', price: 100, assetPath: 'assets/skins/card_mosaic_tiles.jpg'),
+  CardSkin(id: 'mosaic_star',      name: 'כוכב מזרחי',   price: 100, assetPath: 'assets/skins/card_mosaic_star.jpg'),
 
   // ── 200 — ניאון ──────────────────────────────────────────────────────────────
-  CardSkin(id: 'neon_grid',  name: 'רשת ניאון', price: 200),
+  CardSkin(id: 'neon_grid',  name: 'רשת ניאון', price: 200, assetPath: 'assets/skins/card_neon_grid.jpg'),
+  // neon_wave/neon_cyber: תמונות טרם נוצרו — נטענות חי מהענן עד שיוטמעו.
   CardSkin(id: 'neon_wave',  name: 'גל ניאון',  price: 200),
   CardSkin(id: 'neon_cyber', name: 'סייבר',     price: 200),
 
   // ── 500 — קוסמי ──────────────────────────────────────────────────────────────
-  CardSkin(id: 'cosmic_galaxy',  name: 'גלקסיה',      price: 500),
-  CardSkin(id: 'cosmic_aurora',  name: 'זוהר הקוטב',  price: 500),
-  CardSkin(id: 'cosmic_fireice', name: 'אש וקרח',     price: 500),
+  CardSkin(id: 'cosmic_galaxy',  name: 'גלקסיה',      price: 500, assetPath: 'assets/skins/card_cosmic_galaxy.jpg'),
+  CardSkin(id: 'cosmic_aurora',  name: 'זוהר הקוטב',  price: 500, assetPath: 'assets/skins/card_cosmic_aurora.jpg'),
+  CardSkin(id: 'cosmic_fireice', name: 'אש וקרח',     price: 500, assetPath: 'assets/skins/card_cosmic_fireice.jpg'),
 
   // ── 1000 — זהב מלכותי (יחיד) ─────────────────────────────────────────────────
-  CardSkin(id: 'royal_magen', name: 'מגן דוד מלכותי', price: 1000),
+  CardSkin(id: 'royal_magen', name: 'מגן דוד מלכותי', price: 1000, assetPath: 'assets/skins/card_royal_magen.jpg'),
 ];

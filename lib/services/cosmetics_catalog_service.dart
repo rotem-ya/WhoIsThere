@@ -84,6 +84,27 @@ class CosmeticsCatalogService {
         kWinEffects, data['winEffects'], _parseWinEffect, (x) => x.id);
     liveBoardSkins = _merge<BoardSkin>(
         kBoardSkins, data['boardSkins'], _parseBoardSkin, (x) => x.id);
+    // Baked local assets always win: re-apply bundled assetPath onto any live
+    // board skin whose id is baked, so a live imageUrl can't override it.
+    final bakedBoard = {
+      for (final b in kBoardSkins)
+        if (b.assetPath != null) b.id: b.assetPath!
+    };
+    if (bakedBoard.isNotEmpty && liveBoardSkins != null) {
+      liveBoardSkins = [
+        for (final s in liveBoardSkins!)
+          bakedBoard.containsKey(s.id) && s.assetPath == null
+              ? BoardSkin(
+                  id: s.id,
+                  name: s.name,
+                  price: s.price,
+                  colors: s.colors,
+                  imageUrl: s.imageUrl,
+                  assetPath: bakedBoard[s.id],
+                  active: s.active)
+              : s,
+      ];
+    }
     revision.value++;
 
     if (persist) {

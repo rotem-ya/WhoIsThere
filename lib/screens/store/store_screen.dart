@@ -22,8 +22,6 @@ import '../../widgets/common/win_effect_overlay.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_icon.dart';
 import 'avatars_screen.dart' show selectedAvatarProvider;
-import 'avatar_frames_screen.dart' show selectedFrameProvider;
-import 'name_styles_screen.dart' show selectedNameStyleProvider;
 import 'win_effects_screen.dart' show selectedWinEffectProvider;
 import 'board_skins_screen.dart' show selectedBoardSkinProvider;
 
@@ -701,9 +699,6 @@ class _SkinsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final name = ref.watch(currentUserProvider).valueOrNull?.name ?? 'שחקן';
     final avatarId = ref.watch(selectedAvatarProvider).valueOrNull ?? 'auto';
-    final frameId = ref.watch(selectedFrameProvider).valueOrNull ?? 'none';
-    final nameStyleId =
-        ref.watch(selectedNameStyleProvider).valueOrNull ?? 'none';
     final winEffectId =
         ref.watch(selectedWinEffectProvider).valueOrNull ?? 'none';
     final boardSkinId =
@@ -717,8 +712,6 @@ class _SkinsTab extends ConsumerWidget {
         _MyLookPreview(
           name: name,
           avatarId: avatarId,
-          frameId: frameId,
-          nameStyleId: nameStyleId,
         ),
         const SizedBox(height: AppSpacing.lg),
         Row(
@@ -745,26 +738,6 @@ class _SkinsTab extends ConsumerWidget {
               route: '/store/avatars',
               preview: PlayerAvatar(
                   name: name, seed: name, radius: 22, avatarId: avatarId),
-            ),
-            _DesignCard(
-              title: 'מסגרות',
-              accent: const Color(0xFFD4AF37),
-              route: '/store/frames',
-              preview: PlayerAvatar(
-                  name: name, seed: name, radius: 20, frameId: frameId),
-            ),
-            _DesignCard(
-              title: 'צבעי שם',
-              accent: const Color(0xFF4DD0A0),
-              route: '/store/names',
-              preview: PlayerNameText(
-                text: name,
-                styleId: nameStyleId,
-                base: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900),
-              ),
             ),
             _DesignCard(
               title: 'אפקטי ניצחון',
@@ -805,14 +778,10 @@ class _SkinsTab extends ConsumerWidget {
 class _MyLookPreview extends StatelessWidget {
   final String name;
   final String avatarId;
-  final String frameId;
-  final String nameStyleId;
 
   const _MyLookPreview({
     required this.name,
     required this.avatarId,
-    required this.frameId,
-    required this.nameStyleId,
   });
 
   @override
@@ -844,7 +813,6 @@ class _MyLookPreview extends StatelessWidget {
             seed: name,
             radius: 32,
             avatarId: avatarId,
-            frameId: frameId,
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -860,7 +828,6 @@ class _MyLookPreview extends StatelessWidget {
                 const SizedBox(height: 4),
                 PlayerNameText(
                   text: name,
-                  styleId: nameStyleId,
                   base: const TextStyle(
                       color: Colors.white,
                       fontSize: 22,
