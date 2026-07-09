@@ -272,6 +272,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   // Cycle integrity
   int? _lastKnownCycleId;
+  // The image the currently-open guess targets. The guess input is force-closed
+  // only when THIS changes (round solved / item swapped) — NOT on every piece
+  // reveal (which bumps revealCycleId but keeps the same image).
+  String? _lastKnownImageId;
 
   // Deadline tracking for timer lifecycle logs
   int? _lastKnownGuessOpportunityDeadlineMs;
@@ -2401,8 +2405,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 // any bot-typing banner — they target the previous image. This is
                 // what makes the next image appear for everyone together instead of
                 // hiding behind a stale typing overlay.
-                if (_prevCycle != null &&
-                    room.revealCycleId != _prevCycle &&
+                //
+                // Keyed on the IMAGE, not revealCycleId: a piece auto-reveal bumps
+                // revealCycleId every few seconds while the same image is guessed,
+                // so keying on the cycle would keep snapping the keyboard shut.
+                // selectedImageId only changes when the round is solved or the item
+                // is swapped — exactly when the open guess is truly stale.
+                final _prevImageId = _lastKnownImageId;
+                final _curImageId = room.selectedImageId;
+                _lastKnownImageId = _curImageId;
+                if (_prevImageId != null &&
+                    _curImageId != null &&
+                    _curImageId != _prevImageId &&
                     (_localGuessOpen || _showBotTyping)) {
                   QaLoggerService.instance
                       .log('GUESS', 'LOCAL_GUESS_CLOSED_ROUND_ADVANCED');
