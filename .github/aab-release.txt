@@ -25,6 +25,6 @@ note-r4 (this build): store cosmetics slimmed to WIN EFFECTS + CARD BACKS +
   flag + 11 board backgrounds; each <250KB) so they load instantly with no
   cloud read — bundled asset always wins over any live imageUrl. New flagship
   premium win effect "מופע זיקוקים" (grand_finale): staggered multi-firework
-  rockets + gold glow. (neon_wave/neon_cyber card images not yet generated —
-  they still load live from the cloud until baked next pass.)
+  rockets + gold glow. r5: neon_wave + neon_cyber card images now generated
+  and BAKED too — all 16 card backs + 11 board backgrounds are local assets.
 note2: versionCode auto = build-aab run number (strictly increasing; 25 used by v1.1.0).

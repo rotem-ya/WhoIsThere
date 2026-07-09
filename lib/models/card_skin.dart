@@ -78,9 +78,8 @@ const kAvailableCardSkins = <CardSkin>[
 
   // ── 200 — ניאון ──────────────────────────────────────────────────────────────
   CardSkin(id: 'neon_grid',  name: 'רשת ניאון', price: 200, assetPath: 'assets/skins/card_neon_grid.jpg'),
-  // neon_wave/neon_cyber: תמונות טרם נוצרו — נטענות חי מהענן עד שיוטמעו.
-  CardSkin(id: 'neon_wave',  name: 'גל ניאון',  price: 200),
-  CardSkin(id: 'neon_cyber', name: 'סייבר',     price: 200),
+  CardSkin(id: 'neon_wave',  name: 'גל ניאון',  price: 200, assetPath: 'assets/skins/card_neon_wave.jpg'),
+  CardSkin(id: 'neon_cyber', name: 'סייבר',     price: 200, assetPath: 'assets/skins/card_neon_cyber.jpg'),
 
   // ── 500 — קוסמי ──────────────────────────────────────────────────────────────
   CardSkin(id: 'cosmic_galaxy',  name: 'גלקסיה',      price: 500, assetPath: 'assets/skins/card_cosmic_galaxy.jpg'),
