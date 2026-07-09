@@ -103,9 +103,24 @@ class BoardSkinBackground extends StatelessWidget {
       );
 
   List<Widget> _layersFor(String id) {
-    // An admin-attached background IMAGE (live cosmetics catalog) always wins —
-    // including for bundled ids that would otherwise hit their bespoke case.
     final live = boardSkinFor(id);
+    // A BAKED local asset (release bake) always wins — instant, no cloud read.
+    if (live.id == id && live.assetPath != null) {
+      return [
+        Positioned.fill(
+          child: Image.asset(
+            live.assetPath!,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => DecoratedBox(
+              decoration: BoxDecoration(gradient: live.gradient),
+            ),
+          ),
+        ),
+        _vignette(0.40),
+      ];
+    }
+    // An admin-attached background IMAGE (live cosmetics catalog) wins next —
+    // including for bundled ids that would otherwise hit their bespoke case.
     if (live.id == id && live.imageUrl != null) {
       return [
         Positioned.fill(

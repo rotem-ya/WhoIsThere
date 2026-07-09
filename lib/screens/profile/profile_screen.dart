@@ -22,8 +22,6 @@ import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
 import 'discovered_images_screen.dart';
 import '../store/card_skins_screen.dart' show ownedSkinsProvider;
-import '../store/avatar_frames_screen.dart' show selectedFrameProvider;
-import '../store/name_styles_screen.dart' show selectedNameStyleProvider;
 import '../store/avatars_screen.dart' show selectedAvatarProvider;
 import '../../widgets/common/player_name_text.dart';
 
@@ -250,9 +248,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
-    final selectedFrame = ref.watch(selectedFrameProvider).valueOrNull ?? 'none';
-    final selectedNameStyle =
-        ref.watch(selectedNameStyleProvider).valueOrNull ?? 'none';
     final selectedAvatar =
         ref.watch(selectedAvatarProvider).valueOrNull ?? 'auto';
 
@@ -318,7 +313,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           name: user.name,
                           photoUrl: user.photoUrl,
                           radius: 34,
-                          frameId: selectedFrame,
                           avatarId: selectedAvatar),
                       const SizedBox(width: 16),
                       // Name + edit
@@ -336,7 +330,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     alignment: AlignmentDirectional.centerStart,
                                     child: PlayerNameText(
                                       text: user.name,
-                                      styleId: selectedNameStyle,
                                       base: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 18,

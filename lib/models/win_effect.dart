@@ -4,7 +4,9 @@ enum WinEffectTier { free, basic, rare, premium }
 
 /// How particles travel — the motion is the main thing that makes effects feel
 /// distinct (not just colour).
-enum WinEffectMotion { fall, rise, burst }
+/// [grandFinale] = a spectacular multi-firework show: staggered rockets rise
+/// across the screen and explode into radiating sparks with a gold glow.
+enum WinEffectMotion { fall, rise, burst, grandFinale }
 
 /// Particle shape (ignored when [WinEffect.emoji] is set).
 enum WinEffectShape { rect, circle, ring }
@@ -112,6 +114,18 @@ const kWinEffects = <WinEffect>[
   ),
 
   // ── פרימיום (1000) ───────────────────────────────────────────────────────────
+  // ⭐ אפקט הדגל — מופע זיקוקים מרהיב: רקטות עולות ומתפוצצות ברחבי המסך בזהב וצבע.
+  WinEffect(
+    id: 'grand_finale',
+    name: 'מופע זיקוקים',
+    price: 1000,
+    motion: WinEffectMotion.grandFinale,
+    shape: WinEffectShape.circle,
+    colors: [
+      Color(0xFFFFD700), Color(0xFFFFF3B0), Color(0xFFFF3D7F),
+      Color(0xFF18FFFF), Color(0xFF7CFF6B), Color(0xFFB388FF),
+    ],
+  ),
   WinEffect(
     id: 'fireworks',
     name: 'זיקוקים',

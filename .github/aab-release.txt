@@ -1,4 +1,4 @@
-Release AAB build requested: 2026-07-08T15:30:00Z (v1.1.1 — the revenue release, r3: baked store skins + performance)
+Release AAB build requested: 2026-07-09T18:00:00Z (v1.1.1 — the revenue release, r4: elegant baked skins + slimmer store + grand-finale win effect)
 version: 1.1.1 (build name 1.1.1; versionCode = build-aab run number, strictly increasing)
 signing: Play upload key SHA-1 EA:3B (from UPLOAD_* secrets / embedded)
 package: com.whoisthere.app (matches Play Console)
@@ -18,4 +18,13 @@ note-r3 (this build): 30 card-back skins BAKED into app assets (instant, no
   gallery upload + batch Gemini (cards + board backgrounds) + image shrink +
   full-bleed/price-scaled prompts + recently-connected users list + store ZIP
   export. lastSeenAt refreshed on every app open (admin "last connected").
+note-r4 (this build): store cosmetics slimmed to WIN EFFECTS + CARD BACKS +
+  BOARD SKINS + avatars (avatar FRAMES and NAME COLORS removed entirely from
+  the store; names now render plain, avatars carry no frame ring). 25 elegant
+  admin-generated skins BAKED into assets (14 card backs incl. the Israeli
+  flag + 11 board backgrounds; each <250KB) so they load instantly with no
+  cloud read — bundled asset always wins over any live imageUrl. New flagship
+  premium win effect "מופע זיקוקים" (grand_finale): staggered multi-firework
+  rockets + gold glow. (neon_wave/neon_cyber card images not yet generated —
+  they still load live from the cloud until baked next pass.)
 note2: versionCode auto = build-aab run number (strictly increasing; 25 used by v1.1.0).

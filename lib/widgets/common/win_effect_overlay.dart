@@ -146,6 +146,30 @@ class _WinEffectPainter extends CustomPainter {
           y = cy + math.sin(p.angle) * dist + prog * prog * size.height * 0.18;
           opacity = (1 - prog).clamp(0.0, 1.0);
           break;
+        case WinEffectMotion.grandFinale:
+          // Six staggered firework bursts spread across the screen: each group
+          // rises as a rocket, then explodes into radiating sparks + gravity.
+          final g = p.colorIndex % 6;
+          final ep = (prog + g / 6.0) % 1.0; // per-group phase offset
+          final cx = (0.15 + g * (0.70 / 5)) * size.width;
+          final cy = (0.20 + (g % 3) * 0.11) * size.height;
+          if (ep < 0.16) {
+            // Rocket rising from the bottom to the burst point.
+            final rp = ep / 0.16;
+            x = cx + math.sin(rp * math.pi) * size.width * 0.015;
+            y = size.height - rp * (size.height - cy);
+            opacity = 1.0;
+          } else {
+            final bp = (ep - 0.16) / 0.84; // explosion progress 0..1
+            final eased = 1 - math.pow(1 - bp, 2).toDouble();
+            final dist = eased * p.burstReach * size.shortestSide * 0.52;
+            x = cx + math.cos(p.angle) * dist;
+            y = cy + math.sin(p.angle) * dist + bp * bp * size.height * 0.16;
+            // Twinkle as it fades for a shimmering finale.
+            final twinkle = 0.75 + 0.25 * math.sin((bp + p.phase) * math.pi * 8);
+            opacity = ((1 - bp) * twinkle).clamp(0.0, 1.0);
+          }
+          break;
         case WinEffectMotion.rise:
           final travel = size.height + p.size * 2;
           y = size.height - prog * travel;

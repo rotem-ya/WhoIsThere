@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../models/name_style.dart';
 
-/// Renders a player's name with an optional cosmetic colour/gradient.
+/// Renders a player's name as plain text.
 ///
-/// When [styleId] is null/'none', the [base] style is used unchanged (so
-/// context colours like "me = cyan" are preserved). A single-colour style
-/// overrides the colour; a multi-colour style paints a gradient via ShaderMask.
+/// Name-colour cosmetics were removed from the store; names now always render
+/// in the given [base] style. [styleId] is accepted (and ignored) so existing
+/// call sites keep compiling without change.
 class PlayerNameText extends StatelessWidget {
   final String text;
   final TextStyle base;
@@ -26,37 +25,10 @@ class PlayerNameText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = nameStyleFor(styleId);
-
-    if (style.isNone) {
-      return Text(text,
-          maxLines: maxLines,
-          overflow: overflow,
-          textAlign: textAlign,
-          style: base);
-    }
-
-    if (!style.isGradient) {
-      return Text(text,
-          maxLines: maxLines,
-          overflow: overflow,
-          textAlign: textAlign,
-          style: base.copyWith(color: style.colors.first));
-    }
-
-    // Gradient: paint white text and mask it with the gradient.
-    return ShaderMask(
-      blendMode: BlendMode.srcIn,
-      shaderCallback: (bounds) => LinearGradient(
-        colors: style.colors,
-        begin: Alignment.centerRight,
-        end: Alignment.centerLeft,
-      ).createShader(bounds),
-      child: Text(text,
-          maxLines: maxLines,
-          overflow: overflow,
-          textAlign: textAlign,
-          style: base.copyWith(color: Colors.white)),
-    );
+    return Text(text,
+        maxLines: maxLines,
+        overflow: overflow,
+        textAlign: textAlign,
+        style: base);
   }
 }
