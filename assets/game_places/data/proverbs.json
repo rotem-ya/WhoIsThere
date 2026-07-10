@@ -359,5 +359,214 @@
     "facts": [
       "התגאה יתר על המידה"
     ]
+  },
+  {
+    "id": "proverbs_crocodile_tears",
+    "name_he": "דמעות תנין",
+    "answer_he": "דמעות תנין",
+    "aliases_he": [
+      "דמעות של תנין"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_crocodile_tears.jpg",
+    "facts": [
+      "עצב מזויף ולא כן"
+    ]
+  },
+  {
+    "id": "proverbs_stubborn_mule",
+    "name_he": "עקשן כמו פרד",
+    "answer_he": "עקשן כמו פרד",
+    "aliases_he": [
+      "עקשן כפרד"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_stubborn_mule.jpg",
+    "facts": [
+      "עקשן מאוד, לא זז מדעתו"
+    ]
+  },
+  {
+    "id": "proverbs_diligent_ant",
+    "name_he": "חרוץ כמו נמלה",
+    "answer_he": "חרוץ כמו נמלה",
+    "aliases_he": [
+      "חרוצה כמו נמלה"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_diligent_ant.jpg",
+    "facts": [
+      "עובד קשה ובהתמדה"
+    ]
+  },
+  {
+    "id": "proverbs_sleeps_like_bear",
+    "name_he": "ישן כמו דוב",
+    "answer_he": "ישן כמו דוב",
+    "aliases_he": [
+      "לישון כמו דוב"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_sleeps_like_bear.jpg",
+    "facts": [
+      "ישן שינה עמוקה מאוד"
+    ]
+  },
+  {
+    "id": "proverbs_light_as_feather",
+    "name_he": "קל כנוצה",
+    "answer_he": "קל כנוצה",
+    "aliases_he": [
+      "קל כמו נוצה"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_light_as_feather.jpg",
+    "facts": [
+      "קל מאוד במשקל"
+    ]
+  },
+  {
+    "id": "proverbs_walls_have_ears",
+    "name_he": "אוזניים לכותל",
+    "answer_he": "אוזניים לכותל",
+    "aliases_he": [],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_walls_have_ears.jpg",
+    "facts": [
+      "מישהו עלול להאזין — היזהר בדבריך"
+    ]
+  },
+  {
+    "id": "proverbs_break_the_ice",
+    "name_he": "לשבור את הקרח",
+    "answer_he": "לשבור את הקרח",
+    "aliases_he": [
+      "שבירת הקרח"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_break_the_ice.jpg",
+    "facts": [
+      "לפתוח מחסום חברתי ולהתחיל קשר"
+    ]
+  },
+  {
+    "id": "proverbs_black_cat_between",
+    "name_he": "עבר ביניהם חתול שחור",
+    "answer_he": "עבר ביניהם חתול שחור",
+    "aliases_he": [
+      "עבר בניהם חתול שחור",
+      "חתול שחור עבר ביניהם",
+      "חתול שחור"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_black_cat_between.jpg",
+    "facts": [
+      "פרץ סכסוך בין חברים"
+    ]
+  },
+  {
+    "id": "proverbs_neighbors_grass",
+    "name_he": "הדשא של השכן ירוק יותר",
+    "answer_he": "הדשא של השכן ירוק יותר",
+    "aliases_he": [
+      "הדשא של השכן"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_neighbors_grass.jpg",
+    "facts": [
+      "תמיד נדמה שלאחרים יש יותר טוב"
+    ]
+  },
+  {
+    "id": "proverbs_not_all_glitters",
+    "name_he": "לא כל הנוצץ זהב",
+    "answer_he": "לא כל הנוצץ זהב",
+    "aliases_he": [
+      "לא כל הנוצץ הוא זהב"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_not_all_glitters.jpg",
+    "facts": [
+      "מראה מרשים לא מעיד על ערך אמיתי"
+    ]
+  },
+  {
+    "id": "proverbs_drop_in_sea",
+    "name_he": "טיפה בים",
+    "answer_he": "טיפה בים",
+    "aliases_he": [
+      "כמו טיפה בים"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_drop_in_sea.jpg",
+    "facts": [
+      "כמות זעירה לעומת הצורך"
+    ]
+  },
+  {
+    "id": "proverbs_two_birds_one_stone",
+    "name_he": "לתפוס שתי ציפורים במכה אחת",
+    "answer_he": "לתפוס שתי ציפורים במכה אחת",
+    "aliases_he": [
+      "שתי ציפורים במכה אחת",
+      "שתי ציפורים במכה"
+    ],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_two_birds_one_stone.jpg",
+    "facts": [
+      "להשיג שתי מטרות בפעולה אחת"
+    ]
+  },
+  {
+    "id": "proverbs_odd_bird",
+    "name_he": "עוף מוזר",
+    "answer_he": "עוף מוזר",
+    "aliases_he": [],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_odd_bird.jpg",
+    "facts": [
+      "אדם חריג ושונה מהסביבה"
+    ]
+  },
+  {
+    "id": "proverbs_fast_as_lightning",
+    "name_he": "מהיר כמו ברק",
+    "answer_he": "מהיר כמו ברק",
+    "aliases_he": [
+      "מהיר כברק"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_fast_as_lightning.jpg",
+    "facts": [
+      "מהיר מאוד"
+    ]
   }
 ]

@@ -13,9 +13,8 @@ void main() {
   final raw = File('assets/game_places/data/proverbs.json').readAsStringSync();
   final items = (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
 
-  test('proverbs catalog: 24 items, unique proverbs_* ids, proverbs category',
-      () {
-    expect(items.length, 24);
+  test('proverbs catalog: unique proverbs_* ids, proverbs category', () {
+    expect(items.length, greaterThanOrEqualTo(24));
     final ids = items.map((e) => e['id'] as String).toSet();
     expect(ids.length, items.length);
     for (final it in items) {
