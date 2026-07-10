@@ -12,3 +12,4 @@ note: v1.2.0 — NEW GAME "זהו את הפתגם" (proverbs rebus): 38 baked He
   (baked skins, slimmer store, grand-finale win effect, keyboard fix, real
   ads) is included — this branch supersedes it.
 note2: versionCode auto = build-aab run number (31 used by v1.1.1 r6).
+trigger: r1 dispatch via session-branch push (MCP workflow_dispatch lacks actions:write)

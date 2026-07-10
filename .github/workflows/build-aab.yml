@@ -32,6 +32,10 @@ on:
     branches:
       - main
       - claude/qa-launch-prep-EXqLn
+      # Session branch — content-identical to the launch branch (synced by the
+      # release-refs workflow); token ref-updates can't trigger this workflow,
+      # so the build fires from the session branch's own push instead.
+      - claude/whothere-v111-launch-iqkbq2
     # Only build an AAB when the release marker file changes, so ordinary
     # pushes don't trigger a Play build on every commit.
     paths:
