@@ -1,5 +1,4 @@
-ios-v10
-a7ede83e8d9aff537765c6b3d14a7b7ee8553876
-# line 1 = tag name (ios-vN), line 2 = full commit SHA to tag.
-# Target: HEAD of claude/qa-launch-prep-EXqLn (v1.1.1 build r6 — baked skins,
-# slimmer store, grand-finale win effect, guess-keyboard fix).
+ios-v11
+HEAD
+# line 1 = tag name (ios-vN), line 2 = full commit SHA to tag, or HEAD = the
+# pushed commit. v1.2.0: proverbs game release (38 proverbs, build 1.2.0+65).
