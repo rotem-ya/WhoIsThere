@@ -1,0 +1,5 @@
+ios-v10
+a7ede83e8d9aff537765c6b3d14a7b7ee8553876
+# line 1 = tag name (ios-vN), line 2 = full commit SHA to tag.
+# Target: HEAD of claude/qa-launch-prep-EXqLn (v1.1.1 build r6 — baked skins,
+# slimmer store, grand-finale win effect, guess-keyboard fix).
