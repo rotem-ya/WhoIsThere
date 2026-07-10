@@ -348,6 +348,9 @@ class GameLayout extends StatelessWidget {
             onBuyLetter: onBuyLetter,
             nextLetterPrice: nextLetterPrice,
             showBuyLetter: showBuyLetter,
+            // A proverb is a whole phrase — allow up to 24 letter slots (the
+            // longest baked answer is 19; words wrap to extra rows).
+            maxLetters: room.isProverbs ? 24 : 12,
           ),
       ],
     );

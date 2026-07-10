@@ -1,0 +1,363 @@
+[
+  {
+    "id": "proverbs_echad_bapeh",
+    "name_he": "אחד בפה ואחד בלב",
+    "answer_he": "אחד בפה ואחד בלב",
+    "aliases_he": [
+      "צבוע",
+      "דו פרצופי"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_echad_bapeh.jpg",
+    "facts": [
+      "אומר דבר אחד ומרגיש/מתכוון להיפך — צבוע"
+    ]
+  },
+  {
+    "id": "proverbs_apple_tree",
+    "name_he": "התפוח לא נופל רחוק מהעץ",
+    "answer_he": "התפוח לא נופל רחוק מהעץ",
+    "aliases_he": [
+      "התפוח לא נופל רחוק"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_apple_tree.jpg",
+    "facts": [
+      "הילד דומה להוריו"
+    ]
+  },
+  {
+    "id": "proverbs_needle_haystack",
+    "name_he": "לחפש מחט בערימת שחת",
+    "answer_he": "לחפש מחט בערימת שחת",
+    "aliases_he": [
+      "מחט בערימת שחת"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_needle_haystack.jpg",
+    "facts": [
+      "חיפוש כמעט בלתי אפשרי"
+    ]
+  },
+  {
+    "id": "proverbs_smoke_fire",
+    "name_he": "אין עשן בלי אש",
+    "answer_he": "אין עשן בלי אש",
+    "aliases_he": [],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_smoke_fire.jpg",
+    "facts": [
+      "לכל שמועה יש בסיס אמת"
+    ]
+  },
+  {
+    "id": "proverbs_bird_in_hand",
+    "name_he": "ציפור אחת ביד עדיפה משתיים על העץ",
+    "answer_he": "ציפור אחת ביד",
+    "aliases_he": [
+      "ציפור אחת ביד עדיפה משתיים על העץ",
+      "טוב ציפור אחת ביד",
+      "ציפור ביד"
+    ],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_bird_in_hand.jpg",
+    "facts": [
+      "עדיף מעט בטוח מהרבה לא בטוח"
+    ]
+  },
+  {
+    "id": "proverbs_barking_dog",
+    "name_he": "כלב נובח לא נושך",
+    "answer_he": "כלב נובח לא נושך",
+    "aliases_he": [
+      "כלב נובח אינו נושך"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_barking_dog.jpg",
+    "facts": [
+      "מי שמאיים הכי הרבה — הכי פחות מסוכן"
+    ]
+  },
+  {
+    "id": "proverbs_elephant_china",
+    "name_he": "פיל בחנות חרסינה",
+    "answer_he": "פיל בחנות חרסינה",
+    "aliases_he": [
+      "כמו פיל בחנות חרסינה"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_elephant_china.jpg",
+    "facts": [
+      "מסורבל שהורס הכול סביבו"
+    ]
+  },
+  {
+    "id": "proverbs_hand_washes_hand",
+    "name_he": "יד רוחצת יד",
+    "answer_he": "יד רוחצת יד",
+    "aliases_he": [],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_hand_washes_hand.jpg",
+    "facts": [
+      "עזרה הדדית — אני לך ואתה לי"
+    ]
+  },
+  {
+    "id": "proverbs_calm_before_storm",
+    "name_he": "שקט לפני הסערה",
+    "answer_he": "שקט לפני הסערה",
+    "aliases_he": [
+      "השקט שלפני הסערה"
+    ],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_calm_before_storm.jpg",
+    "facts": [
+      "רגיעה זמנית לפני צרה"
+    ]
+  },
+  {
+    "id": "proverbs_money_tree",
+    "name_he": "כסף לא גדל על העצים",
+    "answer_he": "כסף לא גדל על העצים",
+    "aliases_he": [
+      "כסף לא צומח על העצים"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_money_tree.jpg",
+    "facts": [
+      "צריך לעבוד קשה בשביל כסף"
+    ]
+  },
+  {
+    "id": "proverbs_heart_of_gold",
+    "name_he": "לב זהב",
+    "answer_he": "לב זהב",
+    "aliases_he": [
+      "לב של זהב"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_heart_of_gold.jpg",
+    "facts": [
+      "אדם טוב, נדיב ורחום"
+    ]
+  },
+  {
+    "id": "proverbs_talk_to_wall",
+    "name_he": "לדבר אל הקיר",
+    "answer_he": "לדבר אל הקיר",
+    "aliases_he": [
+      "כאילו מדבר אל הקיר",
+      "ראש בקיר"
+    ],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_talk_to_wall.jpg",
+    "facts": [
+      "מאמץ חסר תועלת — אף אחד לא מקשיב"
+    ]
+  },
+  {
+    "id": "proverbs_eggs_one_basket",
+    "name_he": "כל הביצים בסל אחד",
+    "answer_he": "כל הביצים בסל אחד",
+    "aliases_he": [
+      "לשים את כל הביצים בסל אחד"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_eggs_one_basket.jpg",
+    "facts": [
+      "לרכז את כל הסיכון במקום אחד"
+    ]
+  },
+  {
+    "id": "proverbs_head_in_sand",
+    "name_he": "לטמון את הראש בחול",
+    "answer_he": "לטמון את הראש בחול",
+    "aliases_he": [
+      "ראש בחול",
+      "בת יענה"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_head_in_sand.jpg",
+    "facts": [
+      "להתעלם מבעיה במקום להתמודד"
+    ]
+  },
+  {
+    "id": "proverbs_wolf_sheep",
+    "name_he": "זאב בעור כבש",
+    "answer_he": "זאב בעור כבש",
+    "aliases_he": [
+      "זאב במעטה כבש"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_wolf_sheep.jpg",
+    "facts": [
+      "רשע שמתחזה לתמים"
+    ]
+  },
+  {
+    "id": "proverbs_light_tunnel",
+    "name_he": "אור בקצה המנהרה",
+    "answer_he": "אור בקצה המנהרה",
+    "aliases_he": [
+      "האור בקצה המנהרה"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_light_tunnel.jpg",
+    "facts": [
+      "תקווה אחרי תקופה קשה"
+    ]
+  },
+  {
+    "id": "proverbs_strong_as_ox",
+    "name_he": "חזק כמו שור",
+    "answer_he": "חזק כמו שור",
+    "aliases_he": [
+      "חזק כשור"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_strong_as_ox.jpg",
+    "facts": [
+      "חזק מאוד פיזית"
+    ]
+  },
+  {
+    "id": "proverbs_sly_fox",
+    "name_he": "ערמומי כמו שועל",
+    "answer_he": "ערמומי כמו שועל",
+    "aliases_he": [
+      "פיקח כמו שועל"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_sly_fox.jpg",
+    "facts": [
+      "פיקח ותחבולן"
+    ]
+  },
+  {
+    "id": "proverbs_slow_turtle",
+    "name_he": "איטי כמו צב",
+    "answer_he": "איטי כמו צב",
+    "aliases_he": [
+      "איטי כצב"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_slow_turtle.jpg",
+    "facts": [
+      "איטי מאוד"
+    ]
+  },
+  {
+    "id": "proverbs_head_in_clouds",
+    "name_he": "ראש בעננים",
+    "answer_he": "ראש בעננים",
+    "aliases_he": [
+      "הראש בעננים"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_head_in_clouds.jpg",
+    "facts": [
+      "חולם בהקיץ, לא מרוכז"
+    ]
+  },
+  {
+    "id": "proverbs_butterflies_stomach",
+    "name_he": "פרפרים בבטן",
+    "answer_he": "פרפרים בבטן",
+    "aliases_he": [
+      "יש לי פרפרים בבטן"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_butterflies_stomach.jpg",
+    "facts": [
+      "התרגשות או מתח"
+    ]
+  },
+  {
+    "id": "proverbs_mountain_mouse",
+    "name_he": "הר הוליד עכבר",
+    "answer_he": "הר הוליד עכבר",
+    "aliases_he": [
+      "ההר הוליד עכבר"
+    ],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_mountain_mouse.jpg",
+    "facts": [
+      "הרבה רעש והתרגשות על תוצאה זעירה"
+    ]
+  },
+  {
+    "id": "proverbs_penny_dropped",
+    "name_he": "נפל לו האסימון",
+    "answer_he": "נפל לו האסימון",
+    "aliases_he": [
+      "נפל האסימון"
+    ],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_penny_dropped.jpg",
+    "facts": [
+      "הבין משהו בפתאומיות"
+    ]
+  },
+  {
+    "id": "proverbs_went_to_head",
+    "name_he": "עלה לו לראש",
+    "answer_he": "עלה לו לראש",
+    "aliases_he": [
+      "ההצלחה עלתה לו לראש"
+    ],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_went_to_head.jpg",
+    "facts": [
+      "התגאה יתר על המידה"
+    ]
+  }
+]

@@ -620,7 +620,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                   ? () => _openInviteFriends(room)
                                   : null,
                             ),
-                            if (room.selectedDifficulty == Difficulty.giant) ...[
+                            if (room.selectedDifficulty == Difficulty.giant &&
+                                !room.isProverbs) ...[
                               const SizedBox(height: 8),
                               _buildHeatSetup(room, currentUser),
                             ],
@@ -663,7 +664,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                     'START_GAME_TAPPED roomId=${widget.roomId}');
                                 // Heat friends game: if some players haven't
                                 // picked a topic, ask the host how to proceed.
-                                if (room.selectedDifficulty == Difficulty.giant) {
+                                if (room.selectedDifficulty == Difficulty.giant &&
+                                    !room.isProverbs) {
                                   final unchosen = room.players.values
                                       .where((p) =>
                                           !p.isBot &&

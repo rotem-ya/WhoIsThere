@@ -269,6 +269,9 @@ class RoomService {
     Difficulty difficulty = Difficulty.easy,
     String category = GameCategories.israelPlaces,
     int heatRounds = 3,
+    // Fixed-topic heat (e.g. proverbs): overrides the random topic draw for
+    // public quick-match rooms; the list length sets the round count.
+    List<String>? heatTopics,
   }) async {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
@@ -356,7 +359,9 @@ class RoomService {
     // start time — it's built from the players' lobby topic picks in
     // startGameDirectly (heatImageIds stays empty until then).
     if (difficulty == Difficulty.giant && isPublicRoom) {
-      final heat = await _buildHeat(players, count: max(heatRounds, 3));
+      final heat = heatTopics != null && heatTopics.isNotEmpty
+          ? await _buildHeatForTopics(heatTopics, players)
+          : await _buildHeat(players, count: max(heatRounds, 3));
       if (heat.imageIds.isNotEmpty) {
         heatCategories = heat.categories;
         heatImageIds = heat.imageIds;
@@ -489,6 +494,12 @@ class RoomService {
       entryFee: 0,
       isPublicRoom: false,
       difficulty: old.selectedDifficulty ?? Difficulty.easy,
+      // A proverbs rematch must stay a proverbs game (the category is the
+      // discriminator); other games keep the default — a heat rebuilds its
+      // topics from the new lobby's picks anyway.
+      category: old.isProverbs
+          ? GameCategories.proverbs
+          : GameCategories.israelPlaces,
     );
     return _claimRematchSlot(oldDoc.reference, newRoom.id);
   }
@@ -633,7 +644,8 @@ class RoomService {
   /// Quick-match by exposure: finds a waiting public room whose image the joining
   /// player has seen the SAME number of times as the host (room.matchExposureCount).
   /// Uses an equality-only query (no composite index needed) and filters locally.
-  Future<RoomModel?> findMatchRoom(Map<String, int> myExposure) async {
+  Future<RoomModel?> findMatchRoom(Map<String, int> myExposure,
+      {bool proverbs = false}) async {
     try {
       final snap = await _rooms
           .where('phase', isEqualTo: GamePhase.waiting.name)
@@ -642,6 +654,11 @@ class RoomService {
           .get();
       for (final doc in snap.docs) {
         final room = RoomModel.fromFirestore(doc);
+        // Letters duels share this index but have their own matcher — never
+        // pull one into an image-game quick match. Same for proverbs rooms:
+        // they only match players who asked for the proverbs game.
+        if (room.isLetters) continue;
+        if (room.isProverbs != proverbs) continue;
         if (room.players.length >= GameConstants.maxPlayers) continue;
         // Skip rooms whose baked image was hidden by the admin after creation.
         if (!_roomContentActive(room)) continue;
@@ -713,7 +730,12 @@ class RoomService {
     // from the players' lobby topic picks (rounds = max(players, 3); missing
     // picks + min-3 filler are random). Quick-match rooms already have a heat.
     if (room.selectedDifficulty == Difficulty.giant && room.heatImageIds.isEmpty) {
-      final heat = await _buildFriendsHeat(room);
+      // Proverbs rooms skip the lobby topic picks entirely — the heat is always
+      // 3 rounds of the proverbs category (fixed game format).
+      final heat = room.isProverbs
+          ? await _buildHeatForTopics(
+              List.filled(3, GameCategories.proverbs), room.players)
+          : await _buildFriendsHeat(room);
       if (heat.imageIds.isNotEmpty) {
         await _rooms.doc(roomId).update({
           'heatCategories': heat.categories,

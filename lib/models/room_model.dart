@@ -165,6 +165,11 @@ class RoomModel extends Equatable {
   // True for the letters game (Wordle-style duel).
   bool get isLetters => mode == 'letters';
 
+  // True for "זהו את הפתגם" — a heat game whose every round is the proverbs
+  // category. Derived from the category (no new mode field): private rooms
+  // carry it from creation, quick-match rooms from the pre-built heat.
+  bool get isProverbs => selectedCategory == GameCategories.proverbs;
+
   // True when this room is a fast-game heat (more than one queued round).
   bool get isHeat => heatImageIds.length > 1;
   bool get isLastHeatRound => heatRoundIndex >= heatImageIds.length - 1;
