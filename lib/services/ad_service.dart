@@ -134,7 +134,15 @@ class AdService {
         if (!completer.isCompleted) completer.complete();
       },
     );
-    await ad.show();
+    try {
+      await ad.show();
+    } catch (_) {
+      // AdShowError is sporadic (SDK/timing) — fail-soft: drop this slot and
+      // preload the next one instead of surfacing a crash.
+      ad.dispose();
+      preloadInterstitial();
+      if (!completer.isCompleted) completer.complete();
+    }
     return completer.future;
   }
 

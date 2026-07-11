@@ -18,11 +18,9 @@ import '../../widgets/common/board_skin_background.dart';
 import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/player_name_text.dart';
 import '../../widgets/common/pressable_scale.dart';
-import '../../widgets/common/win_effect_overlay.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_icon.dart';
 import 'avatars_screen.dart' show selectedAvatarProvider;
-import 'win_effects_screen.dart' show selectedWinEffectProvider;
 import 'board_skins_screen.dart' show selectedBoardSkinProvider;
 
 class StoreScreen extends ConsumerStatefulWidget {
@@ -699,8 +697,6 @@ class _SkinsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final name = ref.watch(currentUserProvider).valueOrNull?.name ?? 'שחקן';
     final avatarId = ref.watch(selectedAvatarProvider).valueOrNull ?? 'auto';
-    final winEffectId =
-        ref.watch(selectedWinEffectProvider).valueOrNull ?? 'none';
     final boardSkinId =
         ref.watch(selectedBoardSkinProvider).valueOrNull ?? 'none';
 
@@ -738,20 +734,6 @@ class _SkinsTab extends ConsumerWidget {
               route: '/store/avatars',
               preview: PlayerAvatar(
                   name: name, seed: name, radius: 22, avatarId: avatarId),
-            ),
-            _DesignCard(
-              title: 'אפקטי ניצחון',
-              accent: const Color(0xFFFF8A65),
-              route: '/store/effects',
-              preview: winEffectId == 'none'
-                  ? const Icon(Icons.celebration_rounded,
-                      color: Color(0xFFFF8A65), size: 34)
-                  : SizedBox(
-                      width: 64,
-                      height: 48,
-                      child: WinEffectOverlay(
-                          effectId: winEffectId, particleCount: 14),
-                    ),
             ),
             _DesignCard(
               title: 'עיצובי קלפים',

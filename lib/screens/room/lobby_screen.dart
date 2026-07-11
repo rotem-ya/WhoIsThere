@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../core/utils/share_util.dart';
 
 import '../../core/constants/ad_constants.dart';
 import '../../core/constants/app_constants.dart';
@@ -482,7 +482,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     msg.writeln('🎮 הצטרפות ישירה לחדר:');
     msg.write(AppConstants.joinUrlForCode(code));
     AnalyticsService.instance.inviteSent(kind: 'room');
-    Share.share(msg.toString());
+    shareText(context, msg.toString());
   }
 
   /// Opens the "invite a friend" picker (friends list + search) for this room.

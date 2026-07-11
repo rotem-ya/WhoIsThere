@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/avatar_choice.dart';
 import '../models/avatar_frame.dart';
 import '../models/board_skin.dart';
 import '../models/name_style.dart';
@@ -84,6 +85,8 @@ class CosmeticsCatalogService {
         kWinEffects, data['winEffects'], _parseWinEffect, (x) => x.id);
     liveBoardSkins = _merge<BoardSkin>(
         kBoardSkins, data['boardSkins'], _parseBoardSkin, (x) => x.id);
+    liveAvatarChoices = _merge<AvatarChoice>(
+        kAvatarChoices, data['avatars'], _parseAvatar, (x) => x.id);
     // Baked local assets always win: re-apply bundled assetPath onto any live
     // board skin whose id is baked, so a live imageUrl can't override it.
     final bakedBoard = {
@@ -211,6 +214,20 @@ class CosmeticsCatalogService {
           WinEffectMotion.fall,
       shape: WinEffectShape.values.asNameMap()[_str(m, 'shape')] ??
           WinEffectShape.rect,
+      active: _bool(m, 'active', true),
+    );
+  }
+
+  AvatarChoice? _parseAvatar(Map<String, dynamic> m) {
+    final id = _str(m, 'id');
+    if (id == null) return null;
+    return AvatarChoice(
+      id: id,
+      name: _str(m, 'name') ?? id,
+      price: _int(m, 'price', 0),
+      emoji: _str(m, 'emoji') ?? '🙂',
+      colors: _colors(m['colors']),
+      imageUrl: _str(m, 'imageUrl'),
       active: _bool(m, 'active', true),
     );
   }

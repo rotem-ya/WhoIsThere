@@ -39,7 +39,34 @@ class PlayerAvatar extends StatelessWidget {
     final useChoice = !choice.isAuto;
 
     final Widget face;
-    if (useChoice) {
+    if (useChoice && (choice.imageUrl?.isNotEmpty ?? false)) {
+      // אווטר 3D מתמונה (קטלוג חי / נכס מוטמע) — עיגול חתוך עם נפילה חיננית
+      // לדיסק האימוג'י בזמן טעינה/שגיאה.
+      final url = choice.imageUrl!;
+      final img = url.startsWith('assets/')
+          ? Image.asset(url,
+              fit: BoxFit.cover, width: radius * 2, height: radius * 2)
+          : CachedNetworkImage(
+              imageUrl: url,
+              fit: BoxFit.cover,
+              width: radius * 2,
+              height: radius * 2,
+              placeholder: (_, __) => DecoratedBox(
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle, gradient: choice.gradient)),
+              errorWidget: (_, __, ___) => DecoratedBox(
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle, gradient: choice.gradient),
+                child: Center(
+                    child: Text(choice.emoji,
+                        style:
+                            TextStyle(fontSize: radius * 1.05, height: 1.0))),
+              ),
+            );
+      face = ClipOval(
+          child:
+              SizedBox(width: radius * 2, height: radius * 2, child: img));
+    } else if (useChoice) {
       face = Container(
         width: radius * 2,
         height: radius * 2,

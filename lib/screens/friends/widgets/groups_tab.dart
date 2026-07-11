@@ -19,6 +19,9 @@ class GroupsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final groups = ref.watch(myGroupsProvider).valueOrNull ?? const [];
     final me = ref.watch(currentUserProvider).valueOrNull;
+    // חובה watch (ולא read בזמן הלחיצה): הפרוביידר autoDispose ומתאפס כשאף
+    // אחד לא צופה בו — קריאה קרה מהטאב הזה החזירה רשימה ריקה למרות שיש חברים.
+    final friends = ref.watch(friendsListProvider).valueOrNull;
 
     return ListView(
       padding: const EdgeInsets.all(12),
@@ -26,8 +29,9 @@ class GroupsTab extends ConsumerWidget {
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed:
-                me == null ? null : () => _openCreateSheet(context, ref),
+            onPressed: me == null
+                ? null
+                : () => _openCreateSheet(context, ref, friends),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF1A6CB0),
               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -58,8 +62,12 @@ class GroupsTab extends ConsumerWidget {
   }
 
   // ── יצירת קבוצה: שם + בחירת חברים ─────────────────────────────────────────
-  void _openCreateSheet(BuildContext context, WidgetRef ref) {
-    final friends = ref.read(friendsListProvider).valueOrNull ?? const [];
+  void _openCreateSheet(
+      BuildContext context, WidgetRef ref, List<FriendModel>? friends) {
+    if (friends == null) {
+      onToast('רשימת החברים עוד נטענת — נסו שוב רגע');
+      return;
+    }
     if (friends.isEmpty) {
       onToast('קודם הוסיפו חברים (בטאב "הוסף חבר")');
       return;

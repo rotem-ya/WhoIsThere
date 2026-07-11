@@ -430,6 +430,14 @@ class RoomService {
     final room = RoomModel.fromFirestore(doc);
 
     if (room.players.length >= GameConstants.maxPlayers) return null;
+    // Letters is a strict 1v1 duel — a third joiner (join-code race, stale
+    // invite) must bounce instead of corrupting the two-board state.
+    if (room.isLetters &&
+        room.players.length >= 2 &&
+        !room.players.containsKey(userId)) {
+      QaLoggerService.instance.log('LETTERS', 'JOIN_REJECTED_FULL code=$code');
+      return null;
+    }
 
     if (room.players.containsKey(userId)) {
       final updates = <String, dynamic>{'players.$userId.name': userName};

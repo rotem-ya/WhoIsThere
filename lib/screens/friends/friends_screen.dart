@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../core/utils/share_util.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_styles.dart';
@@ -128,7 +128,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
       ..writeln()
       ..writeln('אין אפליקציה? הקוד שלי: $code');
     AnalyticsService.instance.inviteSent(kind: 'friend_code');
-    Share.share(msg.toString());
+    shareText(context, msg.toString());
   }
 
   @override
@@ -692,7 +692,7 @@ class _FriendsTab extends ConsumerWidget {
         ..writeln(AppConstants.joinUrlForCode(room.code))
         ..writeln()
         ..writeln('קוד החדר: ${room.code}');
-      Share.share(msg.toString());
+      shareText(context, msg.toString());
       ref.read(currentRoomIdProvider.notifier).state = room.id;
       if (context.mounted) context.go('/lobby/${room.id}');
     } catch (_) {

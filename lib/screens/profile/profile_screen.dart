@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../core/utils/share_util.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/build_info.dart';
@@ -171,7 +171,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       iosUrl: info?.iosUrl,
     );
     try {
-      await Share.share(message, subject: 'מה בתמונה?');
+      await shareText(context, message, subject: 'מה בתמונה?');
     } catch (e) {
       QaLoggerService.instance.log('SHARE', 'SHARE_APP_ERROR $e');
     }

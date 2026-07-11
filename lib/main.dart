@@ -228,7 +228,10 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp>
   /// Throttled + fail-soft inside AuthService.
   void _touchLastSeen() {
     try {
-      ref.read(authServiceProvider).touchLastSeen();
+      final auth = ref.read(authServiceProvider);
+      auth.touchLastSeen();
+      // v1.3: החזר מטבעות חד-פעמי לרוכשי אפקטי ניצחון (הוסרו מהחנות).
+      unawaited(auth.refundRetiredWinEffects());
     } catch (_) {}
   }
 
@@ -259,10 +262,12 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp>
     await NotificationService.instance.init();
   }
 
-  /// Joins a room straight from a tapped game-invite push. Waits briefly for
-  /// the signed-in user on cold start; any failure lands on the friends
-  /// screen where the invite banner offers the same join.
-  Future<void> _joinFromPush(String code, GoRouter router) async {
+  /// Joins a room straight from a tapped game-invite push or a join deep
+  /// link. Waits briefly for the signed-in user on cold start; any failure
+  /// lands on [fallbackPath] (friends screen for pushes, the join screen with
+  /// the code pre-filled for links).
+  Future<void> _joinFromPush(String code, GoRouter router,
+      {String fallbackPath = '/friends'}) async {
     try {
       UserModel? me = ref.read(currentUserProvider).valueOrNull;
       for (var i = 0; i < 20 && me == null; i++) {
@@ -270,7 +275,7 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp>
         me = ref.read(currentUserProvider).valueOrNull;
       }
       if (me == null) {
-        router.go('/friends');
+        router.go(fallbackPath);
         return;
       }
       final room = await ref.read(roomServiceProvider).joinRoom(
@@ -280,7 +285,7 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp>
             userPhotoUrl: me.photoUrl,
           );
       if (room == null) {
-        router.go('/friends');
+        router.go(fallbackPath);
         return;
       }
       ref.read(currentRoomIdProvider.notifier).state = room.id;
@@ -290,7 +295,7 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp>
     } catch (e) {
       QaLoggerService.instance.log('INVITE', 'PUSH_JOIN_ERROR $e');
       try {
-        router.go('/friends');
+        router.go(fallbackPath);
       } catch (_) {}
     }
   }
@@ -396,7 +401,10 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp>
         currentPath.startsWith('/lobby/');
 
     if (!inActiveGame) {
-      router.go('/join-room?initialCode=$code');
+      // הצטרפות ישירה לחדר מהקישור; אם החדר כבר לא זמין — מסך ההצטרפות
+      // עם הקוד ממולא (המסלול הישן).
+      unawaited(_joinFromPush(code, router,
+          fallbackPath: '/join-room?initialCode=$code'));
     }
   }
 
@@ -440,7 +448,9 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp>
         // iOS stays at 1.0 and looks right. A small allowance keeps some
         // accessibility benefit without breaking screens.
         final mq = MediaQuery.of(context);
-        final scale = mq.textScaler.scale(1.0).clamp(0.85, 1.1);
+        // בקשת רותם (2026-07-11): כיתוב קטן במעט בכל האפליקציה — מקדם 0.95
+        // אחרי ה-clamp המגן מפני פונטים מוגדלים של המערכת.
+        final scale = mq.textScaler.scale(1.0).clamp(0.85, 1.1) * 0.95;
         return MediaQuery(
           data: mq.copyWith(textScaler: TextScaler.linear(scale)),
           child: Directionality(
