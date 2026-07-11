@@ -88,7 +88,7 @@ class EconomyConfig {
 
   // ── Ad-watch reward ───────────────────────────────────────────
   static const int adRewardCoins = 40;
-  static const int maxAdRewardsPerDay = 2;
+  static const int maxAdRewardsPerDay = 5;
 
   // ── Coin pack prices (store SKUs) ────────────────────────────
   static const Map<String, int> coinPacks = {
