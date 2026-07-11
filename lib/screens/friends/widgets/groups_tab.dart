@@ -76,21 +76,21 @@ class GroupsTab extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _CreateGroupSheet(friends: friends, onToast: onToast),
+      builder: (_) => CreateGroupSheet(friends: friends, onToast: onToast),
     );
   }
 }
 
-class _CreateGroupSheet extends ConsumerStatefulWidget {
+class CreateGroupSheet extends ConsumerStatefulWidget {
   final List<FriendModel> friends;
   final void Function(String) onToast;
-  const _CreateGroupSheet({required this.friends, required this.onToast});
+  const CreateGroupSheet({super.key, required this.friends, required this.onToast});
 
   @override
-  ConsumerState<_CreateGroupSheet> createState() => _CreateGroupSheetState();
+  ConsumerState<CreateGroupSheet> createState() => CreateGroupSheetState();
 }
 
-class _CreateGroupSheetState extends ConsumerState<_CreateGroupSheet> {
+class CreateGroupSheetState extends ConsumerState<CreateGroupSheet> {
   final _name = TextEditingController();
   final Set<String> _selected = {};
   bool _creating = false;

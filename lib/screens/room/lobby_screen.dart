@@ -20,6 +20,7 @@ import '../../models/friend_models.dart';
 import '../../core/constants/game_categories.dart';
 import '../../core/utils/chat_filter.dart';
 import '../../widgets/chat/chat_sheet.dart';
+import '../friends/widgets/groups_tab.dart';
 import '../../services/analytics_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../services/settings_service.dart';
@@ -1272,6 +1273,26 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
     }
   }
 
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  /// אין עדיין קבוצה קבועה — פותח את אותו יוצר-קבוצה מטאב "קבוצות", כדי
+  /// שהיכולת תהיה נגישה גם למי שעוד לא הקים קבוצה.
+  void _openCreateGroup(List<FriendModel> friends) {
+    if (friends.isEmpty) {
+      _toast('קודם הוסיפו חברים (בטאב "הוסף חבר")');
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CreateGroupSheet(friends: friends, onToast: _toast),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final friends =
@@ -1317,7 +1338,7 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
               // ── שורת שיתוף קבועה — הדרך המהירה ביותר, בלי צורך ברשימת
               //    חברים בכלל (וואטסאפ / קישור / קוד להעתקה).
               _ShareCodeRow(code: widget.code, onShare: widget.onShareCode),
-              if (groups.isNotEmpty && me != null) ...[
+              if (me != null) ...[
                 const SizedBox(height: 14),
                 Align(
                   alignment: Alignment.centerRight,
@@ -1328,17 +1349,49 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
                           fontWeight: FontWeight.w700)),
                 ),
                 const SizedBox(height: 8),
-                SizedBox(
-                  height: 68,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    reverse: true,
-                    itemCount: groups.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (_, i) =>
-                        _groupChip(groups[i], me.id),
+                if (groups.isNotEmpty)
+                  SizedBox(
+                    height: 68,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      reverse: true,
+                      itemCount: groups.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (_, i) =>
+                          _groupChip(groups[i], me.id),
+                    ),
+                  )
+                else
+                  InkWell(
+                    onTap: () => _openCreateGroup(friends),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: Colors.white.withOpacity(0.12)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.group_add_rounded,
+                              color: Color(0xFF4A9EFF), size: 18),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                                'אין לך עדיין קבוצה קבועה, צרו אחת כדי להזמין בלחיצה',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 13)),
+                          ),
+                          const Icon(Icons.chevron_left_rounded,
+                              color: Colors.white38, size: 18),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
               ],
               const SizedBox(height: 14),
               TextField(
