@@ -20,13 +20,8 @@
 - [ ] בניית **Build AAB (Google Play)** שוגרה אוטומטית (דרך `.github/aab-release.txt`) על ענף ההשקה. ודא ריצה ירוקה ב-Actions → Build AAB, והורד את ה-artifact `app-release.aab` (versionCode = מס' הריצה).
 - אם משהו מאלה לא קרה/נכשל: Actions → הרץ שוב (Build AAB: Run workflow על `claude/qa-launch-prep-EXqLn` עם build_name=1.3.0; iOS: דחוף תג `ios-v13` מענף ההשקה או Start build ב-Codemagic).
 
-## שלב 1 — בירור מצב גרסאות קודמות (חשוב לפני הגשה)
-שאל את רותם מה מצב הגרסאות הקודמות בשתי החנויות (v1.1.x / v1.2.0):
-- **אם גרסה קודמת עדיין ב-Waiting for Review באפל** — יש שתי אפשרויות; המלץ לפי לוח הזמנים של רותם:
-  1. להסיר אותה מה-review (Remove from Review) ולהגיש ישר את 1.3.0 (חוסך סבב), או
-  2. לתת לה להתאשר ואז להגיש את 1.3.0 כעדכון.
-- **אם אף גרסה קודמת לא הוגשה בפועל** — מדלגים עליהן לגמרי ומגישים רק את 1.3.0.
-- בגוגל (Closed testing) אין התלבטות: release חדש עם ה-AAB החדש פשוט מחליף.
+## שלב 1 — מצב גרסה קודמת (מאושר, אין צורך לברר)
+v1.2.0 **חי** בשתי החנויות (אפל וגוגל) — אושר, לא בהמתנה. v1.3.0 היא הגשת עדכון רגילה, בלי שום דילמת "Remove from Review". פשוט ממשיכים לשלב 2.
 
 ## שלב 2 — Google Play Console (com.whoisthere.app)
 - [ ] Testing → **Closed testing (Alpha)** → Create new release.
@@ -36,7 +31,7 @@
 
 ## שלב 3 — App Store Connect (Apple ID 6776076758)
 - [ ] המתן שהבילד של 1.3.0 יסיים "Processing" ב-TestFlight (~10-30 דק').
-- [ ] App Store tab → **+ Version** → `1.3.0` (או ערוך את הגרסה הקיימת אם הוסרה גרסה קודמת מה-review).
+- [ ] App Store tab → **+ Version** → `1.3.0`.
 - [ ] **Build** → בחר את בילד 1.3.0.
 - [ ] **What's New in This Version** — הדבק את הטקסט למטה.
 - [ ] **Add for Review → Submit**. (Export compliance: אין הצפנה חריגה → "No".)
@@ -60,5 +55,5 @@
 ```
 
 ## אחרי אישור — למסור לקלוד
-- מספרי הבילד שהתקבלו (Play versionCode / iOS build) + מה קרה עם הגרסאות הקודמות.
+- מספרי הבילד שהתקבלו (Play versionCode / iOS build).
 - כל דחייה/הערה מהחנויות (טקסט מלא) — קלוד יתקן ויחזיר בילד.
