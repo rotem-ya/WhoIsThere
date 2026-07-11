@@ -392,7 +392,7 @@ class _GroupCard extends ConsumerWidget {
                           color: Colors.white, fontWeight: FontWeight.w800)),
                   onTap: () {
                     Navigator.pop(ctx);
-                    _startGroupGame(context, ref,
+                    _openMemberPicker(context, ref,
                         difficulty: opt.$3, category: opt.$4);
                   },
                 ),
@@ -404,15 +404,127 @@ class _GroupCard extends ConsumerWidget {
     );
   }
 
+  /// את מי להזמין? כולם מסומנים כברירת מחדל — אפשר להוריד מוזמנים ספציפיים.
+  void _openMemberPicker(
+    BuildContext context,
+    WidgetRef ref, {
+    required Difficulty difficulty,
+    required String category,
+  }) {
+    final me = ref.read(currentUserProvider).valueOrNull;
+    if (me == null) return;
+    final others =
+        group.memberUids.where((u) => u != me.id).toList(growable: false);
+    if (others.isEmpty) {
+      onToast('אין עוד חברים בקבוצה');
+      return;
+    }
+    final selected = {...others};
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF0D1E30),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text('את מי להזמין?',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900)),
+                      ),
+                      TextButton(
+                        onPressed: () => setSheet(() =>
+                            selected.length == others.length
+                                ? selected.clear()
+                                : selected.addAll(others)),
+                        child: Text(
+                            selected.length == others.length
+                                ? 'נקה הכל'
+                                : 'בחר הכל',
+                            style: const TextStyle(
+                                color: Color(0xFF4A9EFF),
+                                fontWeight: FontWeight.w800)),
+                      ),
+                    ],
+                  ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 260),
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: [
+                        for (final uid in others)
+                          CheckboxListTile(
+                            value: selected.contains(uid),
+                            dense: true,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            activeColor: const Color(0xFF34D399),
+                            title: Text(group.nameOf(uid),
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 15)),
+                            onChanged: (v) => setSheet(() => v == true
+                                ? selected.add(uid)
+                                : selected.remove(uid)),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  FilledButton(
+                    onPressed: selected.isEmpty
+                        ? null
+                        : () {
+                            Navigator.pop(ctx);
+                            _startGroupGame(context, ref,
+                                difficulty: difficulty,
+                                category: category,
+                                inviteUids: selected.toList());
+                          },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF34D399),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: Text(
+                        selected.length == others.length
+                            ? 'הזמן את כולם (${selected.length}) 🎮'
+                            : 'הזמן ${selected.length} נבחרים 🎮',
+                        style: const TextStyle(
+                            color: Color(0xFF06281C),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _startGroupGame(
     BuildContext context,
     WidgetRef ref, {
     required Difficulty difficulty,
     required String category,
+    required List<String> inviteUids,
   }) async {
     final me = ref.read(currentUserProvider).valueOrNull;
     if (me == null) return;
-    onToast('פותח חדר ומזמין את כולם… 🎮');
+    onToast('פותח חדר ושולח הזמנות… 🎮');
     try {
       final room = await ref.read(roomServiceProvider).createRoom(
             hostId: me.id,
@@ -430,6 +542,7 @@ class _GroupCard extends ConsumerWidget {
             room: room,
             myUid: me.id,
             myName: me.name,
+            toUids: inviteUids,
           );
       ref.read(currentRoomIdProvider.notifier).state = room.id;
       if (context.mounted) context.go('/lobby/${room.id}');

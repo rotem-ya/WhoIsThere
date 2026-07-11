@@ -74,17 +74,21 @@ class GroupsService {
 
   // ── משחק קבוצתי בלחיצה ──────────────────────────────────────────────────────
 
-  /// Invites every group member (except me) to [room] — each invite doc fires
-  /// the existing FCM cloud function, so the whole squad gets a push with a
-  /// one-tap join. Also stamps the group's lastGameAt.
+  /// Invites group members (except me) to [room] — each invite doc fires
+  /// the existing FCM cloud function, so everyone invited gets a push with a
+  /// one-tap join. [toUids] limits the invite to a chosen subset (null =
+  /// the whole squad). Also stamps the group's lastGameAt.
   Future<void> inviteGroupToRoom({
     required GroupModel group,
     required RoomModel room,
     required String myUid,
     required String myName,
+    List<String>? toUids,
   }) async {
-    for (final uid in group.memberUids) {
+    final targets = toUids ?? group.memberUids;
+    for (final uid in targets) {
       if (uid == myUid) continue;
+      if (!group.memberUids.contains(uid)) continue;
       await _friends.sendGameInvite(
         fromUid: myUid,
         fromName: myName,
@@ -98,7 +102,7 @@ class GroupsService {
         .set({'lastGameAt': FieldValue.serverTimestamp()},
             SetOptions(merge: true));
     QaLoggerService.instance.log('GROUP',
-        'INVITED group=${group.id} members=${group.memberUids.length - 1} room=${room.id.substring(0, 6)}');
+        'INVITED group=${group.id} invited=${targets.where((u) => u != myUid).length} room=${room.id.substring(0, 6)}');
   }
 
   // ── ניקוד מצטבר ─────────────────────────────────────────────────────────────
