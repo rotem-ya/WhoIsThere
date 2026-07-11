@@ -157,10 +157,12 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     labelColor: AppStyles.cyanGlow,
                     unselectedLabelColor: Colors.white54,
                     indicatorColor: AppStyles.cyanGlow,
+                    // 4 טאבים: תוויות קצרות + ריווח מצומצם כדי שלא ייחתכו.
+                    labelPadding: EdgeInsets.symmetric(horizontal: 4),
                     labelStyle:
-                        TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                        TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
                     tabs: [
-                      Tab(text: 'טבלת ניקוד'),
+                      Tab(text: 'ניקוד'),
                       Tab(text: 'חברים'),
                       Tab(text: 'קבוצות'),
                       Tab(text: 'הוסף חבר'),

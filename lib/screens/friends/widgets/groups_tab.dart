@@ -140,7 +140,11 @@ class _CreateGroupSheetState extends ConsumerState<_CreateGroupSheet> {
           left: 20,
           right: 20,
           top: 14,
-          bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
+          // גם המקלדת (viewInsets) וגם פס הניווט של אנדרואיד / ה-home
+          // indicator של iOS (viewPadding) — אחרת כפתור "צור קבוצה" מוסתר.
+          bottom: 16 +
+              MediaQuery.of(context).viewInsets.bottom +
+              MediaQuery.of(context).viewPadding.bottom,
         ),
         decoration: const BoxDecoration(
           color: Color(0xFF0D1E30),
