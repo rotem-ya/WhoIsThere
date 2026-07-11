@@ -45,6 +45,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   bool _isStarting = false;
   bool _codeCopied = false;
   bool _lobbyLogged = false;
+  bool _autoInvitePrompted = false;
   int _lastPlayerCount = 0;
   static final AudioPlayer _joinPlayer = AudioPlayer(playerId: 'player-join');
   static final AssetSource _joinSound = AssetSource('sounds/player_join.wav');
@@ -542,6 +543,17 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         }
 
         final isHost = currentUser?.id == room.hostId;
+        // נגישות מקסימלית להזמנת חברים: חדר חברים שנפתח ריק קופץ למארח
+        // מרכז ההזמנות אוטומטית (פעם אחת), במקום לחכות שיגלה את הכפתור.
+        if (isHost &&
+            room.isFriendsGame &&
+            room.players.length <= 1 &&
+            !_autoInvitePrompted) {
+          _autoInvitePrompted = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _openInviteFriends(room);
+          });
+        }
         // Prefer the live currentUser name so the greeting is always up to date.
         final rawHostName = isHost
             ? (currentUser?.name ?? room.players[room.hostId]?.name ?? '')
@@ -612,6 +624,31 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                       child: SingleChildScrollView(
                         child: Column(
                           children: [
+                            // כפתור הזמנה בולט — לא רק המשבצת הריקה בגריד.
+                            if (room.isFriendsGame) ...[
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  onPressed: () => _openInviteFriends(room),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFF34D399),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(14)),
+                                  ),
+                                  icon: const Icon(Icons.person_add_alt_1_rounded,
+                                      color: Color(0xFF06281C)),
+                                  label: const Text('הזמן חברים למשחק',
+                                      style: TextStyle(
+                                          color: Color(0xFF06281C),
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 15)),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                            ],
                             _PlayerGrid(
                               players: room.players.values.toList(),
                               currentUserId: currentUser?.id,
@@ -1048,6 +1085,95 @@ class _PlayerAvatarTile extends StatelessWidget {
   }
 }
 
+// ── Persistent share/code row — always visible, no friends-list dependency ──
+
+class _ShareCodeRow extends StatefulWidget {
+  final String code;
+  final VoidCallback onShare;
+  const _ShareCodeRow({required this.code, required this.onShare});
+
+  @override
+  State<_ShareCodeRow> createState() => _ShareCodeRowState();
+}
+
+class _ShareCodeRowState extends State<_ShareCodeRow> {
+  bool _copied = false;
+
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: widget.code));
+    HapticFeedback.lightImpact();
+    if (!mounted) return;
+    setState(() => _copied = true);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            onTap: _copy,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.14)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                      _copied
+                          ? Icons.check_rounded
+                          : Icons.copy_rounded,
+                      color: _copied
+                          ? const Color(0xFF34D399)
+                          : Colors.white54,
+                      size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    _copied ? 'הועתק!' : widget.code,
+                    style: TextStyle(
+                      color: _copied ? const Color(0xFF34D399) : Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: widget.onShare,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF25D366),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            icon: const Icon(Icons.share_rounded, size: 17, color: Colors.white),
+            label: const Text('שתף קישור',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ── Invite-a-friend picker (friends list + search) ─────────────────────────
 
 class _InviteFriendsSheet extends ConsumerStatefulWidget {
@@ -1073,6 +1199,7 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
   String _query = '';
   final Set<String> _invited = {};
   String? _busyUid;
+  String? _busyGroupId;
 
   @override
   void dispose() {
@@ -1104,10 +1231,55 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
     }
   }
 
+  /// חברי הקבוצה שעדיין אפשר להזמין (לא אני, לא בחדר, לא הוזמנו כבר).
+  List<String> _groupTargets(GroupModel g, String myUid) => g.memberUids
+      .where((uid) =>
+          uid != myUid &&
+          !widget.existingPlayerIds.contains(uid) &&
+          !_invited.contains(uid))
+      .toList();
+
+  Future<void> _inviteGroup(GroupModel g) async {
+    final me = ref.read(currentUserProvider).valueOrNull;
+    if (me == null || _busyGroupId != null) return;
+    final targets = _groupTargets(g, me.id);
+    if (targets.isEmpty) return;
+    setState(() => _busyGroupId = g.id);
+    HapticFeedback.lightImpact();
+    var sent = 0;
+    try {
+      for (final uid in targets) {
+        await ref.read(friendsServiceProvider).sendGameInvite(
+              fromUid: me.id,
+              fromName: me.name,
+              toUid: uid,
+              roomId: widget.roomId,
+              code: widget.code,
+            );
+        sent++;
+        if (mounted) setState(() => _invited.add(uid));
+      }
+      QaLoggerService.instance.log(
+          'LOBBY', 'GROUP_INVITED group=${g.id} sent=$sent');
+    } catch (_) {
+      if (mounted && sent == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('שגיאה בשליחת ההזמנות')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busyGroupId = null);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final friends =
         ref.watch(friendsListProvider).valueOrNull ?? const <FriendModel>[];
+    final me = ref.watch(currentUserProvider).valueOrNull;
+    final groups = me == null
+        ? const <GroupModel>[]
+        : ref.watch(myGroupsProvider).valueOrNull ?? const <GroupModel>[];
     final q = _query.trim();
     final filtered =
         q.isEmpty ? friends : friends.where((f) => f.name.contains(q)).toList();
@@ -1118,7 +1290,7 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
       child: Padding(
         padding: EdgeInsets.only(bottom: bottomInset),
         child: Container(
-          height: MediaQuery.of(context).size.height * 0.72,
+          height: MediaQuery.of(context).size.height * 0.78,
           decoration: const BoxDecoration(
             color: Color(0xFF0D1E30),
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -1142,6 +1314,33 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
                       fontSize: 18,
                       fontWeight: FontWeight.w900)),
               const SizedBox(height: 12),
+              // ── שורת שיתוף קבועה — הדרך המהירה ביותר, בלי צורך ברשימת
+              //    חברים בכלל (וואטסאפ / קישור / קוד להעתקה).
+              _ShareCodeRow(code: widget.code, onShare: widget.onShareCode),
+              if (groups.isNotEmpty && me != null) ...[
+                const SizedBox(height: 14),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text('הקבוצות שלי',
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.75),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700)),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 68,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    reverse: true,
+                    itemCount: groups.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (_, i) =>
+                        _groupChip(groups[i], me.id),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 14),
               TextField(
                 controller: _searchCtrl,
                 onChanged: (v) => setState(() => _query = v),
@@ -1176,6 +1375,62 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _groupChip(GroupModel g, String myUid) {
+    final targets = _groupTargets(g, myUid);
+    final busy = _busyGroupId == g.id;
+    final allDone = targets.isEmpty;
+    return InkWell(
+      onTap: (busy || allDone) ? null : () => _inviteGroup(g),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: 132,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: allDone
+              ? Colors.white.withOpacity(0.04)
+              : const Color(0xFF34D399).withOpacity(0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: allDone
+                ? Colors.white.withOpacity(0.10)
+                : const Color(0xFF34D399).withOpacity(0.5),
+            width: 1.2,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(g.name.isEmpty ? 'קבוצה' : g.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            busy
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Color(0xFF34D399)))
+                : Text(
+                    allDone ? 'כולם הוזמנו' : 'הזמן ${targets.length} 👥',
+                    style: TextStyle(
+                        color: allDone
+                            ? Colors.white38
+                            : const Color(0xFF34D399),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700),
+                  ),
+          ],
         ),
       ),
     );
