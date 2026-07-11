@@ -1,15 +1,17 @@
-Release AAB build requested: 2026-07-10T19:30:00Z (v1.2.0 — new game release, r1: "זהו את הפתגם" proverbs rebus game)
-version: 1.2.0 (build name 1.2.0; versionCode = build-aab run number, strictly increasing)
+Release AAB build requested: 2026-07-11T20:00:00Z (v1.3.0 — friends experience overhaul)
+version: 1.3.0 (build name 1.3.0; versionCode = build-aab run number, strictly increasing)
 signing: Play upload key SHA-1 EA:3B (from UPLOAD_* secrets / embedded)
 package: com.whoisthere.app (matches Play Console)
-note: v1.2.0 — NEW GAME "זהו את הפתגם" (proverbs rebus): 38 baked Hebrew
-  proverbs with Pixar-style 3D riddle images, rides the full heat
-  infrastructure (tile reveal, letter-bank guessing raised to 24 slots for
-  proverbs, scoring, bots, chat, skip vote, interlude). Fixed 3-round heat,
-  home 🧩 button with random(2/3/4)/friends sheet, quick-match pool separated
-  from image games (+ fix: image-game quick match no longer lands in letters
-  duels), rematch keeps the proverbs category. Everything from v1.1.1 r6
-  (baked skins, slimmer store, grand-finale win effect, keyboard fix, real
-  ads) is included — this branch supersedes it.
-note2: versionCode auto = build-aab run number (31 used by v1.1.1 r6).
-trigger: r1 dispatch via session-branch push (MCP workflow_dispatch lacks actions:write)
+note: v1.3.0 — everything from v1.2.0 (proverbs rebus game) is included, plus:
+  fixed friend groups (cumulative scoreboard, persistent chat, one-tap
+  invite the whole squad or a chosen subset), push notifications for game
+  invites/friend requests/group invites (group joins now require explicit
+  accept, WhatsApp-style — declining creates no membership), end-of-round
+  scoreboard shown between heat images, host toggle for tricks on/off in
+  classic friends games, direct-join deep link (whoisthere://join?code=),
+  a single grand-finale win effect for everyone (past buyers auto-refunded),
+  a much more accessible lobby invite hub (share row, groups quick-invite,
+  tricks toggle all inline), 5% smaller global text, and several stability/
+  accessibility/nav-bar-clipping fixes.
+note2: versionCode auto = build-aab run number.
+trigger: session-branch push (MCP workflow_dispatch lacks actions:write)

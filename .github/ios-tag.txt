@@ -1,4 +1,6 @@
-ios-v11
+ios-v12
 HEAD
 # line 1 = tag name (ios-vN), line 2 = full commit SHA to tag, or HEAD = the
-# pushed commit. v1.2.0: proverbs game release (38 proverbs, build 1.2.0+65).
+# pushed commit. v1.3.0: friends experience overhaul (groups, push invites,
+# group-join consent, round scoreboard, tricks toggle, direct-join deep
+# link, single win effect, accessibility/nav-bar fixes).

@@ -1,4 +1,4 @@
 claude/qa-launch-prep-EXqLn
 HEAD
 # line 1 = branch to force-sync, line 2 = target SHA (or HEAD = this push).
-# v1.2.0: bring the launch branch to the proverbs-game HEAD.
+# v1.3.0: bring the launch branch to the friends-experience-overhaul HEAD.
