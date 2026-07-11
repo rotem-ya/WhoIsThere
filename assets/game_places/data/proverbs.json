@@ -60,12 +60,14 @@
   },
   {
     "id": "proverbs_bird_in_hand",
-    "name_he": "ציפור אחת ביד עדיפה משתיים על העץ",
+    "name_he": "טוב ציפור אחת ביד משתיים על העץ",
     "answer_he": "ציפור אחת ביד",
     "aliases_he": [
-      "ציפור אחת ביד עדיפה משתיים על העץ",
+      "ציפור ביד",
       "טוב ציפור אחת ביד",
-      "ציפור ביד"
+      "טוב ציפור אחת ביד משתיים על העץ",
+      "טובה ציפור אחת ביד משתיים על העץ",
+      "ציפור אחת ביד עדיפה משתיים על העץ"
     ],
     "category": "proverbs",
     "difficulty": "medium",
@@ -120,10 +122,10 @@
   },
   {
     "id": "proverbs_calm_before_storm",
-    "name_he": "שקט לפני הסערה",
-    "answer_he": "שקט לפני הסערה",
+    "name_he": "השקט שלפני הסערה",
+    "answer_he": "השקט שלפני הסערה",
     "aliases_he": [
-      "השקט שלפני הסערה"
+      "שקט לפני הסערה"
     ],
     "category": "proverbs",
     "difficulty": "medium",
@@ -168,8 +170,8 @@
     "name_he": "לדבר אל הקיר",
     "answer_he": "לדבר אל הקיר",
     "aliases_he": [
-      "כאילו מדבר אל הקיר",
-      "ראש בקיר"
+      "ראש בקיר",
+      "כאילו מדבר אל הקיר"
     ],
     "category": "proverbs",
     "difficulty": "medium",
@@ -181,10 +183,11 @@
   },
   {
     "id": "proverbs_eggs_one_basket",
-    "name_he": "כל הביצים בסל אחד",
-    "answer_he": "כל הביצים בסל אחד",
+    "name_he": "לשים את כל הביצים בסל אחד",
+    "answer_he": "לשים את כל הביצים בסל אחד",
     "aliases_he": [
-      "לשים את כל הביצים בסל אחד"
+      "כל הביצים בסל אחד",
+      "לא לשים את כל הביצים בסל אחד"
     ],
     "category": "proverbs",
     "difficulty": "easy",
@@ -196,11 +199,12 @@
   },
   {
     "id": "proverbs_head_in_sand",
-    "name_he": "לטמון את הראש בחול",
-    "answer_he": "לטמון את הראש בחול",
+    "name_he": "טומן ראשו בחול",
+    "answer_he": "טומן ראשו בחול",
     "aliases_he": [
+      "בת יענה",
       "ראש בחול",
-      "בת יענה"
+      "לטמון את הראש בחול"
     ],
     "category": "proverbs",
     "difficulty": "easy",
@@ -317,10 +321,10 @@
   },
   {
     "id": "proverbs_mountain_mouse",
-    "name_he": "הר הוליד עכבר",
-    "answer_he": "הר הוליד עכבר",
+    "name_he": "ההר הוליד עכבר",
+    "answer_he": "ההר הוליד עכבר",
     "aliases_he": [
-      "ההר הוליד עכבר"
+      "הר הוליד עכבר"
     ],
     "category": "proverbs",
     "difficulty": "medium",
@@ -332,10 +336,11 @@
   },
   {
     "id": "proverbs_penny_dropped",
-    "name_he": "נפל לו האסימון",
-    "answer_he": "נפל לו האסימון",
+    "name_he": "נפל האסימון",
+    "answer_he": "נפל האסימון",
     "aliases_he": [
-      "נפל האסימון"
+      "נפל לו האסימון",
+      "נפל לי האסימון"
     ],
     "category": "proverbs",
     "difficulty": "medium",
@@ -365,7 +370,8 @@
     "name_he": "דמעות תנין",
     "answer_he": "דמעות תנין",
     "aliases_he": [
-      "דמעות של תנין"
+      "דמעות של תנין",
+      "הזיל דמעות תנין"
     ],
     "category": "proverbs",
     "difficulty": "easy",
@@ -439,7 +445,10 @@
     "id": "proverbs_walls_have_ears",
     "name_he": "אוזניים לכותל",
     "answer_he": "אוזניים לכותל",
-    "aliases_he": [],
+    "aliases_he": [
+      "יש אוזניים לכותל",
+      "לכותל יש אוזניים"
+    ],
     "category": "proverbs",
     "difficulty": "easy",
     "is_active": true,
@@ -468,9 +477,9 @@
     "name_he": "עבר ביניהם חתול שחור",
     "answer_he": "עבר ביניהם חתול שחור",
     "aliases_he": [
+      "חתול שחור",
       "עבר בניהם חתול שחור",
-      "חתול שחור עבר ביניהם",
-      "חתול שחור"
+      "חתול שחור עבר ביניהם"
     ],
     "category": "proverbs",
     "difficulty": "easy",
@@ -500,7 +509,8 @@
     "name_he": "לא כל הנוצץ זהב",
     "answer_he": "לא כל הנוצץ זהב",
     "aliases_he": [
-      "לא כל הנוצץ הוא זהב"
+      "לא כל הנוצץ הוא זהב",
+      "לא כל הנוצץ זהב הוא"
     ],
     "category": "proverbs",
     "difficulty": "easy",
@@ -530,8 +540,8 @@
     "name_he": "לתפוס שתי ציפורים במכה אחת",
     "answer_he": "לתפוס שתי ציפורים במכה אחת",
     "aliases_he": [
-      "שתי ציפורים במכה אחת",
-      "שתי ציפורים במכה"
+      "שתי ציפורים במכה",
+      "שתי ציפורים במכה אחת"
     ],
     "category": "proverbs",
     "difficulty": "medium",
