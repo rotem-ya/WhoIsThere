@@ -11,6 +11,7 @@ import '../../providers/providers.dart';
 import '../../services/analytics_service.dart';
 import '../../services/friends_service.dart';
 import '../../widgets/chat/chat_sheet.dart';
+import 'widgets/groups_tab.dart';
 
 /// Friends hub: a cumulative leaderboard, the friends list with pending
 /// requests, and an "add friend" tab (personal code + WhatsApp invite).
@@ -142,7 +143,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
       }
     });
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
@@ -161,6 +162,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     tabs: [
                       Tab(text: 'טבלת ניקוד'),
                       Tab(text: 'חברים'),
+                      Tab(text: 'קבוצות'),
                       Tab(text: 'הוסף חבר'),
                     ],
                   ),
@@ -169,6 +171,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                       children: [
                         _LeaderboardTab(),
                         _FriendsTab(onToast: _toast),
+                        GroupsTab(onToast: _toast),
                         _addFriendTab(),
                       ],
                     ),

@@ -99,6 +99,15 @@ service cloud.firestore {
       allow read, create, update, delete: if signedIn();
     }
 
+    // ── Friend groups (קבוצות קבועות) ─────────────────────────────────────────
+    // A saved squad: cumulative group scoreboard + persistent chat + per-game
+    // score records. Same open trust model as friends/invites — membership
+    // edits, chat and cross-game score recording are all client-driven, and
+    // every member may read/write (scores are self-recorded per player).
+    match /groups/{groupId}/{document=**} {
+      allow read, write: if signedIn();
+    }
+
     // ── Direct messages (friend-to-friend chat, outside a game) ───────────────
     // Conversation id = the two uids sorted + joined ("{a}_{b}"). Any signed-in
     // user may read/write; messages live under the conversation document.

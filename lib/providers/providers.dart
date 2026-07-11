@@ -15,11 +15,13 @@ import '../services/qa_logger_service.dart';
 import '../services/room_service.dart';
 import '../services/settings_service.dart';
 import '../services/friends_service.dart';
+import '../services/groups_service.dart';
 import '../services/content_manifest_service.dart';
 import '../services/cosmetics_catalog_service.dart';
 import '../models/user_model.dart';
 import '../models/room_model.dart';
 import '../models/game_image_model.dart';
+import '../models/chat_message.dart';
 import '../models/friend_models.dart';
 
 // Services
@@ -204,6 +206,22 @@ final gameInvitesProvider =
   if (uid == null) return Stream.value(const []);
   return ref.watch(friendsServiceProvider).incomingGameInvites(uid);
 });
+
+// ── קבוצות חברים קבועות ──────────────────────────────────────────────────────
+final groupsServiceProvider = Provider<GroupsService>((ref) => GroupsService(
+    FirebaseFirestore.instance, ref.watch(friendsServiceProvider)));
+
+// The signed-in user's saved groups (most recently played first).
+final myGroupsProvider = StreamProvider.autoDispose<List<GroupModel>>((ref) {
+  final uid = ref.watch(firebaseUserProvider).valueOrNull?.uid;
+  if (uid == null) return Stream.value(const []);
+  return ref.watch(groupsServiceProvider).myGroups(uid);
+});
+
+// Persistent group chat (last 60, oldest→newest like the room chat).
+final groupMessagesProvider = StreamProvider.autoDispose
+    .family<List<ChatMessage>, String>((ref, groupId) =>
+        ref.watch(groupsServiceProvider).messages(groupId));
 
 // Cumulative friends leaderboard (me + friends, sorted by points). Recomputes
 // when my profile changes or my friends list changes; invalidate to refresh.

@@ -82,6 +82,9 @@ class RoomModel extends Equatable {
   // blackout, stun) are disabled for everyone in this room. Default true so
   // existing rooms and public games keep today's behavior.
   final bool tricksEnabled;
+  // Set when this room was opened FOR a saved friends group ("קבוצה קבועה"):
+  // the finished game's scores roll into that group's cumulative scoreboard.
+  final String? groupId;
   final String? lastRoundImageId;
   // Display name of the round's solver; null when the board filled with no
   // correct guess.
@@ -158,6 +161,7 @@ class RoomModel extends Equatable {
     this.rematchRoomId,
     this.roundInterludeUntilMs,
     this.tricksEnabled = true,
+    this.groupId,
     this.lastRoundImageId,
     this.lastRoundWinnerName,
     this.mode = 'normal',
@@ -334,6 +338,7 @@ class RoomModel extends Equatable {
       rematchRoomId: data['rematchRoomId'] as String?,
       roundInterludeUntilMs: (data['roundInterludeUntilMs'] as num?)?.toInt(),
       tricksEnabled: (data['tricksEnabled'] as bool?) ?? true,
+      groupId: data['groupId'] as String?,
       lastRoundImageId: data['lastRoundImageId'] as String?,
       lastRoundWinnerName: data['lastRoundWinnerName'] as String?,
       mode: (data['mode'] as String?) ?? 'normal',
@@ -406,6 +411,7 @@ class RoomModel extends Equatable {
         if (roundInterludeUntilMs != null)
           'roundInterludeUntilMs': roundInterludeUntilMs,
         'tricksEnabled': tricksEnabled,
+        if (groupId != null) 'groupId': groupId,
         if (lastRoundImageId != null) 'lastRoundImageId': lastRoundImageId,
         if (lastRoundWinnerName != null)
           'lastRoundWinnerName': lastRoundWinnerName,
@@ -465,6 +471,7 @@ class RoomModel extends Equatable {
     String? rematchRoomId,
     int? roundInterludeUntilMs,
     bool? tricksEnabled,
+    String? groupId,
     String? lastRoundImageId,
     String? lastRoundWinnerName,
     String? mode,
@@ -532,6 +539,7 @@ class RoomModel extends Equatable {
         roundInterludeUntilMs:
             roundInterludeUntilMs ?? this.roundInterludeUntilMs,
         tricksEnabled: tricksEnabled ?? this.tricksEnabled,
+        groupId: groupId ?? this.groupId,
         lastRoundImageId: lastRoundImageId ?? this.lastRoundImageId,
         lastRoundWinnerName: lastRoundWinnerName ?? this.lastRoundWinnerName,
         mode: mode ?? this.mode,
@@ -597,6 +605,7 @@ class RoomModel extends Equatable {
         lastRoundWinnerName,
         mode,
         tricksEnabled,
+        groupId,
         secretWord,
         lettersRevealedTiles,
         lettersGuessed,

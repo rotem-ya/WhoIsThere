@@ -272,6 +272,8 @@ class RoomService {
     // Fixed-topic heat (e.g. proverbs): overrides the random topic draw for
     // public quick-match rooms; the list length sets the round count.
     List<String>? heatTopics,
+    // Saved friends group this room was opened for (group scoreboard).
+    String? groupId,
   }) async {
     final code = RoomCodeGenerator.generate();
     final docRef = _rooms.doc();
@@ -398,6 +400,7 @@ class RoomService {
       matchExposureCount: matchExposure,
       selectedDifficulty: difficulty,
       selectedCategory: effectiveCategory,
+      groupId: groupId,
       heatCategories: heatCategories,
       heatImageIds: heatImageIds,
       heatRoundIndex: 0,
@@ -500,6 +503,9 @@ class RoomService {
       category: old.isProverbs
           ? GameCategories.proverbs
           : GameCategories.israelPlaces,
+      // "שחק שוב עם החבורה": a group game's rematch stays on the group
+      // scoreboard.
+      groupId: old.groupId,
     );
     return _claimRematchSlot(oldDoc.reference, newRoom.id);
   }

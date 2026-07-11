@@ -137,3 +137,45 @@ class FriendGameRecord {
     );
   }
 }
+
+/// A saved friends squad ("קבוצה קבועה"): open a game for everyone in one tap,
+/// keep a cumulative group scoreboard, and chat between games. Stored at
+/// `groups/{groupId}`; messages under `groups/{groupId}/messages`.
+class GroupModel {
+  final String id;
+  final String name;
+  final String ownerUid;
+  final List<String> memberUids;
+  final Map<String, String> memberNames; // uid → display name (snapshot)
+  final Map<String, int> points; // uid → cumulative group points
+  final DateTime? createdAt;
+  final DateTime? lastGameAt;
+
+  const GroupModel({
+    required this.id,
+    required this.name,
+    required this.ownerUid,
+    required this.memberUids,
+    required this.memberNames,
+    required this.points,
+    this.createdAt,
+    this.lastGameAt,
+  });
+
+  String nameOf(String uid) => memberNames[uid] ?? 'חבר';
+  int pointsOf(String uid) => points[uid] ?? 0;
+
+  factory GroupModel.fromDoc(DocumentSnapshot doc) {
+    final data = (doc.data() as Map<String, dynamic>?) ?? const {};
+    return GroupModel(
+      id: doc.id,
+      name: (data['name'] as String?) ?? 'קבוצה',
+      ownerUid: (data['ownerUid'] as String?) ?? '',
+      memberUids: List<String>.from(data['memberUids'] ?? const []),
+      memberNames: Map<String, String>.from(data['memberNames'] ?? const {}),
+      points: Map<String, int>.from(data['points'] ?? const {}),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      lastGameAt: (data['lastGameAt'] as Timestamp?)?.toDate(),
+    );
+  }
+}

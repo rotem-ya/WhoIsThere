@@ -1467,6 +1467,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
           .read(friendsServiceProvider)
           .recordMyResult(room: room, myUid: uid));
     }
+    // משחק של קבוצה קבועה: הניקוד שלי מצטרף ללוח הקבוצה (אידמפוטנטי פר חדר).
+    if (room.groupId != null && room.groupId!.isNotEmpty) {
+      unawaited(ref
+          .read(groupsServiceProvider)
+          .recordMyGroupResult(room: room, myUid: uid));
+    }
 
     final isWin = room.winnerId == uid;
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
