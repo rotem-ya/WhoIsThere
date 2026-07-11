@@ -87,6 +87,42 @@ class GameInviteModel {
   }
 }
 
+/// A pending "join my group" invite, stored at `groupInvites/{toUid}_{groupId}`.
+/// The recipient must accept before becoming a member — declining leaves the
+/// group untouched, just like a WhatsApp group invite.
+class GroupInviteModel {
+  final String id;
+  final String groupId;
+  final String groupName;
+  final String fromUid;
+  final String fromName;
+  final String toUid;
+  final DateTime? createdAt;
+
+  const GroupInviteModel({
+    required this.id,
+    required this.groupId,
+    required this.groupName,
+    required this.fromUid,
+    required this.fromName,
+    required this.toUid,
+    this.createdAt,
+  });
+
+  factory GroupInviteModel.fromDoc(DocumentSnapshot doc) {
+    final data = (doc.data() as Map<String, dynamic>?) ?? const {};
+    return GroupInviteModel(
+      id: doc.id,
+      groupId: (data['groupId'] as String?) ?? '',
+      groupName: (data['groupName'] as String?) ?? 'קבוצה',
+      fromUid: (data['fromUid'] as String?) ?? '',
+      fromName: (data['fromName'] as String?) ?? '',
+      toUid: (data['toUid'] as String?) ?? '',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+    );
+  }
+}
+
 /// One row in the friends leaderboard: a friend (or me) and their cumulative
 /// friends-game points.
 class FriendScore {

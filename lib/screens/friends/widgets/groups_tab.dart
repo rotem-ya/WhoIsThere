@@ -22,10 +22,16 @@ class GroupsTab extends ConsumerWidget {
     // חובה watch (ולא read בזמן הלחיצה): הפרוביידר autoDispose ומתאפס כשאף
     // אחד לא צופה בו — קריאה קרה מהטאב הזה החזירה רשימה ריקה למרות שיש חברים.
     final friends = ref.watch(friendsListProvider).valueOrNull;
+    final invites = ref.watch(pendingGroupInvitesProvider).valueOrNull ?? const [];
 
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
+        // הזמנות קבוצה ממתינות: חייבים אישור לפני שהקבוצה נפתחת אצל המוזמן,
+        // בדיוק כמו בוואטסאפ (זמינות גם אם הבאנר הגלובלי נסגר).
+        for (final inv in invites)
+          _GroupInviteCard(invite: inv, onToast: onToast),
+        if (invites.isNotEmpty) const SizedBox(height: 4),
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
@@ -49,7 +55,7 @@ class GroupsTab extends ConsumerWidget {
             padding: EdgeInsets.all(28),
             child: Center(
               child: Text(
-                'צרו קבוצה קבועה של חברים —\nמשחק לכל החבורה בלחיצה אחת! 🎮',
+                'צרו קבוצה קבועה של חברים,\nמשחק לכל החבורה בלחיצה אחת! 🎮',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white54, fontSize: 15),
               ),
@@ -65,7 +71,7 @@ class GroupsTab extends ConsumerWidget {
   void _openCreateSheet(
       BuildContext context, WidgetRef ref, List<FriendModel>? friends) {
     if (friends == null) {
-      onToast('רשימת החברים עוד נטענת — נסו שוב רגע');
+      onToast('רשימת החברים עוד נטענת, נסו שוב רגע');
       return;
     }
     if (friends.isEmpty) {
@@ -124,7 +130,9 @@ class CreateGroupSheetState extends ConsumerState<CreateGroupSheet> {
                 .toList(),
           );
       if (mounted) Navigator.pop(context);
-      widget.onToast('הקבוצה "$name" נוצרה 🎉');
+      widget.onToast(_selected.length == 1
+          ? 'הקבוצה "$name" נוצרה, נשלחה הזמנה לחבר אחד 🎉'
+          : 'הקבוצה "$name" נוצרה, נשלחו הזמנות ל-${_selected.length} חברים 🎉');
     } catch (_) {
       widget.onToast('שגיאה ביצירת הקבוצה');
       if (mounted) setState(() => _creating = false);
@@ -223,6 +231,122 @@ class CreateGroupSheetState extends ConsumerState<CreateGroupSheet> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── הזמנה להצטרפות לקבוצה (WhatsApp-style: מחייב אישור) ─────────────────────
+
+class _GroupInviteCard extends ConsumerStatefulWidget {
+  final GroupInviteModel invite;
+  final void Function(String) onToast;
+  const _GroupInviteCard({required this.invite, required this.onToast});
+
+  @override
+  ConsumerState<_GroupInviteCard> createState() => _GroupInviteCardState();
+}
+
+class _GroupInviteCardState extends ConsumerState<_GroupInviteCard> {
+  bool _busy = false;
+
+  Future<void> _accept() async {
+    final me = ref.read(currentUserProvider).valueOrNull;
+    if (me == null || _busy) return;
+    setState(() => _busy = true);
+    HapticFeedback.mediumImpact();
+    try {
+      final ok = await ref
+          .read(groupsServiceProvider)
+          .acceptGroupInvite(widget.invite, me.name);
+      widget.onToast(ok
+          ? 'הצטרפת לקבוצה "${widget.invite.groupName}" 🎉'
+          : 'הקבוצה כבר לא קיימת');
+    } catch (_) {
+      widget.onToast('שגיאה בהצטרפות לקבוצה');
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _decline() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    HapticFeedback.selectionClick();
+    try {
+      await ref.read(groupsServiceProvider).declineGroupInvite(widget.invite);
+    } catch (_) {
+      widget.onToast('שגיאה בדחיית ההזמנה');
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final inv = widget.invite;
+    final fromName = inv.fromName.isEmpty ? 'חבר' : inv.fromName;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D1E30),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF34D399).withOpacity(0.5)),
+      ),
+      child: _busy
+          ? const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Color(0xFF34D399)),
+              ),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('👥 $fromName הזמין אותך לקבוצה "${inv.groupName}"',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800)),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _accept,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF34D399),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('הצטרף',
+                            style: TextStyle(
+                                color: Color(0xFF06281C),
+                                fontWeight: FontWeight.w900)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _decline,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                              color: Colors.white.withOpacity(0.25)),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('דחה',
+                            style: TextStyle(
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w800)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
     );
   }
 }

@@ -108,6 +108,16 @@ service cloud.firestore {
       allow read, write: if signedIn();
     }
 
+    // ── Group invites ─────────────────────────────────────────────────────────
+    // A pending "join my group" invite (id = "{toUid}_{groupId}"), like a
+    // WhatsApp group invite — membership is only granted on accept. Any
+    // signed-in user may create/read/delete: the group owner creates it, the
+    // recipient accepts (writes membership on groups/{groupId} + deletes) or
+    // declines (deletes).
+    match /groupInvites/{inviteId} {
+      allow read, create, update, delete: if signedIn();
+    }
+
     // ── Direct messages (friend-to-friend chat, outside a game) ───────────────
     // Conversation id = the two uids sorted + joined ("{a}_{b}"). Any signed-in
     // user may read/write; messages live under the conversation document.

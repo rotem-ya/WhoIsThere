@@ -26,6 +26,7 @@ import 'services/qa_logger_service.dart';
 import 'services/report_service.dart';
 import 'widgets/common/friend_request_banner.dart';
 import 'widgets/common/game_invite_banner.dart';
+import 'widgets/common/group_invite_banner.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'services/settings_service.dart';
 
@@ -463,6 +464,8 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp>
                 const FriendRequestBanner(),
                 // הזמנות משחק — באנר גלובלי עם "הצטרף" ישיר ללובי.
                 const GameInviteBanner(),
+                // הזמנות קבוצה — מחייב אישור מפורש (הצטרף/דחה) לפני חברות.
+                const GroupInviteBanner(),
               ],
             ),
           ),

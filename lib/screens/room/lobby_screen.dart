@@ -1308,7 +1308,10 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
     final q = _query.trim();
     final filtered =
         q.isEmpty ? friends : friends.where((f) => f.name.contains(q)).toList();
+    // מקלדת (viewInsets) וגם פס הניווט של אנדרואיד / ה-home indicator של
+    // iOS (viewPadding) — אחרת רשימת החברים התחתונה מוסתרת מאחורי הפקדים.
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final navBarInset = MediaQuery.of(context).viewPadding.bottom;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -1320,7 +1323,7 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
             color: Color(0xFF0D1E30),
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + navBarInset),
           child: Column(
             children: [
               Center(

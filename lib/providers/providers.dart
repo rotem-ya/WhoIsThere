@@ -218,6 +218,15 @@ final myGroupsProvider = StreamProvider.autoDispose<List<GroupModel>>((ref) {
   return ref.watch(groupsServiceProvider).myGroups(uid);
 });
 
+// Incoming pending group invites ("X invited you to join a group") — the
+// group is only visible via myGroupsProvider once the invite is accepted.
+final pendingGroupInvitesProvider =
+    StreamProvider.autoDispose<List<GroupInviteModel>>((ref) {
+  final uid = ref.watch(firebaseUserProvider).valueOrNull?.uid;
+  if (uid == null) return Stream.value(const []);
+  return ref.watch(groupsServiceProvider).incomingGroupInvites(uid);
+});
+
 // Persistent group chat (last 60, oldest→newest like the room chat).
 final groupMessagesProvider = StreamProvider.autoDispose
     .family<List<ChatMessage>, String>((ref, groupId) =>
