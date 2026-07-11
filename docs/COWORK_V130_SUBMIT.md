@@ -13,11 +13,13 @@
 - **אפקט ניצחון אחיד** ("מופע זיקוקים") לכל מנצח, עם החזר מטבעות אוטומטי למי שכבר קנה אפקט ישן.
 - מרכז הזמנות בלובי הרבה יותר נגיש (שיתוף מהיר, הזמנת קבוצה בלחיצה, בקרת תחבולות, הכל במסך אחד).
 - כיתוב קטן במעט בכל האפליקציה, ותיקוני יציבות/נגישות/תצוגה (טאבים, פס ניווט אנדרואיד).
+- מכסת פרסומות-בתמורה-למטבעות עלתה מ-2 ל-5 ביום.
+- תיקוני ניסוח מאומתים ל-6 פתגמים (כולל "ההר הוליד עכבר") + ריענון תמונות.
 
 ## שלב 0 — מה קלוד כבר עשה אוטומטית (רק לוודא)
-- [ ] ענף ההשקה `claude/qa-launch-prep-EXqLn` סונכרן ל-HEAD החדש דרך workflow "Push release refs". ודא: `git log -1 origin/claude/qa-launch-prep-EXqLn` = הקומיט של v1.3.0.
-- [ ] תג `ios-v12` נדחף → Codemagic בונה ומעלה ל-TestFlight אוטומטית (~15 דק'). ודא ב-Codemagic שהבילד רץ על הקומיט הנכון והסתיים ירוק. גרסה 1.3.0.
-- [ ] בניית **Build AAB (Google Play)** שוגרה אוטומטית (דרך `.github/aab-release.txt`) על ענף ההשקה. ודא ריצה ירוקה ב-Actions → Build AAB, והורד את ה-artifact `app-release.aab` (versionCode = מס' הריצה).
+- [ ] ענף ההשקה `claude/qa-launch-prep-EXqLn` סונכרן ל-HEAD החדש דרך workflow "Push release refs". ודא: `git log -1 origin/claude/qa-launch-prep-EXqLn` = הקומיט של v1.3.0 r3.
+- [ ] תג `ios-v14` נדחף → Codemagic בונה ומעלה ל-TestFlight אוטומטית (~15 דק'). ודא ב-Codemagic שהבילד רץ על הקומיט הנכון והסתיים ירוק. גרסה 1.3.0.
+- [ ] בניית **Build AAB (Google Play)** שוגרה אוטומטית (דרך `.github/aab-release.txt`) על ענף ההשקה — ריצה #35 הסתיימה בהצלחה. הורד את ה-artifact `app-release.aab` מ-Actions → Build AAB → run #35 (versionCode 35).
 - אם משהו מאלה לא קרה/נכשל: Actions → הרץ שוב (Build AAB: Run workflow על `claude/qa-launch-prep-EXqLn` עם build_name=1.3.0; iOS: דחוף תג `ios-v13` מענף ההשקה או Start build ב-Codemagic).
 
 ## שלב 1 — מצב גרסה קודמת (מאושר, אין צורך לברר)
