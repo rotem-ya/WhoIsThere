@@ -1301,6 +1301,10 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
     final groups = me == null
         ? const <GroupModel>[]
         : ref.watch(myGroupsProvider).valueOrNull ?? const <GroupModel>[];
+    // חי, כדי שהמארח יראה כאן גם את בקרת התחבולות בלי לגלול/לסגור את
+    // מרכז ההזמנות, שנפתח אוטומטית ומכסה את שאר מסך הלובי.
+    final liveRoom = ref.watch(roomStreamProvider(widget.roomId)).valueOrNull;
+    final isHost = liveRoom != null && me != null && liveRoom.hostId == me.id;
     final q = _query.trim();
     final filtered =
         q.isEmpty ? friends : friends.where((f) => f.name.contains(q)).toList();
@@ -1338,6 +1342,20 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
               // ── שורת שיתוף קבועה — הדרך המהירה ביותר, בלי צורך ברשימת
               //    חברים בכלל (וואטסאפ / קישור / קוד להעתקה).
               _ShareCodeRow(code: widget.code, onShare: widget.onShareCode),
+              if (liveRoom != null &&
+                  liveRoom.isFriendsGame &&
+                  liveRoom.selectedDifficulty != Difficulty.giant) ...[
+                const SizedBox(height: 12),
+                _TricksToggleRow(
+                  enabled: liveRoom.tricksEnabled,
+                  isHost: isHost,
+                  onChanged: isHost
+                      ? (v) => ref
+                          .read(roomServiceProvider)
+                          .setTricksEnabled(widget.roomId, v)
+                      : null,
+                ),
+              ],
               if (me != null) ...[
                 const SizedBox(height: 14),
                 Align(
@@ -1822,7 +1840,7 @@ class _TricksToggleRow extends StatelessWidget {
                 Text(
                   enabled
                       ? 'כרטיסי חסימה, החשכה ועצירה פעילים'
-                      : 'משחק נקי — בלי כרטיסי פעולה',
+                      : 'משחק נקי, בלי כרטיסי פעולה',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.55),
                     fontSize: 11.5,
