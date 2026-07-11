@@ -2,7 +2,7 @@
   "name": "whoisthere-functions",
   "description": "Cloud Functions for WhoIsThere — push notifications for friend game invites",
   "engines": {
-    "node": "18"
+    "node": "20"
   },
   "main": "index.js",
   "scripts": {

@@ -20,11 +20,13 @@ name: Deploy Cloud Functions
 # Run manually from the Actions tab, or it runs automatically when
 # functions/ changes on main or the session branch.
 #
-# IAM permissions granted 2026-07-11 — confirmed working (the run that
-# actually failed after that was a Node version mismatch, not permissions:
-# firebase-tools 15.x needs Node >=20 to RUN in CI. That's separate from the
-# deployed function's own runtime, which stays nodejs18 per firebase.json/
-# functions/package.json — bumping Node here does not change that.
+# IAM permissions granted 2026-07-11 — confirmed working (Google auto-enabled
+# cloudfunctions/cloudbuild/artifactregistry APIs during deploy, which needs
+# real permissions). Two unrelated Node version issues surfaced after that:
+#   1. firebase-tools 15.x needs Node >=20 to RUN in CI (this workflow's own
+#      Node, unrelated to the deployed function).
+#   2. The nodejs18 Cloud Functions runtime was decommissioned by Google on
+#      2025-10-30 — firebase.json/functions/package.json now target nodejs20.
 
 on:
   workflow_dispatch:
