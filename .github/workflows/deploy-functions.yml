@@ -20,7 +20,11 @@ name: Deploy Cloud Functions
 # Run manually from the Actions tab, or it runs automatically when
 # functions/ changes on main or the session branch.
 #
-# IAM permissions granted 2026-07-11 — first live run triggered right after.
+# IAM permissions granted 2026-07-11 — confirmed working (the run that
+# actually failed after that was a Node version mismatch, not permissions:
+# firebase-tools 15.x needs Node >=20 to RUN in CI. That's separate from the
+# deployed function's own runtime, which stays nodejs18 per firebase.json/
+# functions/package.json — bumping Node here does not change that.
 
 on:
   workflow_dispatch:
@@ -42,7 +46,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Install functions dependencies
         working-directory: functions
