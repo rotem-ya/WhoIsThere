@@ -625,6 +625,23 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                               const SizedBox(height: 8),
                               _buildHeatSetup(room, currentUser),
                             ],
+                            // תחבולות: בחירת מארח למשחק חברים קלאסי (בהיט
+                            // הכרטיסים ממילא כבויים). כולם רואים את המצב; רק
+                            // המארח יכול לשנות.
+                            if (room.isFriendsGame &&
+                                room.selectedDifficulty !=
+                                    Difficulty.giant) ...[
+                              const SizedBox(height: 8),
+                              _TricksToggleRow(
+                                enabled: room.tricksEnabled,
+                                isHost: isHost,
+                                onChanged: isHost
+                                    ? (v) => ref
+                                        .read(roomServiceProvider)
+                                        .setTricksEnabled(widget.roomId, v)
+                                    : null,
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -1451,6 +1468,67 @@ class _WaitingFooter extends StatelessWidget {
           'ממתין למארח שיתחיל...',
           style: AppStyles.bodyMedium.copyWith(color: Colors.white54),
         ),
+      ),
+    );
+  }
+}
+
+
+/// שורת "עם/בלי תחבולות" בלובי חברים — טוגל למארח, תצוגה לשאר.
+class _TricksToggleRow extends StatelessWidget {
+  final bool enabled;
+  final bool isHost;
+  final ValueChanged<bool>? onChanged;
+
+  const _TricksToggleRow({
+    required this.enabled,
+    required this.isHost,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D1E30).withOpacity(0.85),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Row(
+        children: [
+          Text(enabled ? '🃏' : '🕊️', style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'תחבולות במשחק',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  enabled
+                      ? 'כרטיסי חסימה, החשכה ועצירה פעילים'
+                      : 'משחק נקי — בלי כרטיסי פעולה',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.55),
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: enabled,
+            onChanged: onChanged,
+            activeColor: const Color(0xFF8B4FBF),
+          ),
+        ],
       ),
     );
   }

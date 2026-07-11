@@ -199,6 +199,7 @@ class GameLayout extends StatelessWidget {
               guessBlock5Count: guessBlock5Count,
               guessBlock10Count: guessBlock10Count,
               blackoutCardCount: blackoutCardCount,
+              tricksDisabled: !room.tricksEnabled,
             ),
             // חי/צומח/דומם: always show the current topic + round, so the player
             // knows what they're guessing at every stage.

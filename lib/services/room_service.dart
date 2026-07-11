@@ -1136,6 +1136,15 @@ class RoomService {
 
   // ── Fast-game "heat" (sequence of quick rounds: חי / צומח / דומם) ──────────
 
+  /// Friends-lobby host setting: enables/disables the trick cards (guess
+  /// blocks, blackout, stun) for this room. Host-only by UI; harmless if
+  /// flipped mid-wait since every card path re-checks the live flag.
+  Future<void> setTricksEnabled(String roomId, bool enabled) async {
+    await _rooms.doc(roomId).update({'tricksEnabled': enabled});
+    QaLoggerService.instance
+        .log('LOBBY', 'TRICKS_TOGGLE roomId=${roomId.substring(0, roomId.length.clamp(0, 6))} enabled=$enabled');
+  }
+
   /// Records a friends-lobby topic pick (playerId → list of categoryIds). Every
   /// participant picks exactly one; the host may pick as many as they like, and
   /// each extra adds a heat round (see [_buildFriendsHeat]).
@@ -1277,7 +1286,7 @@ class RoomService {
   /// Short synced pause between heat rounds: every client shows the finished
   /// image + answer + solver until this many ms pass, then the next round's
   /// reveals begin together (the reveal deadline is pushed past the pause).
-  static const int heatInterludeMs = 4000;
+  static const int heatInterludeMs = 6500;
 
   /// Update map that advances a heat to its next round (next image/category).
   /// [winnerName] is the solver's display name (null when the board filled
@@ -2604,6 +2613,7 @@ class RoomService {
         if (!roomSnap.exists) return;
         final room = RoomModel.fromFirestore(roomSnap);
         if (room.phase == GamePhase.finished) return;
+        if (!room.tricksEnabled) return; // friends-host setting: no tricks
 
         final blockUntil = room.revealCount + EconomyConfig.stunCardBlockTurns;
         tx.update(_firestore.doc('users/$actorUid'), {
@@ -2645,6 +2655,7 @@ class RoomService {
         if (!roomSnap.exists) return;
         final room = RoomModel.fromFirestore(roomSnap);
         if (room.phase == GamePhase.finished) return;
+        if (!room.tricksEnabled) return; // friends-host setting: no tricks
         final unblockAt = DateTime.now().millisecondsSinceEpoch + duration;
         tx.update(_firestore.doc('users/$actorUid'), {field: FieldValue.increment(-1)});
         tx.update(_rooms.doc(roomId), {'guessBlockedUntilMs.$targetUid': unblockAt});
@@ -2677,6 +2688,7 @@ class RoomService {
         if (!roomSnap.exists) return;
         final room = RoomModel.fromFirestore(roomSnap);
         if (room.phase == GamePhase.finished) return;
+        if (!room.tricksEnabled) return; // friends-host setting: no tricks
         final expiresAt = DateTime.now().millisecondsSinceEpoch + EconomyConfig.blackoutDurationMs;
         tx.update(_firestore.doc('users/$actorUid'), {'blackoutCardCount': FieldValue.increment(-1)});
         tx.update(_rooms.doc(roomId), {'blackoutActiveUntilMs.$targetUid': expiresAt});

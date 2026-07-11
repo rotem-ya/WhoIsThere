@@ -2087,6 +2087,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     });
   }
 
+  // Thumbnails of every heat round already solved — shown as a "story so far"
+  // strip on the interlude scoreboard. Cached per image id for the whole game.
+  final Map<String, GameImageModel> _interludeGallery = {};
+  Future<void> _ensureInterludeGallery(RoomModel room) async {
+    final done = room.heatImageIds.take(room.heatRoundIndex);
+    for (final id in done) {
+      if (_interludeGallery.containsKey(id)) continue;
+      final img = await ref.read(roomServiceProvider).getImage(id);
+      if (!mounted) return;
+      if (img != null) setState(() => _interludeGallery[id] = img);
+    }
+  }
+
   Future<void> _showExitConfirmation(BuildContext context) async {
     QaLoggerService.instance.log('GAME', 'GAME_BACK_CONFIRM_SHOWN');
     await showDialog<void>(
@@ -2822,6 +2835,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     _interludeDismissedUntilMs != interludeUntil;
                 if (interludeActive) {
                   unawaited(_ensureInterludeImage(room.lastRoundImageId!));
+                  unawaited(_ensureInterludeGallery(room));
                   _interludeTimer?.cancel();
                   final msLeft = interludeUntil -
                       DateTime.now().millisecondsSinceEpoch;
@@ -2886,8 +2900,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                         .log('GUESS', 'LOCAL_GUESS_CANCELLED_BY_USER');
                     _closeLocalGuess();
                   },
-                  stunCardCount: room.isHeat ? 0 : (user?.stunCardCount ?? 0),
-                  onStunCard: (currentUserId == null || room.isHeat) ? null : (targetId) async {
+                  stunCardCount: (room.isHeat || !room.tricksEnabled)
+                      ? 0
+                      : (user?.stunCardCount ?? 0),
+                  onStunCard: (currentUserId == null ||
+                          room.isHeat ||
+                          !room.tricksEnabled)
+                      ? null
+                      : (targetId) async {
                     final success = await ref.read(roomServiceProvider).applyStunCard(
                       roomId: room.id,
                       actorUid: currentUserId,
@@ -2899,9 +2919,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       );
                     }
                   },
-                  guessBlock5Count: room.isHeat ? 0 : (user?.guessBlock5Count ?? 0),
-                  guessBlock10Count: room.isHeat ? 0 : (user?.guessBlock10Count ?? 0),
-                  blackoutCardCount: room.isHeat ? 0 : (user?.blackoutCardCount ?? 0),
+                  guessBlock5Count: (room.isHeat || !room.tricksEnabled)
+                      ? 0
+                      : (user?.guessBlock5Count ?? 0),
+                  guessBlock10Count: (room.isHeat || !room.tricksEnabled)
+                      ? 0
+                      : (user?.guessBlock10Count ?? 0),
+                  blackoutCardCount: (room.isHeat || !room.tricksEnabled)
+                      ? 0
+                      : (user?.blackoutCardCount ?? 0),
                   guessBlockedUntilMs: room.guessBlockedUntilMs,
                   blackoutActiveUntilMs: room.blackoutActiveUntilMs,
                   personalRevealedCells: _personalRevealedTiles,
@@ -2940,6 +2966,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                           ? _interludeImage
                           : null,
                       winnerName: room.lastRoundWinnerName,
+                      room: room,
+                      gallery: _interludeGallery,
                     ),
                   ],
                 );
@@ -3175,17 +3203,59 @@ class _RoundStartOverlayState extends State<_RoundStartOverlay> {
 class _RoundInterludeOverlay extends StatelessWidget {
   final GameImageModel? image;
   final String? winnerName;
+  final RoomModel room;
+  final Map<String, GameImageModel> gallery;
 
-  const _RoundInterludeOverlay({required this.image, required this.winnerName});
+  const _RoundInterludeOverlay({
+    required this.image,
+    required this.winnerName,
+    required this.room,
+    required this.gallery,
+  });
+
+  Widget _thumb(String url, double size, {bool glow = false}) => Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(size * 0.12),
+          boxShadow: glow
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFFD4AF37).withOpacity(0.35),
+                    blurRadius: 24,
+                  ),
+                ]
+              : null,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(size * 0.12),
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: url.startsWith('assets/')
+                ? Image.asset(url, fit: BoxFit.cover)
+                : CachedNetworkImage(imageUrl: url, fit: BoxFit.cover),
+          ),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
     final url = image?.imageUrl;
     final name = winnerName?.trim();
+    final hasWinner = name != null && name.isNotEmpty;
+    final plusPoints =
+        (room.selectedDifficulty ?? Difficulty.easy).winReward;
+    // דירוג מעודכן: הניקוד של הסבב כבר נזקף בטרנזקציית הניחוש.
+    final standings = room.players.values.toList()
+      ..sort((a, b) => b.score.compareTo(a.score));
+    // התמונות שכבר נפתרו במקצה (כולל של הסבב שהסתיים) — "הסיפור עד כה".
+    final doneIds =
+        room.heatImageIds.take(room.heatRoundIndex).toList(growable: false);
+    const medals = ['🥇', '🥈', '🥉'];
+
     return Positioned.fill(
       child: AbsorbPointer(
         child: Container(
-          color: Colors.black.withOpacity(0.9),
+          color: Colors.black.withOpacity(0.92),
           alignment: Alignment.center,
           child: Directionality(
             textDirection: TextDirection.rtl,
@@ -3195,62 +3265,133 @@ class _RoundInterludeOverlay extends StatelessWidget {
               curve: Curves.easeOutBack,
               builder: (context, t, child) => Opacity(
                 opacity: t.clamp(0.0, 1.0),
-                child: Transform.scale(scale: 0.85 + 0.15 * t, child: child),
+                child: Transform.scale(scale: 0.9 + 0.1 * t, child: child),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    (name != null && name.isNotEmpty)
-                        ? '🎉 $name ניחש נכון!'
-                        : 'אף אחד לא ניחש הפעם',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (url != null)
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFD4AF37).withOpacity(0.35),
-                            blurRadius: 28,
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(18),
-                        child: SizedBox(
-                          width: 210,
-                          height: 210,
-                          child: url.startsWith('assets/')
-                              ? Image.asset(url, fit: BoxFit.cover)
-                              : CachedNetworkImage(
-                                  imageUrl: url, fit: BoxFit.cover),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 340),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        hasWinner ? '🎉 $name ניחש נכון!' : 'אף אחד לא ניחש הפעם',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
-                    ),
-                  const SizedBox(height: 14),
-                  Text(
-                    image?.answer ?? '',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFFFFE082),
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                    ),
+                      const SizedBox(height: 12),
+                      if (url != null) _thumb(url, 150, glow: true),
+                      const SizedBox(height: 10),
+                      Text(
+                        image?.answer ?? '',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFFFFE082),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      // ── טבלת הניקוד ─────────────────────────────────────
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0D1E30).withOpacity(0.92),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: Colors.white.withOpacity(0.12)),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (var i = 0; i < standings.length; i++)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 3),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 26,
+                                      child: Text(
+                                        i < medals.length
+                                            ? medals[i]
+                                            : '${i + 1}.',
+                                        style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 15),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Text(
+                                        standings[i].name,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: standings[i].name == name
+                                              ? const Color(0xFFFFE082)
+                                              : Colors.white,
+                                          fontSize: 15,
+                                          fontWeight:
+                                              standings[i].name == name
+                                                  ? FontWeight.w900
+                                                  : FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    if (hasWinner &&
+                                        standings[i].name == name)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                            left: 6),
+                                        child: Text(
+                                          '+$plusPoints',
+                                          style: const TextStyle(
+                                            color: Color(0xFF56D364),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                      ),
+                                    Text(
+                                      '${standings[i].score}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      // ── התמונות שנחשפו עד כה ────────────────────────────
+                      if (doneIds.length > 1) ...[
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            for (final id in doneIds)
+                              if (gallery[id] != null)
+                                _thumb(gallery[id]!.imageUrl, 44),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+                      const Text(
+                        'התמונה הבאה עוד רגע…',
+                        style: TextStyle(color: Colors.white54, fontSize: 13),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 22),
-                  const Text(
-                    'התמונה הבאה עוד רגע…',
-                    style: TextStyle(color: Colors.white54, fontSize: 14),
-                  ),
-                ],
+                ),
               ),
             ),
           ),

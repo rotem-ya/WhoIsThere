@@ -16,6 +16,8 @@ import 'core/theme/app_styles.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_router.dart';
 import 'firebase_options.dart';
+import 'package:go_router/go_router.dart';
+import 'models/user_model.dart';
 import 'providers/providers.dart';
 import 'services/content_manifest_service.dart';
 import 'services/cosmetics_catalog_service.dart';
@@ -23,6 +25,7 @@ import 'services/notification_service.dart';
 import 'services/qa_logger_service.dart';
 import 'services/report_service.dart';
 import 'widgets/common/friend_request_banner.dart';
+import 'widgets/common/game_invite_banner.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'services/settings_service.dart';
 
@@ -241,10 +244,55 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp>
             currentPath.startsWith('/vote-') ||
             currentPath.startsWith('/win/') ||
             currentPath.startsWith('/lobby/');
-        if (!inActiveGame) router.go('/friends');
+        if (inActiveGame) return;
+        // הזמנת משחק: קפיצה ישירה ללובי של המזמין (בלי תחנת ביניים במסך
+        // החברים). נכשל/חסר קוד → נופל למסך החברים, שם הבאנר ממתין.
+        if (message.data['type'] == 'game_invite' &&
+            (message.data['code'] as String? ?? '').isNotEmpty) {
+          unawaited(_joinFromPush(
+              message.data['code'] as String, router));
+          return;
+        }
+        router.go('/friends');
       } catch (_) {}
     };
     await NotificationService.instance.init();
+  }
+
+  /// Joins a room straight from a tapped game-invite push. Waits briefly for
+  /// the signed-in user on cold start; any failure lands on the friends
+  /// screen where the invite banner offers the same join.
+  Future<void> _joinFromPush(String code, GoRouter router) async {
+    try {
+      UserModel? me = ref.read(currentUserProvider).valueOrNull;
+      for (var i = 0; i < 20 && me == null; i++) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        me = ref.read(currentUserProvider).valueOrNull;
+      }
+      if (me == null) {
+        router.go('/friends');
+        return;
+      }
+      final room = await ref.read(roomServiceProvider).joinRoom(
+            code: code,
+            userId: me.id,
+            userName: me.name,
+            userPhotoUrl: me.photoUrl,
+          );
+      if (room == null) {
+        router.go('/friends');
+        return;
+      }
+      ref.read(currentRoomIdProvider.notifier).state = room.id;
+      router.go('/lobby/${room.id}');
+      QaLoggerService.instance
+          .log('INVITE', 'PUSH_JOIN room=${room.id.substring(0, 6)}');
+    } catch (e) {
+      QaLoggerService.instance.log('INVITE', 'PUSH_JOIN_ERROR $e');
+      try {
+        router.go('/friends');
+      } catch (_) {}
+    }
   }
 
   /// iOS App Tracking Transparency: request authorization once the app is
@@ -403,6 +451,8 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp>
               children: [
                 child ?? const SizedBox.shrink(),
                 const FriendRequestBanner(),
+                // הזמנות משחק — באנר גלובלי עם "הצטרף" ישיר ללובי.
+                const GameInviteBanner(),
               ],
             ),
           ),
