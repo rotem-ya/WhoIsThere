@@ -217,6 +217,7 @@ class ContentManifestService {
       cost: bundled.cost,
       imageUrl: useImage ? overrideUrl : bundled.imageUrl,
       thumbnailUrl: useImage ? overrideUrl : bundled.thumbnailUrl,
+      source: bundled.source,
     );
   }
 

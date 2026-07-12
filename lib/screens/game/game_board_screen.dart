@@ -3301,6 +3301,11 @@ class _RoundInterludeOverlay extends StatelessWidget {
                           fontWeight: FontWeight.w900,
                         ),
                       ),
+                      if (room.isProverbs && image != null)
+                        _ProverbMeaningCard(
+                          meaning: image!.facts.isNotEmpty ? image!.facts.first : null,
+                          source: image!.source,
+                        ),
                       const SizedBox(height: 14),
                       // ── טבלת הניקוד ─────────────────────────────────────
                       Container(
@@ -3401,6 +3406,61 @@ class _RoundInterludeOverlay extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// פירוש + מקור הפתגם, מוצג בין-סבבים במשחק "זהו את הפתגם" בלבד. facts[0]
+/// כבר קיים כפירוש; source הוא שדה נפרד (proverbs.json), לא חלק ממנגנון
+/// הרמזים הנרכשים כדי שיוצג תמיד ולא ייצרך כרמז בתשלום.
+class _ProverbMeaningCard extends StatelessWidget {
+  final String? meaning;
+  final String? source;
+
+  const _ProverbMeaningCard({required this.meaning, required this.source});
+
+  @override
+  Widget build(BuildContext context) {
+    if ((meaning == null || meaning!.isEmpty) &&
+        (source == null || source!.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (meaning != null && meaning!.isNotEmpty)
+              Text(
+                meaning!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            if (source != null && source!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                source!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

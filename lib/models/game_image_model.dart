@@ -14,6 +14,7 @@ class GameImageModel extends Equatable {
   final int cost;
   final String imageUrl;
   final String thumbnailUrl;
+  final String? source;
 
   const GameImageModel({
     required this.id,
@@ -22,6 +23,7 @@ class GameImageModel extends Equatable {
     this.acceptedAnswers = const [],
     this.facts = const [],
     required this.category,
+    this.source,
     this.isPremium = false,
     this.cost = 0,
     required this.imageUrl,

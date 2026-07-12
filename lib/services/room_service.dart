@@ -256,6 +256,7 @@ class RoomService {
       category: ImageCategory.israeliLandmark,
       imageUrl: asset,
       thumbnailUrl: asset,
+      source: place['source'] as String?,
     );
   }
 
