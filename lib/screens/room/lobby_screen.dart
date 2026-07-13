@@ -680,6 +680,18 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                     : null,
                               ),
                             ],
+                            if (room.isFriendsGame) ...[
+                              const SizedBox(height: 8),
+                              _LetterTurnToggleRow(
+                                enabled: room.letterTurnEnabled,
+                                isHost: isHost,
+                                onChanged: isHost
+                                    ? (v) => ref
+                                        .read(roomServiceProvider)
+                                        .setLetterTurnEnabled(widget.roomId, v)
+                                    : null,
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -1359,6 +1371,18 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
                       : null,
                 ),
               ],
+              if (liveRoom != null && liveRoom.isFriendsGame) ...[
+                const SizedBox(height: 12),
+                _LetterTurnToggleRow(
+                  enabled: liveRoom.letterTurnEnabled,
+                  isHost: isHost,
+                  onChanged: isHost
+                      ? (v) => ref
+                          .read(roomServiceProvider)
+                          .setLetterTurnEnabled(widget.roomId, v)
+                      : null,
+                ),
+              ],
               if (me != null) ...[
                 const SizedBox(height: 14),
                 Align(
@@ -1844,6 +1868,69 @@ class _TricksToggleRow extends StatelessWidget {
                   enabled
                       ? 'כרטיסי חסימה, החשכה ועצירה פעילים'
                       : 'משחק נקי, בלי כרטיסי פעולה',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.55),
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: enabled,
+            onChanged: onChanged,
+            activeColor: const Color(0xFF8B4FBF),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Host-only toggle for the turn-based letter-guess hint layer (off by
+/// default): each player's turn, guess one letter and every occurrence in the
+/// answer reveals at once. Works alongside the normal reveal/guess race in
+/// every game mode (places, heat, proverbs).
+class _LetterTurnToggleRow extends StatelessWidget {
+  final bool enabled;
+  final bool isHost;
+  final ValueChanged<bool>? onChanged;
+
+  const _LetterTurnToggleRow({
+    required this.enabled,
+    required this.isHost,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D1E30).withOpacity(0.85),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Row(
+        children: [
+          Text(enabled ? '🔤' : '🔠', style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'ניחוש אותיות בתורות',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  enabled
+                      ? 'כל שחקן מנחש אות בתורו, 5 שניות לבחירה'
+                      : 'כבוי, המשחק נשאר כרגיל',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.55),
                     fontSize: 11.5,

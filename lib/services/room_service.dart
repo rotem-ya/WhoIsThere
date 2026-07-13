@@ -1172,6 +1172,16 @@ class RoomService {
         .log('LOBBY', 'TRICKS_TOGGLE roomId=${roomId.substring(0, roomId.length.clamp(0, 6))} enabled=$enabled');
   }
 
+  /// Friends-lobby host setting: enables/disables the turn-based letter-guess
+  /// hint layer for this room (see [RoomModel.isLetterTurnActive]). Off by
+  /// default; harmless to flip mid-wait since the round-reset paths read the
+  /// live flag fresh each round.
+  Future<void> setLetterTurnEnabled(String roomId, bool enabled) async {
+    await _rooms.doc(roomId).update({'letterTurnEnabled': enabled});
+    QaLoggerService.instance.log('LOBBY',
+        'LETTER_TURN_TOGGLE roomId=${roomId.substring(0, roomId.length.clamp(0, 6))} enabled=$enabled');
+  }
+
   /// Records a friends-lobby topic pick (playerId → list of categoryIds). Every
   /// participant picks exactly one; the host may pick as many as they like, and
   /// each extra adds a heat round (see [_buildFriendsHeat]).
