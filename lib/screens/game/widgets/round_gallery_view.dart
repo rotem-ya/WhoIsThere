@@ -5,15 +5,21 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:gal/gal.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../models/game_image_model.dart';
 
 /// Post-match gallery: every image played this match (all heat/proverbs
 /// rounds, or just the one round for a normal game), swipeable, each with its
 /// name/answer and any facts + source. "שמור לגלריה" saves the image (with
-/// the app's logo watermarked onto it) straight to the device's photo
-/// gallery via the gal plugin; "שתף" opens the native share sheet instead.
+/// the app's logo + a download-QR watermarked onto it) straight to the
+/// device's photo gallery via the gal plugin; "שתף" opens the native share
+/// sheet instead. The QR encodes this device's platform store link, so
+/// whoever the saved/shared photo reaches can scan straight to the download
+/// page — the whole point of carrying it on the image rather than as a
+/// separate caption, which a gallery save can't attach anyway.
 class RoundGalleryView extends StatefulWidget {
   final List<GameImageModel> images;
   final String answerLabel;
@@ -270,6 +276,11 @@ class _GalleryPage extends StatelessWidget {
                       bottom: 10,
                       child: _LogoBadge(),
                     ),
+                    const Positioned(
+                      right: 10,
+                      bottom: 10,
+                      child: _QrBadge(),
+                    ),
                   ],
                 ),
               ),
@@ -361,6 +372,36 @@ class _LogoBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Small scannable QR badge encoding this device's store link, so a saved or
+/// shared photo carries a working download link with it (a gallery save
+/// can't attach a text caption the way a share-sheet message can).
+class _QrBadge extends StatelessWidget {
+  const _QrBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 6,
+          ),
+        ],
+      ),
+      child: QrImageView(
+        data: AppConstants.storeUrl(),
+        size: 46,
+        padding: EdgeInsets.zero,
+        gapless: true,
       ),
     );
   }
