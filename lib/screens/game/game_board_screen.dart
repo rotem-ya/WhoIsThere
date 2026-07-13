@@ -35,6 +35,7 @@ import '../../services/analytics_service.dart';
 import '../../services/reward_calculator.dart';
 import '../../services/review_prompt_service.dart';
 import '../../services/qa_logger_service.dart';
+import '../../core/utils/letters_matcher.dart';
 import '../../widgets/game/letter_bank_input.dart';
 import 'widgets/detective_toolbar.dart';
 
@@ -89,6 +90,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   String _lastBotTurnKey = '';
   // One bot guess attempt per heat round (keyed by round + image).
   String _lastHeatBotKey = '';
+  // One bot letter-turn guess per turn (keyed by round + cycle).
+  String _lastLetterTurnBotKey = '';
   // Emoji reactions ("chat") — floating bubbles + ambient bot reactions.
   int _lastReactionTs = 0;
   int _reactionSeq = 0;
@@ -1173,6 +1176,62 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
               ? 0.30
               : 0.45;
       await _performBotGuess(snap, botId, correctChance);
+    });
+  }
+
+  // All keyboard keys the letter-turn bot may pick from (mirrors
+  // letter_turn_panel.dart's layout; kept local since that list is private).
+  static const List<String> _letterTurnBotAlphabet = [
+    'פ', 'ם', 'ן', 'ו', 'ט', 'א', 'ר', 'ק',
+    'ף', 'ך', 'ל', 'ח', 'י', 'ע', 'כ', 'ג', 'ד', 'ש',
+    'ץ', 'ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז', kGeresh,
+  ];
+
+  /// Turn-based letter guessing (additive hint layer): when it's a bot's turn,
+  /// it waits ~3.5s (per Rotem — reads clearly as "thinking" without feeling
+  /// laggy) then guesses one letter. Turn-gated, NOT the probabilistic
+  /// race-decision system above — every bot turn results in exactly one guess.
+  void _scheduleLetterTurnBot(RoomModel room) {
+    if (!room.isLetterTurnActive) return;
+    final turnUid = room.letterTurnPlayerId;
+    if (turnUid == null || !turnUid.startsWith('virtual_')) return;
+
+    final key = '${room.id}-letterTurn-${room.selectedImageId}-${room.letterTurnCycleId}';
+    if (_lastLetterTurnBotKey == key) return;
+    _lastLetterTurnBotKey = key;
+
+    Future.delayed(const Duration(milliseconds: 3500), () async {
+      if (!mounted) return;
+      final snap = await ref.read(roomServiceProvider).watchRoom(room.id).first;
+      if (snap == null || !snap.isLetterTurnActive) return;
+      if (snap.letterTurnPlayerId != turnUid) return; // turn already moved on
+      if (snap.letterTurnCycleId != room.letterTurnCycleId) return;
+
+      final guessedNorm =
+          snap.letterTurnGuessedLetters.map(normalizeHebrewFinals).toSet();
+      final puzzle = buildLettersPuzzle(snap.letterTurnAnswer!);
+      final unguessedAnswerLetters = puzzle.matchChars
+          .where((l) => !guessedNorm.contains(normalizeHebrewFinals(l)))
+          .toSet();
+
+      String letter;
+      if (unguessedAnswerLetters.isNotEmpty && _random.nextDouble() < 0.5) {
+        letter = unguessedAnswerLetters.elementAt(
+            _random.nextInt(unguessedAnswerLetters.length));
+      } else {
+        final pool = _letterTurnBotAlphabet
+            .where((l) => !guessedNorm.contains(normalizeHebrewFinals(l)))
+            .toList();
+        letter = pool.isEmpty
+            ? _letterTurnBotAlphabet[_random.nextInt(_letterTurnBotAlphabet.length)]
+            : pool[_random.nextInt(pool.length)];
+      }
+
+      await ref.read(roomServiceProvider).guessLetterTurn(
+            roomId: snap.id,
+            userId: turnUid,
+            letter: letter,
+          );
     });
   }
 
@@ -2710,6 +2769,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 _lastRoom = room;
                 _scheduleBotTurn(room);
                 _scheduleHeatBotTurn(room);
+                _scheduleLetterTurnBot(room);
                 _consumeReaction(room);
                 _maybeStartBotReactions(room);
                 _ensureChatSub(room.id);
