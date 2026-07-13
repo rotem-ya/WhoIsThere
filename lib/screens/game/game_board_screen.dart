@@ -315,10 +315,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int? _lastExpiredRevealDeadline;
   int? _lastExpiredGuessOpportunityDeadline;
   int? _lastExpiredGuessModeDeadline;
+  int? _lastExpiredLetterTurnDeadline;
   // Per-phase retry cooldowns — prevents tick-spam on failed attempts
   int? _revealTimeoutLastAttemptMs;
   int? _guessOppTimeoutLastAttemptMs;
   int? _guessModeTimeoutLastAttemptMs;
+  int? _letterTurnTimeoutLastAttemptMs;
   // Exponential backoff for auto-reveal when Firestore is unavailable
   int _revealBackoffMs = 2000;
   static const int _revealBackoffMax = 32000;
@@ -333,6 +335,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int? _lastDedupSkipLogMs_guessOpp;
   int _dedupSkipCount_guessMode = 0;
   int? _lastDedupSkipLogMs_guessMode;
+  int _dedupSkipCount_letterTurn = 0;
+  int? _lastDedupSkipLogMs_letterTurn;
   // Snapshot stale escalation — log each level once per stale period
   String? _snapshotStaleLevelLogged;
   // Watchdog stuck confirmation — log once when issue persists >10s
@@ -704,6 +708,42 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
             } else {
               QaLoggerService.instance.log('TURN',
                   'EXPIRY_RETRY_ALLOWED phase=guessMode deadline=${room.guessModeDeadlineMs}');
+            }
+          }
+        }
+      }
+
+      // ── Letter-turn timeout ───────────────────────────────────────────────────
+      // Additive hint-layer mechanic (host-toggled, off by default) — runs
+      // alongside whatever the tile-reveal/guess phases above are doing.
+      // Any client may call; transaction guards prevent double-execution.
+      if (room.isLetterTurnActive &&
+          room.letterTurnDeadlineMs != null &&
+          now >= room.letterTurnDeadlineMs!) {
+        if (_lastExpiredLetterTurnDeadline == room.letterTurnDeadlineMs) {
+          _dedupSkipCount_letterTurn++;
+          if (_dedupSkipCount_letterTurn == 1 ||
+              (_lastDedupSkipLogMs_letterTurn != null &&
+                  now - _lastDedupSkipLogMs_letterTurn! >= 30000)) {
+            _lastDedupSkipLogMs_letterTurn = now;
+            _dedupSkipCount_letterTurn = 0;
+          }
+        } else {
+          final lastAttempt = _letterTurnTimeoutLastAttemptMs;
+          if (lastAttempt != null && now - lastAttempt < 2000) {
+            // within cooldown — wait for retry window
+          } else {
+            _letterTurnTimeoutLastAttemptMs = now;
+            QaLoggerService.instance.log('TIMER',
+                'TIMER_FIRED type=letterTurn deadline=${room.letterTurnDeadlineMs}');
+            final committed = await ref.read(roomServiceProvider).expireLetterTurn(
+              roomId: room.id,
+            );
+            if (!mounted) return;
+            if (committed) {
+              _lastExpiredLetterTurnDeadline = room.letterTurnDeadlineMs;
+              _dedupSkipCount_letterTurn = 0;
+              _lastDedupSkipLogMs_letterTurn = null;
             }
           }
         }
