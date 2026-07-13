@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
-import '../../widgets/game/letter_bank_input.dart' show canonicalizeGeresh;
+import '../../widgets/game/letter_bank_input.dart'
+    show canonicalizeGeresh, normalizeHebrewFinals;
 
 /// Pure logic for the letters game (משחק האותיות) — a Wordle-style per-slot
 /// letter duel. No Flutter/UI dependencies so it stays trivially testable.
@@ -119,6 +120,22 @@ int tilesForFeedback(LetterFeedback feedback) {
 /// A player has solved the puzzle when every slot is locked.
 bool isPuzzleComplete(LettersPuzzle puzzle, Set<int> solvedSlots) =>
     puzzle.length > 0 && solvedSlots.length >= puzzle.length;
+
+/// Hangman-style guess for the main game's letter-turn mechanic (NOT the
+/// letters duel above): which slot indices in [puzzle] match [guessedLetter],
+/// with final letter forms folded together (guessing מ also reveals a ם slot)
+/// since this mechanic runs alongside the free-text race, which already
+/// treats final forms as equivalent — two different rules on screen at once
+/// would look like a bug. Empty set = miss.
+Set<int> matchAllSlotsForLetter(LettersPuzzle puzzle, String guessedLetter) {
+  final raw = guessedLetter.trim();
+  if (raw.isEmpty) return const {};
+  final g = normalizeHebrewFinals(raw);
+  return {
+    for (var i = 0; i < puzzle.matchChars.length; i++)
+      if (normalizeHebrewFinals(puzzle.matchChars[i]) == g) i,
+  };
+}
 
 /// On-screen keyboard coloring for a single key.
 enum KeyStatus { neutral, solved, present, absent }

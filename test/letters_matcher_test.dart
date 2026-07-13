@@ -99,4 +99,48 @@ void main() {
       expect(keyStatusFor(p, 'ת', const {}, {'ת'}), KeyStatus.present);
     });
   });
+
+  group('matchAllSlotsForLetter (main-game letter-turn mechanic)', () {
+    test('single occurrence returns that one slot', () {
+      final p = buildLettersPuzzle('חתול');
+      expect(matchAllSlotsForLetter(p, 'ח'), {0});
+    });
+
+    test('multiple occurrences return all matching slots at once', () {
+      final p = buildLettersPuzzle('בננה');
+      expect(matchAllSlotsForLetter(p, 'נ'), {1, 2});
+    });
+
+    test('zero occurrences returns an empty set', () {
+      final p = buildLettersPuzzle('חתול');
+      expect(matchAllSlotsForLetter(p, 'ז'), isEmpty);
+    });
+
+    test('geresh guess matches a geresh slot', () {
+      final p = buildLettersPuzzle("ג'ירפה");
+      expect(matchAllSlotsForLetter(p, "'"), {1});
+      expect(matchAllSlotsForLetter(p, '׳'), {1}); // canonicalized geresh mark
+    });
+
+    test('multi-word answer matches across both words', () {
+      final p = buildLettersPuzzle('אדום החזה'); // א ד ו ם | ה ח ז ה
+      expect(matchAllSlotsForLetter(p, 'ה'), {4, 7});
+    });
+
+    test('final-form folding: base guess matches a final-form slot', () {
+      final p = buildLettersPuzzle('חלון'); // slot 3 = ן
+      expect(matchAllSlotsForLetter(p, 'נ'), {3});
+    });
+
+    test('final-form folding: final-form guess matches a base-form slot', () {
+      final p = buildLettersPuzzle('בננה'); // slots 1,2 = נ (base)
+      expect(matchAllSlotsForLetter(p, 'ן'), {1, 2});
+    });
+
+    test('empty/whitespace guess returns an empty set', () {
+      final p = buildLettersPuzzle('חתול');
+      expect(matchAllSlotsForLetter(p, ''), isEmpty);
+      expect(matchAllSlotsForLetter(p, '   '), isEmpty);
+    });
+  });
 }

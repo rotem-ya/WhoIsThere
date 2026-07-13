@@ -55,6 +55,10 @@ class RoomModel extends Equatable {
   // for the normal single-round game. [heatRoundIndex] is the 0-based current round.
   final List<String> heatCategories;
   final List<String> heatImageIds;
+  // Parallel to [heatImageIds]: each round's answer text, precomputed at heat-
+  // build time so the letter-turn mechanic never needs an async image lookup
+  // inside a Firestore transaction when advancing rounds.
+  final List<String> heatAnswers;
   final int heatRoundIndex;
   // חי-צומח-דומם: ids של שחקנים אנושיים שהצביעו להחליף את הפריט הנוכחי (כשאף אחד
   // לא יודע את התשובה). בוטים ניטרליים — לא מצביעים ולא נספרים. מתאפס בכל החלפת
@@ -108,6 +112,30 @@ class RoomModel extends Equatable {
   // player's solved-slot count equals the answer length they win (auto-win).
   final Map<String, List<int>> lettersSolvedSlots;
 
+  // ── Letter-turn guessing (normal/heat/proverbs rooms) — additive, alongside
+  // the tile reveal and free-text race. Off unless the host enables it, and
+  // never active in a mode:'letters' room (that's the separate duel above).
+  // Host toggle, mirrors tricksEnabled. Default false: existing/new rooms are
+  // unaffected until a host opts in.
+  final bool letterTurnEnabled;
+  // Server-side snapshot of the CURRENT round's answer text, set only when
+  // letterTurnEnabled — the transaction never trusts a client-supplied answer.
+  // Null when the mechanic isn't active for this round.
+  final String? letterTurnAnswer;
+  // Shared (not per-player) board: slot indices revealed so far this round,
+  // in the buildLettersPuzzle(letterTurnAnswer) index space.
+  final List<int> letterTurnRevealedSlots;
+  // Shared set of letters already tried this round (hit or miss) — greys out
+  // the turn keyboard so nobody burns a turn re-guessing a tried letter.
+  final List<String> letterTurnGuessedLetters;
+  // Deadline for the current player's turn. Null when the mechanic isn't
+  // active for this round.
+  final int? letterTurnDeadlineMs;
+  // Bumped on every accepted guess AND every timeout-skip — lets the client
+  // dedup "already handled this exact turn" even when currentTurnIndex wraps
+  // back to a value it already had.
+  final int letterTurnCycleId;
+
   const RoomModel({
     required this.id,
     required this.code,
@@ -154,6 +182,7 @@ class RoomModel extends Equatable {
     this.matchExposureCount = 0,
     this.heatCategories = const [],
     this.heatImageIds = const [],
+    this.heatAnswers = const [],
     this.heatRoundIndex = 0,
     this.skipVotes = const [],
     this.topicChoices = const {},
@@ -169,6 +198,12 @@ class RoomModel extends Equatable {
     this.lettersRevealedTiles = const {},
     this.lettersGuessed = const {},
     this.lettersSolvedSlots = const {},
+    this.letterTurnEnabled = false,
+    this.letterTurnAnswer,
+    this.letterTurnRevealedSlots = const [],
+    this.letterTurnGuessedLetters = const [],
+    this.letterTurnDeadlineMs,
+    this.letterTurnCycleId = 0,
   });
 
   // True for the letters game (Wordle-style duel).
@@ -220,6 +255,27 @@ class RoomModel extends Equatable {
         .toList();
     if (activePlayers.isEmpty) return null;
     return activePlayers[currentTurnIndex % activePlayers.length];
+  }
+
+  // Letter-turn guessing is live for this round only when the host enabled it
+  // AND the round-reset already snapshotted an answer to guess against. Never
+  // true for the separate letters-duel mode.
+  bool get isLetterTurnActive =>
+      !isLetters && letterTurnEnabled && letterTurnAnswer != null && letterTurnAnswer!.isNotEmpty;
+
+  // Whose turn it is to guess a letter. Deliberately DERIVED from
+  // [letterTurnCycleId] rather than sharing [currentTurnIndex] — that field is
+  // already owned by the manual tile-reveal turn mechanic (see [revealPiece]),
+  // which advances on its own unrelated schedule; sharing it would make the
+  // letter turn silently jump to a different player whenever a tile reveal
+  // happens. [turnOrder] itself (the seat order) is read-only here and safe
+  // to share.
+  String? get letterTurnPlayerId {
+    final activeIds = turnOrder
+        .where((id) => !(players[id]?.isEliminated ?? false))
+        .toList();
+    if (activeIds.isEmpty) return null;
+    return activeIds[letterTurnCycleId % activeIds.length];
   }
 
   String get imageId => selectedImageId ?? '';
@@ -327,6 +383,7 @@ class RoomModel extends Equatable {
       matchExposureCount: (data['matchExposureCount'] as num?)?.toInt() ?? 0,
       heatCategories: List<String>.from(data['heatCategories'] ?? []),
       heatImageIds: List<String>.from(data['heatImageIds'] ?? []),
+      heatAnswers: List<String>.from(data['heatAnswers'] ?? []),
       heatRoundIndex: (data['heatRoundIndex'] as num?)?.toInt() ?? 0,
       skipVotes: List<String>.from(data['skipVotes'] ?? const []),
       topicChoices: (data['topicChoices'] as Map?)?.map(
@@ -355,6 +412,14 @@ class RoomModel extends Equatable {
             (k, v) => MapEntry(k.toString(), List<int>.from(v as List? ?? const [])),
           ) ??
           const {},
+      letterTurnEnabled: (data['letterTurnEnabled'] as bool?) ?? false,
+      letterTurnAnswer: data['letterTurnAnswer'] as String?,
+      letterTurnRevealedSlots:
+          List<int>.from(data['letterTurnRevealedSlots'] ?? const []),
+      letterTurnGuessedLetters:
+          List<String>.from(data['letterTurnGuessedLetters'] ?? const []),
+      letterTurnDeadlineMs: (data['letterTurnDeadlineMs'] as num?)?.toInt(),
+      letterTurnCycleId: (data['letterTurnCycleId'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -403,6 +468,7 @@ class RoomModel extends Equatable {
         'matchExposureCount': matchExposureCount,
         'heatCategories': heatCategories,
         'heatImageIds': heatImageIds,
+        'heatAnswers': heatAnswers,
         'heatRoundIndex': heatRoundIndex,
         'skipVotes': skipVotes,
         'topicChoices': topicChoices,
@@ -420,6 +486,12 @@ class RoomModel extends Equatable {
         'lettersRevealedTiles': lettersRevealedTiles,
         'lettersGuessed': lettersGuessed,
         'lettersSolvedSlots': lettersSolvedSlots,
+        'letterTurnEnabled': letterTurnEnabled,
+        if (letterTurnAnswer != null) 'letterTurnAnswer': letterTurnAnswer,
+        'letterTurnRevealedSlots': letterTurnRevealedSlots,
+        'letterTurnGuessedLetters': letterTurnGuessedLetters,
+        'letterTurnDeadlineMs': letterTurnDeadlineMs,
+        'letterTurnCycleId': letterTurnCycleId,
       };
 
   RoomModel copyWith({
@@ -464,6 +536,7 @@ class RoomModel extends Equatable {
     int? matchExposureCount,
     List<String>? heatCategories,
     List<String>? heatImageIds,
+    List<String>? heatAnswers,
     int? heatRoundIndex,
     List<String>? skipVotes,
     Map<String, List<String>>? topicChoices,
@@ -479,6 +552,12 @@ class RoomModel extends Equatable {
     Map<String, List<int>>? lettersRevealedTiles,
     Map<String, List<String>>? lettersGuessed,
     Map<String, List<int>>? lettersSolvedSlots,
+    bool? letterTurnEnabled,
+    String? letterTurnAnswer,
+    List<int>? letterTurnRevealedSlots,
+    List<String>? letterTurnGuessedLetters,
+    int? letterTurnDeadlineMs,
+    int? letterTurnCycleId,
   }) =>
       RoomModel(
         id: id,
@@ -530,6 +609,7 @@ class RoomModel extends Equatable {
         matchExposureCount: matchExposureCount ?? this.matchExposureCount,
         heatCategories: heatCategories ?? this.heatCategories,
         heatImageIds: heatImageIds ?? this.heatImageIds,
+        heatAnswers: heatAnswers ?? this.heatAnswers,
         heatRoundIndex: heatRoundIndex ?? this.heatRoundIndex,
         skipVotes: skipVotes ?? this.skipVotes,
         topicChoices: topicChoices ?? this.topicChoices,
@@ -547,6 +627,14 @@ class RoomModel extends Equatable {
         lettersRevealedTiles: lettersRevealedTiles ?? this.lettersRevealedTiles,
         lettersGuessed: lettersGuessed ?? this.lettersGuessed,
         lettersSolvedSlots: lettersSolvedSlots ?? this.lettersSolvedSlots,
+        letterTurnEnabled: letterTurnEnabled ?? this.letterTurnEnabled,
+        letterTurnAnswer: letterTurnAnswer ?? this.letterTurnAnswer,
+        letterTurnRevealedSlots:
+            letterTurnRevealedSlots ?? this.letterTurnRevealedSlots,
+        letterTurnGuessedLetters:
+            letterTurnGuessedLetters ?? this.letterTurnGuessedLetters,
+        letterTurnDeadlineMs: letterTurnDeadlineMs ?? this.letterTurnDeadlineMs,
+        letterTurnCycleId: letterTurnCycleId ?? this.letterTurnCycleId,
       );
 
   @override
@@ -595,6 +683,7 @@ class RoomModel extends Equatable {
         matchExposureCount,
         heatCategories,
         heatImageIds,
+        heatAnswers,
         heatRoundIndex,
         skipVotes,
         topicChoices,
@@ -610,5 +699,11 @@ class RoomModel extends Equatable {
         lettersRevealedTiles,
         lettersGuessed,
         lettersSolvedSlots,
+        letterTurnEnabled,
+        letterTurnAnswer,
+        letterTurnRevealedSlots,
+        letterTurnGuessedLetters,
+        letterTurnDeadlineMs,
+        letterTurnCycleId,
       ];
 }

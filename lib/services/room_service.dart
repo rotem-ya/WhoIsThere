@@ -356,6 +356,7 @@ class RoomService {
     var effectiveCategory = category;
     List<String> heatCategories = const [];
     List<String> heatImageIds = const [];
+    List<String> heatAnswers = const [];
 
     // Fast game (giant): quick-match builds a 3 random-topic heat now (so the
     // waiting room is matchable by exposure). Friends rooms DEFER the heat to
@@ -368,6 +369,7 @@ class RoomService {
       if (heat.imageIds.isNotEmpty) {
         heatCategories = heat.categories;
         heatImageIds = heat.imageIds;
+        heatAnswers = heat.answers;
         preImageId = heat.imageIds.first;
         effectiveCategory = heat.categories.first;
         final hostExp = await _getExposureCounts(effectiveHostId);
@@ -404,6 +406,7 @@ class RoomService {
       groupId: groupId,
       heatCategories: heatCategories,
       heatImageIds: heatImageIds,
+      heatAnswers: heatAnswers,
       heatRoundIndex: 0,
     );
 
@@ -755,6 +758,7 @@ class RoomService {
         await _rooms.doc(roomId).update({
           'heatCategories': heat.categories,
           'heatImageIds': heat.imageIds,
+          'heatAnswers': heat.answers,
           'heatRoundIndex': 0,
           'selectedImageId': heat.imageIds.first,
           'selectedCategory': heat.categories.first,
@@ -779,7 +783,8 @@ class RoomService {
     // Start the game first (it rewrites the whole players map), THEN record
     // priorExposureCount via field-path so it isn't clobbered by _startGame.
     // Honor the difficulty chosen at room creation (defaults to easy).
-    await _startGame(roomId, room, room.selectedDifficulty ?? Difficulty.easy);
+    await _startGame(roomId, room, room.selectedDifficulty ?? Difficulty.easy,
+        letterTurnAnswer: image.answer);
     await _recordPriorExposure(roomId, room.players, image.id);
     await _recordExposureForAll(room.players, image.id);
   }
@@ -847,9 +852,13 @@ class RoomService {
     );
 
     final imageId = room.selectedImageId;
+    final voteImage = imageId != null && imageId.isNotEmpty
+        ? await getImage(imageId)
+        : null;
     // Start the game first (it rewrites the whole players map), THEN record
     // priorExposureCount via field-path so it isn't clobbered by _startGame.
-    await _startGame(roomId, room, difficulty);
+    await _startGame(roomId, room, difficulty,
+        letterTurnAnswer: voteImage?.answer);
     if (imageId != null && imageId.isNotEmpty) {
       await _recordPriorExposure(roomId, room.players, imageId);
       await _recordExposureForAll(room.players, imageId);
@@ -1084,8 +1093,9 @@ class RoomService {
   Future<void> _startGame(
     String roomId,
     RoomModel room,
-    Difficulty difficulty,
-  ) async {
+    Difficulty difficulty, {
+    String? letterTurnAnswer,
+  }) async {
     final playerIds = room.players.keys.toList()..shuffle();
     final startScore = difficulty.startingPoints;
     final nowMs = DateTime.now().millisecondsSinceEpoch;
@@ -1146,6 +1156,7 @@ class RoomService {
       // Bots have no real client to call payMyEntryFee — seed their share now.
       'potTotal': room.players.values.where((p) => p.isBot).length * room.entryFee,
       'entryFeePaidPlayerIds': [],
+      ..._letterTurnRoundFields(letterTurnAnswer, nowMs),
     });
   }
 
@@ -1185,10 +1196,12 @@ class RoomService {
   /// Builds a heat plan (one image per topic slot) for the ordered [topics].
   /// Topics MAY repeat (e.g. two players picked the same one) — a different
   /// image is chosen per slot while the topic's pool allows it.
-  Future<({List<String> categories, List<String> imageIds})> _buildHeatForTopics(
+  Future<({List<String> categories, List<String> imageIds, List<String> answers})>
+      _buildHeatForTopics(
       List<String> topics, Map<String, PlayerModel> players) async {
     final cats = <String>[];
     final ids = <String>[];
+    final answers = <String>[];
     final used = <String>{};
     for (final catId in topics) {
       final pool = await _loadLocalImages(categoryId: catId);
@@ -1198,18 +1211,19 @@ class RoomService {
       final img = await _pickSmartImage(source, players);
       cats.add(catId);
       ids.add(img.id);
+      answers.add(img.answer);
       used.add(img.id);
     }
-    return (categories: cats, imageIds: ids);
+    return (categories: cats, imageIds: ids, answers: answers);
   }
 
   /// Quick-match heat: [count] random topics (repeats only if fewer distinct
   /// topics have content than the requested round count).
-  Future<({List<String> categories, List<String> imageIds})> _buildHeat(
-      Map<String, PlayerModel> players, {int count = 3}) async {
+  Future<({List<String> categories, List<String> imageIds, List<String> answers})>
+      _buildHeat(Map<String, PlayerModel> players, {int count = 3}) async {
     final avail = await _availableHeatTopics();
     if (avail.isEmpty) {
-      return (categories: <String>[], imageIds: <String>[]);
+      return (categories: <String>[], imageIds: <String>[], answers: <String>[]);
     }
     final shuffled = [...avail]..shuffle(Random());
     final topics = [
@@ -1223,11 +1237,11 @@ class RoomService {
   /// max(max(playerCount, 3), totalPicks) — the host's extra picks add rounds,
   /// while the ≥3 / ≥players floor is preserved. Any remaining slots (a player
   /// never picked, or the host pressed "start anyway") are filled randomly.
-  Future<({List<String> categories, List<String> imageIds})> _buildFriendsHeat(
-      RoomModel room) async {
+  Future<({List<String> categories, List<String> imageIds, List<String> answers})>
+      _buildFriendsHeat(RoomModel room) async {
     final avail = await _availableHeatTopics();
     if (avail.isEmpty) {
-      return (categories: <String>[], imageIds: <String>[]);
+      return (categories: <String>[], imageIds: <String>[], answers: <String>[]);
     }
     final rng = Random();
     String randTopic() => avail[rng.nextInt(avail.length)];
@@ -1259,9 +1273,28 @@ class RoomService {
     return _buildHeatForTopics(topics, room.players);
   }
 
+  /// Fresh letter-turn state for a new round: reveal/guess history and the
+  /// cycle counter (also the turn-rotation driver, see
+  /// [RoomModel.letterTurnPlayerId]) reset to zero, with a fresh 5s deadline
+  /// when [answer] resolved. When it didn't (content failed to load), the
+  /// mechanic simply stays inactive for the round ([RoomModel.isLetterTurnActive]
+  /// requires a non-empty answer) rather than blocking the round from starting.
+  Map<String, dynamic> _letterTurnRoundFields(String? answer, int nowMs) {
+    final hasAnswer = answer != null && answer.isNotEmpty;
+    return {
+      if (hasAnswer) 'letterTurnAnswer': answer,
+      'letterTurnRevealedSlots': <int>[],
+      'letterTurnGuessedLetters': <String>[],
+      'letterTurnDeadlineMs':
+          hasAnswer ? nowMs + EconomyConfig.letterTurnDurationMs : null,
+      'letterTurnCycleId': 0,
+    };
+  }
+
   /// Board-reset fields for a fresh round (new image), KEEPING scores, pot and
   /// entry-fee state. Shared by the heat-advance logic.
-  Map<String, dynamic> _roundResetUpdates(int gridSize, int nowMs) {
+  Map<String, dynamic> _roundResetUpdates(int gridSize, int nowMs,
+      {String? letterTurnAnswer}) {
     final totalCells = gridSize * gridSize;
     final allCells = List.generate(totalCells, (i) => i);
     final rng = Random();
@@ -1295,6 +1328,7 @@ class RoomService {
       'winnerId': null,
       // Fresh item → drop any skip-item votes from the previous one.
       'skipVotes': <String>[],
+      ..._letterTurnRoundFields(letterTurnAnswer, nowMs),
     };
   }
 
@@ -1309,10 +1343,13 @@ class RoomService {
   Map<String, dynamic> _heatAdvanceUpdates(RoomModel room, int nowMs,
       {String? winnerName}) {
     final next = room.heatRoundIndex + 1;
+    final nextAnswer =
+        next < room.heatAnswers.length ? room.heatAnswers[next] : null;
     return {
       // Base the round reset at the END of the interlude so the first reveal
       // of the new image fires after the pause — synchronized for everyone.
-      ..._roundResetUpdates(room.gridSize, nowMs + heatInterludeMs),
+      ..._roundResetUpdates(room.gridSize, nowMs + heatInterludeMs,
+          letterTurnAnswer: nextAnswer),
       'phase': GamePhase.playing.name,
       'heatRoundIndex': next,
       'selectedImageId': room.heatImageIds[next],
@@ -1431,12 +1468,18 @@ class RoomService {
           if (room.heatRoundIndex < newIds.length) {
             newIds[room.heatRoundIndex] = replacement.id;
           }
+          final newAnswers = [...room.heatAnswers];
+          if (room.heatRoundIndex < newAnswers.length) {
+            newAnswers[room.heatRoundIndex] = replacement.answer;
+          }
           tx.update(_rooms.doc(roomId), {
-            ..._roundResetUpdates(room.gridSize, nowMs),
+            ..._roundResetUpdates(room.gridSize, nowMs,
+                letterTurnAnswer: replacement.answer),
             'phase': GamePhase.playing.name,
             'selectedImageId': replacement.id,
             'selectedCategory': catId,
             'heatImageIds': newIds,
+            'heatAnswers': newAnswers,
             'skipVotes': <String>[],
           });
           QaLoggerService.instance.log('HEAT',

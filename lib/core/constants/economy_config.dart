@@ -100,6 +100,9 @@ class EconomyConfig {
   // ── Auto-reveal race mechanic ─────────────────────────────────
   static const int autoRevealIntervalMs = 1500;
 
+  // ── Turn-based letter guessing (main game modes) ───────────────
+  static const int letterTurnDurationMs = 5000;
+
   // ── Entry fee options (for future host selection UI) ─────────
   static const List<int> entryFeeOptions = [0, 10, 25, 50];
 
