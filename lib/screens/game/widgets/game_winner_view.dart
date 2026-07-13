@@ -14,9 +14,18 @@ class GameWinnerView extends StatefulWidget {
   final String winnerName;
   final String? placeName;
   final String? trivia;
+  final String? source;
   final String? imageUrl;
   final MatchRewardBreakdown? rewardBreakdown;
   final VoidCallback onHome;
+
+  /// "גילה את המקום" / "ניחש את הפתגם" / "זיהה נכון" — verb phrase after the
+  /// winner's name. Defaults to the original place-guessing wording.
+  final String winVerb;
+
+  /// "המקום" / "הפתגם" / "התשובה" — label before the answer. Defaults to
+  /// the original place-guessing wording.
+  final String answerLabel;
 
   /// Coins this player earned this match — used by the optional "double your
   /// coins" rewarded-ad button. 0 hides the button.
@@ -38,9 +47,12 @@ class GameWinnerView extends StatefulWidget {
     required this.winnerName,
     this.placeName,
     this.trivia,
+    this.source,
     this.imageUrl,
     this.rewardBreakdown,
     required this.onHome,
+    this.winVerb = 'גילה את המקום',
+    this.answerLabel = 'המקום',
     this.coinsWon = 0,
     this.onDoubleCoins,
     this.showRematch = false,
@@ -143,6 +155,9 @@ class _GameWinnerViewState extends State<GameWinnerView> {
                           winnerName: widget.winnerName,
                           placeName: widget.placeName,
                           trivia: widget.trivia,
+                          source: widget.source,
+                          winVerb: widget.winVerb,
+                          answerLabel: widget.answerLabel,
                           imageUrl: widget.imageUrl,
                           rewardBreakdown: widget.rewardBreakdown,
                           showButton: _showButton,
@@ -195,6 +210,9 @@ class _WinnerCard extends StatelessWidget {
   final String winnerName;
   final String? placeName;
   final String? trivia;
+  final String? source;
+  final String winVerb;
+  final String answerLabel;
   final String? imageUrl;
   final MatchRewardBreakdown? rewardBreakdown;
   final bool showButton;
@@ -213,6 +231,9 @@ class _WinnerCard extends StatelessWidget {
     required this.winnerName,
     this.placeName,
     this.trivia,
+    this.source,
+    required this.winVerb,
+    required this.answerLabel,
     this.imageUrl,
     required this.rewardBreakdown,
     required this.showButton,
@@ -294,7 +315,7 @@ class _WinnerCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '$winnerName גילה את המקום',
+            '$winnerName $winVerb',
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -307,7 +328,7 @@ class _WinnerCard extends StatelessWidget {
           if (placeName != null && placeName!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              'המקום: $placeName',
+              '$answerLabel: $placeName',
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -363,6 +384,20 @@ class _WinnerCard extends StatelessWidget {
                       height: 1.3,
                     ),
                   ),
+                  if (source != null && source!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      source!,
+                      textAlign: TextAlign.center,
+                      textDirection: TextDirection.rtl,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.55),
+                        fontSize: 11.5,
+                        fontStyle: FontStyle.italic,
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

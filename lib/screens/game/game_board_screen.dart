@@ -2548,10 +2548,27 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     final trivia = winFacts.isEmpty
                         ? null
                         : winFacts[(_image!.id.hashCode & 0x7fffffff) % winFacts.length];
+                    // "גילה את המקום" is wrong outside of israel_places — a
+                    // proverb isn't a place, and a heat category answer isn't
+                    // either. Wording per game type; source only exists for
+                    // proverbs today.
+                    final winVerb = room.isProverbs
+                        ? 'ניחש את הפתגם'
+                        : room.isHeat
+                            ? 'זיהה נכון'
+                            : 'גילה את המקום';
+                    final answerLabel = room.isProverbs
+                        ? 'הפתגם'
+                        : room.isHeat
+                            ? 'התשובה'
+                            : 'המקום';
                     return GameWinnerView(
                       winnerName: winnerName,
                       placeName: _image?.name,
                       trivia: trivia,
+                      source: room.isProverbs ? _image?.source : null,
+                      winVerb: winVerb,
+                      answerLabel: answerLabel,
                       imageUrl: _image?.imageUrl,
                       rewardBreakdown: _rewardBreakdown,
                       coinsWon: _rewardBreakdown?.total ?? 0,
