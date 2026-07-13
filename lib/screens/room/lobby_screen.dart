@@ -1395,62 +1395,7 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
                       : null,
                 ),
               ],
-              if (me != null) ...[
-                const SizedBox(height: 14),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text('הקבוצות שלי',
-                      style: TextStyle(
-                          color: Colors.white.withOpacity(0.75),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700)),
-                ),
-                const SizedBox(height: 8),
-                if (groups.isNotEmpty)
-                  SizedBox(
-                    height: 68,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      reverse: true,
-                      itemCount: groups.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (_, i) =>
-                          _groupChip(groups[i], me.id),
-                    ),
-                  )
-                else
-                  InkWell(
-                    onTap: () => _openCreateGroup(friends),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: Colors.white.withOpacity(0.12)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.group_add_rounded,
-                              color: Color(0xFF4A9EFF), size: 18),
-                          const SizedBox(width: 8),
-                          const Expanded(
-                            child: Text(
-                                'אין לך עדיין קבוצה קבועה, צרו אחת כדי להזמין בלחיצה',
-                                style: TextStyle(
-                                    color: Colors.white70, fontSize: 13)),
-                          ),
-                          const Icon(Icons.chevron_left_rounded,
-                              color: Colors.white38, size: 18),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               TextField(
                 controller: _searchCtrl,
                 onChanged: (v) => setState(() => _query = v),
@@ -1468,20 +1413,95 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
                       borderSide: BorderSide.none),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
+              // כל השאר גולל כיחידה אחת (כולל "הקבוצות שלי") כדי שלרשימת
+              // השמות יהיה שטח גלילה נוח — לא עוד Expanded דחוס מתחת לכל
+              // הכותרות/הבקרים, שגדל עם כל פיצ'ר חדש שנוסף מעליו.
               Expanded(
-                child: friends.isEmpty
-                    ? _emptyState()
-                    : (filtered.isEmpty
-                        ? const Center(
-                            child: Text('לא נמצא חבר בשם הזה',
-                                style: TextStyle(color: Colors.white54)))
-                        : ListView.separated(
-                            itemCount: filtered.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (_, i) => _friendRow(filtered[i]),
-                          )),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (me != null) ...[
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Text('הקבוצות שלי',
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.75),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                        const SizedBox(height: 8),
+                        if (groups.isNotEmpty)
+                          SizedBox(
+                            height: 68,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              reverse: true,
+                              itemCount: groups.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(width: 8),
+                              itemBuilder: (_, i) =>
+                                  _groupChip(groups[i], me.id),
+                            ),
+                          )
+                        else
+                          InkWell(
+                            onTap: () => _openCreateGroup(friends),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: Colors.white.withOpacity(0.12)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.group_add_rounded,
+                                      color: Color(0xFF4A9EFF), size: 18),
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                        'אין לך עדיין קבוצה קבועה, צרו אחת כדי להזמין בלחיצה',
+                                        style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 13)),
+                                  ),
+                                  const Icon(Icons.chevron_left_rounded,
+                                      color: Colors.white38, size: 18),
+                                ],
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 14),
+                      ],
+                      friends.isEmpty
+                          ? SizedBox(height: 260, child: _emptyState())
+                          : (filtered.isEmpty
+                              ? const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 40),
+                                  child: Center(
+                                    child: Text('לא נמצא חבר בשם הזה',
+                                        style:
+                                            TextStyle(color: Colors.white54)),
+                                  ),
+                                )
+                              : ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: filtered.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: 8),
+                                  itemBuilder: (_, i) =>
+                                      _friendRow(filtered[i]),
+                                )),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
