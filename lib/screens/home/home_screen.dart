@@ -440,9 +440,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // Fast game: rounds = max(players, 3), so a 4-player quick game has 4
           // topics. Only matters for the giant (חי-צומח-דומם) heat.
           heatRounds: targetPlayers,
-          // Proverbs: always a fixed 3-round heat of the proverbs category.
+          // Proverbs quick-match: a single round is enough (per Rotem) — the
+          // friends game is where multiple rounds make sense, since there the
+          // host picks a round count.
           heatTopics: _quickProverbs
-              ? List.filled(3, GameCategories.proverbs)
+              ? List.filled(1, GameCategories.proverbs)
               : null,
         );
         roomId = room.id;

@@ -749,11 +749,12 @@ class RoomService {
     // from the players' lobby topic picks (rounds = max(players, 3); missing
     // picks + min-3 filler are random). Quick-match rooms already have a heat.
     if (room.selectedDifficulty == Difficulty.giant && room.heatImageIds.isEmpty) {
-      // Proverbs rooms skip the lobby topic picks entirely — the heat is always
-      // 3 rounds of the proverbs category (fixed game format).
+      // Proverbs rooms skip the lobby topic picks entirely — the round count
+      // is the host's proverbsRounds pick (1-5) instead of lobby topic votes.
       final heat = room.isProverbs
           ? await _buildHeatForTopics(
-              List.filled(3, GameCategories.proverbs), room.players)
+              List.filled(room.proverbsRounds.clamp(1, 5), GameCategories.proverbs),
+              room.players)
           : await _buildFriendsHeat(room);
       if (heat.imageIds.isNotEmpty) {
         await _rooms.doc(roomId).update({
@@ -1180,6 +1181,15 @@ class RoomService {
     await _rooms.doc(roomId).update({'letterTurnEnabled': enabled});
     QaLoggerService.instance.log('LOBBY',
         'LETTER_TURN_TOGGLE roomId=${roomId.substring(0, roomId.length.clamp(0, 6))} enabled=$enabled');
+  }
+
+  /// Friends-lobby host setting: how many rounds ("זהו את הפתגם") the match
+  /// runs, 1-5. Only takes effect at [startGameDirectly] time, so it's safe
+  /// to change any time before the host starts the game.
+  Future<void> setProverbsRounds(String roomId, int rounds) async {
+    await _rooms.doc(roomId).update({'proverbsRounds': rounds.clamp(1, 5)});
+    QaLoggerService.instance.log('LOBBY',
+        'PROVERBS_ROUNDS_SET roomId=${roomId.substring(0, roomId.length.clamp(0, 6))} rounds=$rounds');
   }
 
   /// Records a friends-lobby topic pick (playerId → list of categoryIds). Every

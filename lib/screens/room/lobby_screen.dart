@@ -663,6 +663,18 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                               const SizedBox(height: 8),
                               _buildHeatSetup(room, currentUser),
                             ],
+                            if (room.isProverbs && room.isFriendsGame) ...[
+                              const SizedBox(height: 8),
+                              _ProverbsRoundsRow(
+                                rounds: room.proverbsRounds,
+                                isHost: isHost,
+                                onChanged: isHost
+                                    ? (v) => ref
+                                        .read(roomServiceProvider)
+                                        .setProverbsRounds(widget.roomId, v)
+                                    : null,
+                              ),
+                            ],
                             // תחבולות: בחירת מארח למשחק חברים קלאסי (בהיט
                             // הכרטיסים ממילא כבויים). כולם רואים את המצב; רק
                             // המארח יכול לשנות.
@@ -1880,6 +1892,88 @@ class _TricksToggleRow extends StatelessWidget {
             value: enabled,
             onChanged: onChanged,
             activeColor: const Color(0xFF8B4FBF),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Host-only round-count picker for "זהו את הפתגם" friends games (1-5).
+/// Quick-match proverbs always plays a single fixed round instead.
+class _ProverbsRoundsRow extends StatelessWidget {
+  final int rounds;
+  final bool isHost;
+  final ValueChanged<int>? onChanged;
+
+  const _ProverbsRoundsRow({
+    required this.rounds,
+    required this.isHost,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D1E30).withOpacity(0.85),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Row(
+        children: [
+          const Text('🧩', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'מספר סבבים',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  isHost ? 'המארח בוחר בין 1 ל-5' : 'נבחר על ידי המארח',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.55),
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: (isHost && onChanged != null && rounds > 1)
+                ? () => onChanged!(rounds - 1)
+                : null,
+            icon: const Icon(Icons.remove_circle_outline_rounded),
+            color: const Color(0xFFFFE082),
+            disabledColor: Colors.white24,
+          ),
+          SizedBox(
+            width: 22,
+            child: Text(
+              '$rounds',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: (isHost && onChanged != null && rounds < 5)
+                ? () => onChanged!(rounds + 1)
+                : null,
+            icon: const Icon(Icons.add_circle_outline_rounded),
+            color: const Color(0xFFFFE082),
+            disabledColor: Colors.white24,
           ),
         ],
       ),

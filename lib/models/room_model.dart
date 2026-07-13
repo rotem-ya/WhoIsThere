@@ -86,6 +86,10 @@ class RoomModel extends Equatable {
   // blackout, stun) are disabled for everyone in this room. Default true so
   // existing rooms and public games keep today's behavior.
   final bool tricksEnabled;
+  // Friends-game host setting: how many rounds a "זהו את הפתגם" match runs
+  // (1-5, host picks in the lobby). Quick-match proverbs always uses 1 round
+  // regardless of this field — it only matters when [isFriendsGame].
+  final int proverbsRounds;
   // Set when this room was opened FOR a saved friends group ("קבוצה קבועה"):
   // the finished game's scores roll into that group's cumulative scoreboard.
   final String? groupId;
@@ -190,6 +194,7 @@ class RoomModel extends Equatable {
     this.rematchRoomId,
     this.roundInterludeUntilMs,
     this.tricksEnabled = true,
+    this.proverbsRounds = 3,
     this.groupId,
     this.lastRoundImageId,
     this.lastRoundWinnerName,
@@ -395,6 +400,7 @@ class RoomModel extends Equatable {
       rematchRoomId: data['rematchRoomId'] as String?,
       roundInterludeUntilMs: (data['roundInterludeUntilMs'] as num?)?.toInt(),
       tricksEnabled: (data['tricksEnabled'] as bool?) ?? true,
+      proverbsRounds: (data['proverbsRounds'] as num?)?.toInt() ?? 3,
       groupId: data['groupId'] as String?,
       lastRoundImageId: data['lastRoundImageId'] as String?,
       lastRoundWinnerName: data['lastRoundWinnerName'] as String?,
@@ -477,6 +483,7 @@ class RoomModel extends Equatable {
         if (roundInterludeUntilMs != null)
           'roundInterludeUntilMs': roundInterludeUntilMs,
         'tricksEnabled': tricksEnabled,
+        'proverbsRounds': proverbsRounds,
         if (groupId != null) 'groupId': groupId,
         if (lastRoundImageId != null) 'lastRoundImageId': lastRoundImageId,
         if (lastRoundWinnerName != null)
@@ -544,6 +551,7 @@ class RoomModel extends Equatable {
     String? rematchRoomId,
     int? roundInterludeUntilMs,
     bool? tricksEnabled,
+    int? proverbsRounds,
     String? groupId,
     String? lastRoundImageId,
     String? lastRoundWinnerName,
@@ -619,6 +627,7 @@ class RoomModel extends Equatable {
         roundInterludeUntilMs:
             roundInterludeUntilMs ?? this.roundInterludeUntilMs,
         tricksEnabled: tricksEnabled ?? this.tricksEnabled,
+        proverbsRounds: proverbsRounds ?? this.proverbsRounds,
         groupId: groupId ?? this.groupId,
         lastRoundImageId: lastRoundImageId ?? this.lastRoundImageId,
         lastRoundWinnerName: lastRoundWinnerName ?? this.lastRoundWinnerName,
@@ -694,6 +703,7 @@ class RoomModel extends Equatable {
         lastRoundWinnerName,
         mode,
         tricksEnabled,
+        proverbsRounds,
         groupId,
         secretWord,
         lettersRevealedTiles,
