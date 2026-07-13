@@ -7,6 +7,7 @@ import 'dart:math' show Random, min, pi, sin;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_styles.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -2688,6 +2689,16 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                         : room.isHeat
                             ? 'התשובה'
                             : 'המקום';
+                    // Same admin-controlled override the "share the app" /
+                    // update-notice flows already use (app_config/app →
+                    // androidUrl/iosUrl) — the hardcoded fallback URLs aren't
+                    // guaranteed to be live store listings.
+                    final updateInfo =
+                        ref.watch(appUpdateInfoProvider).valueOrNull;
+                    final storeUrl = AppConstants.storeUrl(
+                      androidOverride: updateInfo?.androidUrl,
+                      iosOverride: updateInfo?.iosUrl,
+                    );
                     return GameWinnerView(
                       winnerName: winnerName,
                       placeName: _image?.name,
@@ -2699,6 +2710,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       rewardBreakdown: _rewardBreakdown,
                       coinsWon: _rewardBreakdown?.total ?? 0,
                       galleryImages: _galleryImages,
+                      galleryStoreUrl: storeUrl,
                       onDoubleCoins: () async {
                         final uid = currentUserId;
                         if (uid == null) return false;

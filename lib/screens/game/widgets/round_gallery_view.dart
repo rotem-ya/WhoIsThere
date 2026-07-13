@@ -25,11 +25,18 @@ class RoundGalleryView extends StatefulWidget {
   final String answerLabel;
   final int initialIndex;
 
+  /// Store link the QR badge encodes. Callers should resolve this from the
+  /// admin-controlled override (app_config/app → androidUrl/iosUrl) the same
+  /// way the "share the app" flow does — the hardcoded AppConstants default
+  /// is a last-resort fallback, not guaranteed to be a live store listing.
+  final String? storeUrl;
+
   const RoundGalleryView({
     super.key,
     required this.images,
     required this.answerLabel,
     this.initialIndex = 0,
+    this.storeUrl,
   });
 
   @override
@@ -142,6 +149,9 @@ class _RoundGalleryViewState extends State<RoundGalleryView> {
                   image: widget.images[i],
                   answerLabel: widget.answerLabel,
                   boundaryKey: _boundaryKeys[i],
+                  storeUrl: (widget.storeUrl ?? '').trim().isNotEmpty
+                      ? widget.storeUrl!.trim()
+                      : AppConstants.storeUrl(),
                 ),
               ),
             ),
@@ -236,11 +246,13 @@ class _GalleryPage extends StatelessWidget {
   final GameImageModel image;
   final String answerLabel;
   final GlobalKey boundaryKey;
+  final String storeUrl;
 
   const _GalleryPage({
     required this.image,
     required this.answerLabel,
     required this.boundaryKey,
+    required this.storeUrl,
   });
 
   @override
@@ -276,10 +288,10 @@ class _GalleryPage extends StatelessWidget {
                       bottom: 10,
                       child: _LogoBadge(),
                     ),
-                    const Positioned(
+                    Positioned(
                       right: 10,
                       bottom: 10,
-                      child: _QrBadge(),
+                      child: _QrBadge(storeUrl: storeUrl),
                     ),
                   ],
                 ),
@@ -381,7 +393,9 @@ class _LogoBadge extends StatelessWidget {
 /// shared photo carries a working download link with it (a gallery save
 /// can't attach a text caption the way a share-sheet message can).
 class _QrBadge extends StatelessWidget {
-  const _QrBadge();
+  final String storeUrl;
+
+  const _QrBadge({required this.storeUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -398,7 +412,7 @@ class _QrBadge extends StatelessWidget {
         ],
       ),
       child: QrImageView(
-        data: AppConstants.storeUrl(),
+        data: storeUrl,
         size: 46,
         padding: EdgeInsets.zero,
         gapless: true,

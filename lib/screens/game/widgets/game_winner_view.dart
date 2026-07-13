@@ -49,6 +49,12 @@ class GameWinnerView extends StatefulWidget {
   /// Empty hides the gallery entry point.
   final List<GameImageModel> galleryImages;
 
+  /// Store link the gallery's QR badge encodes — resolved by the caller from
+  /// the same admin-controlled override (app_config/app) the "share the app"
+  /// flow already uses, since the hardcoded default URLs aren't guaranteed to
+  /// be live store listings.
+  final String galleryStoreUrl;
+
   const GameWinnerView({
     super.key,
     required this.winnerName,
@@ -66,6 +72,7 @@ class GameWinnerView extends StatefulWidget {
     this.rematchReady = false,
     this.onRematch,
     this.galleryImages = const [],
+    this.galleryStoreUrl = '',
   });
 
   @override
@@ -181,6 +188,7 @@ class _GameWinnerViewState extends State<GameWinnerView> {
                           rematchBusy: _rematchBusy,
                           onRematch: _doRematch,
                           galleryImages: widget.galleryImages,
+                          galleryStoreUrl: widget.galleryStoreUrl,
                         ),
                       ),
                     ),
@@ -236,6 +244,7 @@ class _WinnerCard extends StatelessWidget {
   final bool rematchBusy;
   final VoidCallback onRematch;
   final List<GameImageModel> galleryImages;
+  final String galleryStoreUrl;
 
   const _WinnerCard({
     required this.winnerName,
@@ -258,6 +267,7 @@ class _WinnerCard extends StatelessWidget {
     required this.rematchBusy,
     required this.onRematch,
     this.galleryImages = const [],
+    this.galleryStoreUrl = '',
   });
 
   @override
@@ -555,6 +565,7 @@ class _WinnerCard extends StatelessWidget {
                     builder: (_) => RoundGalleryView(
                       images: galleryImages,
                       answerLabel: answerLabel,
+                      storeUrl: galleryStoreUrl,
                     ),
                   ),
                 ),
