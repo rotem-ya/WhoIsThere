@@ -549,7 +549,7 @@ class _WinnerCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               height: 46,
-              child: OutlinedButton.icon(
+              child: OutlinedButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => RoundGalleryView(
@@ -558,15 +558,26 @@ class _WinnerCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                icon: const Icon(Icons.photo_library_rounded, size: 20),
-                label: const Text('גלריית הסבב, שמור תמונות'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF87CEEB),
                   side: BorderSide(color: const Color(0xFF87CEEB).withOpacity(0.7)),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   textStyle: const TextStyle(
                       fontSize: 14.5, fontWeight: FontWeight.w800),
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    textDirection: TextDirection.rtl,
+                    children: const [
+                      Icon(Icons.photo_library_rounded, size: 20),
+                      SizedBox(width: 8),
+                      Text('גלריית הסבב ושמירה', textDirection: TextDirection.rtl),
+                    ],
+                  ),
                 ),
               ),
             ),

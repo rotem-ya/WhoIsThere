@@ -1,16 +1,19 @@
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:gal/gal.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../models/game_image_model.dart';
 
 /// Post-match gallery: every image played this match (all heat/proverbs
 /// rounds, or just the one round for a normal game), swipeable, each with its
-/// name/answer and any facts + source, and a save button that shares the
-/// image with the app's logo watermarked onto it.
+/// name/answer and any facts + source. "שמור לגלריה" saves the image (with
+/// the app's logo watermarked onto it) straight to the device's photo
+/// gallery via the gal plugin; "שתף" opens the native share sheet instead.
 class RoundGalleryView extends StatefulWidget {
   final List<GameImageModel> images;
   final String answerLabel;
@@ -32,6 +35,7 @@ class _RoundGalleryViewState extends State<RoundGalleryView> {
   late final List<GlobalKey> _boundaryKeys;
   late int _currentIndex;
   bool _saving = false;
+  bool _sharing = false;
 
   @override
   void initState() {
@@ -47,16 +51,46 @@ class _RoundGalleryViewState extends State<RoundGalleryView> {
     super.dispose();
   }
 
-  Future<void> _save() async {
+  Future<Uint8List?> _captureCurrentBytes() async {
+    final boundary = _boundaryKeys[_currentIndex].currentContext
+        ?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null) return null;
+    final image = await boundary.toImage(pixelRatio: 3.0);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return byteData?.buffer.asUint8List();
+  }
+
+  void _toast(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _saveToGallery() async {
     if (_saving) return;
     setState(() => _saving = true);
     try {
-      final boundary = _boundaryKeys[_currentIndex].currentContext
-          ?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) throw Exception('boundary not ready');
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      final bytes = byteData?.buffer.asUint8List();
+      final bytes = await _captureCurrentBytes();
+      if (bytes == null) throw Exception('encode failed');
+      final hasAccess = await Gal.hasAccess() || await Gal.requestAccess();
+      if (!hasAccess) {
+        _toast('אין הרשאה לשמור לגלריה');
+        return;
+      }
+      final name = widget.images[_currentIndex].answer;
+      await Gal.putImageBytes(bytes, name: 'whoisthere_$name');
+      _toast('התמונה נשמרה בגלריה 🖼️');
+    } catch (_) {
+      _toast('השמירה נכשלה, נסה שוב');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _share() async {
+    if (_sharing) return;
+    setState(() => _sharing = true);
+    try {
+      final bytes = await _captureCurrentBytes();
       if (bytes == null) throw Exception('encode failed');
       final name = widget.images[_currentIndex].answer;
       await Share.shareXFiles(
@@ -70,13 +104,9 @@ class _RoundGalleryViewState extends State<RoundGalleryView> {
         subject: 'מה בתמונה?',
       );
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('השמירה נכשלה, נסה שוב')),
-        );
-      }
+      _toast('השיתוף נכשל, נסה שוב');
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) setState(() => _sharing = false);
     }
   }
 
@@ -133,31 +163,60 @@ class _RoundGalleryViewState extends State<RoundGalleryView> {
               ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: FilledButton.icon(
-                  onPressed: _saving ? null : _save,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFD4AF37),
-                    disabledBackgroundColor:
-                        const Color(0xFFD4AF37).withOpacity(0.4),
-                    foregroundColor: const Color(0xFF07101F),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                    textStyle: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w900),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 52,
+                      child: FilledButton.icon(
+                        onPressed: _saving ? null : _saveToGallery,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFD4AF37),
+                          disabledBackgroundColor:
+                              const Color(0xFFD4AF37).withOpacity(0.4),
+                          foregroundColor: const Color(0xFF07101F),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                          textStyle: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w900),
+                        ),
+                        icon: _saving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.2, color: Color(0xFF07101F)),
+                              )
+                            : const Icon(Icons.download_rounded),
+                        label: const Text('שמור לגלריה'),
+                      ),
+                    ),
                   ),
-                  icon: _saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2.2, color: Color(0xFF07101F)),
-                        )
-                      : const Icon(Icons.ios_share_rounded),
-                  label: const Text('שמור תמונה'),
-                ),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 52,
+                    height: 52,
+                    child: OutlinedButton(
+                      onPressed: _sharing ? null : _share,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF87CEEB),
+                        side: BorderSide(
+                            color: const Color(0xFF87CEEB).withOpacity(0.7)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        padding: EdgeInsets.zero,
+                      ),
+                      child: _sharing
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2.2, color: Color(0xFF87CEEB)),
+                            )
+                          : const Icon(Icons.ios_share_rounded),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
