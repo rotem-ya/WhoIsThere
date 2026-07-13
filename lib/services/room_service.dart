@@ -18,7 +18,8 @@ import '../core/constants/game_categories.dart';
 import '../core/constants/game_constants.dart';
 import '../core/utils/room_code_generator.dart';
 import '../core/utils/letters_matcher.dart';
-import '../widgets/game/letter_bank_input.dart' show canonicalizeGeresh;
+import '../widgets/game/letter_bank_input.dart'
+    show canonicalizeGeresh, normalizeHebrewFinals;
 import 'content_manifest_service.dart';
 import 'qa_logger_service.dart';
 
@@ -3171,5 +3172,102 @@ class RoomService {
     }
 
     return (accepted: accepted, feedback: feedback, tilesRevealed: tilesRevealed, win: win);
+  }
+
+  // ── Letter-turn guessing (main game modes: places / heat / proverbs) ──────
+  // A host-toggled, additive hint layer (see [RoomModel.isLetterTurnActive]):
+  // each active player's turn, they may guess ONE Hebrew letter (Hangman
+  // style — every occurrence in the answer reveals at once, final forms
+  // folded together). Runs alongside the existing auto-reveal tiles and the
+  // free-text guess race; it never ends the round by itself. Follows the same
+  // safe pattern as [guessLetterInLettersGame]: the answer is snapshotted
+  // server-side ([RoomModel.letterTurnAnswer]) and never trusted from the
+  // client, unlike the pre-existing gap in [submitAnswer].
+
+  /// One turn = guess a single letter. Feedback is symmetric with a miss: the
+  /// turn always passes (see [RoomModel.letterTurnPlayerId]), win or lose.
+  /// Trick cards (guess-block/blackout/stun) don't gate this mechanic — it's
+  /// a separate, always-fair hint layer everyone can use on their turn.
+  Future<({bool accepted, Set<int> revealedSlots})> guessLetterTurn({
+    required String roomId,
+    required String userId,
+    required String letter,
+  }) async {
+    var accepted = false;
+    var revealedSlots = <int>{};
+
+    try {
+      await _firestore.runTransaction((tx) async {
+        final roomDoc = await tx.get(_rooms.doc(roomId));
+        if (!roomDoc.exists) return;
+        final room = RoomModel.fromFirestore(roomDoc);
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        if (room.phase != GamePhase.playing || !room.isLetterTurnActive) return;
+        if (room.letterTurnPlayerId != userId) return; // not your turn
+        final deadline = room.letterTurnDeadlineMs;
+        if (deadline != null && now > deadline) return; // expired, let expireLetterTurn advance it
+
+        final normalized = normalizeHebrewFinals(letter.trim());
+        if (normalized.isEmpty) return;
+        final alreadyGuessed = room.letterTurnGuessedLetters
+            .map(normalizeHebrewFinals)
+            .toSet();
+        if (alreadyGuessed.contains(normalized)) return; // no re-guessing a tried letter
+
+        accepted = true;
+        final puzzle = buildLettersPuzzle(room.letterTurnAnswer!);
+        final matched = matchAllSlotsForLetter(puzzle, letter);
+        final alreadyRevealed = room.letterTurnRevealedSlots.toSet();
+        revealedSlots = matched.difference(alreadyRevealed);
+
+        final updates = <String, dynamic>{
+          'letterTurnGuessedLetters': FieldValue.arrayUnion([normalized]),
+          'letterTurnCycleId': FieldValue.increment(1),
+          'letterTurnDeadlineMs': now + EconomyConfig.letterTurnDurationMs,
+        };
+        if (revealedSlots.isNotEmpty) {
+          updates['letterTurnRevealedSlots'] =
+              FieldValue.arrayUnion(revealedSlots.toList());
+        }
+        tx.update(_rooms.doc(roomId), updates);
+        QaLoggerService.instance.log('LETTER_TURN',
+            'GUESS uid=${_short(userId)} letter=$letter hit=${revealedSlots.isNotEmpty} slots=${revealedSlots.length}');
+      });
+    } catch (e) {
+      QaLoggerService.instance.log('LETTER_TURN', 'GUESS_ERROR error=$e');
+    }
+
+    return (accepted: accepted, revealedSlots: revealedSlots);
+  }
+
+  /// Called by the shared expiry timer when a player's 5s letter-turn window
+  /// passes with no guess. Nothing reveals — the turn simply moves on. Mirrors
+  /// [expireGuessOpportunity]'s no-op-on-mismatch, re-validate-on-server shape.
+  Future<bool> expireLetterTurn({required String roomId}) async {
+    var committed = false;
+    try {
+      await _firestore.runTransaction((tx) async {
+        final roomDoc = await tx.get(_rooms.doc(roomId));
+        if (!roomDoc.exists) return;
+        final room = RoomModel.fromFirestore(roomDoc);
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        if (room.phase != GamePhase.playing || !room.isLetterTurnActive) return;
+        final deadline = room.letterTurnDeadlineMs;
+        if (deadline == null || now < deadline) return;
+
+        tx.update(_rooms.doc(roomId), {
+          'letterTurnCycleId': FieldValue.increment(1),
+          'letterTurnDeadlineMs': now + EconomyConfig.letterTurnDurationMs,
+        });
+        committed = true;
+        QaLoggerService.instance.log('LETTER_TURN', 'TIMEOUT_ADVANCE roomId=$roomId');
+      });
+    } catch (e) {
+      QaLoggerService.instance.log('LETTER_TURN', 'TIMEOUT_ADVANCE_ERROR error=$e');
+      return false;
+    }
+    return committed;
   }
 }
