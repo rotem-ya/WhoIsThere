@@ -196,9 +196,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     // When the picks already cover every round, the others' pick is optional.
     final covered = _picksCoverHeat(room);
     final title = isHost
-        ? 'בחרו נושא — אפשר כמה שתרצו'
+        ? 'בחרו נושא, אפשר כמה שתרצו'
         : (covered
-            ? 'הנושאים למקצה כבר נבחרו — אפשר להוסיף עוד'
+            ? 'הנושאים למקצה כבר נבחרו, אפשר להוסיף עוד'
             : 'בחרו נושא למקצה');
     return Container(
       width: double.infinity,
@@ -364,7 +364,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       duration: const Duration(seconds: 2),
       content: Text(alreadyPicked
-          ? 'כבר בחרת נושא — רק המארח יכול לבטל את הבחירה'
+          ? 'כבר בחרת נושא, רק המארח יכול לבטל את הבחירה'
           : 'רק המארח יכול לבטל בחירת נושא'),
     ));
   }

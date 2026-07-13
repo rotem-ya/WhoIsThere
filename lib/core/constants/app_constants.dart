@@ -38,7 +38,7 @@ class AppConstants {
 
     final b = StringBuffer()
       ..writeln('בואו לשחק איתי ב"מה בתמונה?" 🖼️')
-      ..writeln('משחק ניחוש תמונות מהיר וכיפי — מי מזהה ראשון מנצח!')
+      ..writeln('משחק ניחוש תמונות מהיר וכיפי, מי מזהה ראשון מנצח!')
       ..writeln()
       ..writeln('📲 הורדה:')
       ..writeln('אנדרואיד: $playLink');

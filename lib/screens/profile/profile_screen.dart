@@ -800,7 +800,7 @@ class _SupportCodeCard extends StatelessWidget {
         Clipboard.setData(ClipboardData(text: value));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('קוד התמיכה הועתק — שלח אותו לתמיכה'),
+            content: const Text('קוד התמיכה הועתק, שלח אותו לתמיכה'),
             duration: const Duration(seconds: 2),
             backgroundColor: Colors.green.shade800,
           ),
@@ -910,7 +910,7 @@ class _AccountSection extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              '⚠️ אתה משחק כאורח — מחיקת האפליקציה תמחק את כל ההתקדמות!',
+              '⚠️ אתה משחק כאורח, מחיקת האפליקציה תמחק את כל ההתקדמות!',
               style: TextStyle(color: Color(0xFFFF8C00), fontSize: 11, fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,
             ),

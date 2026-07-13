@@ -92,7 +92,7 @@ class AvatarsScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
             child: Text(
-              'בחר אווטר — יופיע ליד השם שלך במשחק',
+              'בחר אווטר, יופיע ליד השם שלך במשחק',
               style: AppTextStyles.subtitleLight,
               textAlign: TextAlign.center,
             ),

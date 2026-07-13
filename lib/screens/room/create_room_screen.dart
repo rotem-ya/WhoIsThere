@@ -311,7 +311,7 @@ class _EntryFeeCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             selected == 0
-                ? 'ללא סיר — משחק חינמי'
+                ? 'ללא סיר, משחק חינמי'
                 : 'סיר: $selected × $playerCount = ${selected * playerCount} מטבעות',
             textAlign: TextAlign.center,
             style: AppTextStyles.subtitleDark,

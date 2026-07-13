@@ -2938,7 +2938,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     );
                     if (!success && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('הכרטיס לא הופעל — נסה שוב')),
+                        const SnackBar(content: Text('הכרטיס לא הופעל, נסה שוב')),
                       );
                     }
                   },

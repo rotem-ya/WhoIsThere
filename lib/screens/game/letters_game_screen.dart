@@ -672,7 +672,7 @@ class _Header extends StatelessWidget {
             child: Column(
               children: [
                 Text(
-                  isMyTurn ? 'תורך — בחר אות' : 'תור $oppName',
+                  isMyTurn ? 'תורך, בחר אות' : 'תור $oppName',
                   style: TextStyle(
                     color: isMyTurn ? _kGoldLight : Colors.white60,
                     fontSize: 17,

@@ -232,7 +232,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     if (_myCode == null) return;
                     Clipboard.setData(ClipboardData(text: _myCode!));
                     HapticFeedback.selectionClick();
-                    _toast('הקוד הועתק — שלחו אותו לחבר');
+                    _toast('הקוד הועתק, שלחו אותו לחבר');
                   },
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -256,7 +256,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'לחיצה על הקוד מעתיקה אותו. שלחו אותו לחבר —\nהוא יזין אותו למטה אצלו ותתחברו.',
+                  'לחיצה על הקוד מעתיקה אותו. שלחו אותו לחבר,\nהוא יזין אותו למטה אצלו ותתחברו.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white54, fontSize: 12),
                 ),

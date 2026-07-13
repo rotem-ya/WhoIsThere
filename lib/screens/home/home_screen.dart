@@ -178,7 +178,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final desc = kind == _GameKind.letters
         ? 'נחשו את המילה הנסתרת מאחורי התמונה'
         : kind == _GameKind.proverbs
-            ? 'התמונה רומזת על פתגם — מי יפענח ראשון?'
+            ? 'התמונה רומזת על פתגם, מי יפענח ראשון?'
             : 'מי יזהה את התמונה ראשון';
     const fee = EconomyConfig.gameEntryFee;
 
@@ -649,7 +649,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               } else {
                 setSheet(() => busy = false);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('לא ניתן כרגע — נסה דרך אחרת')),
+                  const SnackBar(content: Text('לא ניתן כרגע, נסה דרך אחרת')),
                 );
               }
             }

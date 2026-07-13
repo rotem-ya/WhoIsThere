@@ -209,7 +209,7 @@ class _EarnCoinsInfo extends StatelessWidget {
       ),
       child: Column(
         children: [
-          row('🎁', 'פרס יומי — התחבר כל יום'),
+          row('🎁', 'פרס יומי, התחבר כל יום'),
           row('🏆', 'ניצחונות ונקודות במשחקים'),
           row('🗺️', 'גילוי מקומות חדשים'),
         ],
@@ -275,7 +275,7 @@ class _CardsTab extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 6),
             child: Text(
-              'כרטיסי התקפה — לחץ על שחקן במשחק · כרטיסי עזר — בתפריט הכלים',
+              'כרטיסי התקפה: לחץ על שחקן במשחק · כרטיסי עזר: בתפריט הכלים',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white54, fontSize: 12),
             ),
