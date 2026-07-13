@@ -3018,6 +3018,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                               ));
                         }
                       : null,
+                  onGuessLetterTurn: currentUserId == null
+                      ? null
+                      : (letter) {
+                          unawaited(ref.read(roomServiceProvider).guessLetterTurn(
+                                roomId: room.id,
+                                userId: currentUserId,
+                                letter: letter,
+                              ));
+                        },
                 );
 
                 if (!interludeActive) return gameLayout;
