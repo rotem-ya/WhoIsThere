@@ -87,6 +87,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   GameImageModel? _image;
   String _loadedImageId = '';
+  // Post-match gallery: every image played this match, loaded once when the
+  // game finishes (see _loadGalleryImages).
+  String? _galleryLoadedForRoomId;
+  List<GameImageModel> _galleryImages = const [];
   String _lastBotTurnKey = '';
   // One bot guess attempt per heat round (keyed by round + image).
   String _lastHeatBotKey = '';
@@ -1094,6 +1098,28 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     }
   }
 
+  /// Post-match gallery: fetches every image actually played this match (all
+  /// heat/proverbs rounds in order, or just the one round for a normal game)
+  /// so GameWinnerView can offer a swipeable gallery + save-with-logo. Runs
+  /// once per finished room; failures just leave the gallery empty/partial.
+  Future<void> _loadGalleryImages(RoomModel room) async {
+    if (_galleryLoadedForRoomId == room.id) return;
+    _galleryLoadedForRoomId = room.id;
+    final ids = room.heatImageIds.isNotEmpty
+        ? room.heatImageIds
+        : (room.selectedImageId != null && room.selectedImageId!.isNotEmpty
+            ? [room.selectedImageId!]
+            : const <String>[]);
+    final images = <GameImageModel>[];
+    for (final id in ids) {
+      try {
+        final img = await ref.read(roomServiceProvider).getImage(id);
+        if (img != null) images.add(img);
+      } catch (_) {}
+    }
+    if (!mounted || images.isEmpty) return;
+    setState(() => _galleryImages = images);
+  }
 
   void _scheduleBotTurn(RoomModel room) {
     // In auto-reveal mode, bots no longer reveal tiles (guardian handles it).
@@ -2636,6 +2662,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     _triggerMatchReward(room, currentUserId);
                   });
+                  unawaited(_loadGalleryImages(room));
                   final hasWinner = room.winnerId != null && room.winnerId!.isNotEmpty;
                   if (hasWinner) {
                     final rawName = room.players[room.winnerId]?.name ?? '';
@@ -2671,6 +2698,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       imageUrl: _image?.imageUrl,
                       rewardBreakdown: _rewardBreakdown,
                       coinsWon: _rewardBreakdown?.total ?? 0,
+                      galleryImages: _galleryImages,
                       onDoubleCoins: () async {
                         final uid = currentUserId;
                         if (uid == null) return false;

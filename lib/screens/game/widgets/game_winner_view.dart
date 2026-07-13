@@ -7,8 +7,10 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/ad_constants.dart';
 import '../../../core/theme/app_styles.dart';
 import '../../../models/economy/match_reward_breakdown.dart';
+import '../../../models/game_image_model.dart';
 import '../../../widgets/common/banner_ad_widget.dart';
 import '../../../widgets/economy/coin_icon.dart';
+import 'round_gallery_view.dart';
 
 class GameWinnerView extends StatefulWidget {
   final String winnerName;
@@ -42,6 +44,11 @@ class GameWinnerView extends StatefulWidget {
   final bool rematchReady;
   final Future<void> Function()? onRematch;
 
+  /// Every image played this match (all heat/proverbs rounds, or just the
+  /// one for a normal game) — powers the post-match gallery + save button.
+  /// Empty hides the gallery entry point.
+  final List<GameImageModel> galleryImages;
+
   const GameWinnerView({
     super.key,
     required this.winnerName,
@@ -58,6 +65,7 @@ class GameWinnerView extends StatefulWidget {
     this.showRematch = false,
     this.rematchReady = false,
     this.onRematch,
+    this.galleryImages = const [],
   });
 
   @override
@@ -172,6 +180,7 @@ class _GameWinnerViewState extends State<GameWinnerView> {
                           rematchReady: widget.rematchReady,
                           rematchBusy: _rematchBusy,
                           onRematch: _doRematch,
+                          galleryImages: widget.galleryImages,
                         ),
                       ),
                     ),
@@ -226,6 +235,7 @@ class _WinnerCard extends StatelessWidget {
   final bool rematchReady;
   final bool rematchBusy;
   final VoidCallback onRematch;
+  final List<GameImageModel> galleryImages;
 
   const _WinnerCard({
     required this.winnerName,
@@ -247,6 +257,7 @@ class _WinnerCard extends StatelessWidget {
     required this.rematchReady,
     required this.rematchBusy,
     required this.onRematch,
+    this.galleryImages = const [],
   });
 
   @override
@@ -529,6 +540,33 @@ class _WinnerCard extends StatelessWidget {
                             textDirection: TextDirection.rtl,
                           ),
                         ),
+                ),
+              ),
+            ),
+          ],
+          if (galleryImages.isNotEmpty && showButton) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => RoundGalleryView(
+                      images: galleryImages,
+                      answerLabel: answerLabel,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.photo_library_rounded, size: 20),
+                label: const Text('גלריית הסבב, שמור תמונות'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF87CEEB),
+                  side: BorderSide(color: const Color(0xFF87CEEB).withOpacity(0.7)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  textStyle: const TextStyle(
+                      fontSize: 14.5, fontWeight: FontWeight.w800),
                 ),
               ),
             ),
