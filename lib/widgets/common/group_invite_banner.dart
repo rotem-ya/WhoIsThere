@@ -23,6 +23,7 @@ class GroupInviteBanner extends ConsumerStatefulWidget {
 class _GroupInviteBannerState extends ConsumerState<GroupInviteBanner> {
   String _dismissedKey = '';
   bool _busy = false;
+  final Set<String> _markedReadIds = {};
 
   static bool _suppressedPath(String path) =>
       path == '/' ||
@@ -91,6 +92,15 @@ class _GroupInviteBannerState extends ConsumerState<GroupInviteBanner> {
         final key = invites.map((i) => i.id).join(',');
         if (_suppressedPath(path) || key == _dismissedKey) {
           return const SizedBox.shrink();
+        }
+
+        // This banner being on screen right now means the player has seen
+        // it — mark every currently-listed invite read (fire-and-forget; no
+        // rebuild needed, so safe to do from inside build).
+        for (final inv in invites) {
+          if (_markedReadIds.add(inv.id)) {
+            ref.read(groupsServiceProvider).markGroupInviteRead(inv.id);
+          }
         }
 
         final first = invites.first;

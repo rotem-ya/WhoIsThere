@@ -249,6 +249,17 @@ class _GroupInviteCard extends ConsumerStatefulWidget {
 class _GroupInviteCardState extends ConsumerState<_GroupInviteCard> {
   bool _busy = false;
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.invite.readAt == null) {
+      // Fire-and-forget: this card being built means the invite is on
+      // screen now. No need to await/guard against dispose — the service
+      // method already swallows its own errors.
+      ref.read(groupsServiceProvider).markGroupInviteRead(widget.invite.id);
+    }
+  }
+
   Future<void> _accept() async {
     final me = ref.read(currentUserProvider).valueOrNull;
     if (me == null || _busy) return;
@@ -364,6 +375,9 @@ class _GroupCard extends ConsumerWidget {
     final standings = group.memberUids.toList()
       ..sort((a, b) => group.pointsOf(b).compareTo(group.pointsOf(a)));
     const medals = ['🥇', '🥈', '🥉'];
+    final pendingInvites =
+        ref.watch(groupPendingInvitesProvider(group.id)).valueOrNull ??
+            const [];
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -446,6 +460,45 @@ class _GroupCard extends ConsumerWidget {
                 ],
               ),
             ),
+          // הוזמנו ועדיין לא הצטרפו — כדי שלא ייראה כאילו "אין חברים" בלי
+          // הסבר. "נקראה" רק אחרי שהמוזמן ראה בפועל את כרטיס/באנר ההזמנה.
+          if (pendingInvites.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('ממתינים לאישור',
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.55),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700)),
+            for (final inv in pendingInvites)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: Text(
+                        inv.toName.isEmpty ? 'חבר' : inv.toName,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    Text(
+                      inv.readAt != null ? 'נקראה' : 'נשלחה',
+                      style: TextStyle(
+                        color: inv.readAt != null
+                            ? const Color(0xFF4A9EFF)
+                            : Colors.white38,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
           const SizedBox(height: 10),
           Row(
             children: [

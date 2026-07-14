@@ -232,6 +232,13 @@ final groupMessagesProvider = StreamProvider.autoDispose
     .family<List<ChatMessage>, String>((ref, groupId) =>
         ref.watch(groupsServiceProvider).messages(groupId));
 
+// Still-pending invites for a group the caller owns/is a member of — lets
+// the group card show who was invited and hasn't joined (and whether
+// they've opened the invite) instead of the owner just seeing "0 members".
+final groupPendingInvitesProvider = StreamProvider.autoDispose
+    .family<List<GroupInviteModel>, String>((ref, groupId) =>
+        ref.watch(groupsServiceProvider).pendingInvitesForGroup(groupId));
+
 // Cumulative friends leaderboard (me + friends, sorted by points). Recomputes
 // when my profile changes or my friends list changes; invalidate to refresh.
 final friendsLeaderboardProvider =

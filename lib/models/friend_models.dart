@@ -97,7 +97,16 @@ class GroupInviteModel {
   final String fromUid;
   final String fromName;
   final String toUid;
+  // The invitee's name at invite time — lets the group owner's "pending"
+  // list show a name without an extra live lookup (a stale name here is a
+  // cosmetic, low-stakes tradeoff, unlike the friends-list bug this
+  // mirrors — this is a short-lived invite, not a permanent record).
+  final String toName;
   final DateTime? createdAt;
+  // Set once, the first time the invitee's client actually displays this
+  // invite (the group-invite banner or the invite card) — lets the group
+  // owner tell "sent, not yet seen" apart from "seen, not yet decided".
+  final DateTime? readAt;
 
   const GroupInviteModel({
     required this.id,
@@ -106,7 +115,9 @@ class GroupInviteModel {
     required this.fromUid,
     required this.fromName,
     required this.toUid,
+    this.toName = '',
     this.createdAt,
+    this.readAt,
   });
 
   factory GroupInviteModel.fromDoc(DocumentSnapshot doc) {
@@ -118,7 +129,9 @@ class GroupInviteModel {
       fromUid: (data['fromUid'] as String?) ?? '',
       fromName: (data['fromName'] as String?) ?? '',
       toUid: (data['toUid'] as String?) ?? '',
+      toName: (data['toName'] as String?) ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      readAt: (data['readAt'] as Timestamp?)?.toDate(),
     );
   }
 }

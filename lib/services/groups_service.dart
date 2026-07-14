@@ -60,6 +60,7 @@ class GroupsService {
         myUid: myUid,
         myName: myName,
         toUid: m.uid,
+        toName: m.name,
       );
     }
     QaLoggerService.instance
@@ -98,6 +99,7 @@ class GroupsService {
     required String myUid,
     required String myName,
     required String toUid,
+    required String toName,
   }) async {
     await _groupInvites.doc('${toUid}_$groupId').set({
       'groupId': groupId,
@@ -105,6 +107,7 @@ class GroupsService {
       'fromUid': myUid,
       'fromName': myName,
       'toUid': toUid,
+      'toName': toName,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
@@ -115,6 +118,23 @@ class GroupsService {
           .where('toUid', isEqualTo: uid)
           .snapshots()
           .map((s) => s.docs.map(GroupInviteModel.fromDoc).toList());
+
+  /// All still-pending invites for [groupId] — lets the group owner see who
+  /// was invited and hasn't joined yet, and whether they've even opened the
+  /// invite ([GroupInviteModel.readAt]). A member who accepts simply stops
+  /// appearing here (their invite doc is deleted in [acceptGroupInvite]); a
+  /// decline behaves the same way today (no separate "declined" state).
+  Stream<List<GroupInviteModel>> pendingInvitesForGroup(String groupId) =>
+      _groupInvites
+          .where('groupId', isEqualTo: groupId)
+          .snapshots()
+          .map((s) => s.docs.map(GroupInviteModel.fromDoc).toList());
+
+  /// Marks [invite] as seen by its recipient. Best-effort, fire-and-forget —
+  /// never blocks rendering the invite. Idempotent: harmless to call again.
+  Future<void> markGroupInviteRead(String inviteId) => _groupInvites
+      .doc(inviteId)
+      .update({'readAt': FieldValue.serverTimestamp()}).catchError((_) {});
 
   /// Accepts [invite]: adds the recipient as a member (only now do they see
   /// the group), then removes the invite. Returns false (and just cleans up
