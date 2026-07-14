@@ -81,6 +81,19 @@ service cloud.firestore {
       match /friendGames/{gameId} {
         allow read, write: if signedIn();
       }
+
+      // All-games history (every mode, not just friends games) — powers the
+      // admin per-player stats view (opponents, host choices, result).
+      match /gameHistory/{roomId} {
+        allow read, write: if signedIn();
+      }
+
+      // Trick/card usage log (stun / guessBlock5 / guessBlock10 / blackout) —
+      // same admin stats view. Append-only in practice; broad signedIn()
+      // write matches the rest of this trusted-client app.
+      match /cardUsage/{entryId} {
+        allow read, write: if signedIn();
+      }
     }
 
     // ── Friend requests ───────────────────────────────────────────────────────

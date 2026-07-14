@@ -1585,6 +1585,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (_rewardApplied || uid == null) return;
     _rewardApplied = true;
 
+    // All games, every mode: record this match into MY all-games history
+    // (opponents, host choices, result) for the admin per-player stats view.
+    unawaited(
+        ref.read(roomServiceProvider).recordMyGameHistory(room: room, myUid: uid));
+
     // Friends games: record this match for the friends leaderboard + per-game
     // history. Each client records only its own result (idempotent per
     // player/room); best-effort, never blocks the reward flow.

@@ -2682,6 +2682,7 @@ class RoomService {
     required String targetUid,
   }) async {
     bool success = false;
+    String actorName = '', targetName = '';
     try {
       await _firestore.runTransaction((tx) async {
         final userSnap = await tx.get(_firestore.doc('users/$actorUid'));
@@ -2701,6 +2702,8 @@ class RoomService {
         tx.update(_rooms.doc(roomId), {
           'blockedGuessers.$targetUid': blockUntil,
         });
+        actorName = room.players[actorUid]?.name ?? '';
+        targetName = room.players[targetUid]?.name ?? '';
         success = true;
       });
     } catch (e) {
@@ -2709,6 +2712,13 @@ class RoomService {
     if (success) {
       QaLoggerService.instance.log('STUN',
           'STUN_CARD_APPLIED actor=${actorUid.substring(0, actorUid.length.clamp(0, 6))} target=${targetUid.substring(0, targetUid.length.clamp(0, 6))}');
+      unawaited(_logCardUsage(
+          type: 'stun',
+          roomId: roomId,
+          actorUid: actorUid,
+          actorName: actorName,
+          targetUid: targetUid,
+          targetName: targetName));
     }
     return success;
   }
@@ -2724,6 +2734,7 @@ class RoomService {
     final field = is10s ? 'guessBlock10Count' : 'guessBlock5Count';
     final duration = is10s ? EconomyConfig.guessBlock10DurationMs : EconomyConfig.guessBlock5DurationMs;
     bool success = false;
+    String actorName = '', targetName = '';
     try {
       await _firestore.runTransaction((tx) async {
         final userSnap = await tx.get(_firestore.doc('users/$actorUid'));
@@ -2738,6 +2749,8 @@ class RoomService {
         final unblockAt = DateTime.now().millisecondsSinceEpoch + duration;
         tx.update(_firestore.doc('users/$actorUid'), {field: FieldValue.increment(-1)});
         tx.update(_rooms.doc(roomId), {'guessBlockedUntilMs.$targetUid': unblockAt});
+        actorName = room.players[actorUid]?.name ?? '';
+        targetName = room.players[targetUid]?.name ?? '';
         success = true;
       });
     } catch (e) {
@@ -2746,6 +2759,13 @@ class RoomService {
     if (success) {
       QaLoggerService.instance.log('CARD',
           'GUESS_BLOCK_APPLIED is10s=$is10s actor=${actorUid.substring(0, actorUid.length.clamp(0, 6))} target=${targetUid.substring(0, targetUid.length.clamp(0, 6))}');
+      unawaited(_logCardUsage(
+          type: is10s ? 'guessBlock10' : 'guessBlock5',
+          roomId: roomId,
+          actorUid: actorUid,
+          actorName: actorName,
+          targetUid: targetUid,
+          targetName: targetName));
     }
     return success;
   }
@@ -2757,6 +2777,7 @@ class RoomService {
     required String targetUid,
   }) async {
     bool success = false;
+    String actorName = '', targetName = '';
     try {
       await _firestore.runTransaction((tx) async {
         final userSnap = await tx.get(_firestore.doc('users/$actorUid'));
@@ -2771,6 +2792,8 @@ class RoomService {
         final expiresAt = DateTime.now().millisecondsSinceEpoch + EconomyConfig.blackoutDurationMs;
         tx.update(_firestore.doc('users/$actorUid'), {'blackoutCardCount': FieldValue.increment(-1)});
         tx.update(_rooms.doc(roomId), {'blackoutActiveUntilMs.$targetUid': expiresAt});
+        actorName = room.players[actorUid]?.name ?? '';
+        targetName = room.players[targetUid]?.name ?? '';
         success = true;
       });
     } catch (e) {
@@ -2779,8 +2802,86 @@ class RoomService {
     if (success) {
       QaLoggerService.instance.log('CARD',
           'BLACKOUT_APPLIED actor=${actorUid.substring(0, actorUid.length.clamp(0, 6))} target=${targetUid.substring(0, targetUid.length.clamp(0, 6))}');
+      unawaited(_logCardUsage(
+          type: 'blackout',
+          roomId: roomId,
+          actorUid: actorUid,
+          actorName: actorName,
+          targetUid: targetUid,
+          targetName: targetName));
     }
     return success;
+  }
+
+  /// Fire-and-forget per-user trick-usage log for the admin stats screen
+  /// (users/{actorUid}/cardUsage). Never blocks or fails gameplay — a lost
+  /// log entry is a cosmetic admin-analytics gap, not a game bug.
+  Future<void> _logCardUsage({
+    required String type,
+    required String roomId,
+    required String actorUid,
+    required String actorName,
+    required String targetUid,
+    required String targetName,
+  }) async {
+    try {
+      await _firestore.collection('users').doc(actorUid).collection('cardUsage').add({
+        'type': type,
+        'roomId': roomId,
+        'actorName': actorName,
+        'targetUid': targetUid,
+        'targetName': targetName,
+        'ts': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {}
+  }
+
+  /// Records this ONE finished game into MY OWN all-games history log
+  /// (users/{myUid}/gameHistory/{roomId}) — every mode/room type, not just
+  /// friends games (contrast [FriendsService.recordMyResult], which only
+  /// fires for isFriendsGame and feeds the friends leaderboard). Powers the
+  /// admin "who did this player face, were they host, what did they pick"
+  /// view. Deterministic doc id (roomId) makes a repeat call a harmless
+  /// overwrite, so no transaction/idempotency guard is needed.
+  Future<void> recordMyGameHistory({
+    required RoomModel room,
+    required String myUid,
+  }) async {
+    final me = room.players[myUid];
+    if (me == null || me.isBot) return;
+    final opponents = room.players.values
+        .where((p) => p.id != myUid)
+        .map((p) => {
+              'id': p.id,
+              'name': p.name,
+              'score': p.score,
+              'isBot': p.isBot,
+            })
+        .toList();
+    final wasHost = room.hostId == myUid;
+    try {
+      await _firestore.collection('users').doc(myUid).collection('gameHistory').doc(room.id).set({
+        'playedAt': FieldValue.serverTimestamp(),
+        'mode': room.mode,
+        'category': room.selectedCategory,
+        'isPublicRoom': room.isPublicRoom,
+        'isFriendsGame': room.isFriendsGame,
+        'hostId': room.hostId,
+        'hostName': room.players[room.hostId]?.name ?? '',
+        'wasHost': wasHost,
+        'myScore': me.score,
+        'winnerId': room.winnerId,
+        'winnerName': room.winnerId == null ? '' : (room.players[room.winnerId]?.name ?? ''),
+        'won': room.winnerId == myUid,
+        'tricksEnabled': room.tricksEnabled,
+        'entryFee': room.entryFee,
+        'opponents': opponents,
+        if (wasHost) 'topicChoices': room.topicChoices,
+        if (wasHost) 'proverbsRounds': room.proverbsRounds,
+      });
+    } catch (e) {
+      QaLoggerService.instance.log('HISTORY', 'GAME_HISTORY_ERROR error=$e');
+    }
   }
 
   Future<void> _checkLastPlayerStanding(String roomId) async {
