@@ -127,6 +127,7 @@ class _LetterTurnPanelState extends State<LetterTurnPanel>
           const SizedBox(height: 10),
           _LetterTurnKeyboard(
             enabled: widget.isMyTurn,
+            glow: _glowController,
             guessedNorm: guessedNorm,
             answerNorm: answerNorm,
             onLetter: _tapLetter,
@@ -275,12 +276,14 @@ const List<List<String>> _letterTurnKeyboardRows = [
 
 class _LetterTurnKeyboard extends StatelessWidget {
   final bool enabled;
+  final Animation<double> glow;
   final Set<String> guessedNorm;
   final Set<String> answerNorm;
   final ValueChanged<String> onLetter;
 
   const _LetterTurnKeyboard({
     required this.enabled,
+    required this.glow,
     required this.guessedNorm,
     required this.answerNorm,
     required this.onLetter,
@@ -292,29 +295,35 @@ class _LetterTurnKeyboard extends StatelessWidget {
         const maxKeysInRow = 10;
         final keySize =
             math.min(34.0, math.max(20.0, (constraints.maxWidth - gap * (maxKeysInRow - 1)) / maxKeysInRow));
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < _letterTurnKeyboardRows.length; i++) ...[
-              Row(
-                textDirection: TextDirection.rtl,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (final letter in _letterTurnKeyboardRows[i])
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: _LetterTurnKey(
-                        label: letter,
-                        size: keySize,
-                        status: _statusFor(letter),
-                        onTap: () => onLetter(letter),
+        // Nested AnimatedBuilder: only the tappable keys' glow needs to
+        // repaint every tick, not the whole panel (that's the outer one).
+        return AnimatedBuilder(
+          animation: glow,
+          builder: (context, _) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < _letterTurnKeyboardRows.length; i++) ...[
+                Row(
+                  textDirection: TextDirection.rtl,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (final letter in _letterTurnKeyboardRows[i])
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: _LetterTurnKey(
+                          label: letter,
+                          size: keySize,
+                          status: _statusFor(letter),
+                          glowValue: glow.value,
+                          onTap: () => onLetter(letter),
+                        ),
                       ),
-                    ),
-                ],
-              ),
-              if (i != _letterTurnKeyboardRows.length - 1) const SizedBox(height: 6),
+                  ],
+                ),
+                if (i != _letterTurnKeyboardRows.length - 1) const SizedBox(height: 6),
+              ],
             ],
-          ],
+          ),
         );
       });
 
@@ -333,12 +342,17 @@ class _LetterTurnKey extends StatelessWidget {
   final String label;
   final double size;
   final _LetterKeyStatus status;
+  // 0..1 pulse phase, only meaningful (and only animating) for a tappable
+  // key — this is the literal "keyboard lit up in glowing green" signal for
+  // whose turn it is, on the keys themselves, not just the panel border.
+  final double glowValue;
   final VoidCallback onTap;
 
   const _LetterTurnKey({
     required this.label,
     required this.size,
     required this.status,
+    required this.glowValue,
     required this.onTap,
   });
 
@@ -347,22 +361,37 @@ class _LetterTurnKey extends StatelessWidget {
     final tappable = status == _LetterKeyStatus.tappable;
     Color bg;
     Color fg;
+    Border border;
+    List<BoxShadow>? shadow;
     switch (status) {
       case _LetterKeyStatus.tappable:
-        bg = Colors.white;
+        bg = Color.lerp(const Color(0xFF2ECC71), const Color(0xFF9DFFC0), glowValue)!;
         fg = const Color(0xFF07101F);
+        border = Border.all(
+            color: Color.lerp(const Color(0xFF9DFFC0), Colors.white, glowValue)!,
+            width: 1.6);
+        shadow = [
+          BoxShadow(
+            color: const Color(0xFF2ECC71).withOpacity(0.35 + 0.35 * glowValue),
+            blurRadius: 10,
+            spreadRadius: 0.5,
+          ),
+        ];
         break;
       case _LetterKeyStatus.waiting:
         bg = Colors.white.withOpacity(0.55);
         fg = Colors.grey.shade600;
+        border = Border.all(color: const Color(0xFFD4AF37).withOpacity(0.4), width: 1);
         break;
       case _LetterKeyStatus.hit:
         bg = const Color(0xFF2ECC71);
         fg = const Color(0xFF07101F);
+        border = Border.all(color: const Color(0xFFD4AF37).withOpacity(0.4), width: 1);
         break;
       case _LetterKeyStatus.miss:
         bg = Colors.white.withOpacity(0.14);
         fg = Colors.white38;
+        border = Border.all(color: const Color(0xFFD4AF37).withOpacity(0.4), width: 1);
         break;
     }
     return Material(
@@ -370,13 +399,14 @@ class _LetterTurnKey extends StatelessWidget {
       child: InkWell(
         onTap: tappable ? onTap : null,
         borderRadius: BorderRadius.circular(10),
-        child: Ink(
+        child: Container(
           width: size,
           height: size + 8,
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.4), width: 1),
+            border: border,
+            boxShadow: shadow,
           ),
           child: Center(
             child: Text(
