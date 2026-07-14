@@ -123,12 +123,38 @@ class FriendsService {
       .snapshots()
       .map((s) => s.docs.map(FriendRequestModel.fromDoc).toList());
 
-  /// The user's accepted friends.
+  /// The user's accepted friends. The subcollection doc's `name` is a
+  /// SNAPSHOT taken once at friendship time (_linkFriendship) — it never
+  /// updates if the friend later renames (e.g. a guest named "אורח131"
+  /// signs into a real account and picks "קובי"). Re-resolve each friend's
+  /// CURRENT name from their live user doc, the same way [leaderboard]
+  /// already does, so a renamed friend doesn't look like they "vanished"
+  /// while actually just showing under their old name.
   Stream<List<FriendModel>> friends(String uid) => _users
       .doc(uid)
       .collection('friends')
       .snapshots()
-      .map((s) => s.docs.map(FriendModel.fromDoc).toList());
+      .asyncMap((s) async {
+    final base = s.docs.map(FriendModel.fromDoc).toList();
+    if (base.isEmpty) return base;
+
+    final liveNames = <String, String>{};
+    final uids = base.map((f) => f.uid).toList();
+    for (var i = 0; i < uids.length; i += 10) {
+      final chunk = uids.sublist(i, min(i + 10, uids.length));
+      final snap = await _users.where(FieldPath.documentId, whereIn: chunk).get();
+      for (final d in snap.docs) {
+        final n = d.data()['name'] as String?;
+        if (n != null && n.isNotEmpty) liveNames[d.id] = n;
+      }
+    }
+
+    return base.map((f) {
+      final live = liveNames[f.uid];
+      if (live == null || live == f.name) return f;
+      return FriendModel(uid: f.uid, name: live, photoUrl: f.photoUrl, since: f.since);
+    }).toList();
+  });
 
   Future<void> acceptRequest(FriendRequestModel req, String myName) async {
     await _linkFriendship(req.toUid, myName, req.fromUid, req.fromName);
