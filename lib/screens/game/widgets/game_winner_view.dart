@@ -1,13 +1,17 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/ad_constants.dart';
 import '../../../core/theme/app_styles.dart';
 import '../../../models/economy/match_reward_breakdown.dart';
 import '../../../models/game_image_model.dart';
+import '../../../widgets/common/app_share_badges.dart';
 import '../../../widgets/common/banner_ad_widget.dart';
 import '../../../widgets/economy/coin_icon.dart';
 import 'round_gallery_view.dart';
@@ -81,11 +85,13 @@ class GameWinnerView extends StatefulWidget {
 
 class _GameWinnerViewState extends State<GameWinnerView> {
   late final ConfettiController _confettiController;
+  final GlobalKey _shareCardKey = GlobalKey();
   bool _showCard = false;
   bool _showButton = false;
   bool _doubled = false;
   bool _doublingBusy = false;
   bool _rematchBusy = false;
+  bool _sharingCard = false;
 
   @override
   void initState() {
@@ -112,6 +118,35 @@ class _GameWinnerViewState extends State<GameWinnerView> {
       await widget.onRematch!();
     } finally {
       if (mounted) setState(() => _rematchBusy = false);
+    }
+  }
+
+  /// Captures the win card itself (trophy/title/answer/trivia/reward — not
+  /// the action buttons) and shares it as an image, watermarked with the
+  /// app logo + a download-QR the same way the round gallery's saves are.
+  Future<void> _shareWinCard() async {
+    if (_sharingCard) return;
+    setState(() => _sharingCard = true);
+    try {
+      final boundary = _shareCardKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) throw Exception('boundary not ready');
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final bytes = byteData?.buffer.asUint8List();
+      if (bytes == null) throw Exception('encode failed');
+      await Share.shareXFiles(
+        [XFile.fromData(bytes, mimeType: 'image/png', name: 'whoisthere_win.png')],
+        subject: 'מה בתמונה?',
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('השיתוף נכשל, נסה שוב')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sharingCard = false);
     }
   }
 
@@ -189,6 +224,9 @@ class _GameWinnerViewState extends State<GameWinnerView> {
                           onRematch: _doRematch,
                           galleryImages: widget.galleryImages,
                           galleryStoreUrl: widget.galleryStoreUrl,
+                          shareCardKey: _shareCardKey,
+                          sharingCard: _sharingCard,
+                          onShareCard: _shareWinCard,
                         ),
                       ),
                     ),
@@ -245,6 +283,9 @@ class _WinnerCard extends StatelessWidget {
   final VoidCallback onRematch;
   final List<GameImageModel> galleryImages;
   final String galleryStoreUrl;
+  final GlobalKey shareCardKey;
+  final bool sharingCard;
+  final VoidCallback onShareCard;
 
   const _WinnerCard({
     required this.winnerName,
@@ -268,6 +309,9 @@ class _WinnerCard extends StatelessWidget {
     required this.onRematch,
     this.galleryImages = const [],
     this.galleryStoreUrl = '',
+    required this.shareCardKey,
+    required this.sharingCard,
+    required this.onShareCard,
   });
 
   @override
@@ -295,6 +339,16 @@ class _WinnerCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Everything captured by "שתף מסך ניצחון" lives inside this
+          // boundary — the trophy/title/answer/trivia/reward, watermarked
+          // with the same logo+QR badges the round gallery saves use. The
+          // action buttons below are deliberately OUTSIDE it (a shared
+          // screenshot with live buttons in it would look broken).
+          RepaintBoundary(
+            key: shareCardKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
           // The revealed place photo is the hero of the win screen.
           if (imageUrl != null) ...[
             Container(
@@ -427,6 +481,20 @@ class _WinnerCard extends StatelessWidget {
             const SizedBox(height: 10),
             _RewardSummary(breakdown: rewardBreakdown!),
           ],
+          if (galleryStoreUrl.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const AppLogoBadge(),
+                const SizedBox(width: 8),
+                AppQrBadge(storeUrl: galleryStoreUrl, size: 38),
+              ],
+            ),
+          ],
+              ],
+            ),
+          ),
           // Opt-in "double your coins" rewarded ad — only ever runs on tap.
           if (canDouble && showButton) ...[
             const SizedBox(height: 12),
@@ -556,41 +624,74 @@ class _WinnerCard extends StatelessWidget {
           ],
           if (galleryImages.isNotEmpty && showButton) ...[
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: OutlinedButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => RoundGalleryView(
-                      images: galleryImages,
-                      answerLabel: answerLabel,
-                      storeUrl: galleryStoreUrl,
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => RoundGalleryView(
+                            images: galleryImages,
+                            answerLabel: answerLabel,
+                            storeUrl: galleryStoreUrl,
+                          ),
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF87CEEB),
+                        side: BorderSide(
+                            color: const Color(0xFF87CEEB).withOpacity(0.7)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        textStyle: const TextStyle(
+                            fontSize: 14.5, fontWeight: FontWeight.w800),
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          textDirection: TextDirection.rtl,
+                          children: const [
+                            Icon(Icons.photo_library_rounded, size: 20),
+                            SizedBox(width: 8),
+                            Text('גלריית הסבב ושמירה',
+                                textDirection: TextDirection.rtl),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF87CEEB),
-                  side: BorderSide(color: const Color(0xFF87CEEB).withOpacity(0.7)),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  textStyle: const TextStyle(
-                      fontSize: 14.5, fontWeight: FontWeight.w800),
-                ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    textDirection: TextDirection.rtl,
-                    children: const [
-                      Icon(Icons.photo_library_rounded, size: 20),
-                      SizedBox(width: 8),
-                      Text('גלריית הסבב ושמירה', textDirection: TextDirection.rtl),
-                    ],
+                const SizedBox(width: 10),
+                // Shares the win card itself (title/answer/trivia/reward) —
+                // distinct from the gallery's per-round photo share.
+                SizedBox(
+                  width: 46,
+                  height: 46,
+                  child: OutlinedButton(
+                    onPressed: sharingCard ? null : onShareCard,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFD4AF37),
+                      side: BorderSide(
+                          color: const Color(0xFFD4AF37).withOpacity(0.7)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: sharingCard
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2.2, color: Color(0xFFD4AF37)),
+                          )
+                        : const Icon(Icons.ios_share_rounded),
                   ),
                 ),
-              ),
+              ],
             ),
           ],
           const SizedBox(height: 14),

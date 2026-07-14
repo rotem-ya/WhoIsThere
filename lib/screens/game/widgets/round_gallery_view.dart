@@ -5,11 +5,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:gal/gal.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../models/game_image_model.dart';
+import '../../../widgets/common/app_share_badges.dart';
 
 /// Post-match gallery: every image played this match (all heat/proverbs
 /// rounds, or just the one round for a normal game), swipeable, each with its
@@ -286,12 +286,12 @@ class _GalleryPage extends StatelessWidget {
                     const Positioned(
                       left: 10,
                       bottom: 10,
-                      child: _LogoBadge(),
+                      child: AppLogoBadge(),
                     ),
                     Positioned(
                       right: 10,
                       bottom: 10,
-                      child: _QrBadge(storeUrl: storeUrl),
+                      child: AppQrBadge(storeUrl: storeUrl),
                     ),
                   ],
                 ),
@@ -351,72 +351,3 @@ class _GalleryPage extends StatelessWidget {
   }
 }
 
-class _LogoBadge extends StatelessWidget {
-  const _LogoBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.55),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(5),
-            child: Image.asset(
-              'assets/icons/icon.png',
-              width: 16,
-              height: 16,
-              fit: BoxFit.cover,
-            ),
-          ),
-          const SizedBox(width: 5),
-          const Text(
-            'מה בתמונה?',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Small scannable QR badge encoding this device's store link, so a saved or
-/// shared photo carries a working download link with it (a gallery save
-/// can't attach a text caption the way a share-sheet message can).
-class _QrBadge extends StatelessWidget {
-  final String storeUrl;
-
-  const _QrBadge({required this.storeUrl});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.35),
-            blurRadius: 6,
-          ),
-        ],
-      ),
-      child: QrImageView(
-        data: storeUrl,
-        size: 46,
-        padding: EdgeInsets.zero,
-        gapless: true,
-      ),
-    );
-  }
-}
