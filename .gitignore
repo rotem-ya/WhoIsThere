@@ -34,3 +34,6 @@ __pycache__/
 *.pyc
 submission-assets-*.zip
 public/assets/
+
+# Node (scripts/ tooling)
+node_modules/
