@@ -648,6 +648,38 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                           fontSize: 15)),
                                 ),
                               ),
+                              // בדיקות: מארח יכול למלא סלוטים בבוט, כדי לשחק
+                              // משחק חברים מלא לבד בלי לחכות לחבר אמיתי.
+                              if (isHost &&
+                                  room.players.length <
+                                      GameConstants.maxPlayers) ...[
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => ref
+                                        .read(roomServiceProvider)
+                                        .addBotToRoom(widget.roomId,
+                                            room.players.length + 1),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.white70,
+                                      side: BorderSide(
+                                          color: Colors.white.withOpacity(0.25)),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(14)),
+                                    ),
+                                    icon: const Icon(Icons.smart_toy_outlined,
+                                        size: 18),
+                                    label: const Text('הוסף בוט (לבדיקה)',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 13)),
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 10),
                             ],
                             _PlayerGrid(
