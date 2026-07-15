@@ -299,7 +299,11 @@ class GameLayout extends StatelessWidget {
                 ),
               ),
             ),
-            AnswerSlots(answer: image?.answer ?? '', isMyTurn: isMyTurn),
+            // Letter-turn's own slots already show the word shape (plus actual
+            // reveals) — showing the blank AnswerSlots row too just duplicates
+            // it and eats space the image badly needs.
+            if (!room.isLetterTurnActive)
+              AnswerSlots(answer: image?.answer ?? '', isMyTurn: isMyTurn),
             if (room.isLetterTurnActive)
               LetterTurnPanel(
                 answer: room.letterTurnAnswer!,

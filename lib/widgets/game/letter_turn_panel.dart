@@ -89,8 +89,8 @@ class _LetterTurnPanelState extends State<LetterTurnPanel>
     return AnimatedBuilder(
       animation: _glowController,
       builder: (context, child) => Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
         decoration: BoxDecoration(
           color: const Color(0xFF07101F).withOpacity(0.55),
           borderRadius: BorderRadius.circular(18),
@@ -122,9 +122,9 @@ class _LetterTurnPanelState extends State<LetterTurnPanel>
             turnPlayerName: widget.turnPlayerName,
             remainingSec: _remainingSec,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           _LetterTurnSlots(puzzle: puzzle, revealedSlots: widget.revealedSlots),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           _LetterTurnKeyboard(
             enabled: widget.isMyTurn,
             glow: _glowController,
@@ -198,7 +198,7 @@ class _LetterTurnSlots extends StatelessWidget {
         final wordCount = math.max(1, puzzle.wordLengths.length);
         final totalGapWidth = slotGap * (totalLetters - wordCount) + wordGap * (wordCount - 1);
         final slotSize =
-            math.min(34.0, math.max(18.0, (constraints.maxWidth - 8 - totalGapWidth) / totalLetters));
+            math.min(26.0, math.max(16.0, (constraints.maxWidth - 8 - totalGapWidth) / totalLetters));
         var idx = 0;
         final words = <Widget>[];
         for (final len in puzzle.wordLengths) {
@@ -291,10 +291,10 @@ class _LetterTurnKeyboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, constraints) {
-        const gap = 4.0;
+        const gap = 3.0;
         const maxKeysInRow = 10;
         final keySize =
-            math.min(34.0, math.max(20.0, (constraints.maxWidth - gap * (maxKeysInRow - 1)) / maxKeysInRow));
+            math.min(26.0, math.max(18.0, (constraints.maxWidth - gap * (maxKeysInRow - 1)) / maxKeysInRow));
         // Nested AnimatedBuilder: only the tappable keys' glow needs to
         // repaint every tick, not the whole panel (that's the outer one).
         return AnimatedBuilder(
@@ -320,7 +320,7 @@ class _LetterTurnKeyboard extends StatelessWidget {
                       ),
                   ],
                 ),
-                if (i != _letterTurnKeyboardRows.length - 1) const SizedBox(height: 6),
+                if (i != _letterTurnKeyboardRows.length - 1) const SizedBox(height: 3),
               ],
             ],
           ),
@@ -401,7 +401,7 @@ class _LetterTurnKey extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         child: Container(
           width: size,
-          height: size + 8,
+          height: size + 5,
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(10),
