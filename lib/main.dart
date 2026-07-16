@@ -449,9 +449,13 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp>
         // iOS stays at 1.0 and looks right. A small allowance keeps some
         // accessibility benefit without breaking screens.
         final mq = MediaQuery.of(context);
-        // בקשת רותם (2026-07-11): כיתוב קטן במעט בכל האפליקציה — מקדם 0.95
+        // בקשת רותם (2026-07-11): כיתוב קטן במעט בכל האפליקציה - מקדם 0.95
         // אחרי ה-clamp המגן מפני פונטים מוגדלים של המערכת.
-        final scale = mq.textScaler.scale(1.0).clamp(0.85, 1.1) * 0.95;
+        // בקשת רותם (2026-07-16): באנדרואיד הכיתוב עדיין גדול מדי גם אחרי
+        // ה-0.95 (באייפון כבר טוב) - מקדם נוסף רק לאנדרואיד.
+        final platformFactor = Platform.isAndroid ? 0.9 : 1.0;
+        final scale =
+            mq.textScaler.scale(1.0).clamp(0.85, 1.1) * 0.95 * platformFactor;
         return MediaQuery(
           data: mq.copyWith(textScaler: TextScaler.linear(scale)),
           child: Directionality(
