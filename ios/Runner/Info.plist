@@ -117,6 +117,8 @@
 	<key>NSCameraUsageDescription</key>
 	<string>This app does not use the camera.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app does not access your photo library.</string>
+	<string>Used to save game images you choose to save to your photo library.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Used to save game images you choose to save to your photo library.</string>
 </dict>
 </plist>

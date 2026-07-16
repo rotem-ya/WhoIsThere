@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../core/utils/share_util.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_styles.dart';
@@ -11,6 +11,7 @@ import '../../providers/providers.dart';
 import '../../services/analytics_service.dart';
 import '../../services/friends_service.dart';
 import '../../widgets/chat/chat_sheet.dart';
+import 'widgets/groups_tab.dart';
 
 /// Friends hub: a cumulative leaderboard, the friends list with pending
 /// requests, and an "add friend" tab (personal code + WhatsApp invite).
@@ -127,7 +128,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
       ..writeln()
       ..writeln('אין אפליקציה? הקוד שלי: $code');
     AnalyticsService.instance.inviteSent(kind: 'friend_code');
-    Share.share(msg.toString());
+    shareText(context, msg.toString());
   }
 
   @override
@@ -142,7 +143,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
       }
     });
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
@@ -156,11 +157,14 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     labelColor: AppStyles.cyanGlow,
                     unselectedLabelColor: Colors.white54,
                     indicatorColor: AppStyles.cyanGlow,
+                    // 4 טאבים: תוויות קצרות + ריווח מצומצם כדי שלא ייחתכו.
+                    labelPadding: EdgeInsets.symmetric(horizontal: 4),
                     labelStyle:
-                        TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                        TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
                     tabs: [
-                      Tab(text: 'טבלת ניקוד'),
+                      Tab(text: 'ניקוד'),
                       Tab(text: 'חברים'),
+                      Tab(text: 'קבוצות'),
                       Tab(text: 'הוסף חבר'),
                     ],
                   ),
@@ -169,6 +173,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                       children: [
                         _LeaderboardTab(),
                         _FriendsTab(onToast: _toast),
+                        GroupsTab(onToast: _toast),
                         _addFriendTab(),
                       ],
                     ),
@@ -227,7 +232,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     if (_myCode == null) return;
                     Clipboard.setData(ClipboardData(text: _myCode!));
                     HapticFeedback.selectionClick();
-                    _toast('הקוד הועתק — שלחו אותו לחבר');
+                    _toast('הקוד הועתק, שלחו אותו לחבר');
                   },
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -251,7 +256,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'לחיצה על הקוד מעתיקה אותו. שלחו אותו לחבר —\nהוא יזין אותו למטה אצלו ותתחברו.',
+                  'לחיצה על הקוד מעתיקה אותו. שלחו אותו לחבר,\nהוא יזין אותו למטה אצלו ותתחברו.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white54, fontSize: 12),
                 ),
@@ -631,6 +636,16 @@ class _FriendsTab extends ConsumerWidget {
                     fontSize: 16,
                     fontWeight: FontWeight.w700)),
           ),
+          // בוט-בדיקה בלבד: כפתור לגרום לבוט "לשלוח" לי פוש, לבדיקת התראות.
+          if (f.uid.startsWith('bot_friend_'))
+            IconButton(
+              tooltip: 'בדיקת פוש מהבוט',
+              icon: const Icon(Icons.science_outlined,
+                  color: Color(0xFFFFB74D), size: 20),
+              onPressed: myUid == null
+                  ? null
+                  : () => _showBotTestMenu(context, ref, f, myUid),
+            ),
           // Chat with this friend (outside a game).
           IconButton(
             tooltip: 'צ׳אט',
@@ -689,7 +704,7 @@ class _FriendsTab extends ConsumerWidget {
         ..writeln(AppConstants.joinUrlForCode(room.code))
         ..writeln()
         ..writeln('קוד החדר: ${room.code}');
-      Share.share(msg.toString());
+      shareText(context, msg.toString());
       ref.read(currentRoomIdProvider.notifier).state = room.id;
       if (context.mounted) context.go('/lobby/${room.id}');
     } catch (_) {
@@ -714,6 +729,96 @@ class _FriendsTab extends ConsumerWidget {
               friendUid: f.uid,
               text: text,
             ),
+      ),
+    );
+  }
+
+  /// Bot-friends only: lets a dev/tester make a bot "send" a real push
+  /// notification (game invite, now or in a minute) or a chat DM, to verify
+  /// end-to-end delivery without a second real device. The delayed invite
+  /// keeps running after this sheet closes even if the app is backgrounded —
+  /// it's a plain Future, not a widget-bound Timer.
+  void _showBotTestMenu(
+      BuildContext context, WidgetRef ref, FriendModel f, String myUid) {
+    final friends = ref.read(friendsServiceProvider);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF0D1A2E),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+              child: Text('בדיקת פוש מ-${f.name}',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.sports_esports_rounded,
+                  color: Color(0xFF34D399)),
+              title: const Text('שלח לי הזמנת משחק — עכשיו',
+                  style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                friends.sendGameInvite(
+                  fromUid: f.uid,
+                  fromName: f.name,
+                  toUid: myUid,
+                  roomId: 'test_push_${DateTime.now().millisecondsSinceEpoch}',
+                  code: 'TEST99',
+                );
+                onToast('נשלחה הזמנת בדיקה — היא לא ניתנת להצטרפות בפועל');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.timer_outlined,
+                  color: Color(0xFF34D399)),
+              title: const Text('שלח לי הזמנת משחק — בעוד דקה',
+                  style: TextStyle(color: Colors.white)),
+              subtitle: const Text(
+                  'אפשר לצאת מהאפליקציה עכשיו — הפוש עדיין יגיע',
+                  style: TextStyle(color: Colors.white54, fontSize: 12)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Future.delayed(const Duration(minutes: 1), () {
+                  friends.sendGameInvite(
+                    fromUid: f.uid,
+                    fromName: f.name,
+                    toUid: myUid,
+                    roomId:
+                        'test_push_${DateTime.now().millisecondsSinceEpoch}',
+                    code: 'TEST99',
+                  );
+                });
+                onToast('הזמנת בדיקה תישלח בעוד דקה');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat_bubble_outline_rounded,
+                  color: AppStyles.cyanGlow),
+              title: const Text('שלח לי הודעת צ׳אט',
+                  style: TextStyle(color: Colors.white)),
+              subtitle: const Text('הודעת צ׳אט לא מפעילה פוש כרגע — רק בדיקה',
+                  style: TextStyle(color: Colors.white54, fontSize: 12)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                friends.sendDirectMessage(
+                  myUid: f.uid,
+                  myName: f.name,
+                  friendUid: myUid,
+                  text: 'הודעת בדיקה 🧪',
+                );
+                onToast('הודעת בדיקה נשלחה בצ׳אט (בלי פוש)');
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }

@@ -16,6 +16,8 @@ import 'core/theme/app_styles.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_router.dart';
 import 'firebase_options.dart';
+import 'package:go_router/go_router.dart';
+import 'models/user_model.dart';
 import 'providers/providers.dart';
 import 'services/content_manifest_service.dart';
 import 'services/cosmetics_catalog_service.dart';
@@ -23,6 +25,8 @@ import 'services/notification_service.dart';
 import 'services/qa_logger_service.dart';
 import 'services/report_service.dart';
 import 'widgets/common/friend_request_banner.dart';
+import 'widgets/common/game_invite_banner.dart';
+import 'widgets/common/group_invite_banner.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'services/settings_service.dart';
 
@@ -200,7 +204,8 @@ class GuessThePlaceApp extends ConsumerStatefulWidget {
   ConsumerState<GuessThePlaceApp> createState() => _GuessThePlaceAppState();
 }
 
-class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
+class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp>
+    with WidgetsBindingObserver {
   StreamSubscription<Uri>? _linkSub;
 
   String? _pushedTokenForUid;
@@ -208,9 +213,27 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initDeepLinks();
     _initTrackingThenAds();
     _initPush();
+    _touchLastSeen();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _touchLastSeen();
+  }
+
+  /// Refresh the signed-in user's lastSeenAt (admin "recently connected" list).
+  /// Throttled + fail-soft inside AuthService.
+  void _touchLastSeen() {
+    try {
+      final auth = ref.read(authServiceProvider);
+      auth.touchLastSeen();
+      // v1.3: החזר מטבעות חד-פעמי לרוכשי אפקטי ניצחון (הוסרו מהחנות).
+      unawaited(auth.refundRetiredWinEffects());
+    } catch (_) {}
   }
 
   Future<void> _initPush() async {
@@ -225,10 +248,57 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
             currentPath.startsWith('/vote-') ||
             currentPath.startsWith('/win/') ||
             currentPath.startsWith('/lobby/');
-        if (!inActiveGame) router.go('/friends');
+        if (inActiveGame) return;
+        // הזמנת משחק: קפיצה ישירה ללובי של המזמין (בלי תחנת ביניים במסך
+        // החברים). נכשל/חסר קוד → נופל למסך החברים, שם הבאנר ממתין.
+        if (message.data['type'] == 'game_invite' &&
+            (message.data['code'] as String? ?? '').isNotEmpty) {
+          unawaited(_joinFromPush(
+              message.data['code'] as String, router));
+          return;
+        }
+        router.go('/friends');
       } catch (_) {}
     };
     await NotificationService.instance.init();
+  }
+
+  /// Joins a room straight from a tapped game-invite push or a join deep
+  /// link. Waits briefly for the signed-in user on cold start; any failure
+  /// lands on [fallbackPath] (friends screen for pushes, the join screen with
+  /// the code pre-filled for links).
+  Future<void> _joinFromPush(String code, GoRouter router,
+      {String fallbackPath = '/friends'}) async {
+    try {
+      UserModel? me = ref.read(currentUserProvider).valueOrNull;
+      for (var i = 0; i < 20 && me == null; i++) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        me = ref.read(currentUserProvider).valueOrNull;
+      }
+      if (me == null) {
+        router.go(fallbackPath);
+        return;
+      }
+      final room = await ref.read(roomServiceProvider).joinRoom(
+            code: code,
+            userId: me.id,
+            userName: me.name,
+            userPhotoUrl: me.photoUrl,
+          );
+      if (room == null) {
+        router.go(fallbackPath);
+        return;
+      }
+      ref.read(currentRoomIdProvider.notifier).state = room.id;
+      router.go('/lobby/${room.id}');
+      QaLoggerService.instance
+          .log('INVITE', 'PUSH_JOIN room=${room.id.substring(0, 6)}');
+    } catch (e) {
+      QaLoggerService.instance.log('INVITE', 'PUSH_JOIN_ERROR $e');
+      try {
+        router.go(fallbackPath);
+      } catch (_) {}
+    }
   }
 
   /// iOS App Tracking Transparency: request authorization once the app is
@@ -332,12 +402,16 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
         currentPath.startsWith('/lobby/');
 
     if (!inActiveGame) {
-      router.go('/join-room?initialCode=$code');
+      // הצטרפות ישירה לחדר מהקישור; אם החדר כבר לא זמין — מסך ההצטרפות
+      // עם הקוד ממולא (המסלול הישן).
+      unawaited(_joinFromPush(code, router,
+          fallbackPath: '/join-room?initialCode=$code'));
     }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _linkSub?.cancel();
     super.dispose();
   }
@@ -375,7 +449,13 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
         // iOS stays at 1.0 and looks right. A small allowance keeps some
         // accessibility benefit without breaking screens.
         final mq = MediaQuery.of(context);
-        final scale = mq.textScaler.scale(1.0).clamp(0.85, 1.1);
+        // בקשת רותם (2026-07-11): כיתוב קטן במעט בכל האפליקציה - מקדם 0.95
+        // אחרי ה-clamp המגן מפני פונטים מוגדלים של המערכת.
+        // בקשת רותם (2026-07-16): באנדרואיד הכיתוב עדיין גדול מדי גם אחרי
+        // ה-0.95 (באייפון כבר טוב) - מקדם נוסף רק לאנדרואיד.
+        final platformFactor = Platform.isAndroid ? 0.9 : 1.0;
+        final scale =
+            mq.textScaler.scale(1.0).clamp(0.85, 1.1) * 0.95 * platformFactor;
         return MediaQuery(
           data: mq.copyWith(textScaler: TextScaler.linear(scale)),
           child: Directionality(
@@ -386,6 +466,10 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp> {
               children: [
                 child ?? const SizedBox.shrink(),
                 const FriendRequestBanner(),
+                // הזמנות משחק — באנר גלובלי עם "הצטרף" ישיר ללובי.
+                const GameInviteBanner(),
+                // הזמנות קבוצה — מחייב אישור מפורש (הצטרף/דחה) לפני חברות.
+                const GroupInviteBanner(),
               ],
             ),
           ),

@@ -58,12 +58,17 @@ class AvatarsScreen extends ConsumerWidget {
     final owned = ref.watch(ownedAvatarsProvider).valueOrNull ?? const ['auto'];
     final userName = ref.watch(currentUserProvider).valueOrNull?.name ?? '';
 
-    final free = kAvatarChoices.where((a) => a.tier == AvatarTier.free).toList();
+    // קטלוג חי: דריסות/תוספות מהאדמין, active:false מוסתר, ורענון חי דרך
+    // cosmeticsRevisionProvider (כמו שאר מסכי הקוסמטיקה).
+    ref.watch(cosmeticsRevisionProvider);
+    final catalog =
+        allAvatarChoices.where((a) => a.active || a.isAuto).toList();
+    final free = catalog.where((a) => a.tier == AvatarTier.free).toList();
     final basic =
-        kAvatarChoices.where((a) => a.tier == AvatarTier.basic).toList();
-    final rare = kAvatarChoices.where((a) => a.tier == AvatarTier.rare).toList();
+        catalog.where((a) => a.tier == AvatarTier.basic).toList();
+    final rare = catalog.where((a) => a.tier == AvatarTier.rare).toList();
     final prem =
-        kAvatarChoices.where((a) => a.tier == AvatarTier.premium).toList();
+        catalog.where((a) => a.tier == AvatarTier.premium).toList();
 
     return AppScaffold(
       backgroundGradient: AppColors.pageBackground,
@@ -87,7 +92,7 @@ class AvatarsScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
             child: Text(
-              'בחר אווטר — יופיע ליד השם שלך במשחק',
+              'בחר אווטר, יופיע ליד השם שלך במשחק',
               style: AppTextStyles.subtitleLight,
               textAlign: TextAlign.center,
             ),

@@ -1,0 +1,8 @@
+ios-v14
+HEAD
+# line 1 = tag name (ios-vN), line 2 = full commit SHA to tag, or HEAD = the
+# pushed commit. v1.3.0 r3: friends experience overhaul (groups, push
+# invites, group-join consent, round scoreboard, tricks toggle, direct-join
+# deep link, single win effect, accessibility/nav-bar fixes) + daily ad
+# reward cap raised from 2 to 5 + proverbs wording/image refresh (6 verified
+# wording fixes incl. "ההר הוליד עכבר", 18 refreshed images).

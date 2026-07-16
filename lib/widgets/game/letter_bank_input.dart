@@ -61,6 +61,10 @@ class LetterBankInput extends StatefulWidget {
   final int nextLetterPrice;
   final bool showBuyLetter;
 
+  // Slot cap. 12 keeps the bank compact for the short image-game answers;
+  // the proverbs game raises it so a whole proverb fits (words wrap to rows).
+  final int maxLetters;
+
   const LetterBankInput({
     super.key,
     required this.answer,
@@ -70,6 +74,7 @@ class LetterBankInput extends StatefulWidget {
     this.onBuyLetter,
     this.nextLetterPrice = 0,
     this.showBuyLetter = false,
+    this.maxLetters = 12,
   });
 
   @override
@@ -128,9 +133,10 @@ class _LetterBankInputState extends State<LetterBankInput> {
     var total = 0;
     final lengths = <int>[];
     final letters = <String>[];
+    final cap = math.max(1, widget.maxLetters);
     for (final word in words) {
-      if (total >= 12) break;
-      final allowed = math.min(word.characters.length, 12 - total);
+      if (total >= cap) break;
+      final allowed = math.min(word.characters.length, cap - total);
       if (allowed > 0) {
         lengths.add(allowed);
         letters.addAll(word.characters.take(allowed));

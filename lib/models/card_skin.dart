@@ -8,6 +8,10 @@ class CardSkin {
   final String? coverImageUrl;
   final String? previewImageUrl;
 
+  /// Hidden from the store when false, but still rendered for players who
+  /// already own it (removing a skin from sale must not break their board).
+  final bool active;
+
   const CardSkin({
     required this.id,
     required this.name,
@@ -15,6 +19,7 @@ class CardSkin {
     this.assetPath,
     this.coverImageUrl,
     this.previewImageUrl,
+    this.active = true,
   });
 
   bool get isFree => price == 0;
@@ -36,6 +41,7 @@ class CardSkin {
       price: (data['price'] as num?)?.toInt() ?? 0,
       coverImageUrl: data['coverImageUrl'] as String?,
       previewImageUrl: data['previewImageUrl'] as String?,
+      active: data['active'] != false,
     );
   }
 
@@ -48,45 +54,38 @@ class CardSkin {
       };
 }
 
+// Store catalog by price tier — 3 skins per tier (0/50/100/200/500) + 1 at 1000.
+// Each tier is a distinct art style (see the admin's tierStyle):
+//   0 minimalist · 50 Israeli nature · 100 oriental mosaic · 200 neon ·
+//   500 cosmic · 1000 royal gold + diamonds + Magen David.
+// Images are generated in the admin per tier and BAKED here (assetPath) each
+// release; until baked they render procedurally / from a live cloud image.
 const kAvailableCardSkins = <CardSkin>[
-  // ── חינמי (ברירת מחדל) ───────────────────────────────────────────────────────
-  // Default card back is the Israeli flag (shares the classic_zionist artwork).
-  // No assetPath → rendered by the painter, not a PNG.
-  CardSkin(id: 'default', name: 'דגל ישראל', price: 0),
+  // ── חינם (0) — מינימליסטי ────────────────────────────────────────────────────
+  CardSkin(id: 'default',        name: 'דגל ישראל',  price: 0, assetPath: 'assets/skins/card_default.jpg'),
+  CardSkin(id: 'minimal_lines',  name: 'קווים נקיים', price: 0, assetPath: 'assets/skins/card_minimal_lines.jpg'),
+  CardSkin(id: 'minimal_calm',   name: 'רוגע',        price: 0, assetPath: 'assets/skins/card_minimal_calm.jpg'),
 
-  // ── בסיסי (50–150 מטבעות) ───────────────────────────────────────────────────
-  CardSkin(id: 'mediterranean_blue', name: 'כחול ים תיכון',  price: 50),
-  CardSkin(id: 'valley_green',       name: 'ירוק העמק',       price: 60),
-  CardSkin(id: 'negev_sands',        name: 'חולות הנגב',      price: 70),
-  CardSkin(id: 'quiet_night',        name: 'לילה שקט',        price: 80),
-  CardSkin(id: 'dawn_light',         name: 'אור שחר',         price: 90),
-  CardSkin(id: 'urban_concrete',     name: 'בטון אורבני',     price: 100),
-  CardSkin(id: 'classic_zionist',    name: 'ציוני קלאסי',     price: 110),
-  CardSkin(id: 'summer_pastel',      name: 'גלידת קיץ',       price: 120),
-  CardSkin(id: 'simple_gold_basic',  name: 'זהב עדין',        price: 130),
-  CardSkin(id: 'terracotta_earth',   name: 'אדמת טרקוטה',     price: 150),
+  // ── 50 — טבע ישראלי ──────────────────────────────────────────────────────────
+  CardSkin(id: 'nature_leaves',  name: 'עלי זית',  price: 50, assetPath: 'assets/skins/card_nature_leaves.jpg'),
+  CardSkin(id: 'nature_waves',   name: 'גלי ים',   price: 50, assetPath: 'assets/skins/card_nature_waves.jpg'),
+  CardSkin(id: 'nature_anemone', name: 'כלניות',   price: 50, assetPath: 'assets/skins/card_nature_anemone.jpg'),
 
-  // ── נדיר (300–500 מטבעות) ───────────────────────────────────────────────────
-  CardSkin(id: 'jerusalem_neon',     name: 'נאון ירושלמי',    price: 300),
-  CardSkin(id: 'steel_armor',        name: 'שריון פלדה',      price: 320),
-  CardSkin(id: 'space_cluster',      name: 'צביר החלל',       price: 340),
-  CardSkin(id: 'blue_fire',          name: 'אש כחולה',        price: 360),
-  CardSkin(id: 'hermon_glacier',     name: 'קרחון חרמון',     price: 380),
-  CardSkin(id: 'oriental_arabesque', name: 'ערבסק מזרחי',     price: 400),
-  CardSkin(id: 'ancient_gold_rare',  name: 'זהב עתיק',        price: 420),
-  CardSkin(id: 'brushed_titanium',   name: 'טיטניום מוברש',   price: 440),
-  CardSkin(id: 'eilat_coral',        name: 'אלמוג אילת',      price: 460),
-  CardSkin(id: 'meteor_shower',      name: 'מטר מטאורים',     price: 500),
+  // ── 100 — פסיפס מזרחי ────────────────────────────────────────────────────────
+  CardSkin(id: 'mosaic_arabesque', name: 'ערבסק',        price: 100, assetPath: 'assets/skins/card_mosaic_arabesque.jpg'),
+  CardSkin(id: 'mosaic_tiles',     name: 'פסיפס אריחים', price: 100, assetPath: 'assets/skins/card_mosaic_tiles.jpg'),
+  CardSkin(id: 'mosaic_star',      name: 'כוכב מזרחי',   price: 100, assetPath: 'assets/skins/card_mosaic_star.jpg'),
 
-  // ── פרימיום (1000 מטבעות) ───────────────────────────────────────────────────
-  CardSkin(id: 'royal_throne',          name: 'כס המלכות',     price: 1000),
-  CardSkin(id: 'ancient_scroll',        name: 'מגילה עתיקה',   price: 1000),
-  CardSkin(id: 'jerusalem_of_gold',     name: 'ירושלים של זהב', price: 1000),
-  CardSkin(id: 'kotel_stones',          name: 'אבני הכותל',    price: 1000),
-  CardSkin(id: 'anemone_red',           name: 'אודם הכלניות',  price: 1000),
-  CardSkin(id: 'salt_sunset',           name: 'שקיעת מלח',     price: 1000),
-  CardSkin(id: 'royal_sapphire',        name: 'ספיר מלכותי',   price: 1000),
-  CardSkin(id: 'lava_core',             name: 'ליבת הלבה',     price: 1000),
-  CardSkin(id: 'diamond_shield',        name: 'מגן יהלום',     price: 1000),
-  CardSkin(id: 'cyber_future_israel',   name: 'ישראל 2077',    price: 1000),
+  // ── 200 — ניאון ──────────────────────────────────────────────────────────────
+  CardSkin(id: 'neon_grid',  name: 'רשת ניאון', price: 200, assetPath: 'assets/skins/card_neon_grid.jpg'),
+  CardSkin(id: 'neon_wave',  name: 'גל ניאון',  price: 200, assetPath: 'assets/skins/card_neon_wave.jpg'),
+  CardSkin(id: 'neon_cyber', name: 'סייבר',     price: 200, assetPath: 'assets/skins/card_neon_cyber.jpg'),
+
+  // ── 500 — קוסמי ──────────────────────────────────────────────────────────────
+  CardSkin(id: 'cosmic_galaxy',  name: 'גלקסיה',      price: 500, assetPath: 'assets/skins/card_cosmic_galaxy.jpg'),
+  CardSkin(id: 'cosmic_aurora',  name: 'זוהר הקוטב',  price: 500, assetPath: 'assets/skins/card_cosmic_aurora.jpg'),
+  CardSkin(id: 'cosmic_fireice', name: 'אש וקרח',     price: 500, assetPath: 'assets/skins/card_cosmic_fireice.jpg'),
+
+  // ── 1000 — זהב מלכותי (יחיד) ─────────────────────────────────────────────────
+  CardSkin(id: 'royal_magen', name: 'מגן דוד מלכותי', price: 1000, assetPath: 'assets/skins/card_royal_magen.jpg'),
 ];

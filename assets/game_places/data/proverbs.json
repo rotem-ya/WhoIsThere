@@ -1,0 +1,620 @@
+[
+  {
+    "id": "proverbs_echad_bapeh",
+    "name_he": "אחד בפה ואחד בלב",
+    "answer_he": "אחד בפה ואחד בלב",
+    "aliases_he": [
+      "צבוע",
+      "דו פרצופי"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_echad_bapeh.jpg",
+    "facts": [
+      "אומר דבר אחד ומרגיש להיפך, כמו צבוע"
+    ],
+    "source": "מקור תלמודי, מתאר בחז\"ל אדם צבוע שאומר דבר אחד ומרגיש הפך."
+  },
+  {
+    "id": "proverbs_apple_tree",
+    "name_he": "התפוח לא נופל רחוק מהעץ",
+    "answer_he": "התפוח לא נופל רחוק מהעץ",
+    "aliases_he": [
+      "התפוח לא נופל רחוק"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_apple_tree.jpg",
+    "facts": [
+      "הילד דומה להוריו"
+    ],
+    "source": "פתגם עממי אירופי, מקור גרמני (Der Apfel fällt nicht weit vom Stamm). אין לו זיקה למקור עברי עתיק."
+  },
+  {
+    "id": "proverbs_needle_haystack",
+    "name_he": "לחפש מחט בערימת שחת",
+    "answer_he": "לחפש מחט בערימת שחת",
+    "aliases_he": [
+      "מחט בערימת שחת"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_needle_haystack.jpg",
+    "facts": [
+      "חיפוש כמעט בלתי אפשרי"
+    ],
+    "source": "ביטוי אנגלי עתיק (needle in a haystack), מתועד כבר מהמאה ה-16. שאול ותורגם לעברית."
+  },
+  {
+    "id": "proverbs_smoke_fire",
+    "name_he": "אין עשן בלי אש",
+    "answer_he": "אין עשן בלי אש",
+    "aliases_he": [],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_smoke_fire.jpg",
+    "facts": [
+      "לכל שמועה יש בסיס אמת"
+    ],
+    "source": "פתגם לטיני עתיק, מיוחס למחזאי הרומי פלאוטוס. מופיע גם בצרפתית ובאנגלית."
+  },
+  {
+    "id": "proverbs_bird_in_hand",
+    "name_he": "טוב ציפור אחת ביד משתיים על העץ",
+    "answer_he": "ציפור אחת ביד",
+    "aliases_he": [
+      "ציפור ביד",
+      "טוב ציפור אחת ביד",
+      "טוב ציפור אחת ביד משתיים על העץ",
+      "טובה ציפור אחת ביד משתיים על העץ",
+      "ציפור אחת ביד עדיפה משתיים על העץ"
+    ],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_bird_in_hand.jpg",
+    "facts": [
+      "עדיף מעט בטוח מהרבה לא בטוח"
+    ],
+    "source": "פתגם אנגלי מימי הביניים (a bird in the hand is worth two in the bush), עם מקבילות ביוונית ובלטינית עתיקה."
+  },
+  {
+    "id": "proverbs_barking_dog",
+    "name_he": "כלב נובח לא נושך",
+    "answer_he": "כלב נובח לא נושך",
+    "aliases_he": [
+      "כלב נובח אינו נושך"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_barking_dog.jpg",
+    "facts": [
+      "מי שמאיים הכי הרבה הוא הכי פחות מסוכן"
+    ],
+    "source": "פתגם לטיני עתיק שמופיע בגרסאות שונות כבר בעת העתיקה, ונפוץ כפתגם עממי באירופה."
+  },
+  {
+    "id": "proverbs_elephant_china",
+    "name_he": "פיל בחנות חרסינה",
+    "answer_he": "פיל בחנות חרסינה",
+    "aliases_he": [
+      "כמו פיל בחנות חרסינה"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_elephant_china.jpg",
+    "facts": [
+      "מסורבל שהורס הכול סביבו"
+    ],
+    "source": "הביטוי האנגלי המקורי הוא \"שור בחנות חרסינה\" (a bull in a china shop), מתועד מ-1812. בעברית הוחלף השור בפיל."
+  },
+  {
+    "id": "proverbs_hand_washes_hand",
+    "name_he": "יד רוחצת יד",
+    "answer_he": "יד רוחצת יד",
+    "aliases_he": [],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_hand_washes_hand.jpg",
+    "facts": [
+      "עזרה הדדית, אני לך ואתה לי"
+    ],
+    "source": "פתגם לטיני עתיק (manus manum lavat), מופיע כבר אצל סנקה ופטרוניוס. נפוץ בהמון שפות אירופיות."
+  },
+  {
+    "id": "proverbs_calm_before_storm",
+    "name_he": "השקט שלפני הסערה",
+    "answer_he": "השקט שלפני הסערה",
+    "aliases_he": [
+      "שקט לפני הסערה"
+    ],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_calm_before_storm.jpg",
+    "facts": [
+      "רגיעה זמנית לפני צרה"
+    ],
+    "source": "ביטוי אנגלי ממקור ימי (the calm before the storm), נפוץ מהמאה ה-18. דימוי מטאורולוגי שתורגם לעברית."
+  },
+  {
+    "id": "proverbs_money_tree",
+    "name_he": "כסף לא גדל על העצים",
+    "answer_he": "כסף לא גדל על העצים",
+    "aliases_he": [
+      "כסף לא צומח על העצים"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_money_tree.jpg",
+    "facts": [
+      "צריך לעבוד קשה בשביל כסף"
+    ],
+    "source": "ביטוי אנגלי-אמריקאי מהמאה ה-19 (money doesn't grow on trees). אין לו זיקה למקור עברי."
+  },
+  {
+    "id": "proverbs_heart_of_gold",
+    "name_he": "לב זהב",
+    "answer_he": "לב זהב",
+    "aliases_he": [
+      "לב של זהב"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_heart_of_gold.jpg",
+    "facts": [
+      "אדם טוב, נדיב ורחום"
+    ],
+    "source": "ביטוי אנגלי ותיק, מופיע כבר אצל שייקספיר במחזה הנרי החמישי. תורגם לעברית כפתגם שאול."
+  },
+  {
+    "id": "proverbs_talk_to_wall",
+    "name_he": "לדבר אל הקיר",
+    "answer_he": "לדבר אל הקיר",
+    "aliases_he": [
+      "ראש בקיר",
+      "כאילו מדבר אל הקיר"
+    ],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_talk_to_wall.jpg",
+    "facts": [
+      "מאמץ חסר תועלת, אף אחד לא מקשיב"
+    ],
+    "source": "ביטוי עממי בין-לאומי (כמו talking to a brick wall באנגלית), בלי מקור טקסטואלי מסוים."
+  },
+  {
+    "id": "proverbs_eggs_one_basket",
+    "name_he": "לשים את כל הביצים בסל אחד",
+    "answer_he": "לשים את כל הביצים בסל אחד",
+    "aliases_he": [
+      "כל הביצים בסל אחד",
+      "לא לשים את כל הביצים בסל אחד"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_eggs_one_basket.jpg",
+    "facts": [
+      "לרכז את כל הסיכון במקום אחד"
+    ],
+    "source": "מיוחס לראשונה לדון קיחוטה של סרוונטס (1615). התאזרח באנגלית ומשם לעברית."
+  },
+  {
+    "id": "proverbs_head_in_sand",
+    "name_he": "טומן ראשו בחול",
+    "answer_he": "טומן ראשו בחול",
+    "aliases_he": [
+      "בת יענה",
+      "ראש בחול",
+      "לטמון את הראש בחול"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_head_in_sand.jpg",
+    "facts": [
+      "להתעלם מבעיה במקום להתמודד"
+    ],
+    "source": "מבוסס על אגדה עתיקה ושגויה מבחינה ביולוגית שיען טומן ראשו בחול מפחד, מוזכרת כבר אצל פליניוס הזקן."
+  },
+  {
+    "id": "proverbs_wolf_sheep",
+    "name_he": "זאב בעור כבש",
+    "answer_he": "זאב בעור כבש",
+    "aliases_he": [
+      "זאב במעטה כבש"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_wolf_sheep.jpg",
+    "facts": [
+      "רשע שמתחזה לתמים"
+    ],
+    "source": "מקורו בברית החדשה, מתי ז' 15 (\"היזהרו מנביאי השקר... בלבוש כבשים ובתוכם זאבים טורפים\")."
+  },
+  {
+    "id": "proverbs_light_tunnel",
+    "name_he": "אור בקצה המנהרה",
+    "answer_he": "אור בקצה המנהרה",
+    "aliases_he": [
+      "האור בקצה המנהרה"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_light_tunnel.jpg",
+    "facts": [
+      "תקווה אחרי תקופה קשה"
+    ],
+    "source": "ביטוי אנגלי (light at the end of the tunnel), נפוץ מהמאה ה-19. תרגום-שאילה לעברית בלי מקור עברי קדום."
+  },
+  {
+    "id": "proverbs_strong_as_ox",
+    "name_he": "חזק כמו שור",
+    "answer_he": "חזק כמו שור",
+    "aliases_he": [
+      "חזק כשור"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_strong_as_ox.jpg",
+    "facts": [
+      "חזק מאוד פיזית"
+    ],
+    "source": "דימוי עממי בין-לאומי, לא ציטוט מדויק ממקור יהודי. השור מוזכר בתנ\"ך כסמל לכוח, למשל במשלי י\"ד."
+  },
+  {
+    "id": "proverbs_sly_fox",
+    "name_he": "ערמומי כמו שועל",
+    "answer_he": "ערמומי כמו שועל",
+    "aliases_he": [
+      "פיקח כמו שועל"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_sly_fox.jpg",
+    "facts": [
+      "פיקח ותחבולן"
+    ],
+    "source": "השועל כסמל לערמומיות מופיע כבר במשלי איזופוס וגם באגדה תלמודית (משל השועל והדגים, ברכות ס\"א)."
+  },
+  {
+    "id": "proverbs_slow_turtle",
+    "name_he": "איטי כמו צב",
+    "answer_he": "איטי כמו צב",
+    "aliases_he": [
+      "איטי כצב"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_slow_turtle.jpg",
+    "facts": [
+      "איטי מאוד"
+    ],
+    "source": "הצב כסמל לאיטיות מוכר בעיקר ממשל הצב והארנב של איזופוס. דימוי עממי בין-לאומי."
+  },
+  {
+    "id": "proverbs_head_in_clouds",
+    "name_he": "ראש בעננים",
+    "answer_he": "ראש בעננים",
+    "aliases_he": [
+      "הראש בעננים"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_head_in_clouds.jpg",
+    "facts": [
+      "חולם בהקיץ, לא מרוכז"
+    ],
+    "source": "ביטוי עממי אירופי (head in the clouds). אין לו זיקה למקור עברי עתיק."
+  },
+  {
+    "id": "proverbs_butterflies_stomach",
+    "name_he": "פרפרים בבטן",
+    "answer_he": "פרפרים בבטן",
+    "aliases_he": [
+      "יש לי פרפרים בבטן"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_butterflies_stomach.jpg",
+    "facts": [
+      "התרגשות או מתח"
+    ],
+    "source": "ביטוי אנגלי-אמריקאי (butterflies in the stomach), מתועד מהמאה ה-19 וה-20. תורגם ישירות לעברית."
+  },
+  {
+    "id": "proverbs_mountain_mouse",
+    "name_he": "ההר הוליד עכבר",
+    "answer_he": "ההר הוליד עכבר",
+    "aliases_he": [
+      "הר הוליד עכבר"
+    ],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_mountain_mouse.jpg",
+    "facts": [
+      "הרבה רעש והתרגשות על תוצאה זעירה"
+    ],
+    "source": "פתגם לטיני עתיק מהמשורר הורטיוס (\"ההרים יחוללו, ויוולד עכבר מגוחך\", Ars Poetica)."
+  },
+  {
+    "id": "proverbs_penny_dropped",
+    "name_he": "נפל האסימון",
+    "answer_he": "נפל האסימון",
+    "aliases_he": [
+      "נפל לו האסימון",
+      "נפל לי האסימון"
+    ],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_penny_dropped.jpg",
+    "facts": [
+      "הבין משהו בפתאומיות"
+    ],
+    "source": "ביטוי ישראלי מודרני, על שם האסימון שבו שילמו בטלפונים ציבוריים עד שנות ה-90. מתאר רגע של הבנה פתאומית."
+  },
+  {
+    "id": "proverbs_went_to_head",
+    "name_he": "עלה לו לראש",
+    "answer_he": "עלה לו לראש",
+    "aliases_he": [
+      "ההצלחה עלתה לו לראש"
+    ],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_went_to_head.jpg",
+    "facts": [
+      "התגאה יתר על המידה"
+    ],
+    "source": "ביטוי עממי בין-לאומי (דומה ל-it went to his head באנגלית), בלי מקור טקסטואלי מסוים."
+  },
+  {
+    "id": "proverbs_crocodile_tears",
+    "name_he": "דמעות תנין",
+    "answer_he": "דמעות תנין",
+    "aliases_he": [
+      "דמעות של תנין",
+      "הזיל דמעות תנין"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_crocodile_tears.jpg",
+    "facts": [
+      "עצב מזויף ולא כן"
+    ],
+    "source": "מבוסס על אגדה יוונית ומאוחר יותר אירופית שתנינים בוכים בזמן טריפת קורבנם. נפוץ באנגלית מהמאה ה-16."
+  },
+  {
+    "id": "proverbs_stubborn_mule",
+    "name_he": "עקשן כמו פרד",
+    "answer_he": "עקשן כמו פרד",
+    "aliases_he": [
+      "עקשן כפרד"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_stubborn_mule.jpg",
+    "facts": [
+      "עקשן מאוד, לא זז מדעתו"
+    ],
+    "source": "דימוי עממי בין-לאומי לעקשנות, מבוסס על התנהגות הפרדים בפועל. אין לו מקור טקסטואלי ספציפי."
+  },
+  {
+    "id": "proverbs_diligent_ant",
+    "name_he": "חרוץ כמו נמלה",
+    "answer_he": "חרוץ כמו נמלה",
+    "aliases_he": [
+      "חרוצה כמו נמלה"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_diligent_ant.jpg",
+    "facts": [
+      "עובד קשה ובהתמדה"
+    ],
+    "source": "מקור מקראי מובהק, משלי ו' 6: \"לך אל נמלה עצל, ראה דרכיה וחכם\"."
+  },
+  {
+    "id": "proverbs_sleeps_like_bear",
+    "name_he": "ישן כמו דוב",
+    "answer_he": "ישן כמו דוב",
+    "aliases_he": [
+      "לישון כמו דוב"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_sleeps_like_bear.jpg",
+    "facts": [
+      "ישן שינה עמוקה מאוד"
+    ],
+    "source": "דימוי עממי המבוסס על תרדמת החורף של הדובים. אין לו עיגון מילוני מבוסס בעברית."
+  },
+  {
+    "id": "proverbs_light_as_feather",
+    "name_he": "קל כנוצה",
+    "answer_he": "קל כנוצה",
+    "aliases_he": [
+      "קל כמו נוצה"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_light_as_feather.jpg",
+    "facts": [
+      "קל מאוד במשקל"
+    ],
+    "source": "דימוי עממי עתיק ובין-לאומי, מוכר גם מהמיתולוגיה המצרית ושקילת הלב מול נוצה."
+  },
+  {
+    "id": "proverbs_walls_have_ears",
+    "name_he": "אוזניים לכותל",
+    "answer_he": "אוזניים לכותל",
+    "aliases_he": [
+      "יש אוזניים לכותל",
+      "לכותל יש אוזניים"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_walls_have_ears.jpg",
+    "facts": [
+      "מישהו עלול להאזין, היזהר בדבריך"
+    ],
+    "source": "ביטוי צרפתי מהמאה ה-17 (les murs ont des oreilles), משויך באגדה לחצרה של קתרין דה מדיצ'י."
+  },
+  {
+    "id": "proverbs_break_the_ice",
+    "name_he": "לשבור את הקרח",
+    "answer_he": "לשבור את הקרח",
+    "aliases_he": [
+      "שבירת הקרח"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_break_the_ice.jpg",
+    "facts": [
+      "לפתוח מחסום חברתי ולהתחיל קשר"
+    ],
+    "source": "ביטוי אנגלי שמקורו כנראה בספינות ששברו קרח כדי לפתוח נתיבי מסחר. מתועד כבר מהמאה ה-17."
+  },
+  {
+    "id": "proverbs_black_cat_between",
+    "name_he": "עבר ביניהם חתול שחור",
+    "answer_he": "עבר ביניהם חתול שחור",
+    "aliases_he": [
+      "חתול שחור",
+      "עבר בניהם חתול שחור",
+      "חתול שחור עבר ביניהם"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_black_cat_between.jpg",
+    "facts": [
+      "פרץ סכסוך בין חברים"
+    ],
+    "source": "מבוסס על אמונה עממית אירופית עתיקה שחתול שחור החוצה את הדרך מביא מזל רע."
+  },
+  {
+    "id": "proverbs_neighbors_grass",
+    "name_he": "הדשא של השכן ירוק יותר",
+    "answer_he": "הדשא של השכן ירוק יותר",
+    "aliases_he": [
+      "הדשא של השכן"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_neighbors_grass.jpg",
+    "facts": [
+      "תמיד נדמה שלאחרים יש יותר טוב"
+    ],
+    "source": "ביטוי אנגלי (the grass is always greener on the other side), מתועד מהמאה ה-19."
+  },
+  {
+    "id": "proverbs_not_all_glitters",
+    "name_he": "לא כל הנוצץ זהב",
+    "answer_he": "לא כל הנוצץ זהב",
+    "aliases_he": [
+      "לא כל הנוצץ הוא זהב",
+      "לא כל הנוצץ זהב הוא"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_not_all_glitters.jpg",
+    "facts": [
+      "מראה מרשים לא מעיד על ערך אמיתי"
+    ],
+    "source": "הניסוח המוכר ביותר הוא משייקספיר, \"הסוחר מוונציה\" (all that glisters is not gold), אך הרעיון קדום יותר."
+  },
+  {
+    "id": "proverbs_drop_in_sea",
+    "name_he": "טיפה בים",
+    "answer_he": "טיפה בים",
+    "aliases_he": [
+      "כמו טיפה בים"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_drop_in_sea.jpg",
+    "facts": [
+      "כמות זעירה לעומת הצורך"
+    ],
+    "source": "הרעיון מהדהד פסוק בישעיהו מ' 15 (\"הן גויים כמר מדלי\"), אך הניסוח \"טיפה בים\" עצמו מאוחר יותר."
+  },
+  {
+    "id": "proverbs_two_birds_one_stone",
+    "name_he": "לתפוס שתי ציפורים במכה אחת",
+    "answer_he": "לתפוס שתי ציפורים במכה אחת",
+    "aliases_he": [
+      "שתי ציפורים במכה",
+      "שתי ציפורים במכה אחת"
+    ],
+    "category": "proverbs",
+    "difficulty": "medium",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_two_birds_one_stone.jpg",
+    "facts": [
+      "להשיג שתי מטרות בפעולה אחת"
+    ],
+    "source": "ביטוי אנגלי (kill two birds with one stone), מתועד מהמאה ה-17. בעברית הוחלף \"להרוג\" ב\"לתפוס\"."
+  },
+  {
+    "id": "proverbs_odd_bird",
+    "name_he": "עוף מוזר",
+    "answer_he": "עוף מוזר",
+    "aliases_he": [],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_odd_bird.jpg",
+    "facts": [
+      "אדם חריג ושונה מהסביבה"
+    ],
+    "source": "ביטוי עממי בין-לאומי (an odd bird), בלי מקור טקסטואלי ספציפי. משמש לתיאור אדם חריג."
+  },
+  {
+    "id": "proverbs_fast_as_lightning",
+    "name_he": "מהיר כמו ברק",
+    "answer_he": "מהיר כמו ברק",
+    "aliases_he": [
+      "מהיר כברק"
+    ],
+    "category": "proverbs",
+    "difficulty": "easy",
+    "is_active": true,
+    "image_asset": "assets/game_places/images/proverbs_fast_as_lightning.jpg",
+    "facts": [
+      "מהיר מאוד"
+    ],
+    "source": "דימוי עממי עתיק ובין-לאומי. גם בתנ\"ך ברקים מוזכרים כסמל למהירות, למשל בנחום ב' 5."
+  }
+]

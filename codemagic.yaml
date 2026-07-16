@@ -79,7 +79,131 @@ workflows:
               | openssl x509 -inform DER -noout -subject 2>/dev/null || true
             echo ""
           done
-      - name: Set up code signing settings on Xcode project
+      # Builds #62/#64/#65 all failed at archive with "profile doesn't include
+      # aps-environment". Root cause: Codemagic's automatic signing (the
+      # environment.ios_signing block) fetches/creates the App Store profile at
+      # env-init, BEFORE any script runs, and reuses a stale Push-less profile —
+      # deleting it afterwards is too late, and the on-disk copy is what
+      # use-profiles then applies.
+      #
+      # Definitive fix: take deterministic control of the PROFILE (not the cert —
+      # ios_signing already imported the distribution cert + private key into the
+      # keychain, which is untouched here). We resolve the Bundle ID + all
+      # distribution certificate resource ids, delete stale App Store profiles,
+      # WIPE the on-disk profiles env-init fetched, then CREATE a brand-new
+      # App Store profile via `profiles create`. That command needs only
+      # certificate *resource ids* (not the private key), so it avoids the
+      # cert-key error that broke #63. A freshly created profile includes every
+      # capability enabled on the App ID — including Push. We then decode it on
+      # disk and FAIL EARLY with a clear message if aps-environment is somehow
+      # still absent (which would mean the App ID itself lacks Push).
+      - name: Create fresh Push-enabled App Store profile + verify aps-environment
+        script: |
+          set -e
+          BUNDLE_ID="com.rotem.whoisthere"
+          PROF_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+
+          echo "===== A. Resolve Bundle ID resource id ====="
+          app-store-connect bundle-ids list \
+            --bundle-id-identifier "$BUNDLE_ID" --strict-match-identifier \
+            --json > /tmp/bids.json
+          BID=$(python3 -c "import json;d=json.load(open('/tmp/bids.json'));d=d.get('data',d) if isinstance(d,dict) else d;print(d[0]['id'] if d else '')")
+          echo "Bundle ID resource id: '$BID'"
+          [ -z "$BID" ] && { echo 'ERROR: bundle id not found via API'; exit 1; }
+
+          echo "===== B. Collect ALL distribution certificate ids ====="
+          # Build #66 failed here: filtering --type IOS_DISTRIBUTION found nothing
+          # because the account signs with the *unified* "Apple Distribution"
+          # certificate, whose certificateType is DISTRIBUTION (not the legacy
+          # IOS_DISTRIBUTION). List every certificate and keep any distribution
+          # type (DISTRIBUTION or IOS_DISTRIBUTION); fall back to any non-dev
+          # cert if the type attribute is missing. Also print what we found.
+          app-store-connect certificates list --json > /tmp/certs.json 2>/dev/null || echo '[]' > /tmp/certs.json
+          CERT_IDS=$(python3 <<'PY'
+          import json
+          try:
+              d = json.load(open('/tmp/certs.json'))
+          except Exception:
+              d = []
+          if isinstance(d, dict):
+              d = d.get('data', [])
+          def ctype(c):
+              return ((c.get('attributes') or {}).get('certificateType') or '').upper()
+          for c in (d or []):
+              print('  cert', c.get('id'), '=>', ctype(c) or '(no type attr)', file=__import__('sys').stderr)
+          ids = [c['id'] for c in (d or []) if c.get('id') and ctype(c) in ('DISTRIBUTION', 'IOS_DISTRIBUTION')]
+          if not ids:  # tolerate missing/renamed type attribute — take any non-development cert
+              ids = [c['id'] for c in (d or []) if c.get('id') and 'DEVELOPMENT' not in ctype(c)]
+          print(' '.join(ids))
+          PY
+          )
+          echo "Distribution certificate ids: '$CERT_IDS'"
+          [ -z "$CERT_IDS" ] && { echo 'ERROR: no distribution certificate in ASC (checked DISTRIBUTION + IOS_DISTRIBUTION)'; exit 1; }
+
+          echo "===== C. Delete existing App Store profiles for this bundle id ====="
+          for T in IOS_APP_STORE IOS_APP_STORE_ADHOC; do
+            app-store-connect profiles list --bundle-id-identifier "$BUNDLE_ID" --profile-type "$T" --json > /tmp/pl_$T.json 2>/dev/null || echo '[]' > /tmp/pl_$T.json
+            for pid in $(python3 -c "import json;d=json.load(open('/tmp/pl_$T.json'));d=d.get('data',d) if isinstance(d,dict) else d;print(' '.join(x['id'] for x in d if x.get('id')))"); do
+              echo "deleting stale profile $pid ($T)"; app-store-connect profiles delete "$pid" || true
+            done
+          done
+
+          echo "===== D. Wipe on-disk profiles fetched at env-init (may be stale/Push-less) ====="
+          # profiles are cached in BOTH the legacy MobileDevice dir and the newer
+          # Xcode UserData dir (where `profiles create --save` actually writes on
+          # current Xcode). Wipe both so only the fresh profile from step E remains.
+          PROF_DIRS=(
+            "$HOME/Library/MobileDevice/Provisioning Profiles"
+            "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+          )
+          for d in "${PROF_DIRS[@]}"; do
+            rm -f "$d/"*.mobileprovision 2>/dev/null || true
+            mkdir -p "$d"
+          done
+
+          echo "===== E. Create FRESH App Store profile (inherits App ID capabilities incl. Push) ====="
+          app-store-connect profiles create "$BID" \
+            --certificate-ids $CERT_IDS \
+            --type IOS_APP_STORE \
+            --name "WhoIsThere App Store CI $PROJECT_BUILD_NUMBER" \
+            --save
+
+          echo "===== F. Verify the freshly-saved profile GRANTS aps-environment ====="
+          python3 - <<'PY'
+          import glob, subprocess, plistlib, sys, os
+          # `profiles create --save` writes to the Xcode UserData dir on current
+          # Xcode; older tooling used the MobileDevice dir. Search BOTH.
+          prof_dirs = [
+              os.path.expanduser("~/Library/MobileDevice/Provisioning Profiles"),
+              os.path.expanduser("~/Library/Developer/Xcode/UserData/Provisioning Profiles"),
+          ]
+          files = []
+          for pd in prof_dirs:
+              files += glob.glob(pd + "/*.mobileprovision")
+          if not files:
+              print("ERROR: no provisioning profile on disk after 'profiles create --save'")
+              print("  searched:", prof_dirs); sys.exit(1)
+          ok = False
+          for f in files:
+              raw = subprocess.run(["security", "cms", "-D", "-i", f], capture_output=True).stdout
+              try:
+                  pl = plistlib.loads(raw)
+              except Exception as e:
+                  print("could not decode", f, e); continue
+              ent = pl.get("Entitlements", {})
+              aps = ent.get("aps-environment")
+              print(f"  {os.path.basename(f)}  name={pl.get('Name')!r}  aps-environment={aps!r}")
+              if aps:
+                  ok = True
+          if not ok:
+              print("ERROR: the freshly created profile does NOT grant aps-environment.")
+              print("=> The App ID 'com.rotem.whoisthere' does not have Push Notifications")
+              print("   enabled for App Store distribution in the Apple Developer portal.")
+              print("   Enable Push on that App ID (Certificates, IDs & Profiles), then rebuild.")
+              sys.exit(1)
+          print("OK: a profile on disk grants aps-environment (Push). Proceeding.")
+          PY
+      - name: Set up code signing settings on Xcode project (pins the fresh profile)
         script: xcode-project use-profiles
       - name: Build signed IPA
         script: |
@@ -90,7 +214,7 @@ workflows:
           BUILD_NUMBER=$((PROJECT_BUILD_NUMBER + 1000))
           echo "Using iOS build number: $BUILD_NUMBER"
           flutter build ipa --release \
-            --build-name=1.1.1 \
+            --build-name=1.3.2 \
             --build-number=$BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:

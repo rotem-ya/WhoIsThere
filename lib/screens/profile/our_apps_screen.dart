@@ -54,7 +54,7 @@ class OurAppsScreen extends ConsumerWidget {
           Expanded(
             child: apps.isEmpty
                 ? const Center(
-                    child: Text('בקרוב — עוד משחקים בדרך 🎮',
+                    child: Text('בקרוב: עוד משחקים בדרך 🎮',
                         style: TextStyle(
                             color: Color(0xFF4A8BAA),
                             fontSize: 15,

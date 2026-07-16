@@ -7,6 +7,7 @@ import 'dart:math' show Random, min, pi, sin;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_styles.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -35,6 +36,7 @@ import '../../services/analytics_service.dart';
 import '../../services/reward_calculator.dart';
 import '../../services/review_prompt_service.dart';
 import '../../services/qa_logger_service.dart';
+import '../../core/utils/letters_matcher.dart';
 import '../../widgets/game/letter_bank_input.dart';
 import 'widgets/detective_toolbar.dart';
 
@@ -86,9 +88,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   GameImageModel? _image;
   String _loadedImageId = '';
+  // Post-match gallery: every image played this match, loaded once when the
+  // game finishes (see _loadGalleryImages).
+  String? _galleryLoadedForRoomId;
+  List<GameImageModel> _galleryImages = const [];
   String _lastBotTurnKey = '';
   // One bot guess attempt per heat round (keyed by round + image).
   String _lastHeatBotKey = '';
+  // One bot letter-turn guess per turn (keyed by round + cycle).
+  String _lastLetterTurnBotKey = '';
   // Emoji reactions ("chat") — floating bubbles + ambient bot reactions.
   int _lastReactionTs = 0;
   int _reactionSeq = 0;
@@ -272,6 +280,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   // Cycle integrity
   int? _lastKnownCycleId;
+  // The image the currently-open guess targets. The guess input is force-closed
+  // only when THIS changes (round solved / item swapped) — NOT on every piece
+  // reveal (which bumps revealCycleId but keeps the same image).
+  String? _lastKnownImageId;
 
   // Deadline tracking for timer lifecycle logs
   int? _lastKnownGuessOpportunityDeadlineMs;
@@ -311,10 +323,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int? _lastExpiredRevealDeadline;
   int? _lastExpiredGuessOpportunityDeadline;
   int? _lastExpiredGuessModeDeadline;
+  int? _lastExpiredLetterTurnDeadline;
   // Per-phase retry cooldowns — prevents tick-spam on failed attempts
   int? _revealTimeoutLastAttemptMs;
   int? _guessOppTimeoutLastAttemptMs;
   int? _guessModeTimeoutLastAttemptMs;
+  int? _letterTurnTimeoutLastAttemptMs;
   // Exponential backoff for auto-reveal when Firestore is unavailable
   int _revealBackoffMs = 2000;
   static const int _revealBackoffMax = 32000;
@@ -329,6 +343,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int? _lastDedupSkipLogMs_guessOpp;
   int _dedupSkipCount_guessMode = 0;
   int? _lastDedupSkipLogMs_guessMode;
+  int _dedupSkipCount_letterTurn = 0;
+  int? _lastDedupSkipLogMs_letterTurn;
   // Snapshot stale escalation — log each level once per stale period
   String? _snapshotStaleLevelLogged;
   // Watchdog stuck confirmation — log once when issue persists >10s
@@ -705,6 +721,42 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
         }
       }
 
+      // ── Letter-turn timeout ───────────────────────────────────────────────────
+      // Additive hint-layer mechanic (host-toggled, off by default) — runs
+      // alongside whatever the tile-reveal/guess phases above are doing.
+      // Any client may call; transaction guards prevent double-execution.
+      if (room.isLetterTurnActive &&
+          room.letterTurnDeadlineMs != null &&
+          now >= room.letterTurnDeadlineMs!) {
+        if (_lastExpiredLetterTurnDeadline == room.letterTurnDeadlineMs) {
+          _dedupSkipCount_letterTurn++;
+          if (_dedupSkipCount_letterTurn == 1 ||
+              (_lastDedupSkipLogMs_letterTurn != null &&
+                  now - _lastDedupSkipLogMs_letterTurn! >= 30000)) {
+            _lastDedupSkipLogMs_letterTurn = now;
+            _dedupSkipCount_letterTurn = 0;
+          }
+        } else {
+          final lastAttempt = _letterTurnTimeoutLastAttemptMs;
+          if (lastAttempt != null && now - lastAttempt < 2000) {
+            // within cooldown — wait for retry window
+          } else {
+            _letterTurnTimeoutLastAttemptMs = now;
+            QaLoggerService.instance.log('TIMER',
+                'TIMER_FIRED type=letterTurn deadline=${room.letterTurnDeadlineMs}');
+            final committed = await ref.read(roomServiceProvider).expireLetterTurn(
+              roomId: room.id,
+            );
+            if (!mounted) return;
+            if (committed) {
+              _lastExpiredLetterTurnDeadline = room.letterTurnDeadlineMs;
+              _dedupSkipCount_letterTurn = 0;
+              _lastDedupSkipLogMs_letterTurn = null;
+            }
+          }
+        }
+      }
+
       // Snapshot staleness — escalating levels, each logged once per stale period
       final lastSnap = _lastSnapshotMs;
       if (lastSnap != null) {
@@ -1047,6 +1099,28 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     }
   }
 
+  /// Post-match gallery: fetches every image actually played this match (all
+  /// heat/proverbs rounds in order, or just the one round for a normal game)
+  /// so GameWinnerView can offer a swipeable gallery + save-with-logo. Runs
+  /// once per finished room; failures just leave the gallery empty/partial.
+  Future<void> _loadGalleryImages(RoomModel room) async {
+    if (_galleryLoadedForRoomId == room.id) return;
+    _galleryLoadedForRoomId = room.id;
+    final ids = room.heatImageIds.isNotEmpty
+        ? room.heatImageIds
+        : (room.selectedImageId != null && room.selectedImageId!.isNotEmpty
+            ? [room.selectedImageId!]
+            : const <String>[]);
+    final images = <GameImageModel>[];
+    for (final id in ids) {
+      try {
+        final img = await ref.read(roomServiceProvider).getImage(id);
+        if (img != null) images.add(img);
+      } catch (_) {}
+    }
+    if (!mounted || images.isEmpty) return;
+    setState(() => _galleryImages = images);
+  }
 
   void _scheduleBotTurn(RoomModel room) {
     // In auto-reveal mode, bots no longer reveal tiles (guardian handles it).
@@ -1090,14 +1164,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     final botId = botEntries[_random.nextInt(botEntries.length)].key;
     // Early presence attempt (~12–20s in): the bot visibly types and races,
-    // but below 50% reveal it can only be WRONG (see the attempt's guard).
+    // but below 65% reveal it can only be WRONG (see the attempt's guard).
     _scheduleHeatBotAttempt(room, botId, 12000 + _random.nextInt(8001));
-    // Second wind once >50% of the board is open — the only window where a
+    // Second wind once >65% of the board is open — the only window where a
     // correct bot guess is allowed — so the bot stays a real late threat.
-    // Heat reveals tick at ~1 tile/sec (giant metronome), so time-to-55–73%
+    // Heat reveals tick at ~1 tile/sec (giant metronome), so time-to-68–85%
     // is roughly the missing tile count in seconds.
     final total = room.gridSize * room.gridSize;
-    final targetTiles = (total * (0.55 + _random.nextDouble() * 0.18)).round();
+    final targetTiles = (total * (0.68 + _random.nextDouble() * 0.17)).round();
     final tilesLeft =
         (targetTiles - room.placedPieces.length).clamp(0, total);
     _scheduleHeatBotAttempt(
@@ -1106,11 +1180,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
   /// One delayed heat-bot guess attempt. Re-reads the live room before acting
   /// and bails if the round moved on. Correct chance is derived from the LIVE
-  /// reveal ratio at fire time — and is hard-zeroed below 50% reveal:
-  /// rule (per Rotem), a bot may never guess correctly before half the tiles
-  /// are revealed, in any game, so a human who recognises the image early
-  /// always owns the win. A wrong attempt still shows typing + a same-topic
-  /// wrong guess (then a block), keeping the race feeling alive.
+  /// reveal ratio at fire time — and is hard-zeroed below 65% reveal:
+  /// rule (per Rotem), a bot may never guess correctly before ~two-thirds of
+  /// the tiles are revealed, in any game, so a human who recognises the image
+  /// early always owns the win. A wrong attempt still shows typing + a
+  /// same-topic wrong guess (then a block), keeping the race feeling alive.
   void _scheduleHeatBotAttempt(RoomModel room, String botId, int delayMs) {
     Future.delayed(Duration(milliseconds: delayMs), () async {
       if (!mounted) return;
@@ -1123,12 +1197,68 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       final total = snap.gridSize * snap.gridSize;
       final revealed = snap.placedPieces.length;
       final ratio = total > 0 ? revealed / total : 0.0;
-      final double correctChance = ratio < 0.50
+      final double correctChance = ratio < 0.65
           ? 0.0
-          : ratio < 0.65
+          : ratio < 0.80
               ? 0.30
               : 0.45;
       await _performBotGuess(snap, botId, correctChance);
+    });
+  }
+
+  // All keyboard keys the letter-turn bot may pick from (mirrors
+  // letter_turn_panel.dart's layout; kept local since that list is private).
+  static const List<String> _letterTurnBotAlphabet = [
+    'פ', 'ם', 'ן', 'ו', 'ט', 'א', 'ר', 'ק',
+    'ף', 'ך', 'ל', 'ח', 'י', 'ע', 'כ', 'ג', 'ד', 'ש',
+    'ץ', 'ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז', kGeresh,
+  ];
+
+  /// Turn-based letter guessing (additive hint layer): when it's a bot's turn,
+  /// it waits ~3.5s (per Rotem — reads clearly as "thinking" without feeling
+  /// laggy) then guesses one letter. Turn-gated, NOT the probabilistic
+  /// race-decision system above — every bot turn results in exactly one guess.
+  void _scheduleLetterTurnBot(RoomModel room) {
+    if (!room.isLetterTurnActive) return;
+    final turnUid = room.letterTurnPlayerId;
+    if (turnUid == null || !turnUid.startsWith('virtual_')) return;
+
+    final key = '${room.id}-letterTurn-${room.selectedImageId}-${room.letterTurnCycleId}';
+    if (_lastLetterTurnBotKey == key) return;
+    _lastLetterTurnBotKey = key;
+
+    Future.delayed(const Duration(milliseconds: 3500), () async {
+      if (!mounted) return;
+      final snap = await ref.read(roomServiceProvider).watchRoom(room.id).first;
+      if (snap == null || !snap.isLetterTurnActive) return;
+      if (snap.letterTurnPlayerId != turnUid) return; // turn already moved on
+      if (snap.letterTurnCycleId != room.letterTurnCycleId) return;
+
+      final guessedNorm =
+          snap.letterTurnGuessedLetters.map(normalizeHebrewFinals).toSet();
+      final puzzle = buildLettersPuzzle(snap.letterTurnAnswer!);
+      final unguessedAnswerLetters = puzzle.matchChars
+          .where((l) => !guessedNorm.contains(normalizeHebrewFinals(l)))
+          .toSet();
+
+      String letter;
+      if (unguessedAnswerLetters.isNotEmpty && _random.nextDouble() < 0.5) {
+        letter = unguessedAnswerLetters.elementAt(
+            _random.nextInt(unguessedAnswerLetters.length));
+      } else {
+        final pool = _letterTurnBotAlphabet
+            .where((l) => !guessedNorm.contains(normalizeHebrewFinals(l)))
+            .toList();
+        letter = pool.isEmpty
+            ? _letterTurnBotAlphabet[_random.nextInt(_letterTurnBotAlphabet.length)]
+            : pool[_random.nextInt(pool.length)];
+      }
+
+      await ref.read(roomServiceProvider).guessLetterTurn(
+            roomId: snap.id,
+            userId: turnUid,
+            letter: letter,
+          );
     });
   }
 
@@ -1140,7 +1270,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     // Solo duel: when the human faces bots only, the single bot opponent is the
     // whole challenge, so it plays as a sharper endgame "closer" — more accurate
     // late and a touch faster to think — while still never guessing correctly
-    // before 60% fill, preserving the human's early-guess win path.
+    // before 65% fill, preserving the human's early-guess win path.
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
 
     // Give the human player a guaranteed first-guess window on the first 2 tiles
@@ -1216,10 +1346,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       if (snap.phase != GamePhase.playing) return;
       if (snap.isBlockedFromGuessing(botId)) return;
 
-      // Correct guess: ≥60% revealed → 20% base; 75%+ → 35%; 85%+ → 45%.
+      // Correct guess: ≥65% revealed → 20% base; 75%+ → 35%; 85%+ → 45%.
       // Solo duel sharpens the closer: 25% / 42% / 55% so the lone bot is a
-      // genuine endgame threat (still 0% before 60%, so early guesses stay safe).
-      final double correctChance = ratio >= 0.60
+      // genuine endgame threat (still 0% before 65%, so early guesses stay safe).
+      final double correctChance = ratio >= 0.65
           ? (isSolo
               ? (isSuperEndgame ? 0.55 : isEndgameBotMode ? 0.42 : 0.25)
               : (isSuperEndgame ? 0.45 : isEndgameBotMode ? 0.35 : 0.20))
@@ -1455,6 +1585,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     if (_rewardApplied || uid == null) return;
     _rewardApplied = true;
 
+    // All games, every mode: record this match into MY all-games history
+    // (opponents, host choices, result) for the admin per-player stats view.
+    unawaited(
+        ref.read(roomServiceProvider).recordMyGameHistory(room: room, myUid: uid));
+
     // Friends games: record this match for the friends leaderboard + per-game
     // history. Each client records only its own result (idempotent per
     // player/room); best-effort, never blocks the reward flow.
@@ -1462,6 +1597,12 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       unawaited(ref
           .read(friendsServiceProvider)
           .recordMyResult(room: room, myUid: uid));
+    }
+    // משחק של קבוצה קבועה: הניקוד שלי מצטרף ללוח הקבוצה (אידמפוטנטי פר חדר).
+    if (room.groupId != null && room.groupId!.isNotEmpty) {
+      unawaited(ref
+          .read(groupsServiceProvider)
+          .recordMyGroupResult(room: room, myUid: uid));
     }
 
     final isWin = room.winnerId == uid;
@@ -2083,6 +2224,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     });
   }
 
+  // Thumbnails of every heat round already solved — shown as a "story so far"
+  // strip on the interlude scoreboard. Cached per image id for the whole game.
+  final Map<String, GameImageModel> _interludeGallery = {};
+  Future<void> _ensureInterludeGallery(RoomModel room) async {
+    final done = room.heatImageIds.take(room.heatRoundIndex);
+    for (final id in done) {
+      if (_interludeGallery.containsKey(id)) continue;
+      final img = await ref.read(roomServiceProvider).getImage(id);
+      if (!mounted) return;
+      if (img != null) setState(() => _interludeGallery[id] = img);
+    }
+  }
+
   Future<void> _showExitConfirmation(BuildContext context) async {
     QaLoggerService.instance.log('GAME', 'GAME_BACK_CONFIRM_SHOWN');
     await showDialog<void>(
@@ -2401,8 +2555,18 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 // any bot-typing banner — they target the previous image. This is
                 // what makes the next image appear for everyone together instead of
                 // hiding behind a stale typing overlay.
-                if (_prevCycle != null &&
-                    room.revealCycleId != _prevCycle &&
+                //
+                // Keyed on the IMAGE, not revealCycleId: a piece auto-reveal bumps
+                // revealCycleId every few seconds while the same image is guessed,
+                // so keying on the cycle would keep snapping the keyboard shut.
+                // selectedImageId only changes when the round is solved or the item
+                // is swapped — exactly when the open guess is truly stale.
+                final _prevImageId = _lastKnownImageId;
+                final _curImageId = room.selectedImageId;
+                _lastKnownImageId = _curImageId;
+                if (_prevImageId != null &&
+                    _curImageId != null &&
+                    _curImageId != _prevImageId &&
                     (_localGuessOpen || _showBotTyping)) {
                   QaLoggerService.instance
                       .log('GUESS', 'LOCAL_GUESS_CLOSED_ROUND_ADVANCED');
@@ -2504,6 +2668,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     _triggerMatchReward(room, currentUserId);
                   });
+                  unawaited(_loadGalleryImages(room));
                   final hasWinner = room.winnerId != null && room.winnerId!.isNotEmpty;
                   if (hasWinner) {
                     final rawName = room.players[room.winnerId]?.name ?? '';
@@ -2515,13 +2680,42 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     final trivia = winFacts.isEmpty
                         ? null
                         : winFacts[(_image!.id.hashCode & 0x7fffffff) % winFacts.length];
+                    // "גילה את המקום" is wrong outside of israel_places — a
+                    // proverb isn't a place, and a heat category answer isn't
+                    // either. Wording per game type; source only exists for
+                    // proverbs today.
+                    final winVerb = room.isProverbs
+                        ? 'ניחש את הפתגם'
+                        : room.isHeat
+                            ? 'זיהה נכון'
+                            : 'גילה את המקום';
+                    final answerLabel = room.isProverbs
+                        ? 'הפתגם'
+                        : room.isHeat
+                            ? 'התשובה'
+                            : 'המקום';
+                    // Same admin-controlled override the "share the app" /
+                    // update-notice flows already use (app_config/app →
+                    // androidUrl/iosUrl) — the hardcoded fallback URLs aren't
+                    // guaranteed to be live store listings.
+                    final updateInfo =
+                        ref.watch(appUpdateInfoProvider).valueOrNull;
+                    final storeUrl = AppConstants.storeUrl(
+                      androidOverride: updateInfo?.androidUrl,
+                      iosOverride: updateInfo?.iosUrl,
+                    );
                     return GameWinnerView(
                       winnerName: winnerName,
                       placeName: _image?.name,
                       trivia: trivia,
+                      source: room.isProverbs ? _image?.source : null,
+                      winVerb: winVerb,
+                      answerLabel: answerLabel,
                       imageUrl: _image?.imageUrl,
                       rewardBreakdown: _rewardBreakdown,
                       coinsWon: _rewardBreakdown?.total ?? 0,
+                      galleryImages: _galleryImages,
+                      galleryStoreUrl: storeUrl,
                       onDoubleCoins: () async {
                         final uid = currentUserId;
                         if (uid == null) return false;
@@ -2620,6 +2814,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 _lastRoom = room;
                 _scheduleBotTurn(room);
                 _scheduleHeatBotTurn(room);
+                _scheduleLetterTurnBot(room);
                 _consumeReaction(room);
                 _maybeStartBotReactions(room);
                 _ensureChatSub(room.id);
@@ -2808,6 +3003,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     _interludeDismissedUntilMs != interludeUntil;
                 if (interludeActive) {
                   unawaited(_ensureInterludeImage(room.lastRoundImageId!));
+                  unawaited(_ensureInterludeGallery(room));
                   _interludeTimer?.cancel();
                   final msLeft = interludeUntil -
                       DateTime.now().millisecondsSinceEpoch;
@@ -2872,8 +3068,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                         .log('GUESS', 'LOCAL_GUESS_CANCELLED_BY_USER');
                     _closeLocalGuess();
                   },
-                  stunCardCount: room.isHeat ? 0 : (user?.stunCardCount ?? 0),
-                  onStunCard: (currentUserId == null || room.isHeat) ? null : (targetId) async {
+                  stunCardCount: (room.isHeat || !room.tricksEnabled)
+                      ? 0
+                      : (user?.stunCardCount ?? 0),
+                  onStunCard: (currentUserId == null ||
+                          room.isHeat ||
+                          !room.tricksEnabled)
+                      ? null
+                      : (targetId) async {
                     final success = await ref.read(roomServiceProvider).applyStunCard(
                       roomId: room.id,
                       actorUid: currentUserId,
@@ -2881,13 +3083,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     );
                     if (!success && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('הכרטיס לא הופעל — נסה שוב')),
+                        const SnackBar(content: Text('הכרטיס לא הופעל, נסה שוב')),
                       );
                     }
                   },
-                  guessBlock5Count: room.isHeat ? 0 : (user?.guessBlock5Count ?? 0),
-                  guessBlock10Count: room.isHeat ? 0 : (user?.guessBlock10Count ?? 0),
-                  blackoutCardCount: room.isHeat ? 0 : (user?.blackoutCardCount ?? 0),
+                  guessBlock5Count: (room.isHeat || !room.tricksEnabled)
+                      ? 0
+                      : (user?.guessBlock5Count ?? 0),
+                  guessBlock10Count: (room.isHeat || !room.tricksEnabled)
+                      ? 0
+                      : (user?.guessBlock10Count ?? 0),
+                  blackoutCardCount: (room.isHeat || !room.tricksEnabled)
+                      ? 0
+                      : (user?.blackoutCardCount ?? 0),
                   guessBlockedUntilMs: room.guessBlockedUntilMs,
                   blackoutActiveUntilMs: room.blackoutActiveUntilMs,
                   personalRevealedCells: _personalRevealedTiles,
@@ -2915,6 +3123,15 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                               ));
                         }
                       : null,
+                  onGuessLetterTurn: currentUserId == null
+                      ? null
+                      : (letter) {
+                          unawaited(ref.read(roomServiceProvider).guessLetterTurn(
+                                roomId: room.id,
+                                userId: currentUserId,
+                                letter: letter,
+                              ));
+                        },
                 );
 
                 if (!interludeActive) return gameLayout;
@@ -2926,6 +3143,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                           ? _interludeImage
                           : null,
                       winnerName: room.lastRoundWinnerName,
+                      room: room,
+                      gallery: _interludeGallery,
                     ),
                   ],
                 );
@@ -3161,17 +3380,59 @@ class _RoundStartOverlayState extends State<_RoundStartOverlay> {
 class _RoundInterludeOverlay extends StatelessWidget {
   final GameImageModel? image;
   final String? winnerName;
+  final RoomModel room;
+  final Map<String, GameImageModel> gallery;
 
-  const _RoundInterludeOverlay({required this.image, required this.winnerName});
+  const _RoundInterludeOverlay({
+    required this.image,
+    required this.winnerName,
+    required this.room,
+    required this.gallery,
+  });
+
+  Widget _thumb(String url, double size, {bool glow = false}) => Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(size * 0.12),
+          boxShadow: glow
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFFD4AF37).withOpacity(0.35),
+                    blurRadius: 24,
+                  ),
+                ]
+              : null,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(size * 0.12),
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: url.startsWith('assets/')
+                ? Image.asset(url, fit: BoxFit.cover)
+                : CachedNetworkImage(imageUrl: url, fit: BoxFit.cover),
+          ),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
     final url = image?.imageUrl;
     final name = winnerName?.trim();
+    final hasWinner = name != null && name.isNotEmpty;
+    final plusPoints =
+        (room.selectedDifficulty ?? Difficulty.easy).winReward;
+    // דירוג מעודכן: הניקוד של הסבב כבר נזקף בטרנזקציית הניחוש.
+    final standings = room.players.values.toList()
+      ..sort((a, b) => b.score.compareTo(a.score));
+    // התמונות שכבר נפתרו במקצה (כולל של הסבב שהסתיים) — "הסיפור עד כה".
+    final doneIds =
+        room.heatImageIds.take(room.heatRoundIndex).toList(growable: false);
+    const medals = ['🥇', '🥈', '🥉'];
+
     return Positioned.fill(
       child: AbsorbPointer(
         child: Container(
-          color: Colors.black.withOpacity(0.9),
+          color: Colors.black.withOpacity(0.92),
           alignment: Alignment.center,
           child: Directionality(
             textDirection: TextDirection.rtl,
@@ -3181,65 +3442,196 @@ class _RoundInterludeOverlay extends StatelessWidget {
               curve: Curves.easeOutBack,
               builder: (context, t, child) => Opacity(
                 opacity: t.clamp(0.0, 1.0),
-                child: Transform.scale(scale: 0.85 + 0.15 * t, child: child),
+                child: Transform.scale(scale: 0.9 + 0.1 * t, child: child),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    (name != null && name.isNotEmpty)
-                        ? '🎉 $name ניחש נכון!'
-                        : 'אף אחד לא ניחש הפעם',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (url != null)
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFD4AF37).withOpacity(0.35),
-                            blurRadius: 28,
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(18),
-                        child: SizedBox(
-                          width: 210,
-                          height: 210,
-                          child: url.startsWith('assets/')
-                              ? Image.asset(url, fit: BoxFit.cover)
-                              : CachedNetworkImage(
-                                  imageUrl: url, fit: BoxFit.cover),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 340),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        hasWinner ? '🎉 $name ניחש נכון!' : 'אף אחד לא ניחש הפעם',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
-                    ),
-                  const SizedBox(height: 14),
-                  Text(
-                    image?.answer ?? '',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFFFFE082),
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                    ),
+                      const SizedBox(height: 12),
+                      if (url != null) _thumb(url, 150, glow: true),
+                      const SizedBox(height: 10),
+                      Text(
+                        image?.answer ?? '',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFFFFE082),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      if (room.isProverbs && image != null)
+                        _ProverbMeaningCard(
+                          meaning: image!.facts.isNotEmpty ? image!.facts.first : null,
+                          source: image!.source,
+                        ),
+                      const SizedBox(height: 14),
+                      // ── טבלת הניקוד ─────────────────────────────────────
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0D1E30).withOpacity(0.92),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: Colors.white.withOpacity(0.12)),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (var i = 0; i < standings.length; i++)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 3),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 26,
+                                      child: Text(
+                                        i < medals.length
+                                            ? medals[i]
+                                            : '${i + 1}.',
+                                        style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 15),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Text(
+                                        standings[i].name,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: standings[i].name == name
+                                              ? const Color(0xFFFFE082)
+                                              : Colors.white,
+                                          fontSize: 15,
+                                          fontWeight:
+                                              standings[i].name == name
+                                                  ? FontWeight.w900
+                                                  : FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    if (hasWinner &&
+                                        standings[i].name == name)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                            left: 6),
+                                        child: Text(
+                                          '+$plusPoints',
+                                          style: const TextStyle(
+                                            color: Color(0xFF56D364),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                      ),
+                                    Text(
+                                      '${standings[i].score}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      // ── התמונות שנחשפו עד כה ────────────────────────────
+                      if (doneIds.length > 1) ...[
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            for (final id in doneIds)
+                              if (gallery[id] != null)
+                                _thumb(gallery[id]!.imageUrl, 44),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+                      const Text(
+                        'התמונה הבאה עוד רגע…',
+                        style: TextStyle(color: Colors.white54, fontSize: 13),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 22),
-                  const Text(
-                    'התמונה הבאה עוד רגע…',
-                    style: TextStyle(color: Colors.white54, fontSize: 14),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// פירוש + מקור הפתגם, מוצג בין-סבבים במשחק "זהו את הפתגם" בלבד. facts[0]
+/// כבר קיים כפירוש; source הוא שדה נפרד (proverbs.json), לא חלק ממנגנון
+/// הרמזים הנרכשים כדי שיוצג תמיד ולא ייצרך כרמז בתשלום.
+class _ProverbMeaningCard extends StatelessWidget {
+  final String? meaning;
+  final String? source;
+
+  const _ProverbMeaningCard({required this.meaning, required this.source});
+
+  @override
+  Widget build(BuildContext context) {
+    if ((meaning == null || meaning!.isEmpty) &&
+        (source == null || source!.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (meaning != null && meaning!.isNotEmpty)
+              Text(
+                meaning!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            if (source != null && source!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                source!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

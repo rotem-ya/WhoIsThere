@@ -16,6 +16,10 @@ class BoardSkin {
   /// the image; [colors] still provides the accent + store swatch.
   final String? imageUrl;
 
+  /// A BAKED local background image (bundled asset). When set it ALWAYS wins
+  /// over [imageUrl] — renders instantly with no cloud read (release bake).
+  final String? assetPath;
+
   /// Hidden from the store when false (still renders if already equipped).
   final bool active;
 
@@ -25,8 +29,12 @@ class BoardSkin {
     required this.price,
     this.colors = const [],
     this.imageUrl,
+    this.assetPath,
     this.active = true,
   });
+
+  /// Whether this skin has a baked local background asset.
+  bool get hasAsset => assetPath != null;
 
   bool get isNone => id == 'none' || (colors.isEmpty && imageUrl == null);
   bool get isFree => price == 0;
@@ -51,22 +59,22 @@ const kBoardSkins = <BoardSkin>[
   // ── חינמי (ברירת מחדל) ───────────────────────────────────────────────────────
   BoardSkin(id: 'none', name: 'ברירת מחדל', price: 0),
 
-  // ── בסיסי (50–150) ───────────────────────────────────────────────────────────
-  BoardSkin(id: 'midnight', name: 'חצות',     price: 50,  colors: [Color(0xFF13294B), Color(0xFF050A16)]),
-  BoardSkin(id: 'deep_sea', name: 'מצולות',   price: 70,  colors: [Color(0xFF003B46), Color(0xFF001518)]),
-  BoardSkin(id: 'plum',     name: 'שזיף',     price: 90,  colors: [Color(0xFF2E1A47), Color(0xFF0E0518)]),
-  BoardSkin(id: 'forest',   name: 'יער עד',   price: 110, colors: [Color(0xFF14331F), Color(0xFF04120A)]),
-  BoardSkin(id: 'ember',    name: 'גחלים',    price: 150, colors: [Color(0xFF3A1410), Color(0xFF120403)]),
+  // ── בסיסי (50–150) — תמונות מוטמעות (assetPath), gradient כ-fallback ──────────
+  BoardSkin(id: 'midnight', name: 'חצות',     price: 50,  colors: [Color(0xFF13294B), Color(0xFF050A16)], assetPath: 'assets/skins/board_midnight.jpg'),
+  BoardSkin(id: 'deep_sea', name: 'מצולות',   price: 70,  colors: [Color(0xFF003B46), Color(0xFF001518)], assetPath: 'assets/skins/board_deep_sea.jpg'),
+  BoardSkin(id: 'plum',     name: 'שזיף',     price: 90,  colors: [Color(0xFF2E1A47), Color(0xFF0E0518)], assetPath: 'assets/skins/board_plum.jpg'),
+  BoardSkin(id: 'forest',   name: 'יער עד',   price: 110, colors: [Color(0xFF14331F), Color(0xFF04120A)], assetPath: 'assets/skins/board_forest.jpg'),
+  BoardSkin(id: 'ember',    name: 'גחלים',    price: 150, colors: [Color(0xFF3A1410), Color(0xFF120403)], assetPath: 'assets/skins/board_ember.jpg'),
 
   // ── נדיר (300–500) ───────────────────────────────────────────────────────────
-  BoardSkin(id: 'aurora',   name: 'זוהר הקוטב', price: 300, colors: [Color(0xFF0B3D2E), Color(0xFF134E6F), Color(0xFF050A1A)]),
-  BoardSkin(id: 'sunset',   name: 'שקיעה',      price: 380, colors: [Color(0xFF4A1942), Color(0xFF8A2D4B), Color(0xFF1A0512)]),
-  BoardSkin(id: 'galaxy',   name: 'גלקסיה',     price: 500, colors: [Color(0xFF1A0B3D), Color(0xFF3D1A6E), Color(0xFF05030F)]),
+  BoardSkin(id: 'aurora',   name: 'זוהר הקוטב', price: 300, colors: [Color(0xFF0B3D2E), Color(0xFF134E6F), Color(0xFF050A1A)], assetPath: 'assets/skins/board_aurora.jpg'),
+  BoardSkin(id: 'sunset',   name: 'שקיעה',      price: 380, colors: [Color(0xFF4A1942), Color(0xFF8A2D4B), Color(0xFF1A0512)], assetPath: 'assets/skins/board_sunset.jpg'),
+  BoardSkin(id: 'galaxy',   name: 'גלקסיה',     price: 500, colors: [Color(0xFF1A0B3D), Color(0xFF3D1A6E), Color(0xFF05030F)], assetPath: 'assets/skins/board_galaxy.jpg'),
 
   // ── פרימיום (1000) ───────────────────────────────────────────────────────────
-  BoardSkin(id: 'royal_gold', name: 'זהב מלכותי', price: 1000, colors: [Color(0xFF4A3A0B), Color(0xFF8A6D1A), Color(0xFF120D02)]),
-  BoardSkin(id: 'nebula',     name: 'ערפילית',    price: 1000, colors: [Color(0xFF2B0B3D), Color(0xFF0B2B6E), Color(0xFF6E0B4E), Color(0xFF05030F)]),
-  BoardSkin(id: 'emerald_dream', name: 'חלום אמרלד', price: 1000, colors: [Color(0xFF043D2E), Color(0xFF0B6E4E), Color(0xFF02120C)]),
+  BoardSkin(id: 'royal_gold', name: 'זהב מלכותי', price: 1000, colors: [Color(0xFF4A3A0B), Color(0xFF8A6D1A), Color(0xFF120D02)], assetPath: 'assets/skins/board_royal_gold.jpg'),
+  BoardSkin(id: 'nebula',     name: 'ערפילית',    price: 1000, colors: [Color(0xFF2B0B3D), Color(0xFF0B2B6E), Color(0xFF6E0B4E), Color(0xFF05030F)], assetPath: 'assets/skins/board_nebula.jpg'),
+  BoardSkin(id: 'emerald_dream', name: 'חלום אמרלד', price: 1000, colors: [Color(0xFF043D2E), Color(0xFF0B6E4E), Color(0xFF02120C)], assetPath: 'assets/skins/board_emerald_dream.jpg'),
 ];
 
 /// Live (bundled+remote merged) catalog — populated by CosmeticsCatalogService.

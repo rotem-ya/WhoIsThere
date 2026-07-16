@@ -13,6 +13,7 @@ import 'game_banners.dart';
 import 'game_board_view.dart';
 import 'game_top_hud.dart';
 import 'guess_mode_overlay.dart';
+import '../../../widgets/game/letter_turn_panel.dart';
 
 class GameLayout extends StatelessWidget {
   final RoomModel room;
@@ -67,6 +68,8 @@ class GameLayout extends StatelessWidget {
   final bool showBuyLetter;
   // חי-צומח-דומם: vote to replace the current item (nobody recognizes it).
   final VoidCallback? onVoteSkip;
+  // Turn-based letter guessing (additive hint layer, host-toggled).
+  final ValueChanged<String>? onGuessLetterTurn;
 
   const GameLayout({
     required this.room,
@@ -114,6 +117,7 @@ class GameLayout extends StatelessWidget {
     this.nextLetterPrice = 0,
     this.showBuyLetter = false,
     this.onVoteSkip,
+    this.onGuessLetterTurn,
   });
 
   @override
@@ -199,6 +203,7 @@ class GameLayout extends StatelessWidget {
               guessBlock5Count: guessBlock5Count,
               guessBlock10Count: guessBlock10Count,
               blackoutCardCount: blackoutCardCount,
+              tricksDisabled: !room.tricksEnabled,
             ),
             // חי/צומח/דומם: always show the current topic + round, so the player
             // knows what they're guessing at every stage.
@@ -294,7 +299,23 @@ class GameLayout extends StatelessWidget {
                 ),
               ),
             ),
-            AnswerSlots(answer: image?.answer ?? '', isMyTurn: isMyTurn),
+            // Letter-turn's own slots already show the word shape (plus actual
+            // reveals) — showing the blank AnswerSlots row too just duplicates
+            // it and eats space the image badly needs.
+            if (!room.isLetterTurnActive)
+              AnswerSlots(answer: image?.answer ?? '', isMyTurn: isMyTurn),
+            if (room.isLetterTurnActive)
+              LetterTurnPanel(
+                answer: room.letterTurnAnswer!,
+                revealedSlots: room.letterTurnRevealedSlots.toSet(),
+                guessedLetters: room.letterTurnGuessedLetters,
+                isMyTurn: currentUserId != null &&
+                    room.letterTurnPlayerId == currentUserId,
+                turnPlayerName:
+                    room.players[room.letterTurnPlayerId]?.name ?? '',
+                deadlineMs: room.letterTurnDeadlineMs,
+                onGuessLetter: onGuessLetterTurn ?? (_) {},
+              ),
             GameActions(
               isMyTurn: isMyTurn,
               isBusy: isBusy,
@@ -348,6 +369,9 @@ class GameLayout extends StatelessWidget {
             onBuyLetter: onBuyLetter,
             nextLetterPrice: nextLetterPrice,
             showBuyLetter: showBuyLetter,
+            // A proverb is a whole phrase — allow up to 24 letter slots (the
+            // longest baked answer is 19; words wrap to extra rows).
+            maxLetters: room.isProverbs ? 24 : 12,
           ),
       ],
     );

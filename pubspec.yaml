@@ -51,6 +51,8 @@ dependencies:
   equatable: ^2.0.5
   intl: ^0.19.0
   share_plus: ^9.0.0
+  gal: ^2.3.0  # save images directly to the device gallery/photos
+  qr_flutter: ^4.1.0  # download-link QR badge on saved/shared game images
   url_launcher: ^6.3.0
   wakelock_plus: ^1.1.4
   google_mobile_ads: '>=5.2.0 <5.3.0'

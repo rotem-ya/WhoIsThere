@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -73,6 +74,19 @@ class NotificationService {
   Future<void> registerTokenForUser(String uid) async {
     if (uid.isEmpty) return;
     try {
+      // iOS: getToken() throws apns-token-not-set if called before the OS
+      // finishes the APNs handshake — a real race on some cold starts, right
+      // after permission is granted. Wait for the APNs token first so a
+      // fresh launch doesn't leave a stale/missing token on the user doc.
+      if (Platform.isIOS) {
+        var apnsToken = await _fm.getAPNSToken();
+        var attempts = 0;
+        while (apnsToken == null && attempts < 10) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          apnsToken = await _fm.getAPNSToken();
+          attempts++;
+        }
+      }
       final token = await _fm.getToken();
       if (token != null && token.isNotEmpty) {
         await _saveToken(uid, token);

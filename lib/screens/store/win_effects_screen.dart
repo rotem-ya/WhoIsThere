@@ -94,7 +94,7 @@ class WinEffectsScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
             child: Text(
-              'אפקט שיתנגן במסך הזכייה כשתנצח — כולם יראו',
+              'אפקט שיתנגן במסך הזכייה כשתנצח, כולם יראו',
               style: AppTextStyles.subtitleLight,
               textAlign: TextAlign.center,
             ),

@@ -13,6 +13,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/constants/ad_constants.dart';
 import '../../core/constants/build_info.dart';
 import '../../core/constants/economy_config.dart';
+import '../../core/constants/game_categories.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
@@ -27,7 +28,7 @@ import '../../widgets/economy/coin_icon.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
 import '../../models/room_model.dart';
 
-enum _GameKind { places, heat, letters }
+enum _GameKind { places, heat, letters, proverbs }
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -46,6 +47,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   DateTime? _lastBackPressedAt;
   // Test branch: difficulty chosen for the next quick game (picker below).
   Difficulty _quickDifficulty = Difficulty.easy;
+  // True when the pending quick game is 'זהו את הפתגם' (fixed proverbs heat).
+  bool _quickProverbs = false;
 
   @override
   void initState() {
@@ -169,10 +172,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ? 'זיהוי מקומות'
         : kind == _GameKind.heat
             ? 'חי צומח דומם'
-            : 'משחק האותיות';
+            : kind == _GameKind.proverbs
+                ? 'זהו את הפתגם'
+                : 'משחק האותיות';
     final desc = kind == _GameKind.letters
         ? 'נחשו את המילה הנסתרת מאחורי התמונה'
-        : 'מי יזהה את התמונה ראשון';
+        : kind == _GameKind.proverbs
+            ? 'התמונה רומזת על פתגם, מי יפענח ראשון?'
+            : 'מי יזהה את התמונה ראשון';
     const fee = EconomyConfig.gameEntryFee;
 
     showModalBottomSheet<void>(
@@ -233,8 +240,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       title: n == 2 ? '1 על 1' : '$n שחקנים',
                       subtitle: 'כניסה $fee · קופה ${fee * n} מטבעות',
                       onTap: () {
-                        _quickDifficulty =
-                            kind == _GameKind.heat ? Difficulty.giant : Difficulty.easy;
+                        _quickDifficulty = kind == _GameKind.heat ||
+                                kind == _GameKind.proverbs
+                            ? Difficulty.giant
+                            : Difficulty.easy;
+                        _quickProverbs = kind == _GameKind.proverbs;
                         Navigator.pop(ctx);
                         _startQuickGame(n);
                       },
@@ -253,6 +263,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Navigator.pop(ctx);
                     if (kind == _GameKind.letters) {
                       _startLettersFriends();
+                    } else if (kind == _GameKind.proverbs) {
+                      _createPrivateRoom(
+                          gameType: Difficulty.giant,
+                          category: GameCategories.proverbs);
                     } else {
                       _createPrivateRoom(
                           gameType: kind == _GameKind.heat
@@ -391,11 +405,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final myExposure = await roomSvc.exposureCountsFor(user.id);
       QaLoggerService.instance.log('HOME', 'QUICK_GAME_MATCH_SEARCH images=${myExposure.length}');
 
-      RoomModel? existingRoom = await roomSvc.findMatchRoom(myExposure);
+      RoomModel? existingRoom =
+          await roomSvc.findMatchRoom(myExposure, proverbs: _quickProverbs);
       if (existingRoom == null) {
         await Future.delayed(const Duration(seconds: 2));
         if (!mounted) return;
-        existingRoom = await roomSvc.findMatchRoom(myExposure);
+        existingRoom =
+            await roomSvc.findMatchRoom(myExposure, proverbs: _quickProverbs);
       }
 
       String roomId;
@@ -418,9 +434,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           playerCount: 1,
           isPublicRoom: true,
           difficulty: _quickDifficulty,
+          category: _quickProverbs
+              ? GameCategories.proverbs
+              : GameCategories.israelPlaces,
           // Fast game: rounds = max(players, 3), so a 4-player quick game has 4
           // topics. Only matters for the giant (חי-צומח-דומם) heat.
           heatRounds: targetPlayers,
+          // Proverbs quick-match: a single round is enough (per Rotem) — the
+          // friends game is where multiple rounds make sense, since there the
+          // host picks a round count.
+          heatTopics: _quickProverbs
+              ? List.filled(1, GameCategories.proverbs)
+              : null,
         );
         roomId = room.id;
         QaLoggerService.instance.log('HOME', 'QUICK_GAME_SUCCESS code=${room.code}');
@@ -536,7 +561,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Future<void> _createPrivateRoom({Difficulty? gameType}) async {
+  Future<void> _createPrivateRoom(
+      {Difficulty? gameType, String? category}) async {
     if (_isCreating) return;
     QaLoggerService.instance.log('HOME', 'TAP_CREATE_ROOM');
     FeedbackService.click();
@@ -561,6 +587,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             hostPhotoUrl: user.photoUrl,
             entryFee: 0,
             difficulty: difficulty,
+            category: category ?? GameCategories.israelPlaces,
           );
 
       final shortId = room.id.substring(0, room.id.length.clamp(0, 6));
@@ -624,7 +651,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               } else {
                 setSheet(() => busy = false);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('לא ניתן כרגע — נסה דרך אחרת')),
+                  const SnackBar(content: Text('לא ניתן כרגע, נסה דרך אחרת')),
                 );
               }
             }
@@ -917,6 +944,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   onTap: _isCreating
                                       ? null
                                       : () => _showPlaySheet(_GameKind.heat),
+                                ),
+                                SizedBox(height: verySmall ? 8 : 10),
+                                _GameTypeCard(
+                                  icon: '🧩',
+                                  title: 'זהו את הפתגם',
+                                  subtitle: 'התמונה רומזת על פתגם עברי',
+                                  gradientColors: const [Color(0xFF5A2A7A), Color(0xFF2A1240)],
+                                  borderColor: const Color(0xFFB57AE8),
+                                  glowColor: const Color(0xFF7A3AAA),
+                                  isLoading: _isCreating,
+                                  onTap: _isCreating
+                                      ? null
+                                      : () => _showPlaySheet(_GameKind.proverbs),
                                 ),
                                 SizedBox(height: verySmall ? 8 : 10),
                                 _GameTypeCard(

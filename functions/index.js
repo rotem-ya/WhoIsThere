@@ -8,6 +8,7 @@
  *   users/{uid}.fcmTokens : string[]   device tokens (arrayUnion on each device)
  *   gameInvites/{toUid_fromUid} : { fromUid, fromName, toUid, roomId, code }
  *   friendRequests/{toUid_fromUid} : { fromUid, fromName, toUid, status }
+ *   groupInvites/{toUid_groupId} : { fromUid, fromName, toUid, groupId, groupName }
  *
  * Deploy:  firebase deploy --only functions   (requires the Blaze plan)
  */
@@ -132,6 +133,39 @@ exports.onFriendRequest = functions.firestore
       {
         type: "friend_request",
         fromUid: req.fromUid || "",
+      }
+    );
+  });
+
+/**
+ * Friend invited you to join their group → "X מזמין אותך לקבוצה".
+ *
+ * Same onWrite pattern as onGameInvite: the client writes with a deterministic
+ * id (`{toUid}_{groupId}`), so re-inviting the same person to the same group
+ * overwrites the doc instead of creating a new one — push only on a genuinely
+ * new invite.
+ */
+exports.onGroupInvite = functions.firestore
+  .document("groupInvites/{inviteId}")
+  .onWrite(async (change) => {
+    if (!change.after.exists) return; // deletion (declined/accepted) — no push
+    if (change.before.exists) return; // re-write of the same pending invite
+    const inv = change.after.data() || {};
+    const toUid = inv.toUid;
+    const fromName = inv.fromName || "חבר";
+    const groupName = inv.groupName || "קבוצה";
+    if (!toUid) return;
+
+    await pushToUser(
+      toUid,
+      {
+        title: "הזמנה לקבוצה 👥",
+        body: `${fromName} מזמין אותך להצטרף לקבוצה "${groupName}"`,
+      },
+      {
+        type: "group_invite",
+        groupId: inv.groupId || "",
+        fromUid: inv.fromUid || "",
       }
     );
   });

@@ -19,6 +19,8 @@ class GuessModeOverlay extends StatefulWidget {
   final VoidCallback? onBuyLetter;
   final int nextLetterPrice;
   final bool showBuyLetter;
+  // Letter-bank slot cap (proverbs answers are longer than image names).
+  final int maxLetters;
 
   const GuessModeOverlay({
     super.key,
@@ -32,6 +34,7 @@ class GuessModeOverlay extends StatefulWidget {
     this.onBuyLetter,
     this.nextLetterPrice = 0,
     this.showBuyLetter = false,
+    this.maxLetters = 12,
   });
 
   @override
@@ -180,6 +183,7 @@ class _GuessModeOverlayState extends State<GuessModeOverlay>
                             onBuyLetter: widget.onBuyLetter,
                             nextLetterPrice: widget.nextLetterPrice,
                             showBuyLetter: widget.showBuyLetter,
+                            maxLetters: widget.maxLetters,
                           ),
                         )
                       : _SpectatorBody(answer: widget.answer),

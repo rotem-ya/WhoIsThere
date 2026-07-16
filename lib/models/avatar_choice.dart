@@ -14,12 +14,21 @@ class AvatarChoice {
   /// Disc background gradient (1 colour = solid).
   final List<Color> colors;
 
+  /// Premium 3D avatar image (admin-generated, from the live cosmetics
+  /// catalog or a baked asset path). When set it replaces the emoji disc.
+  final String? imageUrl;
+
+  /// active:false hides the avatar from the store (existing owners keep it).
+  final bool active;
+
   const AvatarChoice({
     required this.id,
     required this.name,
     required this.price,
     required this.emoji,
     this.colors = const [Color(0xFF1B3A5B)],
+    this.imageUrl,
+    this.active = true,
   });
 
   /// 'auto' = use the deterministic generated face (avatar_util), not a choice.
@@ -106,10 +115,17 @@ const kAvatarChoices = <AvatarChoice>[
   AvatarChoice(id: 'joker',   name: 'ג׳וקר',   price: 1000, emoji: '🃏', colors: [Color(0xFFFF4081), Color(0xFF1A0033)]),
 ];
 
+/// Live-catalog hook (cosmetics_catalog/catalog_v1 → `avatars`): admin can
+/// override by id, add new (e.g. premium 3D image avatars) or hide with
+/// active:false — without an app update. Null until the catalog loads.
+List<AvatarChoice>? liveAvatarChoices;
+
+List<AvatarChoice> get allAvatarChoices => liveAvatarChoices ?? kAvatarChoices;
+
 AvatarChoice avatarChoiceFor(String? id) {
-  if (id == null) return kAvatarChoices.first;
-  for (final a in kAvatarChoices) {
+  if (id == null) return allAvatarChoices.first;
+  for (final a in allAvatarChoices) {
     if (a.id == id) return a;
   }
-  return kAvatarChoices.first;
+  return allAvatarChoices.first;
 }

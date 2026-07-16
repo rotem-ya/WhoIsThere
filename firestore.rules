@@ -81,6 +81,19 @@ service cloud.firestore {
       match /friendGames/{gameId} {
         allow read, write: if signedIn();
       }
+
+      // All-games history (every mode, not just friends games) — powers the
+      // admin per-player stats view (opponents, host choices, result).
+      match /gameHistory/{roomId} {
+        allow read, write: if signedIn();
+      }
+
+      // Trick/card usage log (stun / guessBlock5 / guessBlock10 / blackout) —
+      // same admin stats view. Append-only in practice; broad signedIn()
+      // write matches the rest of this trusted-client app.
+      match /cardUsage/{entryId} {
+        allow read, write: if signedIn();
+      }
     }
 
     // ── Friend requests ───────────────────────────────────────────────────────
@@ -96,6 +109,25 @@ service cloud.firestore {
     // (id = "{toUid}_{fromUid}"). Any signed-in user may create/read/delete —
     // the host creates it, the recipient reads + deletes it when they join.
     match /gameInvites/{inviteId} {
+      allow read, create, update, delete: if signedIn();
+    }
+
+    // ── Friend groups (קבוצות קבועות) ─────────────────────────────────────────
+    // A saved squad: cumulative group scoreboard + persistent chat + per-game
+    // score records. Same open trust model as friends/invites — membership
+    // edits, chat and cross-game score recording are all client-driven, and
+    // every member may read/write (scores are self-recorded per player).
+    match /groups/{groupId}/{document=**} {
+      allow read, write: if signedIn();
+    }
+
+    // ── Group invites ─────────────────────────────────────────────────────────
+    // A pending "join my group" invite (id = "{toUid}_{groupId}"), like a
+    // WhatsApp group invite — membership is only granted on accept. Any
+    // signed-in user may create/read/delete: the group owner creates it, the
+    // recipient accepts (writes membership on groups/{groupId} + deletes) or
+    // declines (deletes).
+    match /groupInvites/{inviteId} {
       allow read, create, update, delete: if signedIn();
     }
 

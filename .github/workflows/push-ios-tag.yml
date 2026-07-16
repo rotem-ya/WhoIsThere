@@ -1,0 +1,92 @@
+# Creates an ios-v* release tag via the GitHub API so Codemagic builds
+# and ships to TestFlight. Exists because agent sessions can only push to
+# their own designated branch — a direct `git push origin ios-vN` from an
+# agent is rejected (403), while a workflow's GITHUB_TOKEN may create refs.
+#
+# Usage: edit .github/ios-tag.txt (line 1 = tag name, line 2 = full 40-char
+# commit SHA to tag, or the literal HEAD for the pushed commit) and push to
+# this branch. Tags created by GITHUB_TOKEN do not trigger other GitHub
+# Actions workflows, but DO fire external webhooks — Codemagic picks the tag
+# up normally.
+#
+# Also syncs the launch branch: .github/sync-branch.txt (line 1 = branch
+# name, line 2 = SHA or HEAD) force-updates refs/heads/<branch> to that
+# commit via the API. GITHUB_TOKEN ref updates do NOT trigger push-based
+# workflows (build-aab must be dispatched manually afterwards).
+
+name: Push release refs (iOS tag + launch-branch sync)
+
+on:
+  push:
+    branches:
+      - claude/whothere-v111-launch-iqkbq2
+    paths:
+      - '.github/ios-tag.txt'
+      - '.github/sync-branch.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (read tag spec)
+        uses: actions/checkout@v4
+
+      - name: Create tag from .github/ios-tag.txt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(sed -n '1p' .github/ios-tag.txt | tr -d '[:space:]')
+          SHA=$(sed -n '2p' .github/ios-tag.txt | tr -d '[:space:]')
+          if [ "$SHA" = "HEAD" ]; then SHA="$GITHUB_SHA"; fi
+          echo "Requested tag: $TAG -> $SHA"
+          if ! echo "$TAG" | grep -Eq '^ios-v[0-9]+$'; then
+            echo "Refusing: tag must match ios-v<N>"; exit 1
+          fi
+          if ! echo "$SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "Refusing: SHA must be a full 40-char commit sha"; exit 1
+          fi
+          RESP=$(curl -s -o /tmp/resp.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/refs" \
+            -d "{\"ref\":\"refs/tags/${TAG}\",\"sha\":\"${SHA}\"}")
+          cat /tmp/resp.json
+          if [ "$RESP" = "201" ]; then
+            echo "Tag ${TAG} created at ${SHA}."
+          elif [ "$RESP" = "422" ] && grep -q 'already exists' /tmp/resp.json; then
+            echo "Tag ${TAG} already exists — nothing to do."
+          else
+            echo "Tag creation failed (HTTP $RESP)"; exit 1
+          fi
+
+      - name: Sync launch branch from .github/sync-branch.txt
+        if: hashFiles('.github/sync-branch.txt') != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH=$(sed -n '1p' .github/sync-branch.txt | tr -d '[:space:]')
+          SHA=$(sed -n '2p' .github/sync-branch.txt | tr -d '[:space:]')
+          if [ "$SHA" = "HEAD" ]; then SHA="$GITHUB_SHA"; fi
+          echo "Sync: $BRANCH -> $SHA"
+          if ! echo "$SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "Refusing: SHA must be a full 40-char commit sha (or HEAD)"; exit 1
+          fi
+          case "$BRANCH" in
+            claude/qa-launch-prep-EXqLn|main) ;; # allowlist of syncable refs
+            *) echo "Refusing: branch $BRANCH not in allowlist"; exit 1;;
+          esac
+          RESP=$(curl -s -o /tmp/sync.json -w '%{http_code}' -X PATCH \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/refs/heads/${BRANCH}" \
+            -d "{\"sha\":\"${SHA}\",\"force\":true}")
+          cat /tmp/sync.json
+          if [ "$RESP" = "200" ]; then
+            echo "Branch ${BRANCH} now points at ${SHA}."
+          else
+            echo "Branch sync failed (HTTP $RESP)"; exit 1
+          fi

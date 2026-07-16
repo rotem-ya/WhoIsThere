@@ -447,9 +447,11 @@ class _WinScreenState extends ConsumerState<WinScreen>
               ),
             ),
           ),
-              if (winner != null && winner.winEffectId != 'none')
-                Positioned.fill(
-                  child: WinEffectOverlay(effectId: winner.winEffectId),
+              // v1.3: אפקט ניצחון אחיד ואיכותי לכולם — "מופע זיקוקים".
+              // (החנות כבר לא מוכרת אפקטים; winEffectId נשמר לתאימות בלבד.)
+              if (winner != null)
+                const Positioned.fill(
+                  child: WinEffectOverlay(effectId: 'grand_finale'),
                 ),
             ],
           ),

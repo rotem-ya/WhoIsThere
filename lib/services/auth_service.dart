@@ -9,6 +9,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import '../models/win_effect.dart';
 import '../core/utils/display_name_sanitizer.dart';
 import 'qa_logger_service.dart';
 
@@ -441,6 +442,71 @@ class AuthService {
         .handleError((e) {
           debugPrint('userModelStreamForUid error uid=$uid: $e');
         });
+  }
+
+  bool _winEffectRefundChecked = false;
+
+  /// v1.3: אפקטי הניצחון הוסרו מהחנות ו"מופע זיקוקים" הפך לאפקט של כולם.
+  /// מחזיר חד-פעמית את מלוא המטבעות למי שרכש אפקטים בעבר (דגל
+  /// winEffectsRefundedAt על מסמך המשתמש). Fail-soft — ינוסה שוב בפתיחה הבאה.
+  Future<void> refundRetiredWinEffects() async {
+    if (_winEffectRefundChecked) return;
+    _winEffectRefundChecked = true;
+    final user = _auth.currentUser;
+    if (user == null) return;
+    try {
+      final userRef = _firestore.collection('users').doc(user.uid);
+      final walletRef = userRef.collection('economy').doc('wallet');
+      await _firestore.runTransaction((tx) async {
+        final snap = await tx.get(userRef);
+        final data = snap.data();
+        if (data == null || data['winEffectsRefundedAt'] != null) return;
+        final owned =
+            List<String>.from(data['ownedWinEffects'] ?? const <String>[]);
+        var refund = 0;
+        for (final id in owned) {
+          refund += winEffectFor(id).price; // free/'none' add 0
+        }
+        if (refund <= 0) return;
+        tx.set(
+            walletRef,
+            {'coins': FieldValue.increment(refund)},
+            SetOptions(merge: true));
+        tx.set(
+            userRef,
+            {
+              'winEffectsRefundedAt': FieldValue.serverTimestamp(),
+              'winEffectsRefundAmount': refund,
+            },
+            SetOptions(merge: true));
+      });
+    } catch (_) {
+      _winEffectRefundChecked = false; // retry on the next app open
+    }
+  }
+
+  DateTime? _lastSeenTouch;
+
+  /// Fire-and-forget refresh of the signed-in user's `lastSeenAt` so the admin
+  /// "recently connected" list reflects app opens, not just fresh logins.
+  /// Throttled to once per 2 minutes per session and fully fail-soft.
+  Future<void> touchLastSeen() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    final now = DateTime.now();
+    if (_lastSeenTouch != null &&
+        now.difference(_lastSeenTouch!) < const Duration(minutes: 2)) {
+      return;
+    }
+    _lastSeenTouch = now;
+    try {
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .update({'lastSeenAt': FieldValue.serverTimestamp()});
+    } catch (_) {
+      _lastSeenTouch = null; // let the next call retry
+    }
   }
 
   Future<void> updateDisplayName(String userId, String rawName) async {

@@ -76,7 +76,19 @@ class AdService {
         if (!completer.isCompleted) completer.complete(false);
       },
     );
-    ad.show(onUserEarnedReward: (_, __) => earned = true);
+    try {
+      // Must be awaited — show() can reject asynchronously (AdShowError is
+      // sporadic, SDK/timing) after the method channel round-trip, and an
+      // un-awaited rejected Future becomes an uncaught crash rather than
+      // something this try/catch can see.
+      await ad.show(onUserEarnedReward: (_, __) => earned = true);
+    } catch (_) {
+      // Fail-soft: drop this slot and preload the next one instead of
+      // surfacing a crash (same as maybeShowInterstitial below).
+      ad.dispose();
+      preloadRewarded();
+      if (!completer.isCompleted) completer.complete(false);
+    }
     return completer.future;
   }
 
@@ -134,7 +146,15 @@ class AdService {
         if (!completer.isCompleted) completer.complete();
       },
     );
-    await ad.show();
+    try {
+      await ad.show();
+    } catch (_) {
+      // AdShowError is sporadic (SDK/timing) — fail-soft: drop this slot and
+      // preload the next one instead of surfacing a crash.
+      ad.dispose();
+      preloadInterstitial();
+      if (!completer.isCompleted) completer.complete();
+    }
     return completer.future;
   }
 

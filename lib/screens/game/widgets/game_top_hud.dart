@@ -39,6 +39,7 @@ class TopHud extends StatelessWidget {
   final String roomId;
   final String? localUserId;
   final int guessBlock5Count;
+  final bool tricksDisabled;
   final int guessBlock10Count;
   final int blackoutCardCount;
   final bool showExposure;
@@ -66,6 +67,7 @@ class TopHud extends StatelessWidget {
     this.roomId = '',
     this.localUserId,
     this.guessBlock5Count = 0,
+    this.tricksDisabled = false,
     this.guessBlock10Count = 0,
     this.blackoutCardCount = 0,
     this.showExposure = false,
@@ -131,6 +133,7 @@ class TopHud extends StatelessWidget {
                   guessBlock5Count: guessBlock5Count,
                   guessBlock10Count: guessBlock10Count,
                   blackoutCardCount: blackoutCardCount,
+                  tricksDisabled: tricksDisabled,
                   showExposure: showExposure,
                 ),
               ),
@@ -178,6 +181,7 @@ class _PlayerGrid extends StatelessWidget {
   final String roomId;
   final bool isSolo;
   final int guessBlock5Count;
+  final bool tricksDisabled;
   final int guessBlock10Count;
   final int blackoutCardCount;
   final bool showExposure;
@@ -190,6 +194,7 @@ class _PlayerGrid extends StatelessWidget {
     this.roomId = '',
     this.isSolo = false,
     this.guessBlock5Count = 0,
+    this.tricksDisabled = false,
     this.guessBlock10Count = 0,
     this.blackoutCardCount = 0,
     this.showExposure = false,
@@ -214,6 +219,7 @@ class _PlayerGrid extends StatelessWidget {
               guessBlock5Count: guessBlock5Count,
               guessBlock10Count: guessBlock10Count,
               blackoutCardCount: blackoutCardCount,
+              tricksDisabled: tricksDisabled,
               showExposure: showExposure,
             ),
           ),
@@ -231,6 +237,7 @@ class _PlayerGrid extends StatelessWidget {
                 guessBlock5Count: guessBlock5Count,
                 guessBlock10Count: guessBlock10Count,
                 blackoutCardCount: blackoutCardCount,
+                tricksDisabled: tricksDisabled,
                 showExposure: showExposure,
               ),
             ),
@@ -254,6 +261,7 @@ class _PlayerCell extends ConsumerWidget {
   final String roomId;
   final bool isSolo;
   final int guessBlock5Count;
+  final bool tricksDisabled;
   final int guessBlock10Count;
   final int blackoutCardCount;
   final bool showExposure;
@@ -267,6 +275,7 @@ class _PlayerCell extends ConsumerWidget {
     this.roomId = '',
     this.isSolo = false,
     this.guessBlock5Count = 0,
+    this.tricksDisabled = false,
     this.guessBlock10Count = 0,
     this.blackoutCardCount = 0,
     this.showExposure = false,
@@ -288,6 +297,7 @@ class _PlayerCell extends ConsumerWidget {
         guessBlock5Count: guessBlock5Count,
         guessBlock10Count: guessBlock10Count,
         blackoutCardCount: blackoutCardCount,
+        tricksDisabled: tricksDisabled,
       ),
     );
   }
@@ -391,6 +401,7 @@ class _PlayerActionSheet extends ConsumerStatefulWidget {
   final String roomId;
   final String myUid;
   final int guessBlock5Count;
+  final bool tricksDisabled;
   final int guessBlock10Count;
   final int blackoutCardCount;
 
@@ -401,6 +412,7 @@ class _PlayerActionSheet extends ConsumerStatefulWidget {
     required this.guessBlock5Count,
     required this.guessBlock10Count,
     required this.blackoutCardCount,
+    this.tricksDisabled = false,
   });
 
   @override
@@ -492,7 +504,16 @@ class _PlayerActionSheetState extends ConsumerState<_PlayerActionSheet> {
             ),
           ),
           const SizedBox(height: 16),
-          if (!hasAny) ...[
+          if (widget.tricksDisabled) ...[
+            const Text('🕊️', style: TextStyle(fontSize: 36)),
+            const SizedBox(height: 8),
+            Text(
+              'המארח כיבה את התחבולות במשחק הזה',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 15),
+            ),
+            const SizedBox(height: 8),
+          ] else if (!hasAny) ...[
             const Text('🃏', style: TextStyle(fontSize: 36)),
             const SizedBox(height: 8),
             Text(

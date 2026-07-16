@@ -87,6 +87,55 @@ class GameInviteModel {
   }
 }
 
+/// A pending "join my group" invite, stored at `groupInvites/{toUid}_{groupId}`.
+/// The recipient must accept before becoming a member — declining leaves the
+/// group untouched, just like a WhatsApp group invite.
+class GroupInviteModel {
+  final String id;
+  final String groupId;
+  final String groupName;
+  final String fromUid;
+  final String fromName;
+  final String toUid;
+  // The invitee's name at invite time — lets the group owner's "pending"
+  // list show a name without an extra live lookup (a stale name here is a
+  // cosmetic, low-stakes tradeoff, unlike the friends-list bug this
+  // mirrors — this is a short-lived invite, not a permanent record).
+  final String toName;
+  final DateTime? createdAt;
+  // Set once, the first time the invitee's client actually displays this
+  // invite (the group-invite banner or the invite card) — lets the group
+  // owner tell "sent, not yet seen" apart from "seen, not yet decided".
+  final DateTime? readAt;
+
+  const GroupInviteModel({
+    required this.id,
+    required this.groupId,
+    required this.groupName,
+    required this.fromUid,
+    required this.fromName,
+    required this.toUid,
+    this.toName = '',
+    this.createdAt,
+    this.readAt,
+  });
+
+  factory GroupInviteModel.fromDoc(DocumentSnapshot doc) {
+    final data = (doc.data() as Map<String, dynamic>?) ?? const {};
+    return GroupInviteModel(
+      id: doc.id,
+      groupId: (data['groupId'] as String?) ?? '',
+      groupName: (data['groupName'] as String?) ?? 'קבוצה',
+      fromUid: (data['fromUid'] as String?) ?? '',
+      fromName: (data['fromName'] as String?) ?? '',
+      toUid: (data['toUid'] as String?) ?? '',
+      toName: (data['toName'] as String?) ?? '',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      readAt: (data['readAt'] as Timestamp?)?.toDate(),
+    );
+  }
+}
+
 /// One row in the friends leaderboard: a friend (or me) and their cumulative
 /// friends-game points.
 class FriendScore {
@@ -134,6 +183,48 @@ class FriendGameRecord {
       playedAt: (data['playedAt'] as Timestamp?)?.toDate(),
       winnerName: (data['winnerName'] as String?) ?? '',
       scores: scores,
+    );
+  }
+}
+
+/// A saved friends squad ("קבוצה קבועה"): open a game for everyone in one tap,
+/// keep a cumulative group scoreboard, and chat between games. Stored at
+/// `groups/{groupId}`; messages under `groups/{groupId}/messages`.
+class GroupModel {
+  final String id;
+  final String name;
+  final String ownerUid;
+  final List<String> memberUids;
+  final Map<String, String> memberNames; // uid → display name (snapshot)
+  final Map<String, int> points; // uid → cumulative group points
+  final DateTime? createdAt;
+  final DateTime? lastGameAt;
+
+  const GroupModel({
+    required this.id,
+    required this.name,
+    required this.ownerUid,
+    required this.memberUids,
+    required this.memberNames,
+    required this.points,
+    this.createdAt,
+    this.lastGameAt,
+  });
+
+  String nameOf(String uid) => memberNames[uid] ?? 'חבר';
+  int pointsOf(String uid) => points[uid] ?? 0;
+
+  factory GroupModel.fromDoc(DocumentSnapshot doc) {
+    final data = (doc.data() as Map<String, dynamic>?) ?? const {};
+    return GroupModel(
+      id: doc.id,
+      name: (data['name'] as String?) ?? 'קבוצה',
+      ownerUid: (data['ownerUid'] as String?) ?? '',
+      memberUids: List<String>.from(data['memberUids'] ?? const []),
+      memberNames: Map<String, String>.from(data['memberNames'] ?? const {}),
+      points: Map<String, int>.from(data['points'] ?? const {}),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      lastGameAt: (data['lastGameAt'] as Timestamp?)?.toDate(),
     );
   }
 }

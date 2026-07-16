@@ -105,7 +105,7 @@ jobs:
       # all the latest features — unlike main). Stable URL, no login / no unzip:
       #   https://github.com/rotem-ya/WhoIsThere/releases/download/qa-launch/app-release.apk
       - name: Publish APK to qa-launch release
-        if: github.ref == 'refs/heads/claude/friends-invite-chat' || github.ref == 'refs/heads/claude/qa-launch-prep-EXqLn'
+        if: github.ref == 'refs/heads/claude/friends-invite-chat' || github.ref == 'refs/heads/claude/qa-launch-prep-EXqLn' || github.ref == 'refs/heads/claude/whothere-v111-launch-iqkbq2'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: qa-launch

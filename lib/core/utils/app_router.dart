@@ -19,9 +19,6 @@ import '../../screens/splash/splash_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/store/store_screen.dart';
 import '../../screens/store/card_skins_screen.dart';
-import '../../screens/store/avatar_frames_screen.dart';
-import '../../screens/store/name_styles_screen.dart';
-import '../../screens/store/win_effects_screen.dart';
 import '../../screens/store/board_skins_screen.dart';
 import '../../screens/store/avatars_screen.dart';
 import '../../screens/voting/vote_difficulty_screen.dart';
@@ -116,18 +113,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/store/skins',
         builder: (context, state) => const CardSkinsScreen(),
-      ),
-      GoRoute(
-        path: '/store/frames',
-        builder: (context, state) => const AvatarFramesScreen(),
-      ),
-      GoRoute(
-        path: '/store/names',
-        builder: (context, state) => const NameStylesScreen(),
-      ),
-      GoRoute(
-        path: '/store/effects',
-        builder: (context, state) => const WinEffectsScreen(),
       ),
       GoRoute(
         path: '/store/board',

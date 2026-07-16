@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../../models/card_skin.dart';
 
 Future<ui.Image> _decodeUiImage(Uint8List bytes) {
@@ -12,22 +13,32 @@ Future<ui.Image> _decodeUiImage(Uint8List bytes) {
   return completer.future;
 }
 
-/// Resolves a network URL directly to a ui.Image via Flutter's image cache.
+/// Resolves a network URL to a ui.Image, DISK-caching it (same cache as remote
+/// place images) so each skin image downloads once instead of on every cold
+/// start — the skins store pulls ~30 covers at once, so this is the difference
+/// between a one-time fetch and re-downloading everything each visit.
 Future<ui.Image?> _fetchNetworkUiImage(String url) async {
   try {
-    final stream = NetworkImage(url).resolve(ImageConfiguration.empty);
-    final completer = Completer<ui.Image>();
-    late ImageStreamListener listener;
-    listener = ImageStreamListener(
-      (info, _) => completer.complete(info.image),
-      onError: (e, _) => completer.completeError(e),
-    );
-    stream.addListener(listener);
-    final image = await completer.future;
-    stream.removeListener(listener);
-    return image;
+    final file = await DefaultCacheManager().getSingleFile(url);
+    final bytes = await file.readAsBytes();
+    return await _decodeUiImage(bytes);
   } catch (_) {
-    return null;
+    // Fallback: direct network fetch (memory-cached by Flutter only).
+    try {
+      final stream = NetworkImage(url).resolve(ImageConfiguration.empty);
+      final completer = Completer<ui.Image>();
+      late ImageStreamListener listener;
+      listener = ImageStreamListener(
+        (info, _) => completer.complete(info.image),
+        onError: (e, _) => completer.completeError(e),
+      );
+      stream.addListener(listener);
+      final image = await completer.future;
+      stream.removeListener(listener);
+      return image;
+    } catch (_) {
+      return null;
+    }
   }
 }
 
@@ -39,6 +50,12 @@ class VaultCover extends StatefulWidget {
   /// Optional full skin object — when provided, network coverImageUrl is used.
   final CardSkin? skin;
 
+  /// Board position — when [gridSize] > 1 the skin image is sliced so this tile
+  /// shows only its cell of the shared picture (the whole closed board = one
+  /// image). Defaults keep standalone/whole-image behaviour.
+  final int index;
+  final int gridSize;
+
   const VaultCover({
     super.key,
     required this.isRevealed,
@@ -46,6 +63,8 @@ class VaultCover extends StatefulWidget {
     this.isFocused = false,
     this.cardSkinId = 'default',
     this.skin,
+    this.index = 0,
+    this.gridSize = 1,
   });
 
   @override
@@ -139,7 +158,9 @@ class _VaultCoverState extends State<VaultCover>
               if (v <= 0.005) {
                 return RepaintBoundary(
                   child: _skinImage != null
-                      ? CustomPaint(painter: _ImageFillPainter(_skinImage!))
+                      ? CustomPaint(
+                          painter: _ImageFillPainter(_skinImage!,
+                              index: widget.index, gridSize: widget.gridSize))
                       : CustomPaint(painter: _SkinPreviewPainter(widget.cardSkinId)),
                 );
               }
@@ -150,6 +171,8 @@ class _VaultCoverState extends State<VaultCover>
                     progress: v,
                     cardSkinId: widget.cardSkinId,
                     skinImage: _skinImage,
+                    index: widget.index,
+                    gridSize: widget.gridSize,
                   ),
                 ),
               );
@@ -192,18 +215,48 @@ class _VaultCoverState extends State<VaultCover>
 
 // ── Simple full-fill painter for image-based skins (closed state) ─────────────
 
+/// Source rect within [image] for tile [index] of a [gridSize]² board.
+/// The image is cover-cropped into the square board (centered square of side
+/// min(w,h)), then divided into gridSize×gridSize cells — so every closed tile
+/// shows its own slice and the whole board assembles into one complete picture.
+Rect _skinSliceSrc(ui.Image image, int index, int gridSize) {
+  final iw = image.width.toDouble(), ih = image.height.toDouble();
+  final m = math.min(iw, ih);
+  final ox = (iw - m) / 2, oy = (ih - m) / 2;
+  final cell = m / gridSize;
+  final row = index ~/ gridSize, col = index % gridSize;
+  return Rect.fromLTWH(ox + col * cell, oy + row * cell, cell, cell);
+}
+
 class _ImageFillPainter extends CustomPainter {
   final ui.Image image;
-  _ImageFillPainter(this.image);
+  final int index;
+  final int gridSize;
+  _ImageFillPainter(this.image, {this.index = 0, this.gridSize = 1});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final src = Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
-    canvas.drawImageRect(image, src, Offset.zero & size, Paint());
+    final iw = image.width.toDouble(), ih = image.height.toDouble();
+    if (iw <= 0 || ih <= 0) return;
+    final Rect src;
+    if (gridSize > 1) {
+      // Board tile: draw only this tile's slice of the shared image, so the
+      // closed board forms one whole picture split across the tiles.
+      src = _skinSliceSrc(image, index, gridSize);
+    } else {
+      // Standalone (store preview): BoxFit.cover center-crop of the whole image,
+      // avoiding distortion and trimming any edge border the art carries.
+      final scale = math.max(size.width / iw, size.height / ih);
+      final sw = size.width / scale, sh = size.height / scale;
+      src = Rect.fromLTWH((iw - sw) / 2, (ih - sh) / 2, sw, sh);
+    }
+    canvas.drawImageRect(
+      image, src, Offset.zero & size, Paint()..filterQuality = FilterQuality.medium);
   }
 
   @override
-  bool shouldRepaint(covariant _ImageFillPainter o) => o.image != image;
+  bool shouldRepaint(covariant _ImageFillPainter o) =>
+      o.image != image || o.index != index || o.gridSize != gridSize;
 }
 
 // ── Improved iris painter ──────────────────────────────────────────────────────
@@ -212,6 +265,8 @@ class _AperturePainter extends CustomPainter {
   final double progress;
   final String cardSkinId;
   final ui.Image? skinImage;
+  final int index;
+  final int gridSize;
 
   static const int _bladeCount = 10;
 
@@ -219,6 +274,8 @@ class _AperturePainter extends CustomPainter {
     required this.progress,
     this.cardSkinId = 'default',
     this.skinImage,
+    this.index = 0,
+    this.gridSize = 1,
   });
 
   // ── Per-skin colour scheme ─────────────────────────────────────────────────
@@ -1710,8 +1767,11 @@ class _AperturePainter extends CustomPainter {
 
     // ── Base: skin image if loaded, otherwise solid colour ────────────────
     if (skinImage != null) {
-      final src = Rect.fromLTWH(
-          0, 0, skinImage!.width.toDouble(), skinImage!.height.toDouble());
+      // Slice per board tile (whole board = one image) when on a grid.
+      final src = gridSize > 1
+          ? _skinSliceSrc(skinImage!, index, gridSize)
+          : Rect.fromLTWH(
+              0, 0, skinImage!.width.toDouble(), skinImage!.height.toDouble());
       canvas.drawImageRect(skinImage!, src, rect, Paint());
     } else {
       canvas.drawRect(rect, Paint()..color = pal.base);
@@ -1815,7 +1875,9 @@ class _AperturePainter extends CustomPainter {
   bool shouldRepaint(covariant _AperturePainter old) =>
       old.progress != progress ||
       old.cardSkinId != cardSkinId ||
-      old.skinImage != skinImage;
+      old.skinImage != skinImage ||
+      old.index != index ||
+      old.gridSize != gridSize;
 }
 
 // ── Skin colour palette ───────────────────────────────────────────────────────
@@ -1901,16 +1963,15 @@ class _CardSkinPreviewState extends State<CardSkinPreview> {
 
   @override
   Widget build(BuildContext context) {
-    // If the skin has a real image (asset or network), show the iris preview.
-    // Otherwise use the distinctive flat preview painter.
+    // If the skin has a real image (asset or admin network cover), show the
+    // FULL flat image — exactly how the card back looks closed in-game, and
+    // matching the admin preview. (Previously this drew a nearly-closed iris
+    // over the image, so image skins looked like the procedural sunburst.)
+    // Skins without an image keep the distinctive flat procedural preview.
     if (_skinImage != null) {
       return RepaintBoundary(
         child: CustomPaint(
-          painter: _AperturePainter(
-            progress: 0.08,
-            cardSkinId: widget.cardSkinId,
-            skinImage: _skinImage,
-          ),
+          painter: _ImageFillPainter(_skinImage!),
         ),
       );
     }

@@ -1,0 +1,69 @@
+name: Deploy Cloud Functions
+
+# Deploys functions/ (push notifications: onGameInvite, onFriendRequest,
+# onGroupInvite) using the same FIREBASE_SERVICE_ACCOUNT secret as
+# deploy-firestore-rules / deploy-hosting.
+#
+# ⚠️ One-time setup required before this works: the service account behind
+# FIREBASE_SERVICE_ACCOUNT needs Cloud Functions deploy permissions, which it
+# does NOT have by default (it was scoped narrowly for the rules/hosting
+# deploys only). Grant it these roles in Google Cloud Console → IAM & Admin →
+# IAM (project whoisthere-380fa):
+#   - Cloud Functions Admin      (roles/cloudfunctions.admin)
+#   - Cloud Build Editor         (roles/cloudbuild.builds.editor)
+#   - Service Account User       (roles/iam.serviceAccountUser)
+#   - Storage Admin              (roles/storage.admin)
+# (Simplest alternative: grant the single built-in "Editor" role instead of
+# the four above — broader than strictly necessary, but avoids permission
+# whack-a-mole for a small CI-only service account.)
+#
+# Run manually from the Actions tab, or it runs automatically when
+# functions/ changes on main or the session branch.
+#
+# IAM permissions granted 2026-07-11 — confirmed working (Google auto-enabled
+# cloudfunctions/cloudbuild/artifactregistry APIs during deploy, which needs
+# real permissions). Two unrelated Node version issues surfaced after that:
+#   1. firebase-tools 15.x needs Node >=20 to RUN in CI (this workflow's own
+#      Node, unrelated to the deployed function).
+#   2. The nodejs18 Cloud Functions runtime was decommissioned by Google on
+#      2025-10-30 — firebase.json/functions/package.json now target nodejs20.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - claude/whothere-v111-launch-iqkbq2
+    paths:
+      - 'functions/**'
+      - '.github/workflows/deploy-functions.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install functions dependencies
+        working-directory: functions
+        run: npm install
+
+      - name: Write service account credentials
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT secret is not set"
+            exit 1
+          fi
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+
+      - name: Deploy functions
+        run: npx firebase-tools@latest deploy --only functions --project whoisthere-380fa --non-interactive

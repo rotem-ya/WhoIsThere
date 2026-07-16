@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../core/utils/share_util.dart';
 
 import '../../core/constants/ad_constants.dart';
 import '../../core/constants/app_constants.dart';
@@ -20,6 +20,7 @@ import '../../models/friend_models.dart';
 import '../../core/constants/game_categories.dart';
 import '../../core/utils/chat_filter.dart';
 import '../../widgets/chat/chat_sheet.dart';
+import '../friends/widgets/groups_tab.dart';
 import '../../services/analytics_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../services/settings_service.dart';
@@ -45,6 +46,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   bool _isStarting = false;
   bool _codeCopied = false;
   bool _lobbyLogged = false;
+  bool _autoInvitePrompted = false;
   int _lastPlayerCount = 0;
   static final AudioPlayer _joinPlayer = AudioPlayer(playerId: 'player-join');
   static final AssetSource _joinSound = AssetSource('sounds/player_join.wav');
@@ -194,9 +196,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     // When the picks already cover every round, the others' pick is optional.
     final covered = _picksCoverHeat(room);
     final title = isHost
-        ? 'בחרו נושא — אפשר כמה שתרצו'
+        ? 'בחרו נושא, אפשר כמה שתרצו'
         : (covered
-            ? 'הנושאים למקצה כבר נבחרו — אפשר להוסיף עוד'
+            ? 'הנושאים למקצה כבר נבחרו, אפשר להוסיף עוד'
             : 'בחרו נושא למקצה');
     return Container(
       width: double.infinity,
@@ -362,7 +364,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       duration: const Duration(seconds: 2),
       content: Text(alreadyPicked
-          ? 'כבר בחרת נושא — רק המארח יכול לבטל את הבחירה'
+          ? 'כבר בחרת נושא, רק המארח יכול לבטל את הבחירה'
           : 'רק המארח יכול לבטל בחירת נושא'),
     ));
   }
@@ -482,7 +484,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     msg.writeln('🎮 הצטרפות ישירה לחדר:');
     msg.write(AppConstants.joinUrlForCode(code));
     AnalyticsService.instance.inviteSent(kind: 'room');
-    Share.share(msg.toString());
+    shareText(context, msg.toString());
   }
 
   /// Opens the "invite a friend" picker (friends list + search) for this room.
@@ -542,6 +544,17 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         }
 
         final isHost = currentUser?.id == room.hostId;
+        // נגישות מקסימלית להזמנת חברים: חדר חברים שנפתח ריק קופץ למארח
+        // מרכז ההזמנות אוטומטית (פעם אחת), במקום לחכות שיגלה את הכפתור.
+        if (isHost &&
+            room.isFriendsGame &&
+            room.players.length <= 1 &&
+            !_autoInvitePrompted) {
+          _autoInvitePrompted = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _openInviteFriends(room);
+          });
+        }
         // Prefer the live currentUser name so the greeting is always up to date.
         final rawHostName = isHost
             ? (currentUser?.name ?? room.players[room.hostId]?.name ?? '')
@@ -612,6 +625,63 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                       child: SingleChildScrollView(
                         child: Column(
                           children: [
+                            // כפתור הזמנה בולט — לא רק המשבצת הריקה בגריד.
+                            if (room.isFriendsGame) ...[
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  onPressed: () => _openInviteFriends(room),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFF34D399),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(14)),
+                                  ),
+                                  icon: const Icon(Icons.person_add_alt_1_rounded,
+                                      color: Color(0xFF06281C)),
+                                  label: const Text('הזמן חברים למשחק',
+                                      style: TextStyle(
+                                          color: Color(0xFF06281C),
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 15)),
+                                ),
+                              ),
+                              // בדיקות: מארח יכול למלא סלוטים בבוט, כדי לשחק
+                              // משחק חברים מלא לבד בלי לחכות לחבר אמיתי.
+                              if (isHost &&
+                                  room.players.length <
+                                      GameConstants.maxPlayers) ...[
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => ref
+                                        .read(roomServiceProvider)
+                                        .addBotToRoom(widget.roomId,
+                                            room.players.length + 1),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.white70,
+                                      side: BorderSide(
+                                          color: Colors.white.withOpacity(0.25)),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(14)),
+                                    ),
+                                    icon: const Icon(Icons.smart_toy_outlined,
+                                        size: 18),
+                                    label: const Text('הוסף בוט (לבדיקה)',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 13)),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 10),
+                            ],
                             _PlayerGrid(
                               players: room.players.values.toList(),
                               currentUserId: currentUser?.id,
@@ -620,9 +690,55 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                   ? () => _openInviteFriends(room)
                                   : null,
                             ),
-                            if (room.selectedDifficulty == Difficulty.giant) ...[
+                            if (room.selectedDifficulty == Difficulty.giant &&
+                                !room.isProverbs) ...[
                               const SizedBox(height: 8),
                               _buildHeatSetup(room, currentUser),
+                            ],
+                            if (room.isProverbs && room.isFriendsGame) ...[
+                              const SizedBox(height: 8),
+                              _ProverbsRoundsRow(
+                                rounds: room.proverbsRounds,
+                                isHost: isHost,
+                                onChanged: isHost
+                                    ? (v) => ref
+                                        .read(roomServiceProvider)
+                                        .setProverbsRounds(widget.roomId, v)
+                                    : null,
+                              ),
+                            ],
+                            // תחבולות: בחירת מארח למשחק חברים קלאסי (בהיט
+                            // הכרטיסים ממילא כבויים). כולם רואים את המצב; רק
+                            // המארח יכול לשנות.
+                            if (room.isFriendsGame &&
+                                room.selectedDifficulty !=
+                                    Difficulty.giant) ...[
+                              const SizedBox(height: 8),
+                              _TricksToggleRow(
+                                enabled: room.tricksEnabled,
+                                isHost: isHost,
+                                onChanged: isHost
+                                    ? (v) => ref
+                                        .read(roomServiceProvider)
+                                        .setTricksEnabled(widget.roomId, v)
+                                    : null,
+                              ),
+                            ],
+                            // כבוי זמנית ברמת קוד (kLetterTurnFeatureEnabled) —
+                            // ראה room_model.dart. אין טעם להציג טוגל למארח
+                            // כשהתכונה לא יכולה לפעול בכל מקרה.
+                            if (kLetterTurnFeatureEnabled &&
+                                room.isFriendsGame) ...[
+                              const SizedBox(height: 8),
+                              _LetterTurnToggleRow(
+                                enabled: room.letterTurnEnabled,
+                                isHost: isHost,
+                                onChanged: isHost
+                                    ? (v) => ref
+                                        .read(roomServiceProvider)
+                                        .setLetterTurnEnabled(widget.roomId, v)
+                                    : null,
+                              ),
                             ],
                           ],
                         ),
@@ -663,7 +779,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                     'START_GAME_TAPPED roomId=${widget.roomId}');
                                 // Heat friends game: if some players haven't
                                 // picked a topic, ask the host how to proceed.
-                                if (room.selectedDifficulty == Difficulty.giant) {
+                                if (room.selectedDifficulty == Difficulty.giant &&
+                                    !room.isProverbs) {
                                   final unchosen = room.players.values
                                       .where((p) =>
                                           !p.isBot &&
@@ -1029,6 +1146,95 @@ class _PlayerAvatarTile extends StatelessWidget {
   }
 }
 
+// ── Persistent share/code row — always visible, no friends-list dependency ──
+
+class _ShareCodeRow extends StatefulWidget {
+  final String code;
+  final VoidCallback onShare;
+  const _ShareCodeRow({required this.code, required this.onShare});
+
+  @override
+  State<_ShareCodeRow> createState() => _ShareCodeRowState();
+}
+
+class _ShareCodeRowState extends State<_ShareCodeRow> {
+  bool _copied = false;
+
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: widget.code));
+    HapticFeedback.lightImpact();
+    if (!mounted) return;
+    setState(() => _copied = true);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            onTap: _copy,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.14)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                      _copied
+                          ? Icons.check_rounded
+                          : Icons.copy_rounded,
+                      color: _copied
+                          ? const Color(0xFF34D399)
+                          : Colors.white54,
+                      size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    _copied ? 'הועתק!' : widget.code,
+                    style: TextStyle(
+                      color: _copied ? const Color(0xFF34D399) : Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: widget.onShare,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF25D366),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            icon: const Icon(Icons.share_rounded, size: 17, color: Colors.white),
+            label: const Text('שתף קישור',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ── Invite-a-friend picker (friends list + search) ─────────────────────────
 
 class _InviteFriendsSheet extends ConsumerStatefulWidget {
@@ -1054,6 +1260,7 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
   String _query = '';
   final Set<String> _invited = {};
   String? _busyUid;
+  String? _busyGroupId;
 
   @override
   void dispose() {
@@ -1085,26 +1292,98 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
     }
   }
 
+  /// חברי הקבוצה שעדיין אפשר להזמין (לא אני, לא בחדר, לא הוזמנו כבר).
+  List<String> _groupTargets(GroupModel g, String myUid) => g.memberUids
+      .where((uid) =>
+          uid != myUid &&
+          !widget.existingPlayerIds.contains(uid) &&
+          !_invited.contains(uid))
+      .toList();
+
+  Future<void> _inviteGroup(GroupModel g) async {
+    final me = ref.read(currentUserProvider).valueOrNull;
+    if (me == null || _busyGroupId != null) return;
+    final targets = _groupTargets(g, me.id);
+    if (targets.isEmpty) return;
+    setState(() => _busyGroupId = g.id);
+    HapticFeedback.lightImpact();
+    var sent = 0;
+    try {
+      for (final uid in targets) {
+        await ref.read(friendsServiceProvider).sendGameInvite(
+              fromUid: me.id,
+              fromName: me.name,
+              toUid: uid,
+              roomId: widget.roomId,
+              code: widget.code,
+            );
+        sent++;
+        if (mounted) setState(() => _invited.add(uid));
+      }
+      QaLoggerService.instance.log(
+          'LOBBY', 'GROUP_INVITED group=${g.id} sent=$sent');
+    } catch (_) {
+      if (mounted && sent == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('שגיאה בשליחת ההזמנות')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busyGroupId = null);
+    }
+  }
+
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  /// אין עדיין קבוצה קבועה — פותח את אותו יוצר-קבוצה מטאב "קבוצות", כדי
+  /// שהיכולת תהיה נגישה גם למי שעוד לא הקים קבוצה.
+  void _openCreateGroup(List<FriendModel> friends) {
+    if (friends.isEmpty) {
+      _toast('קודם הוסיפו חברים (בטאב "הוסף חבר")');
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CreateGroupSheet(friends: friends, onToast: _toast),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final friends =
         ref.watch(friendsListProvider).valueOrNull ?? const <FriendModel>[];
+    final me = ref.watch(currentUserProvider).valueOrNull;
+    final groups = me == null
+        ? const <GroupModel>[]
+        : ref.watch(myGroupsProvider).valueOrNull ?? const <GroupModel>[];
+    // חי, כדי שהמארח יראה כאן גם את בקרת התחבולות בלי לגלול/לסגור את
+    // מרכז ההזמנות, שנפתח אוטומטית ומכסה את שאר מסך הלובי.
+    final liveRoom = ref.watch(roomStreamProvider(widget.roomId)).valueOrNull;
+    final isHost = liveRoom != null && me != null && liveRoom.hostId == me.id;
     final q = _query.trim();
     final filtered =
         q.isEmpty ? friends : friends.where((f) => f.name.contains(q)).toList();
+    // מקלדת (viewInsets) וגם פס הניווט של אנדרואיד / ה-home indicator של
+    // iOS (viewPadding) — אחרת רשימת החברים התחתונה מוסתרת מאחורי הפקדים.
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final navBarInset = MediaQuery.of(context).viewPadding.bottom;
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Padding(
         padding: EdgeInsets.only(bottom: bottomInset),
         child: Container(
-          height: MediaQuery.of(context).size.height * 0.72,
+          height: MediaQuery.of(context).size.height * 0.78,
           decoration: const BoxDecoration(
             color: Color(0xFF0D1E30),
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + navBarInset),
           child: Column(
             children: [
               Center(
@@ -1123,6 +1402,38 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
                       fontSize: 18,
                       fontWeight: FontWeight.w900)),
               const SizedBox(height: 12),
+              // ── שורת שיתוף קבועה — הדרך המהירה ביותר, בלי צורך ברשימת
+              //    חברים בכלל (וואטסאפ / קישור / קוד להעתקה).
+              _ShareCodeRow(code: widget.code, onShare: widget.onShareCode),
+              if (liveRoom != null &&
+                  liveRoom.isFriendsGame &&
+                  liveRoom.selectedDifficulty != Difficulty.giant) ...[
+                const SizedBox(height: 12),
+                _TricksToggleRow(
+                  enabled: liveRoom.tricksEnabled,
+                  isHost: isHost,
+                  onChanged: isHost
+                      ? (v) => ref
+                          .read(roomServiceProvider)
+                          .setTricksEnabled(widget.roomId, v)
+                      : null,
+                ),
+              ],
+              if (kLetterTurnFeatureEnabled &&
+                  liveRoom != null &&
+                  liveRoom.isFriendsGame) ...[
+                const SizedBox(height: 12),
+                _LetterTurnToggleRow(
+                  enabled: liveRoom.letterTurnEnabled,
+                  isHost: isHost,
+                  onChanged: isHost
+                      ? (v) => ref
+                          .read(roomServiceProvider)
+                          .setLetterTurnEnabled(widget.roomId, v)
+                      : null,
+                ),
+              ],
+              const SizedBox(height: 12),
               TextField(
                 controller: _searchCtrl,
                 onChanged: (v) => setState(() => _query = v),
@@ -1140,23 +1451,154 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
                       borderSide: BorderSide.none),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
+              // כל השאר גולל כיחידה אחת (כולל "הקבוצות שלי") כדי שלרשימת
+              // השמות יהיה שטח גלילה נוח — לא עוד Expanded דחוס מתחת לכל
+              // הכותרות/הבקרים, שגדל עם כל פיצ'ר חדש שנוסף מעליו.
               Expanded(
-                child: friends.isEmpty
-                    ? _emptyState()
-                    : (filtered.isEmpty
-                        ? const Center(
-                            child: Text('לא נמצא חבר בשם הזה',
-                                style: TextStyle(color: Colors.white54)))
-                        : ListView.separated(
-                            itemCount: filtered.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (_, i) => _friendRow(filtered[i]),
-                          )),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (me != null) ...[
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Text('הקבוצות שלי',
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.75),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                        const SizedBox(height: 8),
+                        if (groups.isNotEmpty)
+                          SizedBox(
+                            height: 68,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              reverse: true,
+                              itemCount: groups.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(width: 8),
+                              itemBuilder: (_, i) =>
+                                  _groupChip(groups[i], me.id),
+                            ),
+                          )
+                        else
+                          InkWell(
+                            onTap: () => _openCreateGroup(friends),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: Colors.white.withOpacity(0.12)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.group_add_rounded,
+                                      color: Color(0xFF4A9EFF), size: 18),
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                        'אין לך עדיין קבוצה קבועה, צרו אחת כדי להזמין בלחיצה',
+                                        style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 13)),
+                                  ),
+                                  const Icon(Icons.chevron_left_rounded,
+                                      color: Colors.white38, size: 18),
+                                ],
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 14),
+                      ],
+                      friends.isEmpty
+                          ? SizedBox(height: 260, child: _emptyState())
+                          : (filtered.isEmpty
+                              ? const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 40),
+                                  child: Center(
+                                    child: Text('לא נמצא חבר בשם הזה',
+                                        style:
+                                            TextStyle(color: Colors.white54)),
+                                  ),
+                                )
+                              : ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: filtered.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: 8),
+                                  itemBuilder: (_, i) =>
+                                      _friendRow(filtered[i]),
+                                )),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _groupChip(GroupModel g, String myUid) {
+    final targets = _groupTargets(g, myUid);
+    final busy = _busyGroupId == g.id;
+    final allDone = targets.isEmpty;
+    return InkWell(
+      onTap: (busy || allDone) ? null : () => _inviteGroup(g),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: 132,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: allDone
+              ? Colors.white.withOpacity(0.04)
+              : const Color(0xFF34D399).withOpacity(0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: allDone
+                ? Colors.white.withOpacity(0.10)
+                : const Color(0xFF34D399).withOpacity(0.5),
+            width: 1.2,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(g.name.isEmpty ? 'קבוצה' : g.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            busy
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Color(0xFF34D399)))
+                : Text(
+                    allDone ? 'כולם הוזמנו' : 'הזמן ${targets.length} 👥',
+                    style: TextStyle(
+                        color: allDone
+                            ? Colors.white38
+                            : const Color(0xFF34D399),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700),
+                  ),
+          ],
         ),
       ),
     );
@@ -1449,6 +1891,212 @@ class _WaitingFooter extends StatelessWidget {
           'ממתין למארח שיתחיל...',
           style: AppStyles.bodyMedium.copyWith(color: Colors.white54),
         ),
+      ),
+    );
+  }
+}
+
+
+/// שורת "עם/בלי תחבולות" בלובי חברים — טוגל למארח, תצוגה לשאר.
+class _TricksToggleRow extends StatelessWidget {
+  final bool enabled;
+  final bool isHost;
+  final ValueChanged<bool>? onChanged;
+
+  const _TricksToggleRow({
+    required this.enabled,
+    required this.isHost,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D1E30).withOpacity(0.85),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Row(
+        children: [
+          Text(enabled ? '🃏' : '🕊️', style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'תחבולות במשחק',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  enabled
+                      ? 'כרטיסי חסימה, החשכה ועצירה פעילים'
+                      : 'משחק נקי, בלי כרטיסי פעולה',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.55),
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: enabled,
+            onChanged: onChanged,
+            activeColor: const Color(0xFF8B4FBF),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Host-only round-count picker for "זהו את הפתגם" friends games (1-5).
+/// Quick-match proverbs always plays a single fixed round instead.
+class _ProverbsRoundsRow extends StatelessWidget {
+  final int rounds;
+  final bool isHost;
+  final ValueChanged<int>? onChanged;
+
+  const _ProverbsRoundsRow({
+    required this.rounds,
+    required this.isHost,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D1E30).withOpacity(0.85),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Row(
+        children: [
+          const Text('🧩', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'מספר סבבים',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  isHost ? 'המארח בוחר בין 1 ל-5' : 'נבחר על ידי המארח',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.55),
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: (isHost && onChanged != null && rounds > 1)
+                ? () => onChanged!(rounds - 1)
+                : null,
+            icon: const Icon(Icons.remove_circle_outline_rounded),
+            color: const Color(0xFFFFE082),
+            disabledColor: Colors.white24,
+          ),
+          SizedBox(
+            width: 22,
+            child: Text(
+              '$rounds',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: (isHost && onChanged != null && rounds < 5)
+                ? () => onChanged!(rounds + 1)
+                : null,
+            icon: const Icon(Icons.add_circle_outline_rounded),
+            color: const Color(0xFFFFE082),
+            disabledColor: Colors.white24,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Host-only toggle for the turn-based letter-guess hint layer (off by
+/// default): each player's turn, guess one letter and every occurrence in the
+/// answer reveals at once. Works alongside the normal reveal/guess race in
+/// every game mode (places, heat, proverbs).
+class _LetterTurnToggleRow extends StatelessWidget {
+  final bool enabled;
+  final bool isHost;
+  final ValueChanged<bool>? onChanged;
+
+  const _LetterTurnToggleRow({
+    required this.enabled,
+    required this.isHost,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D1E30).withOpacity(0.85),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Row(
+        children: [
+          Text(enabled ? '🔤' : '🔠', style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'ניחוש אותיות בתורות',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  enabled
+                      ? 'כל שחקן מנחש אות בתורו, 5 שניות לבחירה'
+                      : 'כבוי, המשחק נשאר כרגיל',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.55),
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: enabled,
+            onChanged: onChanged,
+            activeColor: const Color(0xFF8B4FBF),
+          ),
+        ],
       ),
     );
   }

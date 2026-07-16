@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../core/utils/share_util.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/build_info.dart';
@@ -22,8 +22,6 @@ import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
 import 'discovered_images_screen.dart';
 import '../store/card_skins_screen.dart' show ownedSkinsProvider;
-import '../store/avatar_frames_screen.dart' show selectedFrameProvider;
-import '../store/name_styles_screen.dart' show selectedNameStyleProvider;
 import '../store/avatars_screen.dart' show selectedAvatarProvider;
 import '../../widgets/common/player_name_text.dart';
 
@@ -173,7 +171,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       iosUrl: info?.iosUrl,
     );
     try {
-      await Share.share(message, subject: 'מה בתמונה?');
+      await shareText(context, message, subject: 'מה בתמונה?');
     } catch (e) {
       QaLoggerService.instance.log('SHARE', 'SHARE_APP_ERROR $e');
     }
@@ -250,9 +248,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
-    final selectedFrame = ref.watch(selectedFrameProvider).valueOrNull ?? 'none';
-    final selectedNameStyle =
-        ref.watch(selectedNameStyleProvider).valueOrNull ?? 'none';
     final selectedAvatar =
         ref.watch(selectedAvatarProvider).valueOrNull ?? 'auto';
 
@@ -318,7 +313,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           name: user.name,
                           photoUrl: user.photoUrl,
                           radius: 34,
-                          frameId: selectedFrame,
                           avatarId: selectedAvatar),
                       const SizedBox(width: 16),
                       // Name + edit
@@ -336,7 +330,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     alignment: AlignmentDirectional.centerStart,
                                     child: PlayerNameText(
                                       text: user.name,
-                                      styleId: selectedNameStyle,
                                       base: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 18,
@@ -807,7 +800,7 @@ class _SupportCodeCard extends StatelessWidget {
         Clipboard.setData(ClipboardData(text: value));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('קוד התמיכה הועתק — שלח אותו לתמיכה'),
+            content: const Text('קוד התמיכה הועתק, שלח אותו לתמיכה'),
             duration: const Duration(seconds: 2),
             backgroundColor: Colors.green.shade800,
           ),
@@ -917,7 +910,7 @@ class _AccountSection extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              '⚠️ אתה משחק כאורח — מחיקת האפליקציה תמחק את כל ההתקדמות!',
+              '⚠️ אתה משחק כאורח, מחיקת האפליקציה תמחק את כל ההתקדמות!',
               style: TextStyle(color: Color(0xFFFF8C00), fontSize: 11, fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,
             ),

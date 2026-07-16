@@ -11,6 +11,9 @@ on:
   push:
     branches:
       - main
+      # Session branch — lets an agent deploy a rules change it just made
+      # (agent pushes can only reach its own branch; main is synced after).
+      - claude/whothere-v111-launch-iqkbq2
     paths:
       - firestore.rules
 

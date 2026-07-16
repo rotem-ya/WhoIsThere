@@ -44,6 +44,9 @@ class GameCategories {
   static const String worldSites = 'world_sites';
   static const String israelFigures = 'israel_figures';
   static const String worldFigures = 'world_figures';
+  // "זהו את הפתגם" — a standalone rebus game (NOT a fastHeat topic): every
+  // round's image is a wordless 3D riddle and the answer is a Hebrew proverb.
+  static const String proverbs = 'proverbs';
 
   static const String _dataDir = 'assets/game_places/data';
 
@@ -135,6 +138,13 @@ class GameCategories {
       nameHe: 'דמויות מוכרות בעולם',
       emoji: '🌐',
       assetPath: '$_dataDir/world_figures.json',
+    ),
+    GameCategory(
+      id: proverbs,
+      nameHe: 'פתגמים',
+      emoji: '🧩',
+      assetPath: '$_dataDir/proverbs.json',
+      hasHints: false,
     ),
   ];
 
