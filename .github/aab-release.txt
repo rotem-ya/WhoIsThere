@@ -1,16 +1,17 @@
-Release AAB build requested: 2026-07-14T20:15:00Z (v1.3.1 — iOS push-notification fix + keyboard glow + version bump)
-version: 1.3.1 (build name 1.3.1; versionCode = build-aab run number, strictly increasing)
+Release AAB build requested: 2026-07-16T04:00:00Z (v1.3.2 — EMERGENCY hotfix)
+version: 1.3.2 (build name 1.3.2; versionCode = build-aab run number, strictly increasing)
 signing: Play upload key SHA-1 EA:3B (from UPLOAD_* secrets / embedded)
 package: com.whoisthere.app (matches Play Console)
-note: v1.3.1 — everything from v1.3.0 (friends experience overhaul: groups,
-  push invites, round-end scoreboard, tricks toggle, proverbs host-picked
-  round count, save/share round images with a download QR) is included, plus:
-  fixed an iOS-only race where the FCM token registration could fail right
-  after a fresh launch (apns-token-not-set), which could leave the invite
-  recipient's push token stale exactly when a push needed to send; and the
-  turn-based letter keyboard now visibly pulses green on tappable keys
-  during your turn, not just the panel border.
-note2: versionCode auto = build-aab run number.
-note3: version bumped to 1.3.1 to match the iOS build (Apple already has an
-  approved 1.3.0 on file and closed that pre-release train to new builds).
+severity: URGENT — the live public build (1.3.1) has a serious visual bug in
+  friends games: the turn-based letter-guessing keyboard (added in 1.3.1)
+  squeezes the game image down to nearly nothing on screen. Reported by real
+  users on the live App Store release.
+fix: the turn-based letter-guessing panel is hard-disabled via a kill switch
+  (kLetterTurnFeatureEnabled = false in room_model.dart) for every mode
+  except the separate letters-duel game (which was never affected — it has
+  its own dedicated screen/mechanic, untouched). The host lobby toggle for
+  this feature is hidden while the switch is off. No other 1.3.1 feature is
+  touched or removed (groups, push invites, round-end scoreboard, tricks
+  toggle, proverbs host-picked round count, round-image sharing all stay).
+note: versionCode auto = build-aab run number.
 trigger: session-branch push (MCP workflow_dispatch lacks actions:write)

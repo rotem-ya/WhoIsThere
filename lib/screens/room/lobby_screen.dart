@@ -724,7 +724,11 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                     : null,
                               ),
                             ],
-                            if (room.isFriendsGame) ...[
+                            // כבוי זמנית ברמת קוד (kLetterTurnFeatureEnabled) —
+                            // ראה room_model.dart. אין טעם להציג טוגל למארח
+                            // כשהתכונה לא יכולה לפעול בכל מקרה.
+                            if (kLetterTurnFeatureEnabled &&
+                                room.isFriendsGame) ...[
                               const SizedBox(height: 8),
                               _LetterTurnToggleRow(
                                 enabled: room.letterTurnEnabled,
@@ -1415,7 +1419,9 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
                       : null,
                 ),
               ],
-              if (liveRoom != null && liveRoom.isFriendsGame) ...[
+              if (kLetterTurnFeatureEnabled &&
+                  liveRoom != null &&
+                  liveRoom.isFriendsGame) ...[
                 const SizedBox(height: 12),
                 _LetterTurnToggleRow(
                   enabled: liveRoom.letterTurnEnabled,

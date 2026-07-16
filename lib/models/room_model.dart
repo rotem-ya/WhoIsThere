@@ -4,6 +4,15 @@ import '../core/constants/game_categories.dart';
 import '../core/constants/game_constants.dart';
 import 'player_model.dart';
 
+/// EMERGENCY KILL SWITCH (2026-07-16): the turn-based letter-guessing panel
+/// was squeezing the game image down to near-nothing on the live App Store
+/// build. The render fix (LetterTurnPanel size + dropping the duplicate
+/// AnswerSlots row) is in, but until a new build has actually shipped and
+/// been verified, this stays false so [RoomModel.isLetterTurnActive] can
+/// never be true and the host lobby toggle stays hidden — no code path can
+/// render the panel. Flip back to true only after that's confirmed live.
+const bool kLetterTurnFeatureEnabled = false;
+
 class RoomModel extends Equatable {
   final String id;
   final String code;
@@ -266,7 +275,11 @@ class RoomModel extends Equatable {
   // AND the round-reset already snapshotted an answer to guess against. Never
   // true for the separate letters-duel mode.
   bool get isLetterTurnActive =>
-      !isLetters && letterTurnEnabled && letterTurnAnswer != null && letterTurnAnswer!.isNotEmpty;
+      kLetterTurnFeatureEnabled &&
+      !isLetters &&
+      letterTurnEnabled &&
+      letterTurnAnswer != null &&
+      letterTurnAnswer!.isNotEmpty;
 
   // Whose turn it is to guess a letter. Deliberately DERIVED from
   // [letterTurnCycleId] rather than sharing [currentTurnIndex] — that field is
