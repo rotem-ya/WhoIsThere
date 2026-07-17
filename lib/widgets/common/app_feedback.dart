@@ -1,39 +1,48 @@
 import 'package:flutter/services.dart';
 
+import '../../services/settings_service.dart';
 import '../../services/sfx_service.dart';
 
+/// Unified tactile + audio feedback for UI interactions. Haptics honor the
+/// user's vibration setting (previously they fired unconditionally, so turning
+/// vibration off in Settings had no effect on buttons); the custom click sounds
+/// route through [SfxService], which honors the sfx-volume setting.
 class AppFeedback {
   const AppFeedback._();
 
+  static void _haptic(void Function() fire) {
+    if (SettingsService.instance.vibrationEnabled) fire();
+  }
+
   static void tap() {
-    HapticFeedback.selectionClick();
+    _haptic(HapticFeedback.selectionClick);
     SfxService.instance.uiClick();
   }
 
   static void selection() => tap();
 
   static void primary() {
-    HapticFeedback.mediumImpact();
+    _haptic(HapticFeedback.mediumImpact);
     SfxService.instance.uiPrimary();
   }
 
   static void back() {
-    HapticFeedback.selectionClick();
+    _haptic(HapticFeedback.selectionClick);
     SfxService.instance.uiBack();
   }
 
   static void reveal() {
-    HapticFeedback.lightImpact();
+    _haptic(HapticFeedback.lightImpact);
     SystemSound.play(SystemSoundType.click);
   }
 
   static void success() {
-    HapticFeedback.heavyImpact();
+    _haptic(HapticFeedback.heavyImpact);
     SystemSound.play(SystemSoundType.alert);
   }
 
   static void warning() {
-    HapticFeedback.vibrate();
+    _haptic(HapticFeedback.vibrate);
     SystemSound.play(SystemSoundType.alert);
   }
 
