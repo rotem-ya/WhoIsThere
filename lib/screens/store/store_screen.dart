@@ -38,6 +38,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
   void initState() {
     super.initState();
     _tab = TabController(length: 3, vsync: this);
+    _tab.addListener(() {
+      if (_tab.indexIsChanging) SfxService.instance.tabChange();
+    });
     AnalyticsService.instance.storeView();
   }
 

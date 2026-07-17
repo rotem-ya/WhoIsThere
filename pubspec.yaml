@@ -83,6 +83,7 @@ flutter:
     - assets/game_places/images/
     - assets/game_places/data/
     - assets/sounds/
+    - assets/sounds/ui/
     - assets/icons/
     - assets/skins/
 

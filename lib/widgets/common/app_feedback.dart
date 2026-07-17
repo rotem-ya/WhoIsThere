@@ -1,18 +1,25 @@
 import 'package:flutter/services.dart';
 
+import '../../services/sfx_service.dart';
+
 class AppFeedback {
   const AppFeedback._();
 
   static void tap() {
     HapticFeedback.selectionClick();
-    SystemSound.play(SystemSoundType.click);
+    SfxService.instance.uiClick();
   }
 
   static void selection() => tap();
 
   static void primary() {
     HapticFeedback.mediumImpact();
-    SystemSound.play(SystemSoundType.click);
+    SfxService.instance.uiPrimary();
+  }
+
+  static void back() {
+    HapticFeedback.selectionClick();
+    SfxService.instance.uiBack();
   }
 
   static void reveal() {
