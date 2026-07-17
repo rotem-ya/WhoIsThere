@@ -20,6 +20,7 @@ import '../../services/qa_logger_service.dart';
 import '../../services/report_service.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/common/player_avatar.dart';
+import '../../widgets/common/rank_ladder_sheet.dart';
 import 'discovered_images_screen.dart';
 import '../store/card_skins_screen.dart' show ownedSkinsProvider;
 import '../store/avatars_screen.dart' show selectedAvatarProvider;
@@ -385,6 +386,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
 
               const SizedBox(height: AppSpacing.md),
+
+              // ── Rank card (tap → full ladder of all 7 tiers) ─────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: RankBadgeCard(totalPoints: user.totalPoints),
+              ),
+
+              const SizedBox(height: AppSpacing.sm),
 
               // ── Stats row ────────────────────────────────────────────
               Padding(

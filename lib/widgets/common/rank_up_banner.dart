@@ -10,6 +10,7 @@ import '../../models/user_model.dart';
 import '../../providers/providers.dart';
 import '../../services/settings_service.dart';
 import '../../services/sfx_service.dart';
+import 'rank_ladder_sheet.dart';
 
 /// Global celebration when the player crosses into a new rank tier. Watches the
 /// user's lifetime `totalPoints`; when the derived [PlayerRank] increases, it
@@ -79,6 +80,14 @@ class _RankUpBannerState extends ConsumerState<RankUpBanner> {
     }
   }
 
+  // Tapping the celebration opens the full ladder, so "you leveled up!" leads
+  // straight to "here's where you are and what's next".
+  void _openLadder() {
+    final pts = ref.read(currentUserProvider).valueOrNull?.totalPoints ?? 0;
+    _clear();
+    RankLadderSheet.show(context, pts);
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<AsyncValue<UserModel?>>(currentUserProvider, _onUser);
@@ -111,7 +120,7 @@ class _RankUpBannerState extends ConsumerState<RankUpBanner> {
         return SafeArea(
           child: Align(
             alignment: Alignment.topCenter,
-            child: _RankUpCard(rank: celebrating, onDismiss: _clear),
+            child: _RankUpCard(rank: celebrating, onDismiss: _openLadder),
           ),
         );
       },
