@@ -201,59 +201,42 @@ class _PlayerGrid extends StatelessWidget {
     this.showExposure = false,
   });
 
+  Widget _cell(int i, bool compact) => _PlayerCell(
+        player: players[i],
+        isGuessing: players[i].id == guessModePlayerId,
+        isStunned: stunnedPlayerIds.contains(players[i].id),
+        isMe: players[i].id == myUid,
+        myUid: myUid,
+        roomId: roomId,
+        isSolo: isSolo,
+        guessBlock5Count: guessBlock5Count,
+        guessBlock10Count: guessBlock10Count,
+        blackoutCardCount: blackoutCardCount,
+        tricksDisabled: tricksDisabled,
+        showExposure: showExposure,
+        compact: compact,
+      );
+
   @override
   Widget build(BuildContext context) {
-    // Crowded lobbies (7-8) collapse each player to a first-letter circle so
-    // the whole grid stays short and the game board below gets maximum size.
-    final manyPlayers = players.length >= 7;
+    // Keep the grid to at most 2 rows so the board below gets maximum height.
+    // 5+ players collapse to compact first-letter cells and pack 3-4 per row
+    // (instead of 2), so an 8-player lobby is 2 rows, not 4.
+    final compact = players.length >= 5;
+    final cols = players.length >= 7 ? 4 : (players.length >= 5 ? 3 : 2);
     final rows = <Widget>[];
-    for (var i = 0; i < players.length; i += 2) {
+    for (var i = 0; i < players.length; i += cols) {
       if (rows.isNotEmpty) rows.add(const SizedBox(height: 4));
-      rows.add(Row(
-        children: [
-          Expanded(
-            child: _PlayerCell(
-              player: players[i],
-              isGuessing: players[i].id == guessModePlayerId,
-              isStunned: stunnedPlayerIds.contains(players[i].id),
-              isMe: players[i].id == myUid,
-              myUid: myUid,
-              roomId: roomId,
-              isSolo: isSolo,
-              guessBlock5Count: guessBlock5Count,
-              guessBlock10Count: guessBlock10Count,
-              blackoutCardCount: blackoutCardCount,
-              tricksDisabled: tricksDisabled,
-              showExposure: showExposure,
-              compact: manyPlayers,
-            ),
-          ),
-          if (i + 1 < players.length) ...[
-            const SizedBox(width: 6),
-            Expanded(
-              child: _PlayerCell(
-                player: players[i + 1],
-                isGuessing: players[i + 1].id == guessModePlayerId,
-                isStunned: stunnedPlayerIds.contains(players[i + 1].id),
-                isMe: players[i + 1].id == myUid,
-                myUid: myUid,
-                roomId: roomId,
-                isSolo: isSolo,
-                guessBlock5Count: guessBlock5Count,
-                guessBlock10Count: guessBlock10Count,
-                blackoutCardCount: blackoutCardCount,
-                tricksDisabled: tricksDisabled,
-                showExposure: showExposure,
-                compact: manyPlayers,
-              ),
-            ),
-          ] else
-            const Expanded(child: SizedBox()),
-        ],
-      ));
+      final cells = <Widget>[];
+      for (var c = 0; c < cols; c++) {
+        if (c > 0) cells.add(const SizedBox(width: 6));
+        final idx = i + c;
+        cells.add(Expanded(
+          child: idx < players.length ? _cell(idx, compact) : const SizedBox(),
+        ));
+      }
+      rows.add(Row(children: cells));
     }
-    // Compact cells keep even an 8-player grid short, so no scroll/cap is
-    // needed — every player stays visible and the board still gets its space.
     return Column(mainAxisSize: MainAxisSize.min, children: rows);
   }
 }
@@ -437,41 +420,43 @@ class _PlayerCell extends ConsumerWidget {
   Widget _buildCompact(PlayerRank rank) {
     final trimmed = player.name.trim();
     final letter = trimmed.isNotEmpty ? trimmed.substring(0, 1) : '?';
-    final status = _statusIcon();
+    // Narrow cell for 3-4 columns: rank-colored letter circle (gold ring for
+    // the host), rank emoji marker, score. Turn/stun state reads from the
+    // cell's background/border color.
     return Row(
       children: [
         Container(
-          width: 22,
-          height: 22,
+          width: 23,
+          height: 23,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: rank.color.withOpacity(0.22),
-            border: Border.all(color: rank.color.withOpacity(0.7), width: 1),
+            border: Border.all(
+              color: player.isHost
+                  ? const Color(0xFFFFD54F)
+                  : rank.color.withOpacity(0.75),
+              width: player.isHost ? 1.5 : 1,
+            ),
           ),
           child: Text(
             letter,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 12,
+              fontSize: 12.5,
               fontWeight: FontWeight.w900,
               height: 1,
             ),
           ),
         ),
-        const SizedBox(width: 4),
-        Text(rank.emoji, style: const TextStyle(fontSize: 11)),
-        if (player.isHost) ...[
-          const SizedBox(width: 2),
-          const Text('⭐', style: TextStyle(fontSize: 9)),
-        ],
-        if (status != null) ...[const SizedBox(width: 2), status],
+        const SizedBox(width: 3),
+        Text(rank.emoji, style: const TextStyle(fontSize: 10.5)),
         const Spacer(),
         Text(
           '${player.score}',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.55),
-            fontSize: 11,
+            color: Colors.white.withOpacity(0.6),
+            fontSize: 11.5,
             fontWeight: FontWeight.w800,
           ),
         ),
