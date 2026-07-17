@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils/app_router.dart';
 import '../../providers/providers.dart';
+import '../../services/sfx_service.dart';
 
 /// Global floating notice for a pending GROUP invite ("X מזמין אותך לקבוצה"),
 /// rendered above the router like [FriendRequestBanner]/[GameInviteBanner] so
@@ -22,6 +23,7 @@ class GroupInviteBanner extends ConsumerStatefulWidget {
 
 class _GroupInviteBannerState extends ConsumerState<GroupInviteBanner> {
   String _dismissedKey = '';
+  String _lastNotifiedKey = '';
   bool _busy = false;
   final Set<String> _markedReadIds = {};
 
@@ -92,6 +94,13 @@ class _GroupInviteBannerState extends ConsumerState<GroupInviteBanner> {
         final key = invites.map((i) => i.id).join(',');
         if (_suppressedPath(path) || key == _dismissedKey) {
           return const SizedBox.shrink();
+        }
+        // A new/changed invite is about to slide in → chime once.
+        if (key != _lastNotifiedKey) {
+          _lastNotifiedKey = key;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            SfxService.instance.notify();
+          });
         }
 
         // This banner being on screen right now means the player has seen
