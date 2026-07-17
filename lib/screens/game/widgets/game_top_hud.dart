@@ -246,7 +246,21 @@ class _PlayerGrid extends StatelessWidget {
         ],
       ));
     }
-    return Column(mainAxisSize: MainAxisSize.min, children: rows);
+    final grid = Column(mainAxisSize: MainAxisSize.min, children: rows);
+
+    // Big lobbies (7-8 players = 4 rows) would otherwise push the game board
+    // below into a sliver. Cap the grid at ~3 rows and let it scroll so the
+    // image keeps a usable size. Common 2-6 player games are untouched.
+    final playerRows = (players.length + 1) ~/ 2;
+    if (playerRows <= 3) return grid;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 168),
+      child: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        padding: const EdgeInsets.only(top: 6),
+        child: grid,
+      ),
+    );
   }
 }
 
