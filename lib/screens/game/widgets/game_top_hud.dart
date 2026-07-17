@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/game_constants.dart';
+import '../../../core/constants/player_rank.dart';
 import '../../../models/player_model.dart';
 import '../../../providers/providers.dart';
 import '../../../services/reward_calculator.dart';
@@ -202,6 +203,9 @@ class _PlayerGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Crowded lobbies (7-8) collapse each player to a first-letter circle so
+    // the whole grid stays short and the game board below gets maximum size.
+    final manyPlayers = players.length >= 7;
     final rows = <Widget>[];
     for (var i = 0; i < players.length; i += 2) {
       if (rows.isNotEmpty) rows.add(const SizedBox(height: 4));
@@ -221,6 +225,7 @@ class _PlayerGrid extends StatelessWidget {
               blackoutCardCount: blackoutCardCount,
               tricksDisabled: tricksDisabled,
               showExposure: showExposure,
+              compact: manyPlayers,
             ),
           ),
           if (i + 1 < players.length) ...[
@@ -239,6 +244,7 @@ class _PlayerGrid extends StatelessWidget {
                 blackoutCardCount: blackoutCardCount,
                 tricksDisabled: tricksDisabled,
                 showExposure: showExposure,
+                compact: manyPlayers,
               ),
             ),
           ] else
@@ -246,21 +252,9 @@ class _PlayerGrid extends StatelessWidget {
         ],
       ));
     }
-    final grid = Column(mainAxisSize: MainAxisSize.min, children: rows);
-
-    // Big lobbies (7-8 players = 4 rows) would otherwise push the game board
-    // below into a sliver. Cap the grid at ~3 rows and let it scroll so the
-    // image keeps a usable size. Common 2-6 player games are untouched.
-    final playerRows = (players.length + 1) ~/ 2;
-    if (playerRows <= 3) return grid;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 168),
-      child: SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
-        padding: const EdgeInsets.only(top: 6),
-        child: grid,
-      ),
-    );
+    // Compact cells keep even an 8-player grid short, so no scroll/cap is
+    // needed — every player stays visible and the board still gets its space.
+    return Column(mainAxisSize: MainAxisSize.min, children: rows);
   }
 }
 
@@ -279,6 +273,8 @@ class _PlayerCell extends ConsumerWidget {
   final int guessBlock10Count;
   final int blackoutCardCount;
   final bool showExposure;
+  // Crowded lobbies: collapse to a first-letter circle to save vertical space.
+  final bool compact;
 
   const _PlayerCell({
     required this.player,
@@ -293,6 +289,7 @@ class _PlayerCell extends ConsumerWidget {
     this.guessBlock10Count = 0,
     this.blackoutCardCount = 0,
     this.showExposure = false,
+    this.compact = false,
   });
 
   bool get _canTarget =>
@@ -318,15 +315,15 @@ class _PlayerCell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rawName = player.name.length > 9 ? player.name.substring(0, 9) : player.name;
-    final name = player.isHost ? '$rawName ⭐' : rawName;
+    final rank = PlayerRankX.fromPoints(player.totalPoints);
     return GestureDetector(
       onTap: _canTarget ? () => _showActionSheet(context) : null,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding:
+                EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: 3),
             decoration: BoxDecoration(
               color: isStunned
                   ? const Color(0xFF2A1040).withOpacity(0.75)
@@ -343,59 +340,7 @@ class _PlayerCell extends ConsumerWidget {
                 width: isStunned || isGuessing ? 1.0 : 0.8,
               ),
             ),
-            child: Row(
-              children: [
-                PlayerAvatar(
-                  name: player.name,
-                  seed: player.name,
-                  radius: 10,
-                  avatarId: player.avatarId,
-                  frameId: player.frameId,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: isGuessing ? const Color(0xFF80C080) : Colors.white70,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                if (isStunned)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 3),
-                    child: Text('🔒', style: TextStyle(fontSize: 9)),
-                  )
-                else if (isGuessing)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4),
-                    child: Text('✍', style: TextStyle(fontSize: 10)),
-                  ),
-                // Private rooms: show how many times this player has already
-                // seen the current image (0 = first time) next to their name.
-                if (showExposure && !player.isBot)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 3),
-                    child: Text(
-                      '👁${player.priorExposureCount}',
-                      style: const TextStyle(fontSize: 9, color: Colors.amber),
-                    ),
-                  ),
-                const SizedBox(width: 4),
-                Text(
-                  '${player.score}',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.45),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
+            child: compact ? _buildCompact(rank) : _buildFull(rank),
           ),
           Positioned(
             top: -7,
@@ -404,6 +349,133 @@ class _PlayerCell extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget? _statusIcon() {
+    if (isStunned) return const Text('🔒', style: TextStyle(fontSize: 9));
+    if (isGuessing) return const Text('✍', style: TextStyle(fontSize: 10));
+    return null;
+  }
+
+  // Roomy layout (≤6 players): avatar + a small name with the rank shown as a
+  // tiny "exponent" line above it, plus status / exposure / score.
+  Widget _buildFull(PlayerRank rank) {
+    final rawName =
+        player.name.length > 9 ? player.name.substring(0, 9) : player.name;
+    final name = player.isHost ? '$rawName ⭐' : rawName;
+    final status = _statusIcon();
+    return Row(
+      children: [
+        PlayerAvatar(
+          name: player.name,
+          seed: player.name,
+          radius: 11,
+          avatarId: player.avatarId,
+          frameId: player.frameId,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Rank tucked above the name like a superscript.
+              Text(
+                '${rank.emoji} ${rank.label}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 7.5,
+                  height: 1,
+                  color: rank.color,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color:
+                      isGuessing ? const Color(0xFF80C080) : Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  height: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (status != null)
+          Padding(padding: const EdgeInsets.only(left: 3), child: status),
+        if (showExposure && !player.isBot)
+          Padding(
+            padding: const EdgeInsets.only(left: 3),
+            child: Text(
+              '👁${player.priorExposureCount}',
+              style: const TextStyle(fontSize: 9, color: Colors.amber),
+            ),
+          ),
+        const SizedBox(width: 4),
+        Text(
+          '${player.score}',
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.45),
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Crowded layout (7-8 players): the name collapses to its first letter in a
+  // rank-colored circle, with the rank emoji as the marker and the score — no
+  // full name, so the grid stays short and the board gets maximum size.
+  Widget _buildCompact(PlayerRank rank) {
+    final trimmed = player.name.trim();
+    final letter = trimmed.isNotEmpty ? trimmed.substring(0, 1) : '?';
+    final status = _statusIcon();
+    return Row(
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: rank.color.withOpacity(0.22),
+            border: Border.all(color: rank.color.withOpacity(0.7), width: 1),
+          ),
+          child: Text(
+            letter,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              height: 1,
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(rank.emoji, style: const TextStyle(fontSize: 11)),
+        if (player.isHost) ...[
+          const SizedBox(width: 2),
+          const Text('⭐', style: TextStyle(fontSize: 9)),
+        ],
+        if (status != null) ...[const SizedBox(width: 2), status],
+        const Spacer(),
+        Text(
+          '${player.score}',
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.55),
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
     );
   }
 }
