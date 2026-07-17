@@ -5,12 +5,15 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/ad_constants.dart';
 import '../../../core/theme/app_styles.dart';
 import '../../../models/economy/match_reward_breakdown.dart';
 import '../../../models/game_image_model.dart';
+import '../../../services/settings_service.dart';
+import '../../../services/sfx_service.dart';
 import '../../../widgets/common/app_share_badges.dart';
 import '../../../widgets/common/banner_ad_widget.dart';
 import '../../../widgets/economy/coin_icon.dart';
@@ -83,8 +86,11 @@ class GameWinnerView extends StatefulWidget {
   State<GameWinnerView> createState() => _GameWinnerViewState();
 }
 
-class _GameWinnerViewState extends State<GameWinnerView> {
+class _GameWinnerViewState extends State<GameWinnerView>
+    with SingleTickerProviderStateMixin {
   late final ConfettiController _confettiController;
+  // One-shot gold "detonation" flash that fires the instant the card lands.
+  late final AnimationController _flashController;
   final GlobalKey _shareCardKey = GlobalKey();
   bool _showCard = false;
   bool _showButton = false;
@@ -97,7 +103,24 @@ class _GameWinnerViewState extends State<GameWinnerView> {
   void initState() {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _flashController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 620),
+    );
     _runEntrance();
+  }
+
+  /// The celebratory "impact" — a triple haptic burst, honoring the user's
+  /// vibration setting. Kept out of _runEntrance's async gaps so it fires
+  /// exactly on the card landing.
+  void _impactHaptic() {
+    if (!SettingsService.instance.vibrationEnabled) return;
+    HapticFeedback.heavyImpact();
+    Future.delayed(const Duration(milliseconds: 90), () {
+      if (mounted && SettingsService.instance.vibrationEnabled) {
+        HapticFeedback.mediumImpact();
+      }
+    });
   }
 
   Future<void> _handleDouble() async {
@@ -151,10 +174,16 @@ class _GameWinnerViewState extends State<GameWinnerView> {
   }
 
   Future<void> _runEntrance() async {
+    // Short build-up beat before the impact so the pop lands, not eases in.
     await Future.delayed(const Duration(milliseconds: 180));
     if (!mounted) return;
     setState(() => _showCard = true);
     _confettiController.play();
+    // Impact: gold flash + haptic burst, together with the card's scale-in.
+    _impactHaptic();
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (!reduceMotion) _flashController.forward(from: 0);
 
     await Future.delayed(const Duration(milliseconds: 650));
     if (!mounted) return;
@@ -164,6 +193,7 @@ class _GameWinnerViewState extends State<GameWinnerView> {
   @override
   void dispose() {
     _confettiController.dispose();
+    _flashController.dispose();
     super.dispose();
   }
 
@@ -173,6 +203,42 @@ class _GameWinnerViewState extends State<GameWinnerView> {
       alignment: Alignment.center,
       children: [
         const Positioned.fill(child: _WinnerBackground()),
+        // One-shot gold detonation flash behind the card, driven by the
+        // entrance controller (skipped entirely under "reduce motion").
+        Positioned.fill(
+          child: IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _flashController,
+              builder: (context, _) {
+                final t = _flashController.value;
+                if (t == 0) return const SizedBox.shrink();
+                return Center(
+                  child: Opacity(
+                    opacity: (1 - t) * 0.5,
+                    child: Transform.scale(
+                      scale: 0.2 + t * 1.5,
+                      child: Container(
+                        width: 280,
+                        height: 280,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              Color(0x66FBEC9E),
+                              Color(0x33D4AF37),
+                              Color(0x00D4AF37),
+                            ],
+                            stops: [0.0, 0.55, 1.0],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
         ConfettiWidget(
           confettiController: _confettiController,
           blastDirection: math.pi / 2,
@@ -794,6 +860,11 @@ class _RewardSummaryState extends State<_RewardSummary> {
     await Future.delayed(const Duration(milliseconds: 480));
     if (!mounted) return;
     setState(() => _showTotal = true);
+    // Climax of the reward tally: a coin flourish + a satisfying tap.
+    SfxService.instance.coinGain();
+    if (SettingsService.instance.vibrationEnabled) {
+      HapticFeedback.mediumImpact();
+    }
   }
 
   @override
@@ -954,15 +1025,20 @@ class _TotalRow extends StatelessWidget {
               fontWeight: FontWeight.w900,
             ),
           ),
-          Text.rich(
-            TextSpan(
-              text: '+$total ',
-              children: [coinSpan(size: 18, color: Color(0xFFD4AF37))],
-            ),
-            style: const TextStyle(
-              color: Color(0xFFD4AF37),
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
+          TweenAnimationBuilder<int>(
+            tween: IntTween(begin: 0, end: total),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeOut,
+            builder: (context, value, _) => Text.rich(
+              TextSpan(
+                text: '+$value ',
+                children: [coinSpan(size: 18, color: Color(0xFFD4AF37))],
+              ),
+              style: const TextStyle(
+                color: Color(0xFFD4AF37),
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],
