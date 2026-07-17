@@ -25,6 +25,37 @@ import '../../screens/voting/vote_difficulty_screen.dart';
 import '../../screens/voting/vote_image_screen.dart';
 import '../../screens/win/win_screen.dart';
 
+/// A gentle fade-through page transition (fade + tiny upward drift) used for
+/// every route, replacing the platform-default page cut. Kept short (220ms) so
+/// navigation still feels snappy. Honors the OS "reduce motion" accessibility
+/// setting by dropping the animation entirely.
+CustomTransitionPage<void> _fadeThroughPage(
+  GoRouterState state,
+  Widget child,
+) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    transitionDuration: const Duration(milliseconds: 220),
+    reverseTransitionDuration: const Duration(milliseconds: 180),
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      if (MediaQuery.of(context).disableAnimations) return child;
+      final curved =
+          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.02),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
 /// Created exactly once. Auth changes are handled via [_RouterNotifier] +
 /// [GoRouter.refreshListenable] — the router instance is never recreated.
 final routerProvider = Provider<GoRouter>((ref) {
@@ -39,92 +70,120 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/splash',
-        builder: (context, state) => const SplashScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const SplashScreen()),
       ),
       GoRoute(
         path: '/auth',
-        builder: (context, state) => const AuthScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const AuthScreen()),
       ),
       GoRoute(
         path: '/home',
-        builder: (context, state) => const HomeScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const HomeScreen()),
       ),
       GoRoute(
         path: '/create-room',
-        builder: (context, state) => const CreateRoomScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const CreateRoomScreen()),
       ),
       GoRoute(
         path: '/join-room',
-        builder: (context, state) => JoinRoomScreen(
-          initialCode: state.uri.queryParameters['initialCode'],
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          JoinRoomScreen(
+            initialCode: state.uri.queryParameters['initialCode'],
+          ),
         ),
       ),
       GoRoute(
         path: '/lobby/:roomId',
-        builder: (context, state) =>
-            LobbyScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          LobbyScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/finding-players/:roomId',
-        builder: (context, state) => FindingPlayersScreen(
-          roomId: state.pathParameters['roomId']!,
-          targetPlayers: int.tryParse(
-                  state.uri.queryParameters['target'] ?? '2') ??
-              2,
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          FindingPlayersScreen(
+            roomId: state.pathParameters['roomId']!,
+            targetPlayers:
+                int.tryParse(state.uri.queryParameters['target'] ?? '2') ?? 2,
+          ),
         ),
       ),
       GoRoute(
         path: '/vote-image/:roomId',
-        builder: (context, state) =>
-            VoteImageScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          VoteImageScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/vote-difficulty/:roomId',
-        builder: (context, state) =>
-            VoteDifficultyScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          VoteDifficultyScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/game/:roomId',
-        builder: (context, state) =>
-            GameBoardScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          GameBoardScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/letters/:roomId',
-        builder: (context, state) =>
-            LettersGameScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          LettersGameScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/win/:roomId',
-        builder: (context, state) =>
-            WinScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          WinScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/profile',
-        builder: (context, state) => const ProfileScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const ProfileScreen()),
       ),
       GoRoute(
         path: '/friends',
-        builder: (context, state) => const FriendsScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const FriendsScreen()),
       ),
       GoRoute(
         path: '/store',
-        builder: (context, state) => const StoreScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const StoreScreen()),
       ),
       GoRoute(
         path: '/store/skins',
-        builder: (context, state) => const CardSkinsScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const CardSkinsScreen()),
       ),
       GoRoute(
         path: '/store/board',
-        builder: (context, state) => const BoardSkinsScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const BoardSkinsScreen()),
       ),
       GoRoute(
         path: '/store/avatars',
-        builder: (context, state) => const AvatarsScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const AvatarsScreen()),
       ),
       GoRoute(
         path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const SettingsScreen()),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

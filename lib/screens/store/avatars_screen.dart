@@ -181,6 +181,7 @@ class AvatarsScreen extends ConsumerWidget {
   ) async {
     HapticFeedback.lightImpact();
     if (currentCoins < avatar.price) {
+      SfxService.instance.denied();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('אין מספיק מטבעות!')),
       );

@@ -178,6 +178,7 @@ class WinEffectsScreen extends ConsumerWidget {
   ) async {
     HapticFeedback.lightImpact();
     if (currentCoins < effect.price) {
+      SfxService.instance.denied();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('אין מספיק מטבעות!')),
       );

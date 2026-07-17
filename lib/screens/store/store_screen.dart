@@ -420,6 +420,7 @@ class _CardsTab extends StatelessWidget {
   }
 
   void _showNoCoins(BuildContext context) {
+    SfxService.instance.denied();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('אין מספיק מטבעות!')),
     );

@@ -9,6 +9,7 @@ import '../../core/ui/app_text_styles.dart';
 import '../../models/card_skin.dart';
 import '../../providers/providers.dart';
 import '../../providers/skin_providers.dart';
+import '../../services/sfx_service.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_icon.dart';
@@ -139,6 +140,7 @@ class CardSkinsScreen extends ConsumerWidget {
     int currentCoins,
   ) async {
     if (currentCoins < skin.price) {
+      SfxService.instance.denied();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('אין מספיק מטבעות!')),
       );
