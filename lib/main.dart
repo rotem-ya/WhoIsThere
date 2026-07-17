@@ -27,6 +27,7 @@ import 'services/report_service.dart';
 import 'widgets/common/friend_request_banner.dart';
 import 'widgets/common/game_invite_banner.dart';
 import 'widgets/common/group_invite_banner.dart';
+import 'widgets/common/rank_up_banner.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'services/settings_service.dart';
 
@@ -470,6 +471,8 @@ class _GuessThePlaceAppState extends ConsumerState<GuessThePlaceApp>
                 const GameInviteBanner(),
                 // הזמנות קבוצה — מחייב אישור מפורש (הצטרף/דחה) לפני חברות.
                 const GroupInviteBanner(),
+                // חגיגת עליית דרגה — צפה ב-totalPoints וחוגג מעבר דרגה.
+                const RankUpBanner(),
               ],
             ),
           ),

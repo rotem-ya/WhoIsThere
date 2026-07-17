@@ -44,6 +44,7 @@ class SfxService {
   final AudioPlayer _denied = AudioPlayer(playerId: 'sfx-denied');
   final AudioPlayer _notify = AudioPlayer(playerId: 'sfx-notify');
   final AudioPlayer _chat = AudioPlayer(playerId: 'sfx-chat');
+  final AudioPlayer _rankUp = AudioPlayer(playerId: 'sfx-rank-up');
 
   static final AssetSource _uiClickSound = AssetSource('sounds/ui/ui_click.ogg');
   static final AssetSource _uiCtaSound = AssetSource('sounds/ui/ui_cta.ogg');
@@ -56,6 +57,7 @@ class SfxService {
   static final AssetSource _deniedSound = AssetSource('sounds/ui/denied.ogg');
   static final AssetSource _notifySound = AssetSource('sounds/ui/notify.ogg');
   static final AssetSource _chatSound = AssetSource('sounds/ui/chat_pop.ogg');
+  static final AssetSource _rankUpSound = AssetSource('sounds/ui/rank_up.ogg');
 
   Future<void> _play(AudioPlayer player, AssetSource src, {double scale = 1.0}) async {
     try {
@@ -113,4 +115,7 @@ class SfxService {
   Future<void> notify() => _play(_notify, _notifySound, scale: 0.8);
   /// Incoming chat message (only when the chat sheet is closed).
   Future<void> chatPop() => _play(_chat, _chatSound, scale: 0.6);
+
+  /// Player crossed into a new rank tier — a triumphant jingle.
+  Future<void> rankUp() => _play(_rankUp, _rankUpSound);
 }

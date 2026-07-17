@@ -1605,6 +1605,20 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
           .recordMyGroupResult(room: room, myUid: uid));
     }
 
+    // Normal (non-friends) games: the player's match score is added to lifetime
+    // totalPoints, which drives the 7-tier player rank. This previously lived on
+    // win_screen.dart, which is no longer reached (the live end screen is
+    // GameWinnerView) — so ranks had stopped progressing. Guarded by
+    // _rewardApplied above, so it runs exactly once per finished game. Friends
+    // games are per-match (see recordMyResult) and deliberately excluded.
+    if (!room.isFriendsGame) {
+      final myScore = room.players[uid]?.score ?? 0;
+      if (myScore > 0) {
+        unawaited(
+            ref.read(authServiceProvider).updateTotalPoints(uid, myScore));
+      }
+    }
+
     final isWin = room.winnerId == uid;
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
     // A win is the best moment to (rarely) ask for a store rating.
