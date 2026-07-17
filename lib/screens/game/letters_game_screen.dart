@@ -60,6 +60,13 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   bool _startLogged = false;
   Timer? _randomFallbackTimer;
 
+  // Per-turn 10s clock: a ticker refreshes the visible countdown and skips a
+  // human's turn once it runs out.
+  Timer? _turnTicker;
+  final ValueNotifier<int> _turnSeconds = ValueNotifier<int>(0);
+  RoomModel? _liveRoom;
+  int _lastTimeoutAttemptMs = 0;
+
   static final AudioPlayer _bgPlayer = AudioPlayer(playerId: 'letters-bg');
   static final AssetSource _bgMusic = AssetSource('sounds/background_studio.mp3');
   late final ConfettiController _confetti;
@@ -71,6 +78,36 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
     super.initState();
     _confetti = ConfettiController(duration: const Duration(seconds: 2));
     _startMusic();
+    _turnTicker =
+        Timer.periodic(const Duration(milliseconds: 400), (_) => _onTurnTick());
+  }
+
+  /// Refreshes the turn countdown and, when a human's clock hits zero, asks the
+  /// service to skip their turn. Bots are driven by the host, so they're
+  /// exempt. Throttled + idempotent, so both clients can watch safely.
+  void _onTurnTick() {
+    if (!mounted) return;
+    final room = _liveRoom;
+    if (room == null ||
+        room.phase != GamePhase.playing ||
+        !room.isLetters ||
+        room.letterTurnDeadlineMs == null) {
+      if (_turnSeconds.value != 0) _turnSeconds.value = 0;
+      return;
+    }
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final remainMs = room.letterTurnDeadlineMs! - now;
+    final secs = (remainMs / 1000).ceil().clamp(0, 99);
+    if (_turnSeconds.value != secs) _turnSeconds.value = secs;
+    if (remainMs > 0) return;
+    final turnUid = room.currentTurnUserId;
+    if (turnUid == null || turnUid.startsWith('virtual_')) return; // bot
+    if (now - _lastTimeoutAttemptMs < 1500) return; // throttle retries
+    _lastTimeoutAttemptMs = now;
+    ref.read(roomServiceProvider).expireLettersTurn(
+          roomId: widget.roomId,
+          expectedTurnIndex: room.currentTurnIndex,
+        );
   }
 
   Future<void> _startMusic() async {
@@ -109,6 +146,8 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   void dispose() {
     _confetti.dispose();
     _randomFallbackTimer?.cancel();
+    _turnTicker?.cancel();
+    _turnSeconds.dispose();
     _bgPlayer.stop();
     super.dispose();
   }
@@ -371,6 +410,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   }
 
   Widget _buildPlaying(RoomModel room, LettersPuzzle puzzle) {
+    _liveRoom = room; // the ticker reads this for the countdown + timeout
     final uid = _myUid ?? '';
     final mySolved = (room.lettersSolvedSlots[uid] ?? const []).toSet();
     final myGuessed = (room.lettersGuessed[uid] ?? const []).toSet();
@@ -395,6 +435,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
           total: puzzle.length,
           oppName: opp?.name ?? 'יריב',
           oppSolved: oppSolved,
+          secondsListenable: _turnSeconds,
           onClose: () => context.go('/home'),
         ),
         Expanded(
@@ -425,12 +466,34 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                       : null,
                 ),
                 const SizedBox(height: 12),
-                _Keyboard(
-                  enabled: isMyTurn && !_submitting,
-                  puzzle: puzzle,
-                  solved: mySolved,
-                  guessed: myGuessed,
-                  onLetter: (l) => _guess(room, puzzle, l),
+                // Glow the whole keyboard on your turn so it's unmistakable.
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isMyTurn
+                          ? _kGold.withOpacity(0.55)
+                          : Colors.transparent,
+                      width: 1.2,
+                    ),
+                    boxShadow: isMyTurn
+                        ? [
+                            BoxShadow(
+                                color: _kGold.withOpacity(0.35),
+                                blurRadius: 22,
+                                spreadRadius: 1)
+                          ]
+                        : const [],
+                  ),
+                  child: _Keyboard(
+                    enabled: isMyTurn && !_submitting,
+                    puzzle: puzzle,
+                    solved: mySolved,
+                    guessed: myGuessed,
+                    onLetter: (l) => _guess(room, puzzle, l),
+                  ),
                 ),
                 const SizedBox(height: 10),
               ],
@@ -442,6 +505,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   }
 
   Widget _buildWaiting(RoomModel room) {
+    _liveRoom = null; // no turn clock while waiting
     final uid = _myUid ?? '';
     final isHost = uid == room.hostId;
     final isRandom = room.isPublicRoom;
@@ -534,6 +598,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   }
 
   Widget _buildFinished(RoomModel room, LettersPuzzle puzzle) {
+    _liveRoom = null; // stop the turn clock once the duel is over
     final uid = _myUid ?? '';
     final iWon = room.winnerId == uid;
     final winner = room.players[room.winnerId];
@@ -647,6 +712,7 @@ class _Header extends StatelessWidget {
   final int total;
   final String oppName;
   final int oppSolved;
+  final ValueNotifier<int> secondsListenable;
   final VoidCallback onClose;
 
   const _Header({
@@ -655,6 +721,7 @@ class _Header extends StatelessWidget {
     required this.total,
     required this.oppName,
     required this.oppSolved,
+    required this.secondsListenable,
     required this.onClose,
   });
 
@@ -671,15 +738,78 @@ class _Header extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                Text(
-                  isMyTurn ? 'תורך, בחר אות' : 'תור $oppName',
-                  style: TextStyle(
-                    color: isMyTurn ? _kGoldLight : Colors.white60,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
+                // Glowing turn pill with a live 10s countdown so whose turn it
+                // is (and how long is left) is unmistakable.
+                ValueListenableBuilder<int>(
+                  valueListenable: secondsListenable,
+                  builder: (context, secs, _) {
+                    final urgent = isMyTurn && secs > 0 && secs <= 3;
+                    final accent =
+                        urgent ? const Color(0xFFE0563D) : _kGold;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: isMyTurn
+                            ? accent.withOpacity(0.16)
+                            : Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: isMyTurn
+                              ? accent.withOpacity(0.85)
+                              : Colors.white24,
+                          width: 1.2,
+                        ),
+                        boxShadow: isMyTurn
+                            ? [
+                                BoxShadow(
+                                    color: accent.withOpacity(0.42),
+                                    blurRadius: 16)
+                              ]
+                            : const [],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            isMyTurn ? 'תורך, בחר אות' : 'תור $oppName',
+                            style: TextStyle(
+                              color: isMyTurn ? Colors.white : Colors.white60,
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          if (secs > 0) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              width: 24,
+                              height: 24,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isMyTurn
+                                    ? accent
+                                    : Colors.white.withOpacity(0.18),
+                              ),
+                              child: Text(
+                                '$secs',
+                                style: TextStyle(
+                                  color: isMyTurn
+                                      ? const Color(0xFF07101F)
+                                      : Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   'אתה $mySolved/$total · $oppName $oppSolved/$total',
                   style: const TextStyle(color: Colors.white54, fontSize: 12),

@@ -2981,6 +2981,10 @@ class RoomService {
   /// couple of turns.
   static const Difficulty _lettersDifficulty = Difficulty.easy;
 
+  /// Letters duel: each player has this long to place a letter before their
+  /// turn is skipped (see [expireLettersTurn]).
+  static const int _lettersTurnMs = 10000;
+
   /// Picks a random playable image across ALL content categories (the answer is
   /// its Hebrew name, no topic shown). "Playable" = a normalized answer of 2..10
   /// letters so the Wordle slots stay reasonable.
@@ -3086,6 +3090,9 @@ class RoomService {
       selectedDifficulty: _lettersDifficulty,
       turnOrder: turnOrder,
       currentTurnIndex: 0,
+      letterTurnDeadlineMs: started
+          ? DateTime.now().millisecondsSinceEpoch + _lettersTurnMs
+          : null,
       mode: 'letters',
       secretWord: image?.answer,
       lettersRevealedTiles: started ? {for (final id in players.keys) id: const []} : const {},
@@ -3183,6 +3190,8 @@ class RoomService {
       updates['turnOrder'] = ids;
       updates['currentTurnIndex'] = 0;
       updates['phase'] = GamePhase.playing.name;
+      updates['letterTurnDeadlineMs'] =
+          DateTime.now().millisecondsSinceEpoch + _lettersTurnMs;
       updates['lettersRevealedTiles'] = {for (final id in ids) id: <int>[]};
       updates['lettersGuessed'] = {for (final id in ids) id: <String>[]};
       updates['lettersSolvedSlots'] = {for (final id in ids) id: <int>[]};
@@ -3275,8 +3284,10 @@ class RoomService {
         updates['winnerId'] = userId;
         updates['turnPhase'] = TurnPhase.roundOver.name;
       } else {
-        // Pass the turn to the other player.
+        // Pass the turn to the other player + start their 10s clock.
         updates['currentTurnIndex'] = room.currentTurnIndex + 1;
+        updates['letterTurnDeadlineMs'] =
+            DateTime.now().millisecondsSinceEpoch + _lettersTurnMs;
       }
 
       tx.update(_rooms.doc(roomId), updates);
@@ -3293,6 +3304,37 @@ class RoomService {
     }
 
     return (accepted: accepted, feedback: feedback, tilesRevealed: tilesRevealed, win: win);
+  }
+
+  /// Skips the current player's letters-duel turn once their 10s clock runs
+  /// out. Idempotent and safe to call from any client: it only advances while
+  /// the turn index still matches [expectedTurnIndex] and the deadline passed,
+  /// so a double-fire (active player + opponent watchdog) advances just once.
+  Future<bool> expireLettersTurn({
+    required String roomId,
+    required int expectedTurnIndex,
+  }) async {
+    var advanced = false;
+    await _firestore.runTransaction((tx) async {
+      final doc = await tx.get(_rooms.doc(roomId));
+      if (!doc.exists) return;
+      final room = RoomModel.fromFirestore(doc);
+      if (room.phase != GamePhase.playing || !room.isLetters) return;
+      if (room.currentTurnIndex != expectedTurnIndex) return; // already moved on
+      final deadline = room.letterTurnDeadlineMs;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      if (deadline == null || now < deadline) return; // not expired yet
+      tx.update(_rooms.doc(roomId), {
+        'currentTurnIndex': room.currentTurnIndex + 1,
+        'letterTurnDeadlineMs': now + _lettersTurnMs,
+      });
+      advanced = true;
+    });
+    if (advanced) {
+      QaLoggerService.instance
+          .log('LETTERS', 'TURN_TIMEOUT_SKIP idx=$expectedTurnIndex');
+    }
+    return advanced;
   }
 
   // ── Letter-turn guessing (main game modes: places / heat / proverbs) ──────
