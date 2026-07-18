@@ -311,15 +311,15 @@ class _GameWinnerViewState extends State<GameWinnerView>
         // hand-rolled particle effects.
         if (_showCard)
           Positioned(
-            top: 8,
+            top: 0,
             left: 0,
             right: 0,
             child: IgnorePointer(
               child: Center(
                 child: Lottie.asset(
                   'assets/lottie/trophy_win.json',
-                  width: 128,
-                  height: 128,
+                  width: 62,
+                  height: 62,
                   repeat: false,
                   fit: BoxFit.contain,
                 ),
