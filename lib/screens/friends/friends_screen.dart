@@ -6,6 +6,7 @@ import '../../core/utils/share_util.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_styles.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../models/friend_models.dart';
 import '../../providers/providers.dart';
 import '../../services/analytics_service.dart';
@@ -331,7 +332,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               onPressed: _sending ? null : _sendRequest,
               style: FilledButton.styleFrom(
                 backgroundColor: AppStyles.cyanGlow,
-                foregroundColor: const Color(0xFF07101F),
+                foregroundColor: Candy.bgBottom,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
               ),
@@ -340,7 +341,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Color(0xFF07101F)))
+                          strokeWidth: 2, color: Candy.bgBottom))
                   : const Text('שלח בקשת חברות',
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
@@ -623,7 +624,7 @@ class _FriendsTab extends ConsumerWidget {
         children: [
           const CircleAvatar(
             radius: 16,
-            backgroundColor: Color(0xFF13243B),
+            backgroundColor: Candy.surfaceLow,
             child: Icon(Icons.person, color: Colors.white70, size: 18),
           ),
           const SizedBox(width: 10),
@@ -641,7 +642,7 @@ class _FriendsTab extends ConsumerWidget {
             IconButton(
               tooltip: 'בדיקת פוש מהבוט',
               icon: const Icon(Icons.science_outlined,
-                  color: Color(0xFFFFB74D), size: 20),
+                  color: Candy.gold, size: 20),
               onPressed: myUid == null
                   ? null
                   : () => _showBotTestMenu(context, ref, f, myUid),
@@ -743,7 +744,7 @@ class _FriendsTab extends ConsumerWidget {
     final friends = ref.read(friendsServiceProvider);
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF0D1A2E),
+      backgroundColor: Candy.surfaceLow,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (sheetContext) => SafeArea(
@@ -897,7 +898,7 @@ class _FriendsTab extends ConsumerWidget {
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          backgroundColor: const Color(0xFF0D1E30),
+          backgroundColor: Candy.surfaceLow,
           title: const Text('להסיר חבר?',
               style: TextStyle(color: Colors.white, fontSize: 17)),
           content: Text('להסיר את ${f.name} מרשימת החברים?',

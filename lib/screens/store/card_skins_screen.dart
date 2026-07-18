@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
@@ -70,10 +71,10 @@ class CardSkinsScreen extends ConsumerWidget {
     const tiers = <_TierDef>[
       _TierDef('חינם', 0, 0, Color(0xFF8090B0), Icons.star_outline_rounded, coin: false),
       _TierDef('טבע · 50', 1, 50, Color(0xFF4DD0A0), Icons.eco_outlined),
-      _TierDef('פסיפס · 100', 51, 100, Color(0xFFD4AF37), Icons.grid_on_outlined),
+      _TierDef('פסיפס · 100', 51, 100, Candy.gold, Icons.grid_on_outlined),
       _TierDef('ניאון · 200', 101, 200, Color(0xFF00E5FF), Icons.bolt_outlined),
       _TierDef('קוסמי · 500', 201, 500, Color(0xFF9C27B0), Icons.auto_awesome_outlined),
-      _TierDef('זהב מלכותי · 1000', 501, 1 << 30, Color(0xFFFFD700), Icons.diamond_outlined),
+      _TierDef('זהב מלכותי · 1000', 501, 1 << 30, Candy.gold, Icons.diamond_outlined),
     ];
     final sections = <Widget>[];
     for (final t in tiers) {
@@ -221,7 +222,7 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.label,
     required this.icon,
-    this.color = const Color(0xFFD4AF37),
+    this.color = Candy.gold,
     this.trailingCoin = false,
   });
 
@@ -336,7 +337,7 @@ Color _skinAccentColor(String id) {
     case 'default':            return const Color(0xFF4472C8);
     case 'classic_zionist':    return const Color(0xFF4472C8);
     case 'summer_pastel':      return const Color(0xFFF0A0C0);
-    case 'simple_gold_basic':  return const Color(0xFFFFD700);
+    case 'simple_gold_basic':  return Candy.gold;
     case 'terracotta_earth':   return const Color(0xFFE07A5F);
     // rare
     case 'jerusalem_neon':     return const Color(0xFFFF00FF);
@@ -344,23 +345,23 @@ Color _skinAccentColor(String id) {
     case 'space_cluster':      return const Color(0xFF00FFFF);
     case 'blue_fire':          return const Color(0xFF00FFFF);
     case 'hermon_glacier':     return const Color(0xFF81D4FA);
-    case 'oriental_arabesque': return const Color(0xFFD4AF37);
+    case 'oriental_arabesque': return Candy.gold;
     case 'ancient_gold_rare':  return const Color(0xFFFF8C00);
     case 'brushed_titanium':   return const Color(0xFF39FF14);
     case 'eilat_coral':        return const Color(0xFF00FFFF);
     case 'meteor_shower':      return const Color(0xFFE0E0FF);
     // premium
-    case 'royal_throne':         return const Color(0xFFFFD700);
+    case 'royal_throne':         return Candy.gold;
     case 'ancient_scroll':       return const Color(0xFFC4A47C);
-    case 'jerusalem_of_gold':    return const Color(0xFFFFD700);
-    case 'kotel_stones':         return const Color(0xFFFFD700);
+    case 'jerusalem_of_gold':    return Candy.gold;
+    case 'kotel_stones':         return Candy.gold;
     case 'anemone_red':          return const Color(0xFFFF6060);
     case 'salt_sunset':          return const Color(0xFFFF00FF);
     case 'royal_sapphire':       return const Color(0xFF88AAFF);
     case 'lava_core':            return const Color(0xFFFF4500);
     case 'diamond_shield':       return const Color(0xFF00E5FF);
     case 'cyber_future_israel':  return const Color(0xFF00FFFF);
-    default:                     return const Color(0xFFD4AF37);
+    default:                     return Candy.gold;
   }
 }
 
@@ -381,7 +382,7 @@ class _SkinTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const gold = Color(0xFFD4AF37);
+    const gold = Candy.gold;
     final accent = _skinAccentColor(skin.id);
 
     final borderColor = isSelected
@@ -395,7 +396,7 @@ class _SkinTile extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         decoration: BoxDecoration(
-          color: const Color(0xFF0A1228),
+          color: Candy.surfaceLow,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: borderColor, width: isSelected ? 2.2 : 1.2),
           boxShadow: [
@@ -467,7 +468,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const gold = Color(0xFFD4AF37);
+    const gold = Candy.gold;
     final accent = _skinAccentColor(skin.id);
 
     if (isSelected) {
