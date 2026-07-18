@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../constants/app_colors.dart';
+import '../theme/candy_theme.dart';
 
 class AppScaffold extends StatelessWidget {
   final Widget child;
@@ -25,12 +25,17 @@ class AppScaffold extends StatelessWidget {
       child: child,
     );
 
+    // Default to the unified Candy ground so every screen shares the same
+    // look; a screen may still override with its own color or gradient.
+    final gradient = backgroundGradient ??
+        (backgroundColor == null ? Candy.bg : null);
+
     return Scaffold(
-      backgroundColor: backgroundColor ?? AppColors.background,
+      backgroundColor: backgroundColor ?? Candy.bgBottom,
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(gradient: backgroundGradient),
+        decoration: BoxDecoration(gradient: gradient),
         child: safeArea ? SafeArea(child: content) : content,
       ),
     );

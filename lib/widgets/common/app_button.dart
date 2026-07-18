@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 
@@ -23,12 +23,12 @@ class AppButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: Candy.tangerine,
           foregroundColor: Colors.white,
           disabledBackgroundColor: Colors.white24,
           disabledForegroundColor: Colors.white54,
           elevation: onPressed == null ? 0 : 8,
-          shadowColor: AppColors.primary.withOpacity(0.35),
+          shadowColor: Candy.bevel(Candy.tangerine),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.md),
           ),

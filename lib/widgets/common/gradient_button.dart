@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/candy_theme.dart';
 import 'app_feedback.dart';
 
 class GradientButton extends StatefulWidget {
@@ -52,7 +52,7 @@ class _GradientButtonState extends State<GradientButton> {
         height: widget.height,
         decoration: BoxDecoration(
           gradient: enabled
-              ? (widget.gradient ?? AppColors.primaryGradient)
+              ? (widget.gradient ?? Candy.jellyFill(Candy.tangerine))
               : const LinearGradient(colors: [Colors.grey, Colors.grey]),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.white.withOpacity(0.16), width: 1),
@@ -61,14 +61,14 @@ class _GradientButtonState extends State<GradientButton> {
               ? _pressed
                   ? [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.14),
+                        color: Candy.tangerine.withOpacity(0.14),
                         blurRadius: 6,
                         offset: const Offset(0, 3),
                       ),
                     ]
                   : [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.35),
+                        color: Candy.tangerine.withOpacity(0.35),
                         blurRadius: 18,
                         offset: const Offset(0, 10),
                       ),
