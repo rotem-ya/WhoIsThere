@@ -13,6 +13,7 @@ import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_constants.dart';
 // player_rank removed — using discoveredCount badge instead;
 import '../../core/theme/app_styles.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../providers/providers.dart';
 import '../../models/player_model.dart';
 import '../../models/room_model.dart';
@@ -87,7 +88,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         content: Text(granted
             ? '+${EconomyConfig.adRewardCoins} מטבעות הופקדו!'
             : 'המכסה היומית הושלמה'),
-        backgroundColor: const Color(0xFF0A3880),
+        backgroundColor: Candy.blue,
       ),
     );
   }
@@ -110,7 +111,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF20A8E0), Color(0xFF0868A8)],
+              colors: [Candy.blue, Candy.blue],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -378,7 +379,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          backgroundColor: const Color(0xFF0D1E30),
+          backgroundColor: Candy.surfaceLow,
           title: const Text('לבטל בחירת נושא?',
               style: TextStyle(color: Colors.white, fontSize: 17)),
           content: Text('לבטל את "${cat.nameHe}" שבחר $name?',
@@ -448,7 +449,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          backgroundColor: const Color(0xFF0D1E30),
+          backgroundColor: Candy.surfaceLow,
           title: const Text('לא כולם בחרו נושא',
               style: TextStyle(color: Colors.white, fontSize: 17)),
           content: Text(
@@ -465,7 +466,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('השלם והתחל',
                   style: TextStyle(
-                      color: Color(0xFF22D3EE), fontWeight: FontWeight.w800)),
+                      color: Candy.teal, fontWeight: FontWeight.w800)),
             ),
           ],
         ),
@@ -755,7 +756,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                           'צריך לפחות 2 שחקנים כדי להתחיל',
                           textAlign: TextAlign.center,
                           style: AppStyles.bodySmall.copyWith(
-                            color: const Color(0xFFFFE082).withOpacity(0.85),
+                            color: Candy.gold.withOpacity(0.85),
                           ),
                         ),
                       ),
@@ -1380,7 +1381,7 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
         child: Container(
           height: MediaQuery.of(context).size.height * 0.78,
           decoration: const BoxDecoration(
-            color: Color(0xFF0D1E30),
+            color: Candy.surfaceLow,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + navBarInset),
@@ -1500,7 +1501,7 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
                               child: Row(
                                 children: [
                                   const Icon(Icons.group_add_rounded,
-                                      color: Color(0xFF4A9EFF), size: 18),
+                                      color: Candy.blue, size: 18),
                                   const SizedBox(width: 8),
                                   const Expanded(
                                     child: Text(
@@ -1693,7 +1694,7 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
             icon: const Icon(Icons.share_rounded, size: 18),
             style: FilledButton.styleFrom(
               backgroundColor: AppStyles.cyanGlow,
-              foregroundColor: const Color(0xFF07101F),
+              foregroundColor: Candy.bgBottom,
             ),
             label: const Text('שתף קוד חדר',
                 style: TextStyle(fontWeight: FontWeight.w900)),
@@ -1849,9 +1850,9 @@ class _DiscoveredBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       decoration: BoxDecoration(
-        color: const Color(0xFF061422),
+        color: Candy.bgBottom,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF4A8BAA).withOpacity(0.55), width: 0.8),
+        border: Border.all(color: Candy.inkMuted.withOpacity(0.55), width: 0.8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1861,7 +1862,7 @@ class _DiscoveredBadge extends StatelessWidget {
           Text(
             '$count',
             style: const TextStyle(
-              color: Color(0xFF87CEEB),
+              color: Candy.teal,
               fontSize: 10,
               fontWeight: FontWeight.w900,
               height: 1,
@@ -1914,7 +1915,7 @@ class _TricksToggleRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1E30).withOpacity(0.85),
+        color: Candy.surfaceLow.withOpacity(0.85),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withOpacity(0.12)),
       ),
@@ -1949,7 +1950,7 @@ class _TricksToggleRow extends StatelessWidget {
           Switch(
             value: enabled,
             onChanged: onChanged,
-            activeColor: const Color(0xFF8B4FBF),
+            activeColor: Candy.grape,
           ),
         ],
       ),
@@ -1975,7 +1976,7 @@ class _ProverbsRoundsRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1E30).withOpacity(0.85),
+        color: Candy.surfaceLow.withOpacity(0.85),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withOpacity(0.12)),
       ),
@@ -2010,7 +2011,7 @@ class _ProverbsRoundsRow extends StatelessWidget {
                 ? () => onChanged!(rounds - 1)
                 : null,
             icon: const Icon(Icons.remove_circle_outline_rounded),
-            color: const Color(0xFFFFE082),
+            color: Candy.gold,
             disabledColor: Colors.white24,
           ),
           SizedBox(
@@ -2030,7 +2031,7 @@ class _ProverbsRoundsRow extends StatelessWidget {
                 ? () => onChanged!(rounds + 1)
                 : null,
             icon: const Icon(Icons.add_circle_outline_rounded),
-            color: const Color(0xFFFFE082),
+            color: Candy.gold,
             disabledColor: Colors.white24,
           ),
         ],
@@ -2059,7 +2060,7 @@ class _LetterTurnToggleRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1E30).withOpacity(0.85),
+        color: Candy.surfaceLow.withOpacity(0.85),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withOpacity(0.12)),
       ),
@@ -2094,7 +2095,7 @@ class _LetterTurnToggleRow extends StatelessWidget {
           Switch(
             value: enabled,
             onChanged: onChanged,
-            activeColor: const Color(0xFF8B4FBF),
+            activeColor: Candy.grape,
           ),
         ],
       ),

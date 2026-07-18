@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../providers/providers.dart';
@@ -17,7 +17,7 @@ class SettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
 
     return AppScaffold(
-      backgroundGradient: AppColors.pageBackground,
+      backgroundGradient: Candy.bg,
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         children: [
@@ -123,7 +123,7 @@ class _SoundSection extends StatelessWidget {
                     key: ValueKey(_isMuted),
                     color: _isMuted
                         ? Colors.white30
-                        : AppColors.primary,
+                        : Candy.gold,
                     size: 22,
                   ),
                 ),
@@ -143,7 +143,7 @@ class _SoundSection extends StatelessWidget {
                 _isMuted ? 'מושתק' : '$pct%',
                 style: TextStyle(
                   color:
-                      _isMuted ? Colors.white30 : AppColors.primary,
+                      _isMuted ? Colors.white30 : Candy.gold,
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
                 ),
@@ -154,12 +154,12 @@ class _SoundSection extends StatelessWidget {
             data: SliderTheme.of(context).copyWith(
               activeTrackColor: _isMuted
                   ? Colors.white24
-                  : AppColors.primary,
+                  : Candy.gold,
               inactiveTrackColor: Colors.white12,
               thumbColor: _isMuted
                   ? Colors.white30
-                  : AppColors.primary,
-              overlayColor: AppColors.primary.withOpacity(0.12),
+                  : Candy.gold,
+              overlayColor: Candy.gold.withOpacity(0.12),
               trackHeight: 3,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
             ),
@@ -198,7 +198,7 @@ class _VibrationSection extends StatelessWidget {
         children: [
           Icon(
             enabled ? Icons.vibration_rounded : Icons.phonelink_erase_rounded,
-            color: enabled ? AppColors.primary : Colors.white30,
+            color: enabled ? Candy.gold : Colors.white30,
             size: 22,
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -218,8 +218,8 @@ class _VibrationSection extends StatelessWidget {
               if (v) HapticFeedback.mediumImpact();
               onChanged(v);
             },
-            activeColor: AppColors.primary,
-            activeTrackColor: AppColors.primary.withOpacity(0.35),
+            activeColor: Candy.gold,
+            activeTrackColor: Candy.gold.withOpacity(0.35),
             inactiveThumbColor: Colors.white30,
             inactiveTrackColor: Colors.white12,
           ),
@@ -241,10 +241,10 @@ class _SettingsCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: const Color(0xFF0A1A2E),
+        color: Candy.surfaceLow,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.primary.withOpacity(0.18),
+          color: Candy.gold.withOpacity(0.18),
         ),
       ),
       child: child,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import 'candy_theme.dart';
 
 /// Single source of truth for the dark vault visual identity.
 ///
@@ -8,57 +9,57 @@ import '../constants/app_colors.dart';
 abstract class AppStyles {
   // ── Core Palette ──────────────────────────────────────────────────────
 
-  /// Background top — dark vault navy
-  static const Color navyTop = AppColors.background;
+  /// Background top — Candy grape purple
+  static const Color navyTop = Candy.bgTop;
 
-  /// Background mid — ocean blue
-  static const Color navyMid = Color(0xFF0C3870);
+  /// Background mid — deep grape
+  static const Color navyMid = Candy.bgMid;
 
-  /// Background bottom — deep vault black-navy
-  static const Color cyanBottom = AppColors.backgroundBottom;
+  /// Background bottom — deep purple
+  static const Color cyanBottom = Candy.bgBottom;
 
-  /// Primary action color — "Banana Yellow"
-  static const Color bananaYellow = Color(0xFFFFE14D);
+  /// Primary action color — Candy gold
+  static const Color bananaYellow = Candy.gold;
 
-  /// Highlight / glow — electric cyan
-  static const Color cyanGlow = Color(0xFF00F2FF);
+  /// Highlight / glow — Candy teal
+  static const Color cyanGlow = Candy.teal;
 
   static const Color white = Colors.white;
   static const Color darkText = AppColors.background;
   static const Color errorRed = AppColors.error;
   static const Color successGreen = AppColors.success;
-  static const Color warningAmber = Color(0xFFFFA726);
+  static const Color warningAmber = Candy.tangerine;
 
   // ── Gradients ─────────────────────────────────────────────────────────
 
-  /// Full-screen background: dark vault top → deep black-navy bottom.
+  /// Full-screen background: the unified Candy grape ground.
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [navyTop, navyMid, Color(0xFF082848), Color(0xFF04101E)],
+    colors: [Candy.bgTop, Candy.bgMid, Color(0xFF2A1550), Candy.bgBottom],
     stops: [0.0, 0.40, 0.75, 1.0],
   );
 
-  /// Banana action button gradient (top-highlight → mid-yellow → bottom-shadow).
+  /// Candy gold action button gradient (glossy top → gold → deep gold).
   static const LinearGradient bananaGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFFFFEF70), bananaYellow, Color(0xFFE6C800)],
+    colors: [Color(0xFFFFE98A), Candy.gold, Candy.goldLow],
     stops: [0.0, 0.50, 1.0],
   );
 
-  /// Cyan glow gradient for secondary accents.
+  /// Teal glow gradient for secondary accents.
   static const LinearGradient cyanGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [cyanGlow, cyanBottom],
   );
 
-  /// Subtle vault card gradient.
+  /// Subtle Candy jelly card gradient.
   static const LinearGradient navyCardGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF0E1E35), Color(0xFF07101F)],
+    colors: [Candy.surface, Candy.surfaceLow],
   );
 
   // ── Decorations ───────────────────────────────────────────────────────
