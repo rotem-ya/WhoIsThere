@@ -7,7 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/utils/share_util.dart';
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/build_info.dart';
 import 'our_apps_screen.dart';
@@ -45,7 +45,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF10182E),
+        backgroundColor: Candy.surfaceLow,
         title: const Text('מחיקת חשבון', style: TextStyle(color: Colors.white)),
         content: const Text(
           'הפעולה תמחק לצמיתות את החשבון שלך וכל הנתונים (מטבעות, פריטים, '
@@ -95,7 +95,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          backgroundColor: const Color(0xFF10182E),
+          backgroundColor: Candy.surfaceLow,
           title: const Text('שלח משוב', style: TextStyle(color: Colors.white)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -152,7 +152,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     },
               child: Text(sending ? 'שולח…' : 'שלח',
                   style: const TextStyle(
-                      color: Color(0xFF4A9EFF), fontWeight: FontWeight.w800)),
+                      color: Candy.blue, fontWeight: FontWeight.w800)),
             ),
           ],
         ),
@@ -253,11 +253,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ref.watch(selectedAvatarProvider).valueOrNull ?? 'auto';
 
     return AppScaffold(
-      backgroundGradient: AppColors.pageBackground,
+      backgroundGradient: Candy.bg,
       padding: EdgeInsets.zero,
       child: userAsync.when(
         data: (user) {
-          if (user == null) return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+          if (user == null) return const Center(child: CircularProgressIndicator(color: Candy.teal));
 
           final discoveredCount = user.discoveredImageIds.length;
 
@@ -302,10 +302,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFF0D2137), Color(0xFF091828)],
+                      colors: [Candy.surface, Candy.surfaceLow],
                     ),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0xFF1E4060).withOpacity(0.8), width: 1),
+                    border: Border.all(color: Candy.teal.withOpacity(0.8), width: 1),
                   ),
                   child: Row(
                     children: [
@@ -345,7 +345,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     HapticFeedback.lightImpact();
                                     _showEditNameDialog(context, user.id, user.name);
                                   },
-                                  child: Icon(Icons.edit_rounded, size: 15, color: AppColors.primary.withOpacity(0.7)),
+                                  child: Icon(Icons.edit_rounded, size: 15, color: Candy.gold.withOpacity(0.7)),
                                 ),
                               ],
                             ),
@@ -364,7 +364,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           Text(
                             '$discoveredCount',
                             style: const TextStyle(
-                              color: Color(0xFF87CEEB),
+                              color: Candy.teal,
                               fontSize: 36,
                               fontWeight: FontWeight.w900,
                               height: 1,
@@ -373,7 +373,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           const Text(
                             'גילויים',
                             style: TextStyle(
-                              color: Color(0xFF4A8BAA),
+                              color: Candy.inkMuted,
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                             ),
@@ -436,9 +436,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0A1828),
+                      color: Candy.surfaceLow,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFF87CEEB).withOpacity(0.25), width: 0.8),
+                      border: Border.all(color: Candy.teal.withOpacity(0.25), width: 0.8),
                     ),
                     child: Row(
                       children: [
@@ -446,7 +446,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF87CEEB).withOpacity(0.1),
+                            color: Candy.teal.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Center(child: Text('🌍', style: TextStyle(fontSize: 22))),
@@ -462,12 +462,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               Text(
                                 discoveredCount == 0 ? 'עדיין לא גילית מקומות' : '$discoveredCount מקומות ברחבי העולם',
-                                style: const TextStyle(color: Color(0xFF4A8BAA), fontSize: 12, fontWeight: FontWeight.w600),
+                                style: const TextStyle(color: Candy.inkMuted, fontSize: 12, fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.chevron_right_rounded, color: Color(0xFF4A8BAA), size: 22),
+                        const Icon(Icons.chevron_right_rounded, color: Candy.inkMuted, size: 22),
                       ],
                     ),
                   ),
@@ -541,10 +541,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: TextButton.icon(
                     onPressed: () => _showFeedbackDialog(context, user.name),
                     icon: const Icon(Icons.chat_bubble_outline_rounded,
-                        size: 18, color: Color(0xFF4A9EFF)),
+                        size: 18, color: Candy.blue),
                     label: const Text('שלח משוב',
                         style: TextStyle(
-                            color: Color(0xFF4A9EFF),
+                            color: Candy.blue,
                             fontSize: 14,
                             fontWeight: FontWeight.w700)),
                   ),
@@ -610,7 +610,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        loading: () => const Center(child: CircularProgressIndicator(color: Candy.teal)),
         error: (e, _) => Center(child: Text('שגיאה: $e', style: AppTextStyles.subtitleLight)),
       ),
     );
@@ -660,7 +660,7 @@ class _UpdateBanner extends ConsumerWidget {
                   },
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF34D399),
-              foregroundColor: const Color(0xFF07101F),
+              foregroundColor: Candy.bgBottom,
               shape:
                   RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -696,10 +696,10 @@ class _OurAppsRow extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           decoration: BoxDecoration(
-            color: const Color(0xFF0A1828),
+            color: Candy.surfaceLow,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-                color: const Color(0xFFD4AF37).withOpacity(0.25), width: 0.8),
+                color: Candy.gold.withOpacity(0.25), width: 0.8),
           ),
           child: Row(
             children: [
@@ -707,7 +707,7 @@ class _OurAppsRow extends ConsumerWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD4AF37).withOpacity(0.1),
+                  color: Candy.gold.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Center(
@@ -725,14 +725,14 @@ class _OurAppsRow extends ConsumerWidget {
                             fontWeight: FontWeight.w800)),
                     Text('עוד משחקים שיצרנו בשבילכם',
                         style: TextStyle(
-                            color: Color(0xFF4A8BAA),
+                            color: Candy.inkMuted,
                             fontSize: 12,
                             fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
               const Icon(Icons.chevron_right_rounded,
-                  color: Color(0xFF4A8BAA), size: 22),
+                  color: Candy.inkMuted, size: 22),
             ],
           ),
         ),
@@ -883,9 +883,9 @@ class _AccountSection extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF0A1828),
+          color: Candy.surfaceLow,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFFF8C00).withOpacity(0.7), width: 1.2),
+          border: Border.all(color: Candy.tangerine.withOpacity(0.7), width: 1.2),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -911,7 +911,7 @@ class _AccountSection extends StatelessWidget {
                     children: [
                       Text(Platform.isIOS ? 'התחבר עם Apple' : 'התחבר עם Google',
                           style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
-                      const Text('שמור את ההתקדמות שלך', style: TextStyle(color: Color(0xFF4A8BAA), fontSize: 11)),
+                      const Text('שמור את ההתקדמות שלך', style: TextStyle(color: Candy.inkMuted, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -920,7 +920,7 @@ class _AccountSection extends StatelessWidget {
             const SizedBox(height: 10),
             const Text(
               '⚠️ אתה משחק כאורח, מחיקת האפליקציה תמחק את כל ההתקדמות!',
-              style: TextStyle(color: Color(0xFFFF8C00), fontSize: 11, fontWeight: FontWeight.w700),
+              style: TextStyle(color: Candy.tangerine, fontSize: 11, fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 10),
@@ -979,9 +979,9 @@ class _AccountSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF0A1828),
+        color: Candy.surfaceLow,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E3A5A).withOpacity(0.6), width: 0.8),
+        border: Border.all(color: Candy.surface.withOpacity(0.6), width: 0.8),
       ),
       child: Row(
         children: [
@@ -1059,16 +1059,16 @@ class _MiniStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF0A1828),
+        color: Candy.surfaceLow,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF1E3A5A).withOpacity(0.6), width: 0.8),
+        border: Border.all(color: Candy.surface.withOpacity(0.6), width: 0.8),
       ),
       child: Column(
         children: [
-          Icon(icon, color: AppColors.primary, size: 22),
+          Icon(icon, color: Candy.gold, size: 22),
           const SizedBox(height: 4),
           Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900), textDirection: TextDirection.ltr),
-          Text(label, style: const TextStyle(color: Color(0xFF4A8BAA), fontSize: 10, fontWeight: FontWeight.w600)),
+          Text(label, style: const TextStyle(color: Candy.inkMuted, fontSize: 10, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -1135,7 +1135,7 @@ class _EditNameDialogState extends State<_EditNameDialog> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: AlertDialog(
-        backgroundColor: const Color(0xFF1A1F3A),
+        backgroundColor: Candy.surfaceLow,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'שינוי שם',
@@ -1175,7 +1175,7 @@ class _EditNameDialogState extends State<_EditNameDialog> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                      color: AppColors.primary.withOpacity(0.7), width: 1.5),
+                      color: Candy.gold.withOpacity(0.7), width: 1.5),
                 ),
               ),
             ),
@@ -1198,7 +1198,7 @@ class _EditNameDialogState extends State<_EditNameDialog> {
                   )
                 : Text('שמור',
                     style: TextStyle(
-                        color: AppColors.primary,
+                        color: Candy.gold,
                         fontWeight: FontWeight.w900)),
           ),
         ],
