@@ -12,6 +12,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/ad_constants.dart';
 import '../../core/constants/build_info.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_categories.dart';
 import '../../core/constants/game_constants.dart';
@@ -21,7 +22,6 @@ import '../../services/app_update_service.dart';
 import '../../widgets/common/banner_ad_widget.dart';
 import '../../services/feedback_service.dart';
 import '../../services/qa_logger_service.dart';
-import '../../widgets/common/ambient_background.dart';
 import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_icon.dart';
@@ -819,16 +819,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           backgroundColor: AppStyles.navyTop,
           body: Stack(
             children: [
-              const Positioned.fill(child: _VaultBackground()),
               const Positioned.fill(
-                child: RepaintBoundary(
-                  child: AmbientBackground(
-                    showGrid: false,
-                    showOrbits: false,
-                    showParticles: true,
-                    goldAccent: true,
-                    intensity: 0.28,
-                  ),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(gradient: Candy.bg),
                 ),
               ),
               SafeArea(
@@ -893,9 +886,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   letterSpacing: -1.7,
                                   height: 1,
                                   shadows: const [
-                                    Shadow(color: Color(0xFFD4AF37), blurRadius: 16),
-                                    Shadow(color: Colors.black87, offset: Offset(0, 4), blurRadius: 10),
-                                    Shadow(color: Color(0x55D4AF37), blurRadius: 48, offset: Offset(0, 8)),
+                                    Shadow(color: Candy.pink, blurRadius: 18),
+                                    Shadow(color: Colors.black45, offset: Offset(0, 4), blurRadius: 8),
+                                    Shadow(color: Color(0x66FFD84D), blurRadius: 44, offset: Offset(0, 8)),
                                   ],
                                 ),
                               ),
@@ -908,7 +901,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               'בחרו סוג משחק',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: const Color(0xFF87CEEB).withOpacity(0.86),
+                                color: Candy.gold,
                                 fontSize: verySmall ? 15 : compact ? 17 : 19,
                                 fontWeight: FontWeight.w800,
                                 height: 1.2,
@@ -924,9 +917,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   icon: '🏞️',
                                   title: 'זיהוי מקומות',
                                   subtitle: 'מצאו את המקום בתמונה',
-                                  gradientColors: const [Color(0xFF1A4A8A), Color(0xFF0A2356)],
-                                  borderColor: const Color(0xFF4A9EFF),
-                                  glowColor: const Color(0xFF2266CC),
+                                  gradientColors: const [Candy.blue],
+                                  glowColor: Candy.blue,
                                   isLoading: _isCreating,
                                   onTap: _isCreating
                                       ? null
@@ -937,9 +929,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   icon: '🐢',
                                   title: 'חי צומח דומם',
                                   subtitle: 'חיות · צמחים · חפצים ועוד',
-                                  gradientColors: const [Color(0xFF135A4A), Color(0xFF0A2E26)],
-                                  borderColor: const Color(0xFF3DCCAA),
-                                  glowColor: const Color(0xFF1A8866),
+                                  gradientColors: const [Candy.teal],
+                                  glowColor: Candy.teal,
                                   isLoading: _isCreating,
                                   onTap: _isCreating
                                       ? null
@@ -950,9 +941,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   icon: '🧩',
                                   title: 'זהו את הפתגם',
                                   subtitle: 'התמונה רומזת על פתגם עברי',
-                                  gradientColors: const [Color(0xFF5A2A7A), Color(0xFF2A1240)],
-                                  borderColor: const Color(0xFFB57AE8),
-                                  glowColor: const Color(0xFF7A3AAA),
+                                  gradientColors: const [Candy.tangerine],
+                                  glowColor: Candy.tangerine,
                                   isLoading: _isCreating,
                                   onTap: _isCreating
                                       ? null
@@ -963,9 +953,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   icon: '🔤',
                                   title: 'משחק האותיות',
                                   subtitle: 'נחשו את המילה הנסתרת',
-                                  gradientColors: const [Color(0xFF7A5A12), Color(0xFF3C2C06)],
-                                  borderColor: const Color(0xFFD4AF37),
-                                  glowColor: const Color(0xFF8A6E1E),
+                                  gradientColors: const [Candy.pink],
+                                  glowColor: Candy.pink,
                                   isLoading: _loadingLetters,
                                   onTap: (_isCreating || _loadingLetters)
                                       ? null
@@ -992,64 +981,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _VaultBackground extends StatelessWidget {
-  const _VaultBackground();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: AppStyles.backgroundGradient,
-      ),
-      child: Stack(
-        children: [
-          Positioned(top: -110, right: -80, child: _Glow(color: Color(0xFFD4AF37), size: 310, opacity: 0.12)),
-          Positioned(bottom: -95, left: -80, child: _Glow(color: Color(0xFF87CEEB), size: 285, opacity: 0.14)),
-          Positioned(top: 190, left: 26, child: _Dot(size: 5, opacity: 0.40)),
-          Positioned(top: 270, right: 34, child: _Dot(size: 4, opacity: 0.28)),
-          Positioned(bottom: 190, right: 52, child: _Dot(size: 6, opacity: 0.24)),
-        ],
-      ),
-    );
-  }
-}
-
-class _Glow extends StatelessWidget {
-  final Color color;
-  final double size;
-  final double opacity;
-
-  const _Glow({required this.color, required this.size, required this.opacity});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [BoxShadow(color: color.withOpacity(opacity), blurRadius: 120, spreadRadius: 48)],
-      ),
-    );
-  }
-}
-
-class _Dot extends StatelessWidget {
-  final double size;
-  final double opacity;
-
-  const _Dot({required this.size, required this.opacity});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(opacity)),
-    );
-  }
-}
-
 // ── Equal quick-game button for 2/3/4 players ─────────────────────────────
 
 class _GameTypeCard extends StatelessWidget {
@@ -1057,7 +988,6 @@ class _GameTypeCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final List<Color> gradientColors;
-  final Color borderColor;
   final Color glowColor;
   final bool isLoading;
   final VoidCallback? onTap;
@@ -1067,7 +997,6 @@ class _GameTypeCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.gradientColors,
-    required this.borderColor,
     required this.glowColor,
     required this.isLoading,
     required this.onTap,
@@ -1086,23 +1015,12 @@ class _GameTypeCard extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         opacity: onTap == null ? 0.55 : 1,
         child: Container(
-          height: 72,
-          clipBehavior: Clip.antiAlias,
+          height: 74,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: gradientColors,
-            ),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: borderColor.withOpacity(0.7), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: glowColor.withOpacity(0.35),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            gradient: Candy.jellyFill(gradientColors.first),
+            borderRadius: BorderRadius.circular(22),
+            border: Candy.rim(),
+            boxShadow: Candy.jellyShadow(gradientColors.first),
           ),
           child: isLoading
               ? const Center(
@@ -1119,11 +1037,12 @@ class _GameTypeCard extends StatelessWidget {
                       height: 44,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: borderColor.withOpacity(0.16),
-                        borderRadius: BorderRadius.circular(13),
-                        border: Border.all(color: borderColor.withOpacity(0.40)),
+                        color: Candy.bevel(glowColor).withOpacity(0.55),
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(
+                            color: Colors.white.withOpacity(0.55), width: 1.5),
                       ),
-                      child: Text(icon, style: const TextStyle(fontSize: 23)),
+                      child: Text(icon, style: const TextStyle(fontSize: 24)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1167,7 +1086,7 @@ class _GameTypeCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Icon(Icons.chevron_left_rounded,
-                        color: borderColor.withOpacity(0.8), size: 24),
+                        color: Colors.white.withOpacity(0.92), size: 26),
                     const SizedBox(width: 10),
                   ],
                 ),
