@@ -6,6 +6,7 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:lottie/lottie.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/ad_constants.dart';
@@ -305,6 +306,26 @@ class _GameWinnerViewState extends State<GameWinnerView>
         // Banner pinned to the bottom of the win screen (outside the scaled
         // card so it renders at its real pixel size). Self-hides when banners
         // are disabled.
+        // Premium motion asset (Lottie trophy) crowning the win — plays once
+        // on entrance. A proof-of-concept for asset-driven animation vs the
+        // hand-rolled particle effects.
+        if (_showCard)
+          Positioned(
+            top: 8,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Center(
+                child: Lottie.asset(
+                  'assets/lottie/trophy_win.json',
+                  width: 128,
+                  height: 128,
+                  repeat: false,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
         const Align(
           alignment: Alignment.bottomCenter,
           child: SafeArea(child: BannerAdWidget()),
