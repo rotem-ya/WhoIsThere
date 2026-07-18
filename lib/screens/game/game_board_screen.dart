@@ -9,6 +9,7 @@ import 'package:confetti/confetti.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_styles.dart';
+import '../../core/theme/candy_theme.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -1777,7 +1778,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final agreed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0D1E30),
+        backgroundColor: Candy.surfaceLow,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('אין מספיק מטבעות 💡',
             textDirection: TextDirection.rtl,
@@ -2040,7 +2041,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       child: Container(
                         decoration: BoxDecoration(
                           color: isHidden
-                              ? const Color(0xFF13314F)
+                              ? Candy.surfaceLow
                               : Colors.white10,
                           borderRadius: BorderRadius.circular(5),
                           border: Border.all(
@@ -2258,7 +2259,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       builder: (dialogContext) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          backgroundColor: const Color(0xFF07101F),
+          backgroundColor: Candy.bgBottom,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
             side: BorderSide(color: Colors.white.withOpacity(0.12)),
@@ -2307,7 +2308,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       builder: (dialogContext) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          backgroundColor: const Color(0xFF07101F),
+          backgroundColor: Candy.bgBottom,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
             side: BorderSide(color: Colors.white.withOpacity(0.12)),
@@ -3205,7 +3206,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 child: ConfettiWidget(
                   confettiController: _confettiLeft,
                   blastDirection: -pi / 4,
-                  colors: const [Color(0xFF00F2FF), Color(0xFFFFE14D), Colors.white],
+                  colors: const [Candy.teal, Candy.gold, Colors.white],
                   numberOfParticles: 22,
                   gravity: 0.18,
                   shouldLoop: false,
@@ -3216,7 +3217,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 child: ConfettiWidget(
                   confettiController: _confettiRight,
                   blastDirection: -3 * pi / 4,
-                  colors: const [Color(0xFF00F2FF), Color(0xFFFFE14D), Colors.white],
+                  colors: const [Candy.teal, Candy.gold, Colors.white],
                   numberOfParticles: 22,
                   gravity: 0.18,
                   shouldLoop: false,
@@ -3410,7 +3411,7 @@ class _RoundInterludeOverlay extends StatelessWidget {
           boxShadow: glow
               ? [
                   BoxShadow(
-                    color: const Color(0xFFD4AF37).withOpacity(0.35),
+                    color: Candy.gold.withOpacity(0.35),
                     blurRadius: 24,
                   ),
                 ]
@@ -3481,7 +3482,7 @@ class _RoundInterludeOverlay extends StatelessWidget {
                         image?.answer ?? '',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          color: Color(0xFFFFE082),
+                          color: Candy.gold,
                           fontSize: 24,
                           fontWeight: FontWeight.w900,
                         ),
@@ -3497,7 +3498,7 @@ class _RoundInterludeOverlay extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0D1E30).withOpacity(0.92),
+                          color: Candy.surfaceLow.withOpacity(0.92),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                               color: Colors.white.withOpacity(0.12)),
@@ -3528,7 +3529,7 @@ class _RoundInterludeOverlay extends StatelessWidget {
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           color: standings[i].name == name
-                                              ? const Color(0xFFFFE082)
+                                              ? Candy.gold
                                               : Colors.white,
                                           fontSize: 15,
                                           fontWeight:
@@ -3672,7 +3673,7 @@ class _ChatLauncher extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: const Color(0xFF07101F).withOpacity(0.55),
+              color: Candy.bgBottom.withOpacity(0.55),
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white.withOpacity(0.14)),
             ),
@@ -3689,7 +3690,7 @@ class _ChatLauncher extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFFFF3B30),
                   borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: const Color(0xFF07101F), width: 1.5),
+                  border: Border.all(color: Candy.bgBottom, width: 1.5),
                 ),
                 child: Center(
                   child: Text(
@@ -4102,22 +4103,22 @@ class _PurchasedHintsDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: const Color(0xFF07101F),
+      backgroundColor: Candy.bgBottom,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.5)),
+        side: BorderSide(color: Candy.gold.withOpacity(0.5)),
       ),
       titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
       contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       title: const Row(
         children: [
-          Icon(Icons.lightbulb_rounded, color: Color(0xFFD4AF37), size: 20),
+          Icon(Icons.lightbulb_rounded, color: Candy.gold, size: 20),
           SizedBox(width: 8),
           Text(
             'רמזים',
             style: TextStyle(
-              color: Color(0xFFD4AF37),
+              color: Candy.gold,
               fontSize: 16,
               fontWeight: FontWeight.w900,
             ),
@@ -4135,7 +4136,7 @@ class _PurchasedHintsDialog extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFF0A1A2E),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.25)),
+                border: Border.all(color: Candy.gold.withOpacity(0.25)),
               ),
               child: Text(
                 facts[i],
@@ -4157,7 +4158,7 @@ class _PurchasedHintsDialog extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
           child: const Text(
             'סגור',
-            style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.w900),
+            style: TextStyle(color: Candy.gold, fontWeight: FontWeight.w900),
           ),
         ),
       ],
@@ -4171,7 +4172,7 @@ class _ImageFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF1A1A3E),
+      color: Candy.surfaceLow,
       child: const Center(
         child: Icon(
           Icons.image_not_supported_outlined,

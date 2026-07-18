@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../core/constants/economy_config.dart';
 import '../../core/theme/app_styles.dart';
 import '../../core/ui/app_scaffold.dart';
@@ -100,7 +100,7 @@ class _CreateRoomScreenState extends ConsumerState<CreateRoomScreen> {
           Expanded(
             child: Center(
               child: _isLoading
-                  ? const CircularProgressIndicator(color: AppColors.accent)
+                  ? const CircularProgressIndicator(color: Candy.teal)
                   : _roomCode == null
                       ? Column(
                           mainAxisSize: MainAxisSize.min,
@@ -204,15 +204,15 @@ class _CountButton extends StatelessWidget {
         height: 62,
         decoration: BoxDecoration(
           color: selected
-              ? AppColors.primary
-              : AppColors.primary.withOpacity(0.08),
+              ? Candy.gold
+              : Candy.gold.withOpacity(0.08),
           borderRadius: BorderRadius.circular(18),
         ),
         child: Center(
           child: Text(
             '$count',
             style: AppTextStyles.titleDark.copyWith(
-              color: selected ? Colors.white : AppColors.primary,
+              color: selected ? Colors.white : Candy.gold,
             ),
           ),
         ),
@@ -262,7 +262,7 @@ class _RoomCodeCardState extends State<_RoomCodeCard> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               decoration: BoxDecoration(
-                color: AppColors.primary,
+                color: Candy.gold,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Center(
@@ -356,10 +356,10 @@ class _FeeButton extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         height: 48,
         decoration: BoxDecoration(
-          color: selected ? AppColors.accent.withOpacity(0.18) : Colors.transparent,
+          color: selected ? Candy.teal.withOpacity(0.18) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? AppColors.accent : Colors.white24,
+            color: selected ? Candy.teal : Colors.white24,
             width: selected ? 2 : 1,
           ),
         ),
@@ -367,7 +367,7 @@ class _FeeButton extends StatelessWidget {
         child: Text(
           fee == 0 ? 'חינם' : '$fee',
           style: TextStyle(
-            color: selected ? AppColors.accent : Colors.white70,
+            color: selected ? Candy.teal : Colors.white70,
             fontWeight: selected ? FontWeight.bold : FontWeight.normal,
             fontSize: 14,
           ),

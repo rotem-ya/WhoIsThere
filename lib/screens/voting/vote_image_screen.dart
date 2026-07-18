@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../core/ui/app_scaffold.dart';
@@ -224,7 +224,7 @@ class _CategoryCard extends StatelessWidget {
             height: cardHeight,
             padding: padding,
             decoration: BoxDecoration(
-              color: selected ? AppColors.primary : AppColors.surface,
+              color: selected ? Candy.gold : Candy.ink,
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(

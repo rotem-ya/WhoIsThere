@@ -6,6 +6,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import '../../core/theme/candy_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -42,10 +43,10 @@ const List<List<String>> _kKeyboardRows = [
   ['ץ', 'ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז', "'"],
 ];
 
-const Color _kGold = Color(0xFFD4AF37);
-const Color _kGoldLight = Color(0xFFFFE082);
+const Color _kGold = Candy.gold;
+const Color _kGoldLight = Candy.gold;
 const Color _kGreen = Color(0xFF3DCC7A);
-const Color _kYellow = Color(0xFFE0A93D);
+const Color _kYellow = Candy.gold;
 const Color _kAbsent = Color(0xFF3A4A5E);
 
 class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
@@ -545,7 +546,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF07101F),
+                    color: Candy.bgBottom,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: _kGold.withOpacity(0.6), width: 1.5),
                   ),
@@ -678,7 +679,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                 onPressed: _rematchBusy ? null : () => _playAgain(room),
                 style: FilledButton.styleFrom(
                   backgroundColor: _kGold,
-                  foregroundColor: const Color(0xFF07101F),
+                  foregroundColor: Candy.bgBottom,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   textStyle:
                       const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
@@ -796,7 +797,7 @@ class _Header extends StatelessWidget {
                                 '$secs',
                                 style: TextStyle(
                                   color: isMyTurn
-                                      ? const Color(0xFF07101F)
+                                      ? Candy.bgBottom
                                       : Colors.white,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w900,
@@ -907,7 +908,7 @@ class _SlotBox extends StatelessWidget {
                 end: Alignment.bottomCenter,
               )
             : null,
-        color: filled ? null : const Color(0xFF07101F),
+        color: filled ? null : Candy.bgBottom,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: active
@@ -924,7 +925,7 @@ class _SlotBox extends StatelessWidget {
       child: Text(
         letter ?? '',
         style: TextStyle(
-          color: const Color(0xFF07101F),
+          color: Candy.bgBottom,
           fontSize: math.max(16, size * 0.58),
           fontWeight: FontWeight.w900,
           height: 1,
@@ -1036,7 +1037,7 @@ class _Key extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                color: dark ? const Color(0xFF07101F) : Colors.white,
+                color: dark ? Candy.bgBottom : Colors.white,
                 fontSize: math.max(18, size * 0.56),
                 fontWeight: FontWeight.w900,
                 height: 1,
@@ -1071,7 +1072,7 @@ class _FrostedBoard extends StatelessWidget {
   Widget _fullImage(double side) {
     final url = imageUrl;
     if (url == null || url.isEmpty) {
-      return Container(color: const Color(0xFF0A1A2E));
+      return Container(color: Candy.surfaceLow);
     }
     return url.startsWith('assets/')
         ? Image.asset(url, width: side, height: side, fit: BoxFit.cover)
@@ -1080,7 +1081,7 @@ class _FrostedBoard extends StatelessWidget {
             width: side,
             height: side,
             fit: BoxFit.cover,
-            errorWidget: (_, __, ___) => Container(color: const Color(0xFF0A1A2E)),
+            errorWidget: (_, __, ___) => Container(color: Candy.surfaceLow),
           );
   }
 
@@ -1145,7 +1146,7 @@ class _FrostedBoard extends StatelessWidget {
                         colors: [
                           Colors.white.withOpacity(0.14),
                           Colors.white.withOpacity(0.05),
-                          const Color(0xFF0A1A2E).withOpacity(0.22),
+                          Candy.surfaceLow.withOpacity(0.22),
                         ],
                       ),
                     ),
