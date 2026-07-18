@@ -1,0 +1,103 @@
+<!doctype html><html lang="he"><head><meta charset="utf-8">
+<style>
+  :root{--foil:linear-gradient(135deg,#F9EEBE,#D4AF37 46%,#9A7B2E 72%,#F2E3A0);--gold:#D4AF37;--gold-hi:#F6E7A8;--cyan:#38E8FF;--coral:#FF6B5A;--good:#46D6A0;--ivory:#ECE6D6;--muted:#93A2BC}
+  *{margin:0;box-sizing:border-box}
+  html,body{width:390px;height:844px;overflow:hidden;background:#070A11;font-family:'Rubik','Heebo','Assistant',Arial,sans-serif;direction:rtl}
+  .screen{position:relative;width:390px;height:844px;
+    background:radial-gradient(120% 55% at 50% 26%,rgba(212,175,55,.14),transparent 60%),radial-gradient(100% 45% at 50% 100%,rgba(56,232,255,.06),transparent 60%),linear-gradient(180deg,#0A0E17,#0C1220 55%,#070A11)}
+  .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:0 26px}
+
+  /* burst flash */
+  .burst{position:absolute;top:26%;left:50%;width:340px;height:340px;margin:-170px 0 0 -170px;border-radius:50%;
+    background:radial-gradient(circle,rgba(246,231,168,.55),rgba(212,175,55,.25) 40%,transparent 66%);
+    transform:scale(.2);opacity:0;animation:burst 1s cubic-bezier(.15,.7,.3,1) .18s forwards}
+  @keyframes burst{0%{transform:scale(.2);opacity:0}30%{opacity:.9}100%{transform:scale(1.5);opacity:0}}
+  .ring2{position:absolute;top:26%;left:50%;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;border:2px solid var(--gold-hi);
+    transform:scale(.3);opacity:0;animation:ring2 .9s ease-out .22s forwards}
+  @keyframes ring2{0%{transform:scale(.3);opacity:.9}100%{transform:scale(2.1);opacity:0}}
+
+  /* aperture medallion */
+  .medwrap{position:relative;opacity:0;transform:scale(.5);animation:pop .7s cubic-bezier(.2,1.3,.35,1) .2s forwards}
+  @keyframes pop{to{opacity:1;transform:scale(1)}}
+  .aperture{width:128px;height:128px;border-radius:50%;background:var(--foil);display:grid;place-items:center;position:relative;
+    box-shadow:0 0 50px rgba(212,175,55,.5)}
+  .aperture::before{content:"";position:absolute;inset:4px;border-radius:50%;background:radial-gradient(circle at 50% 35%,#173a68,#0b1c38)}
+  .aperture .em{position:relative;z-index:1;font-size:62px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.5))}
+  .shimmer{position:absolute;inset:-3px;border-radius:50%;background:conic-gradient(from 0deg,transparent,rgba(255,255,255,.55),transparent 30%);
+    -webkit-mask:radial-gradient(circle,transparent 60px,#000 61px);mask:radial-gradient(circle,transparent 60px,#000 61px);animation:spin 3.4s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .title{font-size:44px;font-weight:900;letter-spacing:-1px;background:var(--foil);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 3px 22px rgba(212,175,55,.35));opacity:0;transform:translateY(14px) scale(.9);animation:rise .6s cubic-bezier(.2,1,.3,1) .42s forwards}
+  .sub{color:var(--ivory);font-size:16px;font-weight:700;opacity:0;transform:translateY(10px);animation:rise .55s ease-out .6s forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+
+  .reward{display:flex;gap:18px;align-items:center;background:linear-gradient(180deg,#101C30,#0C1526);border:1px solid rgba(212,175,55,.25);
+    border-radius:20px;padding:14px 22px;position:relative;overflow:hidden;opacity:0;transform:translateY(16px);animation:rise .55s ease-out 1s forwards}
+  .reward::before{content:"";position:absolute;top:0;inset-inline:0;height:1px;background:var(--foil);opacity:.5}
+  .reward .col{text-align:center}
+  .reward .big{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;font-size:26px;font-weight:800;color:var(--gold-hi)}
+  .reward .lbl{font-size:11px;color:var(--muted);margin-top:2px}
+  .reward .sep{width:1px;height:38px;background:rgba(212,175,55,.25)}
+  .reward .place{color:var(--ivory)}
+
+  .btns{width:100%;display:flex;flex-direction:column;gap:11px;opacity:0;transform:translateY(16px);animation:rise .5s ease-out 1.6s forwards}
+  .cta{padding:15px;text-align:center;font-weight:900;font-size:17px;color:#0A0E17;border-radius:18px;background:var(--foil);position:relative;overflow:hidden;box-shadow:0 12px 30px -12px rgba(212,175,55,.6)}
+  .cta::after{content:"";position:absolute;top:0;bottom:0;width:34%;left:-40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-18deg);animation:sheen 3s ease-in-out 2s infinite}
+  @keyframes sheen{0%,100%{left:-40%}55%{left:130%}}
+  .ghost{padding:13px;text-align:center;font-weight:800;color:var(--gold-hi);border:1px solid rgba(212,175,55,.28);border-radius:18px}
+
+  /* confetti */
+  #cf{position:absolute;inset:0;pointer-events:none;z-index:5}
+  .p{position:absolute;top:-16px;width:8px;height:13px;border-radius:2px;will-change:transform,opacity}
+
+  .status{position:absolute;top:16px;inset-inline:22px;display:flex;justify-content:space-between;font-family:monospace;font-size:12px;color:var(--muted);z-index:6}
+</style></head>
+<body>
+  <div class="screen">
+    <div class="status"><span>9:41</span><span>&#100;&#100; 100%</span></div>
+    <canvas></canvas>
+    <div class="burst"></div>
+    <div class="ring2"></div>
+    <div id="cf"></div>
+    <div class="center">
+      <div class="medwrap"><div class="aperture"><div class="shimmer"></div><div class="em">&#128081;</div></div></div>
+      <div class="title">ניצחון!</div>
+      <div class="sub">רותם זיהה את המקום לפני כולם</div>
+      <div class="reward">
+        <div class="col"><div class="big" id="coins">+0</div><div class="lbl">מטבעות</div></div>
+        <div class="sep"></div>
+        <div class="col"><div class="big place">מקום 1</div><div class="lbl">מתוך 4</div></div>
+      </div>
+      <div class="btns">
+        <div class="cta">שחק שוב</div>
+        <div class="ghost">חזור לבית</div>
+      </div>
+    </div>
+  </div>
+<script>
+  // confetti
+  const cf=document.getElementById('cf');
+  const cols=['#F6E7A8','#D4AF37','#38E8FF','#46D6A0','#FF6B5A','#ECE6D6'];
+  function burstConfetti(){
+    for(let i=0;i<70;i++){
+      const p=document.createElement('i');p.className='p';
+      const x=10+Math.random()*370;
+      p.style.left=x+'px';
+      p.style.background=cols[i%cols.length];
+      const dur=1.8+Math.random()*1.8, delay=Math.random()*1.2;
+      const dx=(Math.random()*2-1)*90, rot=Math.random()*720;
+      p.animate([{transform:'translate(0,-10px) rotate(0)',opacity:1},
+                 {transform:`translate(${dx}px,880px) rotate(${rot}deg)`,opacity:.9}],
+                {duration:dur*1000,delay:delay*1000,easing:'cubic-bezier(.3,.2,.5,1)',fill:'forwards'});
+      cf.appendChild(p);
+    }
+  }
+  setTimeout(burstConfetti,260);
+  // coin count-up 0 -> +35
+  const el=document.getElementById('coins');
+  setTimeout(()=>{const t0=performance.now();const dur=900;
+    function tick(t){const k=Math.min(1,(t-t0)/dur);const e=1-Math.pow(1-k,3);el.textContent='+'+Math.round(e*35);if(k<1)requestAnimationFrame(tick);}
+    requestAnimationFrame(tick);},1080);
+</script>
+</body></html>

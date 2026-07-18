@@ -1,0 +1,170 @@
+<!doctype html><html lang="he"><head><meta charset="utf-8">
+<style>
+  *{margin:0;box-sizing:border-box}
+  body{background:#0d0d12;direction:rtl;font-family:'Rubik','Heebo','Assistant',Arial,sans-serif;display:flex;gap:0}
+  .phone{width:360px;height:780px;flex:0 0 auto}
+  .screen{width:100%;height:100%;overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .st{display:flex;justify-content:space-between;padding:14px 22px 0;font-family:monospace;font-size:12px}
+  .bd{flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:13px;overflow:hidden}
+  .row{display:flex;align-items:center;gap:10px}
+  .grow{flex:1}
+  .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+  .nav{display:flex;justify-content:space-around;padding:12px 6px 20px;font-size:10px}
+  .nav .it{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .nav .ic{font-size:19px}
+  .tag{position:absolute;top:16px;right:16px;z-index:9;font-family:monospace;font-size:11px;letter-spacing:1px;padding:5px 10px;border-radius:8px}
+
+  /* ============ 02 · NEON ARCADE ============ */
+  .neon .screen{background:
+    linear-gradient(0deg,rgba(255,61,154,.05),transparent 40%),
+    linear-gradient(180deg,#120a20,#0b0714 60%,#08040f);color:#EAF6FF}
+  .neon .screen::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      repeating-linear-gradient(0deg,transparent 0 26px,rgba(0,229,255,.035) 26px 27px),
+      repeating-linear-gradient(90deg,transparent 0 26px,rgba(255,61,154,.03) 26px 27px);
+    -webkit-mask:radial-gradient(120% 80% at 50% 0%,#000,transparent 75%)}
+  .neon .av{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:22px;
+    background:#160c26;border:2px solid #00E5FF;box-shadow:0 0 14px rgba(0,229,255,.6),inset 0 0 10px rgba(0,229,255,.25)}
+  .neon .nm{font-weight:900;font-size:17px}
+  .neon .rk{font-size:11px;color:#00E5FF;font-weight:800;text-shadow:0 0 8px rgba(0,229,255,.8)}
+  .neon .coin{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:15px;padding:7px 12px;border-radius:12px;
+    background:#1a0f2c;border:2px solid #B6FF3C;color:#B6FF3C;box-shadow:0 0 12px rgba(182,255,60,.45)}
+  .neon .streak{font-size:12px;color:#FF3D9A;font-weight:900;text-shadow:0 0 8px rgba(255,61,154,.7)}
+  .neon .h{font-size:11px;letter-spacing:2px;color:#6a5a8a;font-weight:800;text-transform:uppercase;font-family:monospace}
+  .neon .flag{border-radius:20px;padding:16px;display:flex;align-items:center;gap:14px;position:relative;
+    background:linear-gradient(135deg,#1c0f33,#12081f);border:2px solid #00E5FF;box-shadow:0 0 20px rgba(0,229,255,.35),inset 0 0 20px rgba(0,229,255,.08)}
+  .neon .flag .g{font-size:40px;filter:drop-shadow(0 0 10px rgba(0,229,255,.6))}
+  .neon .flag .t{font-weight:900;font-size:18px}
+  .neon .flag .s{font-size:11px;color:#9fb6c9;margin-top:3px}
+  .neon .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .neon .tile{border-radius:18px;padding:14px;position:relative;background:#150b24;border:2px solid #FF3D9A;box-shadow:0 0 16px rgba(255,61,154,.3)}
+  .neon .tile.c2{border-color:#B6FF3C;box-shadow:0 0 16px rgba(182,255,60,.3)}
+  .neon .tile .g{font-size:28px}
+  .neon .tile .t{font-weight:900;font-size:15px;margin-top:6px}
+  .neon .tile .s{font-size:11px;color:#9fb6c9}
+  .neon .go{margin-top:8px;font-family:monospace;font-size:11px;font-weight:800;color:#0b0714;background:#00E5FF;border-radius:8px;padding:4px 10px;display:inline-block;box-shadow:0 0 12px rgba(0,229,255,.6)}
+  .neon .nav{border-top:1px solid rgba(0,229,255,.14);color:#5a4a7a}
+  .neon .nav .on{color:#00E5FF;text-shadow:0 0 8px rgba(0,229,255,.8)}
+  .neon .st{color:#6a5a8a}
+  .neon .tag{background:#160c26;border:1px solid #00E5FF;color:#00E5FF}
+
+  /* ============ 03 · SOFT DAYLIGHT ============ */
+  .day .screen{background:radial-gradient(120% 40% at 50% 0%,#FFF6EC,#FBF3E7 40%,#F4ECDD);color:#2C2A33}
+  .day .av{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:23px;background:#FFE6D2;border:3px solid #fff;box-shadow:0 6px 16px rgba(255,122,89,.25)}
+  .day .nm{font-weight:900;font-size:17px;color:#332F3B}
+  .day .rk{font-size:11px;color:#FF7A59;font-weight:800}
+  .day .coin{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:15px;padding:8px 13px;border-radius:14px;background:#fff;color:#E8912F;box-shadow:0 6px 16px rgba(0,0,0,.06)}
+  .day .streak{font-size:12px;color:#FF7A59;font-weight:900}
+  .day .h{font-size:12px;color:#B4A895;font-weight:800}
+  .day .flag{border-radius:24px;padding:18px;display:flex;align-items:center;gap:14px;background:#fff;box-shadow:0 14px 30px -12px rgba(120,90,60,.28)}
+  .day .flag .g{font-size:42px}
+  .day .flag .t{font-weight:900;font-size:19px;color:#332F3B}
+  .day .flag .s{font-size:12px;color:#8a8296;margin-top:3px}
+  .day .tiles{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .day .tile{border-radius:22px;padding:16px;background:#fff;box-shadow:0 10px 24px -12px rgba(120,90,60,.25)}
+  .day .tile.c1{background:#E8F7F2}.day .tile.c2{background:#EAF1FF}
+  .day .tile .g{font-size:30px}
+  .day .tile .t{font-weight:900;font-size:15px;margin-top:8px;color:#332F3B}
+  .day .tile .s{font-size:11px;color:#9a92a6}
+  .day .go{margin-top:8px;font-size:12px;font-weight:900;color:#fff;background:#FF7A59;border-radius:999px;padding:5px 13px;display:inline-block;box-shadow:0 8px 16px -6px rgba(255,122,89,.6)}
+  .day .nav{border-top:1px solid #ECE0CE;color:#B4A895}
+  .day .nav .on{color:#FF7A59}
+  .day .st{color:#B4A895}
+  .day .tag{background:#fff;color:#FF7A59;box-shadow:0 4px 10px rgba(0,0,0,.08)}
+
+  /* ============ 04 · CANDY JELLY ============ */
+  .candy .screen{background:radial-gradient(120% 50% at 50% 0%,#5B2AA6,#3A1B6E 45%,#22103F);color:#fff}
+  .candy .av{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:23px;background:linear-gradient(180deg,#FF8FC4,#FF4FA3);border:3px solid #fff;box-shadow:0 6px 0 #B5237A,0 10px 18px rgba(0,0,0,.35)}
+  .candy .nm{font-weight:900;font-size:18px}
+  .candy .rk{font-size:11px;color:#FFD84D;font-weight:900}
+  .candy .coin{font-family:'JetBrains Mono',monospace;font-weight:900;font-size:15px;padding:8px 14px;border-radius:999px;background:linear-gradient(180deg,#FFE05A,#FFB020);color:#5A2E00;border:2px solid #fff;box-shadow:0 5px 0 #C77A00}
+  .candy .streak{font-size:12px;color:#8CF5C0;font-weight:900}
+  .candy .h{font-size:12px;color:#C9AEF2;font-weight:900}
+  .candy .flag{border-radius:26px;padding:18px;display:flex;align-items:center;gap:14px;background:linear-gradient(180deg,#7B3FD1,#5A28A6);border:3px solid rgba(255,255,255,.35);box-shadow:0 8px 0 #3A1670,inset 0 2px 8px rgba(255,255,255,.25)}
+  .candy .flag .g{font-size:44px;filter:drop-shadow(0 4px 4px rgba(0,0,0,.35))}
+  .candy .flag .t{font-weight:900;font-size:19px}
+  .candy .flag .s{font-size:12px;color:#DFCEFF;margin-top:3px}
+  .candy .tiles{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .candy .tile{border-radius:24px;padding:16px;background:linear-gradient(180deg,#12B5A6,#0C8E86);border:3px solid rgba(255,255,255,.35);box-shadow:0 7px 0 #076B66,inset 0 2px 6px rgba(255,255,255,.3)}
+  .candy .tile.c2{background:linear-gradient(180deg,#FF6EA6,#E24488);box-shadow:0 7px 0 #A8235C,inset 0 2px 6px rgba(255,255,255,.3)}
+  .candy .tile .g{font-size:30px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.3))}
+  .candy .tile .t{font-weight:900;font-size:15px;margin-top:8px}
+  .candy .tile .s{font-size:11px;color:rgba(255,255,255,.8)}
+  .candy .go{margin-top:8px;font-size:12px;font-weight:900;color:#5A2E00;background:linear-gradient(180deg,#FFE05A,#FFB020);border-radius:999px;padding:5px 13px;display:inline-block;border:2px solid #fff;box-shadow:0 4px 0 #C77A00}
+  .candy .nav{border-top:1px solid rgba(255,255,255,.12);color:#B69BE0}
+  .candy .nav .on{color:#FFD84D}
+  .candy .st{color:#C9AEF2}
+  .candy .tag{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4)}
+</style></head>
+<body>
+
+<!-- 02 NEON -->
+<div class="phone neon"><div class="screen">
+  <div class="tag">02 · ניאון ארקייד</div>
+  <div class="st"><span>9:41</span><span>&#9679;&#9679; 100%</span></div>
+  <div class="bd">
+    <div class="row">
+      <div class="av">🕵</div>
+      <div><div class="nm">רותם</div><div class="rk">בלש · דרגה 4</div></div>
+      <div class="grow"></div>
+      <div style="text-align:left"><div class="coin">🪙 23,801</div><div class="streak" style="margin-top:5px">🔥 35 ימים</div></div>
+    </div>
+    <div class="h">המשחק הראשי</div>
+    <div class="flag"><div class="g">🖼️</div><div class="grow"><div class="t">מה בתמונה?</div><div class="s">זהה לפני כולם · 2–8 שחקנים</div><span class="go">שחק · 20 🪙</span></div></div>
+    <div class="h">עוד משחקים</div>
+    <div class="tiles">
+      <div class="tile"><div class="g">🦉</div><div class="t">חי · צומח · דומם</div><div class="s">מקצה 3 סבבים</div></div>
+      <div class="tile c2"><div class="g">🔤</div><div class="t">משחק האותיות</div><div class="s">דו־קרב תורות</div></div>
+    </div>
+    <div class="tile" style="border-color:#B6FF3C;box-shadow:0 0 16px rgba(182,255,60,.3);display:flex;align-items:center;gap:12px"><div class="g">🧩</div><div class="grow"><div class="t">זהו את הפתגם</div><div class="s">רבוס תלת־ממד</div></div><span class="go">חדש</span></div>
+  </div>
+  <div class="nav"><div class="it on"><span class="ic">🏠</span>בית</div><div class="it"><span class="ic">👥</span>חברים</div><div class="it"><span class="ic">🛍️</span>חנות</div><div class="it"><span class="ic">👤</span>פרופיל</div></div>
+</div></div>
+
+<!-- 03 DAYLIGHT -->
+<div class="phone day"><div class="screen">
+  <div class="tag">03 · אור יום</div>
+  <div class="st"><span>9:41</span><span>&#9679;&#9679; 100%</span></div>
+  <div class="bd">
+    <div class="row">
+      <div class="av">🕵</div>
+      <div><div class="nm">רותם</div><div class="rk">בלש · דרגה 4</div></div>
+      <div class="grow"></div>
+      <div style="text-align:left"><div class="coin">🪙 23,801</div><div class="streak" style="margin-top:5px">🔥 35 ימים</div></div>
+    </div>
+    <div class="h">המשחק הראשי</div>
+    <div class="flag"><div class="g">🖼️</div><div class="grow"><div class="t">מה בתמונה?</div><div class="s">זהה לפני כולם · 2–8 שחקנים</div><span class="go">שחק · 20 🪙</span></div></div>
+    <div class="h">עוד משחקים</div>
+    <div class="tiles">
+      <div class="tile c1"><div class="g">🦉</div><div class="t">חי · צומח · דומם</div><div class="s">מקצה 3 סבבים</div></div>
+      <div class="tile c2"><div class="g">🔤</div><div class="t">משחק האותיות</div><div class="s">דו־קרב תורות</div></div>
+    </div>
+    <div class="tile" style="display:flex;align-items:center;gap:12px"><div class="g">🧩</div><div class="grow"><div class="t">זהו את הפתגם</div><div class="s">רבוס תלת־ממד</div></div><span class="go">חדש</span></div>
+  </div>
+  <div class="nav"><div class="it on"><span class="ic">🏠</span>בית</div><div class="it"><span class="ic">👥</span>חברים</div><div class="it"><span class="ic">🛍️</span>חנות</div><div class="it"><span class="ic">👤</span>פרופיל</div></div>
+</div></div>
+
+<!-- 04 CANDY -->
+<div class="phone candy"><div class="screen">
+  <div class="tag">04 · ג'לי ממתקים</div>
+  <div class="st"><span>9:41</span><span>&#9679;&#9679; 100%</span></div>
+  <div class="bd">
+    <div class="row">
+      <div class="av">🕵</div>
+      <div><div class="nm">רותם</div><div class="rk">בלש · דרגה 4</div></div>
+      <div class="grow"></div>
+      <div style="text-align:left"><div class="coin">🪙 23,801</div><div class="streak" style="margin-top:5px">🔥 35 ימים</div></div>
+    </div>
+    <div class="h">המשחק הראשי</div>
+    <div class="flag"><div class="g">🖼️</div><div class="grow"><div class="t">מה בתמונה?</div><div class="s">זהה לפני כולם · 2–8 שחקנים</div><span class="go">שחק · 20 🪙</span></div></div>
+    <div class="h">עוד משחקים</div>
+    <div class="tiles">
+      <div class="tile"><div class="g">🦉</div><div class="t">חי · צומח · דומם</div><div class="s">מקצה 3 סבבים</div></div>
+      <div class="tile c2"><div class="g">🔤</div><div class="t">משחק האותיות</div><div class="s">דו־קרב תורות</div></div>
+    </div>
+    <div class="tile" style="background:linear-gradient(180deg,#FFB03A,#E88A16);box-shadow:0 7px 0 #A85E00,inset 0 2px 6px rgba(255,255,255,.3);display:flex;align-items:center;gap:12px"><div class="g">🧩</div><div class="grow"><div class="t">זהו את הפתגם</div><div class="s">רבוס תלת־ממד</div></div><span class="go">חדש</span></div>
+  </div>
+  <div class="nav"><div class="it on"><span class="ic">🏠</span>בית</div><div class="it"><span class="ic">👥</span>חברים</div><div class="it"><span class="ic">🛍️</span>חנות</div><div class="it"><span class="ic">👤</span>פרופיל</div></div>
+</div></div>
+
+</body></html>

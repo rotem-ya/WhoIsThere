@@ -1,0 +1,331 @@
+<title>WhoIsThere — כיוון עיצוב: אובסידיאן מוזהב</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --obsidian:#0A0E17; --obsidian-2:#070A11;
+    --glass:#101C30; --glass-2:#0C1526; --glass-hi:rgba(255,255,255,.05);
+    --leaf-1:#F6E7A8; --leaf-2:#D4AF37; --leaf-3:#9A7B2E;
+    --foil:linear-gradient(135deg,#F9EEBE 0%,#D4AF37 46%,#9A7B2E 72%,#F2E3A0 100%);
+    --ivory:#ECE6D6; --muted:#93A2BC; --faint:#5B6A84;
+    --cyan:#38E8FF; --good:#46D6A0; --coral:#FF6B5A;
+    --line:rgba(212,175,55,.22);
+    --mono:'JetBrains Mono','SF Mono',ui-monospace,Menlo,monospace;
+    --sans:'Rubik','Heebo','Assistant',-apple-system,'Segoe UI',system-ui,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; direction:rtl; font-family:var(--sans); color:var(--ivory);
+    background:
+      radial-gradient(900px 500px at 80% -5%, rgba(212,175,55,.06), transparent 60%),
+      radial-gradient(800px 480px at 5% 100%, rgba(56,232,255,.045), transparent 60%),
+      var(--obsidian-2);
+    min-height:100vh;
+  }
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.045;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 22px;position:relative;z-index:1}
+
+  /* ---------- intro ---------- */
+  header.intro{padding:56px 0 12px}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:3px;color:var(--leaf-2);font-weight:600;margin:0 0 16px;direction:ltr;text-align:right}
+  h1{margin:0;font-size:clamp(30px,6vw,54px);font-weight:900;line-height:1.02;letter-spacing:-.5px;text-wrap:balance}
+  h1 .foil{background:var(--foil);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 20px rgba(212,175,55,.22))}
+  .lede{max-width:60ch;color:var(--muted);font-size:clamp(15px,2.2vw,18px);margin:20px 0 0;line-height:1.65}
+  .lede b{color:var(--ivory);font-weight:600}
+  .principles{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0 6px}
+  .prin{font-size:13px;color:var(--muted);border:1px solid var(--line);background:rgba(212,175,55,.04);
+    border-radius:999px;padding:8px 15px}
+  .prin b{color:var(--leaf-1);font-weight:700}
+
+  /* ---------- phones row ---------- */
+  .stage{display:flex;gap:34px;overflow-x:auto;padding:44px 4px 30px;scroll-snap-type:x mandatory;
+    scrollbar-width:thin;scrollbar-color:var(--leaf-3) transparent}
+  .col{flex:0 0 auto;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .col .cap{font-family:var(--mono);font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+  .col .cap b{color:var(--leaf-1)}
+
+  /* phone frame */
+  .phone{width:326px;height:706px;border-radius:44px;padding:11px;position:relative;
+    background:linear-gradient(160deg,#26262c,#0c0c10);
+    box-shadow:0 40px 90px -30px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.05),
+      inset 0 0 0 2px rgba(212,175,55,.12);}
+  .screen{width:100%;height:100%;border-radius:34px;overflow:hidden;position:relative;
+    background:
+      radial-gradient(120% 60% at 82% 0%, rgba(212,175,55,.10), transparent 55%),
+      radial-gradient(120% 50% at 10% 100%, rgba(56,232,255,.06), transparent 55%),
+      linear-gradient(180deg,var(--obsidian) 0%, #0C1220 55%, var(--obsidian-2) 100%);
+    display:flex;flex-direction:column}
+  .notch{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:96px;height:24px;border-radius:14px;background:#050609;z-index:6}
+  .status{display:flex;justify-content:space-between;align-items:center;padding:14px 22px 0;font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+  /* aperture ring motif */
+  .aperture{position:relative;border-radius:50%;background:var(--foil);display:grid;place-items:center;flex:0 0 auto}
+  .aperture::before{content:"";position:absolute;inset:2px;border-radius:50%;background:var(--obsidian);}
+  .aperture .fill{position:relative;z-index:1;display:grid;place-items:center;border-radius:50%}
+  .aperture.spin{animation:spin 14s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .body{flex:1;overflow:hidden;padding:0 16px;display:flex;flex-direction:column;gap:14px}
+  .row{display:flex;align-items:center;gap:10px}
+  .grow{flex:1}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:.3px}
+
+  /* chips / pills */
+  .coinpill,.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;font-weight:800}
+  .coinpill{padding:7px 12px;background:linear-gradient(180deg,rgba(212,175,55,.16),rgba(212,175,55,.06));
+    border:1px solid var(--line);font-family:var(--mono);font-size:14px;color:var(--leaf-1)}
+  .dot{width:7px;height:7px;border-radius:50%}
+  .streak{font-size:12.5px;color:var(--coral);font-weight:800;display:inline-flex;gap:4px;align-items:center}
+
+  .glass{background:linear-gradient(180deg,var(--glass),var(--glass-2));border:1px solid var(--line);border-radius:20px;position:relative;overflow:hidden}
+  .glass::before{content:"";position:absolute;top:0;inset-inline:0;height:1px;background:var(--foil);opacity:.5}
+
+  .rankname{display:flex;flex-direction:column;line-height:1.1}
+  .rankname .nm{font-weight:900;font-size:16px}
+  .rankname .rk{font-size:11px;color:var(--leaf-2);font-weight:700}
+
+  /* game tiles */
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .tile{aspect-ratio:1/.92;border-radius:20px;padding:13px;display:flex;flex-direction:column;justify-content:space-between;
+    position:relative;overflow:hidden;border:1px solid var(--line);cursor:default}
+  .tile .glyph{font-size:30px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.5))}
+  .tile .t-name{font-weight:900;font-size:15px;line-height:1.15}
+  .tile .t-sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .tile.flag{grid-column:1 / -1;aspect-ratio:auto;flex-direction:row;align-items:center;gap:14px;
+    background:radial-gradient(120% 120% at 100% 0%, rgba(212,175,55,.16), transparent 60%),linear-gradient(180deg,var(--glass),var(--glass-2))}
+  .tile.flag .glyph{font-size:38px}
+  .tile.t1{background:radial-gradient(120% 120% at 0% 0%,rgba(70,214,160,.14),transparent 60%),linear-gradient(180deg,var(--glass),var(--glass-2))}
+  .tile.t2{background:radial-gradient(120% 120% at 100% 0%,rgba(56,232,255,.13),transparent 60%),linear-gradient(180deg,var(--glass),var(--glass-2))}
+  .tile.t3{background:radial-gradient(120% 120% at 0% 100%,rgba(155,110,220,.16),transparent 60%),linear-gradient(180deg,var(--glass),var(--glass-2))}
+  .go{margin-top:8px;align-self:flex-start;font-family:var(--mono);font-size:11px;color:var(--leaf-1);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+
+  .section-h{font-size:12px;color:var(--faint);font-weight:800;letter-spacing:1px;margin:2px 2px -2px}
+
+  /* bottom CTA */
+  .cta{margin:auto 0 0;padding:15px 0;text-align:center;font-weight:900;font-size:17px;color:#0A0E17;
+    border-radius:18px;background:var(--foil);box-shadow:0 12px 30px -12px rgba(212,175,55,.6);position:relative;overflow:hidden}
+  .cta::after{content:"";position:absolute;top:0;bottom:0;width:36%;left:-40%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-18deg);animation:sheen 4.5s ease-in-out infinite}
+  @keyframes sheen{0%,100%{left:-40%}55%{left:130%}}
+
+  /* bottom nav */
+  .nav{display:flex;justify-content:space-around;align-items:center;padding:12px 6px 20px;border-top:1px solid rgba(255,255,255,.05);
+    background:linear-gradient(180deg,transparent,rgba(0,0,0,.25))}
+  .nav .it{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--faint)}
+  .nav .it.on{color:var(--leaf-1)}
+  .nav .it .ic{font-size:19px}
+
+  /* game screen */
+  .hud{display:flex;align-items:center;gap:8px;padding:2px 2px}
+  .board{border-radius:24px;padding:8px;background:var(--foil);position:relative;box-shadow:0 20px 50px -20px rgba(0,0,0,.8)}
+  .board .inner{border-radius:18px;overflow:hidden;aspect-ratio:1/1;position:relative;
+    background:
+      conic-gradient(from 30deg at 50% 50%, #12305a, #0b2144 25%, #163a6b 50%, #0b2144 75%, #12305a),
+      #0b1c38}
+  .gem{position:absolute;inset:0;display:grid;place-items:center;font-size:118px;filter:drop-shadow(0 10px 30px rgba(0,0,0,.6))}
+  .tilegrid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(6,1fr)}
+  .tilegrid i{border:.5px solid rgba(255,255,255,.05)}
+  .tilegrid i.cov{background:linear-gradient(135deg,rgba(10,14,23,.96),rgba(14,26,46,.92));border-color:rgba(212,175,55,.18)}
+  .timer{position:absolute;top:10px;inset-inline-start:10px;width:34px;height:34px;border-radius:50%;
+    background:conic-gradient(var(--coral) 70%, rgba(255,255,255,.12) 0);display:grid;place-items:center}
+  .timer b{width:26px;height:26px;border-radius:50%;background:var(--obsidian);display:grid;place-items:center;font-family:var(--mono);font-weight:800;font-size:13px;color:var(--coral)}
+  .players{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+  .pchip{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+    border-radius:999px;padding:3px 8px 3px 4px;font-size:11px}
+  .pchip .av{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:11px;color:#fff}
+  .pchip .sc{font-family:var(--mono);color:var(--muted);font-size:11px}
+  .slots{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
+  .slot{width:30px;height:36px;border-radius:8px;border:1.4px solid var(--line);background:rgba(212,175,55,.04)}
+  .slot.f{background:var(--foil);border-color:transparent;display:grid;place-items:center;color:#0A0E17;font-weight:900;font-size:17px}
+
+  /* win screen */
+  .winwrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:0 20px;position:relative}
+  .burst{position:absolute;top:16%;width:230px;height:230px;border-radius:50%;
+    background:radial-gradient(circle,rgba(212,175,55,.28),transparent 62%);filter:blur(2px);animation:pulse 3.5s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(.9);opacity:.7}50%{transform:scale(1.08);opacity:1}}
+  .confetti i{position:absolute;top:12%;width:7px;height:11px;border-radius:2px;opacity:.9;animation:fall 3.4s linear infinite}
+  @keyframes fall{0%{transform:translateY(-20px) rotate(0)}100%{transform:translateY(360px) rotate(320deg);opacity:0}}
+  .wtitle{font-size:30px;font-weight:900;background:var(--foil);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .wname{font-size:17px;font-weight:800}
+  .wscore{font-family:var(--mono);font-size:15px;color:var(--leaf-1)}
+
+  .legend{margin:20px 0 60px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}
+  .lg{border:1px solid var(--line);border-radius:16px;padding:16px 18px;background:linear-gradient(180deg,var(--glass),var(--glass-2))}
+  .lg h4{margin:0 0 6px;font-size:14px;color:var(--leaf-1)}
+  .lg p{margin:0;font-size:13px;color:var(--muted);line-height:1.55}
+  .lg .sw{display:flex;gap:6px;margin-top:10px}
+  .lg .sw span{width:22px;height:22px;border-radius:6px;border:1px solid rgba(255,255,255,.12)}
+
+  .foot{color:var(--faint);font-size:12px;text-align:center;padding:8px 0 50px;font-family:var(--mono)}
+  @media (max-width:520px){.phone{width:300px;height:650px}}
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <p class="eyebrow">WhoIsThere · Design Direction 01</p>
+    <h1>אובסידיאן <span class="foil">מוזהב</span></h1>
+    <p class="lede">כיוון אחר לגמרי מהמראה הנוכחי: במקום צילום גלקסיה עמוס שמתחרה בכל אלמנט, <b>רקע אובסידיאן כהה ורגוע</b> עם המון אוויר. הזהב הופך מ<b>גושים</b> ל<b>עלה־זהב דק וחרוט</b> — יוקרתי, לא רועש. מוטיב ה<b>צמצם</b> (טבעת הזהב מהחשיפה) חוזר כחתימה: סביב האווטר, כמסגרת התמונה, כטבעת הטיימר. כרטיסי זכוכית כהה עם קצה זהב של פיקסל אחד.</p>
+    <div class="principles">
+      <span class="prin"><b>פחות רעש</b> · יותר אוויר</span>
+      <span class="prin"><b>זהב כעלה דק</b> · לא גושים</span>
+      <span class="prin">מוטיב <b>הצמצם</b> חוזר</span>
+      <span class="prin">מספרים ב<b>מונו</b> · תחושת HUD יוקרתי</span>
+      <span class="prin">ציאן = <b>חי בלבד</b></span>
+    </div>
+  </header>
+
+  <div class="stage">
+
+    <!-- ============ HOME ============ -->
+    <div class="col">
+      <div class="cap">מסך <b>בית</b></div>
+      <div class="phone"><div class="screen">
+        <div class="notch"></div>
+        <div class="status mono"><span>9:41</span><span>􀙇 􀛨 100%</span></div>
+        <div class="body">
+          <!-- top identity row -->
+          <div class="row" style="margin-top:6px">
+            <div class="aperture spin" style="width:46px;height:46px">
+              <div class="fill" style="width:40px;height:40px;background:var(--obsidian);font-size:20px">🕵</div>
+            </div>
+            <div class="rankname"><span class="nm">רותם</span><span class="rk">בלש · דרגה 4</span></div>
+            <div class="grow"></div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+              <span class="coinpill">🪙 23,801</span>
+              <span class="streak">🔥 35 ימים</span>
+            </div>
+          </div>
+
+          <!-- featured / flagship -->
+          <div class="section-h">המשחק הראשי</div>
+          <div class="tile flag">
+            <div class="glyph">🖼️</div>
+            <div class="grow">
+              <div class="t-name">מה בתמונה?</div>
+              <div class="t-sub">זהה את התמונה לפני כולם · 2–8 שחקנים</div>
+              <span class="go">שחק · כניסה 20 🪙</span>
+            </div>
+          </div>
+
+          <div class="section-h">עוד משחקים</div>
+          <div class="tiles">
+            <div class="tile t1"><div class="glyph">🦉</div><div><div class="t-name">חי · צומח · דומם</div><div class="t-sub">מקצה 3 סבבים</div></div></div>
+            <div class="tile t2"><div class="glyph">🔤</div><div><div class="t-name">משחק האותיות</div><div class="t-sub">דו־קרב תורות</div></div></div>
+            <div class="tile t3" style="grid-column:1 / -1;aspect-ratio:auto;flex-direction:row;align-items:center;gap:14px"><div class="glyph">🧩</div><div class="grow"><div class="t-name">זהו את הפתגם</div><div class="t-sub">רבוס תלת־ממד · נחש את הפתגם</div></div><span class="go">חדש</span></div>
+          </div>
+        </div>
+        <div class="nav">
+          <div class="it on"><span class="ic">🏠</span>בית</div>
+          <div class="it"><span class="ic">👥</span>חברים</div>
+          <div class="it"><span class="ic">🛍️</span>חנות</div>
+          <div class="it"><span class="ic">👤</span>פרופיל</div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- ============ GAME ============ -->
+    <div class="col">
+      <div class="cap">מסך <b>משחק</b> · התמונה גדולה</div>
+      <div class="phone"><div class="screen">
+        <div class="notch"></div>
+        <div class="status mono"><span>9:41</span><span>􀙇 􀛨 100%</span></div>
+        <div class="body" style="gap:12px">
+          <div class="hud">
+            <span class="coinpill" style="font-size:12.5px">🪙 23,801</span>
+            <span class="streak">🔥 35</span>
+            <div class="grow"></div>
+            <div class="aperture" style="width:30px;height:30px"><div class="fill" style="width:26px;height:26px;background:var(--obsidian);font-size:11px;color:var(--muted)">✕</div></div>
+          </div>
+
+          <!-- compact players: rank-colored letter chips (2 rows max) -->
+          <div class="players">
+            <span class="pchip"><span class="av" style="background:#5C9CE6">א</span><span class="sc">30</span></span>
+            <span class="pchip"><span class="av" style="background:#9B59B6">נ</span><span class="sc">30</span></span>
+            <span class="pchip"><span class="av" style="background:#26C6DA">ש</span><span class="sc">30</span></span>
+            <span class="pchip" style="border-color:var(--line);background:rgba(212,175,55,.08)"><span class="av" style="background:linear-gradient(135deg,#F6E7A8,#9A7B2E);color:#0A0E17">ר</span><span class="sc" style="color:var(--leaf-1)">30</span></span>
+          </div>
+
+          <!-- big framed board -->
+          <div class="board">
+            <div class="inner">
+              <div class="gem">💎</div>
+              <div class="tilegrid">
+                <i class="cov"></i><i></i><i class="cov"></i><i class="cov"></i><i></i><i class="cov"></i>
+                <i></i><i class="cov"></i><i></i><i></i><i class="cov"></i><i></i>
+                <i class="cov"></i><i></i><i></i><i class="cov"></i><i></i><i class="cov"></i>
+                <i></i><i class="cov"></i><i></i><i></i><i class="cov"></i><i></i>
+                <i class="cov"></i><i></i><i class="cov"></i><i></i><i></i><i class="cov"></i>
+                <i></i><i class="cov"></i><i></i><i class="cov"></i><i class="cov"></i><i></i>
+              </div>
+              <div class="timer"><b>7</b></div>
+            </div>
+          </div>
+
+          <div class="slots">
+            <div class="slot f">ט</div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
+            <div class="slot"></div><div class="slot"></div><div class="slot"></div>
+          </div>
+
+          <div class="cta" style="margin-top:6px">נחש עכשיו!</div>
+          <div style="height:6px"></div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- ============ WIN ============ -->
+    <div class="col">
+      <div class="cap">מסך <b>ניצחון</b> · הפיצוץ</div>
+      <div class="phone"><div class="screen">
+        <div class="notch"></div>
+        <div class="status mono"><span>9:41</span><span>􀙇 􀛨 100%</span></div>
+        <div class="winwrap">
+          <div class="burst"></div>
+          <div class="confetti" aria-hidden="true">
+            <i style="left:22%;background:#F6E7A8"></i><i style="left:34%;background:#38E8FF;animation-delay:.4s"></i>
+            <i style="left:48%;background:#46D6A0;animation-delay:.9s"></i><i style="left:62%;background:#D4AF37;animation-delay:.2s"></i>
+            <i style="left:74%;background:#FF6B5A;animation-delay:.7s"></i><i style="left:40%;background:#F6E7A8;animation-delay:1.3s"></i>
+          </div>
+          <div class="aperture spin" style="width:132px;height:132px;box-shadow:0 0 44px rgba(212,175,55,.5)">
+            <div class="fill" style="width:118px;height:118px;background:radial-gradient(circle,#12305a,#0b1c38);font-size:56px">👑</div>
+          </div>
+          <div class="wtitle">ניצחון!</div>
+          <div class="wname">רותם זיהה את המקום לפני כולם</div>
+          <div class="glass" style="padding:14px 18px;display:flex;gap:16px;align-items:center;margin-top:4px">
+            <div style="text-align:center"><div class="wscore" style="font-size:22px">+35</div><div style="font-size:10px;color:var(--muted)">מטבעות</div></div>
+            <div style="width:1px;height:34px;background:var(--line)"></div>
+            <div style="text-align:center"><div class="wscore" style="font-size:22px;color:var(--ivory)">מקום 1</div><div style="font-size:10px;color:var(--muted)">מתוך 4</div></div>
+          </div>
+          <div style="width:100%;display:flex;flex-direction:column;gap:10px;margin-top:8px">
+            <div class="cta">שחק שוב</div>
+            <div style="text-align:center;padding:13px;border:1px solid var(--line);border-radius:18px;font-weight:800;color:var(--leaf-1)">חזור לבית</div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+  </div>
+
+  <!-- rationale -->
+  <div class="legend">
+    <div class="lg">
+      <h4>למה זה שונה</h4>
+      <p>המראה הנוכחי נשען על צילום גלקסיה שממלא כל פיקסל ומתחרה בתמונת המשחק. כאן הרקע נסוג לאחור — כהה, רגוע, עם גרעין עדין — והתמונה והזהב מקבלים את הבמה.</p>
+    </div>
+    <div class="lg">
+      <h4>הפלטה</h4>
+      <p>אובסידיאן כבסיס, עלה־זהב לגימור, ציאן רק ל"חי" (טיימר/תור), ואיזמרגד/אלמוג לנכון/דחוף.</p>
+      <div class="sw"><span style="background:#0A0E17"></span><span style="background:#101C30"></span><span style="background:linear-gradient(135deg,#F6E7A8,#9A7B2E)"></span><span style="background:#38E8FF"></span><span style="background:#46D6A0"></span><span style="background:#FF6B5A"></span></div>
+    </div>
+    <div class="lg">
+      <h4>טיפוגרפיה</h4>
+      <p>כותרות כבדות וצפופות; כל המספרים (מטבעות, ניקוד, טיימר) ב<b style="color:var(--ivory)">מונו</b> עם ספרות בעלות רוחב אחיד — נותן תחושת לוח־מחוונים יוקרתי, לא משחקון.</p>
+    </div>
+    <div class="lg">
+      <h4>מה נשמר מהקוד שכבר עשינו</h4>
+      <p>תאי השחקן הקומפקטיים (עיגול־אות בצבע דרגה), מוטיב הצמצם מ־VaultCover, פס הדרגות, וכל שכבת הסאונד — הכול משתלב ישר לכיוון הזה.</p>
+    </div>
+  </div>
+
+  <p class="foot">כיוון עיצוב 01 מתוך כמה אפשריים · גלול את המסכים לצדדים · תגיד לי מה עובד ומה לא ואבנה וריאציות</p>
+</div>
