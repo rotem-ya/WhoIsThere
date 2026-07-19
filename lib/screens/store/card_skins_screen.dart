@@ -69,12 +69,12 @@ class CardSkinsScreen extends ConsumerWidget {
 
     // One section per price tier (matches the admin catalog & Gemini styles).
     const tiers = <_TierDef>[
-      _TierDef('חינם', 0, 0, Color(0xFF8090B0), Icons.star_outline_rounded, coin: false),
-      _TierDef('טבע · 50', 1, 50, Color(0xFF4DD0A0), Icons.eco_outlined),
-      _TierDef('פסיפס · 100', 51, 100, Candy.gold, Icons.grid_on_outlined),
-      _TierDef('ניאון · 200', 101, 200, Color(0xFF00E5FF), Icons.bolt_outlined),
-      _TierDef('קוסמי · 500', 201, 500, Color(0xFF9C27B0), Icons.auto_awesome_outlined),
-      _TierDef('זהב מלכותי · 1000', 501, 1 << 30, Candy.gold, Icons.diamond_outlined),
+      _TierDef('חינמי', 0, 0, Candy.inkMuted, Icons.star_outline_rounded, coin: false),
+      _TierDef('בסיסי · 50', 1, 50, Candy.teal, Icons.palette_outlined),
+      _TierDef('בסיסי · 100', 51, 100, Candy.teal, Icons.palette_outlined),
+      _TierDef('נדיר · 200', 101, 200, Candy.teal, Icons.auto_awesome_outlined),
+      _TierDef('נדיר · 500', 201, 500, Candy.teal, Icons.auto_awesome_outlined),
+      _TierDef('פרימיום · 1000', 501, 1 << 30, Candy.gold, Icons.diamond_outlined),
     ];
     final sections = <Widget>[];
     for (final t in tiers) {

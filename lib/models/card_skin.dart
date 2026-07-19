@@ -64,31 +64,33 @@ class CardSkin {
 // _kSkinStyleAlias) instead of baked photos — clean, designed, consistent with
 // the Candy line. The free default reads as a royal Candy purple.
 const kAvailableCardSkins = <CardSkin>[
-  // ── חינם (0) — ג'לי נקי ──────────────────────────────────────────────────────
-  CardSkin(id: 'default',        name: "ג'לי סגול",   price: 0),
-  CardSkin(id: 'minimal_lines',  name: "ג'לי כחול",   price: 0),
-  CardSkin(id: 'minimal_calm',   name: "ג'לי טורקיז", price: 0),
+  // Names describe the COLOR (the covers are solid Candy jelly, not patterns),
+  // so what the store shows matches the name.
+  // ── חינמי (0) ────────────────────────────────────────────────────────────────
+  CardSkin(id: 'default',        name: 'סגול ענבים', price: 0),
+  CardSkin(id: 'minimal_lines',  name: 'כחול שמיים', price: 0),
+  CardSkin(id: 'minimal_calm',   name: 'טורקיז',     price: 0),
 
-  // ── 50 — טבע ────────────────────────────────────────────────────────────────
-  CardSkin(id: 'nature_leaves',  name: 'עלי זית',  price: 50),
-  CardSkin(id: 'nature_waves',   name: 'גלי ים',   price: 50),
-  CardSkin(id: 'nature_anemone', name: 'כלניות',   price: 50),
+  // ── בסיסי · 50 ───────────────────────────────────────────────────────────────
+  CardSkin(id: 'nature_leaves',  name: 'ליים',        price: 50),
+  CardSkin(id: 'nature_waves',   name: 'כחול ים',     price: 50),
+  CardSkin(id: 'nature_anemone', name: 'אדום כלנית',  price: 50),
 
-  // ── 100 — פסיפס ─────────────────────────────────────────────────────────────
-  CardSkin(id: 'mosaic_arabesque', name: 'ערבסק',   price: 100),
-  CardSkin(id: 'mosaic_tiles',     name: 'פסיפס',   price: 100),
-  CardSkin(id: 'mosaic_star',      name: 'כוכב מזרחי', price: 100),
+  // ── בסיסי · 100 ──────────────────────────────────────────────────────────────
+  CardSkin(id: 'mosaic_arabesque', name: 'אמטיסט', price: 100),
+  CardSkin(id: 'mosaic_tiles',     name: 'אקווה',  price: 100),
+  CardSkin(id: 'mosaic_star',      name: 'ענבר',   price: 100),
 
-  // ── 200 — ניאון (נדיר — נצנוץ עדין) ──────────────────────────────────────────
-  CardSkin(id: 'neon_grid',  name: 'רשת ניאון', price: 200),
-  CardSkin(id: 'neon_wave',  name: 'גל ניאון',  price: 200),
-  CardSkin(id: 'neon_cyber', name: 'סייבר',     price: 200),
+  // ── נדיר · 200 (נצנוץ עדין) ───────────────────────────────────────────────────
+  CardSkin(id: 'neon_grid',  name: 'ורוד ניאון',  price: 200),
+  CardSkin(id: 'neon_wave',  name: 'תכלת ניאון',  price: 200),
+  CardSkin(id: 'neon_cyber', name: 'אינדיגו',      price: 200),
 
-  // ── 500 — קוסמי (נדיר — נצנוץ עדין) ──────────────────────────────────────────
-  CardSkin(id: 'cosmic_galaxy',  name: 'סופרנובה',    price: 500),
-  CardSkin(id: 'cosmic_aurora',  name: 'שמי הצפון',   price: 500),
-  CardSkin(id: 'cosmic_fireice', name: 'אש וקרח',     price: 500),
+  // ── נדיר · 500 (נצנוץ עדין) ───────────────────────────────────────────────────
+  CardSkin(id: 'cosmic_galaxy',  name: 'חלל עמוק',    price: 500),
+  CardSkin(id: 'cosmic_aurora',  name: 'זוהר צפוני',  price: 500),
+  CardSkin(id: 'cosmic_fireice', name: 'כתום להבה',   price: 500),
 
-  // ── 1000 — פרימיום (זהב + ברק) ───────────────────────────────────────────────
+  // ── פרימיום · 1000 (זהב + מגן דוד + ברק מונפש) ───────────────────────────────
   CardSkin(id: 'royal_magen', name: 'מגן דוד מלכותי', price: 1000),
 ];

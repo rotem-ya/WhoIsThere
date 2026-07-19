@@ -87,25 +87,17 @@ class CosmeticsCatalogService {
         kBoardSkins, data['boardSkins'], _parseBoardSkin, (x) => x.id);
     liveAvatarChoices = _merge<AvatarChoice>(
         kAvatarChoices, data['avatars'], _parseAvatar, (x) => x.id);
-    // Built-in board skins render from code (BoardSkinBackground colorways).
-    // Admin overrides for a bundled id may adjust name/price only — never an
-    // image and never hiding them: strip imageUrl/assetPath and force active so
-    // an admin edit can't clobber or hide the built-in set. NEW admin ids are
-    // untouched, so they are ADDED to the store (as images), never replacing.
+    // Built-in board skins are code-authoritative: name, price, swatch and the
+    // BoardSkinBackground colorway all come from kBoardSkins, so an admin doc
+    // can NEVER rename / reprice / re-image / hide a built-in id. NEW admin ids
+    // are appended as extra cloud skins — added alongside, never replacing.
     final bundledBoardIds = {for (final b in kBoardSkins) b.id};
-    if (liveBoardSkins != null) {
-      liveBoardSkins = [
+    liveBoardSkins = [
+      ...kBoardSkins,
+      if (liveBoardSkins != null)
         for (final s in liveBoardSkins!)
-          bundledBoardIds.contains(s.id)
-              ? BoardSkin(
-                  id: s.id,
-                  name: s.name,
-                  price: s.price,
-                  colors: s.colors,
-                  active: true)
-              : s,
-      ];
-    }
+          if (!bundledBoardIds.contains(s.id)) s,
+    ];
     revision.value++;
 
     if (persist) {

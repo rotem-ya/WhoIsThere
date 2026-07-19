@@ -21,35 +21,20 @@ final firestoreSkinsProvider = StreamProvider<List<CardSkin>>((ref) {
       .snapshots()
       .map((snap) {
     if (snap.docs.isEmpty) return kAvailableCardSkins;
-    // Keep ALL skins in the list, including ones the admin set active:false.
-    // The store screen filters inactive out of the BUY grid, but the game must
-    // still resolve an inactive skin so a player who already owns it keeps it.
-    final overrides = <String, CardSkin>{};
+    // Built-in skins are code-authoritative: name, price, and the Candy jelly
+    // rendering all come from kAvailableCardSkins, so an admin doc can NEVER
+    // rename / reprice / re-image / hide a built-in id (that was causing
+    // name-vs-art mismatches). Admin docs with a NEW id are appended as extra
+    // cloud skins — added alongside the built-ins, never replacing them.
+    final bundledIds = {for (final b in kAvailableCardSkins) b.id};
+    final extras = <CardSkin>[];
     for (final doc in snap.docs) {
-      overrides[doc.id] = CardSkin.fromFirestore(doc.id, doc.data());
+      if (bundledIds.contains(doc.id)) continue; // ignore overrides of built-ins
+      extras.add(CardSkin.fromFirestore(doc.id, doc.data()));
     }
-    return <CardSkin>[
-      for (final b in kAvailableCardSkins) _mergeSkin(overrides.remove(b.id), b),
-      ...overrides.values,
-    ];
+    return <CardSkin>[...kAvailableCardSkins, ...extras];
   });
 });
-
-/// Merge a live Firestore skin over its bundled counterpart. Built-in covers
-/// render from CODE (VaultCover's Candy jelly, keyed by id), so an admin doc for
-/// a bundled id may adjust name/price only — never a cover image and never
-/// hiding it: we drop coverImageUrl/previewImageUrl and force active. Brand-new
-/// admin ids (not bundled) are appended untouched, so admin skins are ADDED as
-/// images alongside the built-ins, never replacing them.
-CardSkin _mergeSkin(CardSkin? override, CardSkin bundled) {
-  if (override == null) return bundled;
-  return CardSkin(
-    id: bundled.id,
-    name: override.name,
-    price: override.price,
-    active: true,
-  );
-}
 
 /// Merged skin list: Firestore skins when available, otherwise hardcoded fallback.
 final allSkinsProvider = Provider<List<CardSkin>>((ref) {

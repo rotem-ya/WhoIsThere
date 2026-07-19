@@ -2245,6 +2245,33 @@ class _SkinPreviewPainter extends CustomPainter {
       }
     }
 
+    // Star of David emblem for the royal magen cover (justifies its name).
+    if (id == 'royal_magen') {
+      final cx = size.width / 2, cy = size.height / 2;
+      final rad = size.width * 0.26;
+      final gold = Paint()
+        ..color = Colors.white.withOpacity(0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(1.2, size.width * 0.02)
+        ..strokeJoin = StrokeJoin.round;
+      Path tri(double rot) {
+        final p = Path();
+        for (var k = 0; k < 3; k++) {
+          final a = rot + k * 2 * math.pi / 3;
+          final o = Offset(cx + rad * math.cos(a), cy + rad * math.sin(a));
+          if (k == 0) {
+            p.moveTo(o.dx, o.dy);
+          } else {
+            p.lineTo(o.dx, o.dy);
+          }
+        }
+        return p..close();
+      }
+
+      canvas.drawPath(tri(-math.pi / 2), gold);
+      canvas.drawPath(tri(math.pi / 2), gold);
+    }
+
     // Rim — gold and slightly thicker for premium, else a thin bright rim.
     _tierBorder(
       canvas,
