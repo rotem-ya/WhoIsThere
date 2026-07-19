@@ -3,9 +3,88 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../../models/card_skin.dart';
+
+/// One app-wide clock (single Ticker) that drives the animated shimmer on every
+/// premium card cover, so N tiles cost ONE ticker instead of N controllers.
+/// Loops 0..1 every 4.2s; premium covers listen and repaint from it.
+class _PremiumClock {
+  _PremiumClock._();
+  static final ValueNotifier<double> phase = ValueNotifier<double>(0);
+  static Ticker? _ticker;
+  static void ensureRunning() {
+    if (_ticker != null) return;
+    _ticker = Ticker((elapsed) {
+      phase.value = (elapsed.inMilliseconds % 4200) / 4200.0;
+    })..start();
+  }
+}
+
+/// True when a card skin id belongs to the premium (1000-coin) tier — these get
+/// the animated gold shimmer.
+bool _isPremiumCover(String id) {
+  for (final s in kAvailableCardSkins) {
+    if (s.id == id) return s.price >= 1000;
+  }
+  return false;
+}
+
+/// Animated gold gleam + twinkle drawn OVER the static premium jelly cover.
+/// [t] is the shared clock phase (0..1). Kept cheap: one moving band + a few
+/// pulsing gold sparkles.
+class _PremiumCoverShimmer extends CustomPainter {
+  final double t;
+  final String seedId;
+  _PremiumCoverShimmer(this.t, this.seedId);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Moving diagonal gold gleam.
+    final sweep = t * 1.6 - 0.3; // -0.3..1.3
+    final cx = size.width * sweep;
+    final bandW = size.width * 0.28;
+    final rect = Rect.fromLTWH(cx - bandW, -size.height * 0.2,
+        bandW * 2, size.height * 1.4);
+    canvas.save();
+    canvas.translate(size.width * 0.1, 0);
+    canvas.rotate(-0.32);
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [
+            const Color(0x00FFE9A8),
+            const Color(0x66FFE9A8),
+            const Color(0x00FFE9A8),
+          ],
+        ).createShader(rect)
+        ..blendMode = BlendMode.plus,
+    );
+    canvas.restore();
+
+    // A few twinkling gold sparkles.
+    final rnd = math.Random(seedId.hashCode ^ 0x9E3);
+    for (var i = 0; i < 4; i++) {
+      final o = Offset(size.width * (0.2 + rnd.nextDouble() * 0.6),
+          size.height * (0.15 + rnd.nextDouble() * 0.6));
+      final ph = rnd.nextDouble();
+      final tw = 0.5 + 0.5 * math.sin((t + ph) * math.pi * 2);
+      final r = size.width * 0.06 * (0.6 + 0.4 * tw);
+      final p = Paint()
+        ..color = const Color(0xFFFFE9A8).withOpacity((0.2 + 0.7 * tw).clamp(0.0, 1.0))
+        ..strokeWidth = math.max(0.8, r * 0.22)
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(Offset(o.dx, o.dy - r), Offset(o.dx, o.dy + r), p);
+      canvas.drawLine(Offset(o.dx - r, o.dy), Offset(o.dx + r, o.dy), p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PremiumCoverShimmer old) => old.t != t;
+}
 
 Future<ui.Image> _decodeUiImage(Uint8List bytes) {
   final completer = Completer<ui.Image>();
@@ -161,7 +240,7 @@ class _VaultCoverState extends State<VaultCover>
                       ? CustomPaint(
                           painter: _ImageFillPainter(_skinImage!,
                               index: widget.index, gridSize: widget.gridSize))
-                      : CustomPaint(painter: _SkinPreviewPainter(widget.cardSkinId)),
+                      : _CoverArt(cardSkinId: widget.cardSkinId),
                 );
               }
               // Animating: show iris opening
@@ -2025,9 +2104,35 @@ class _CardSkinPreviewState extends State<CardSkinPreview> {
       );
     }
     return RepaintBoundary(
-      child: CustomPaint(
-        painter: _SkinPreviewPainter(widget.cardSkinId),
-      ),
+      child: _CoverArt(cardSkinId: widget.cardSkinId),
+    );
+  }
+}
+
+/// The static jelly cover, plus an animated gold shimmer overlay for premium
+/// (1000-coin) skins. Non-premium skins render just the static painter.
+class _CoverArt extends StatelessWidget {
+  final String cardSkinId;
+  const _CoverArt({required this.cardSkinId});
+
+  @override
+  Widget build(BuildContext context) {
+    final base = CustomPaint(painter: _SkinPreviewPainter(cardSkinId));
+    if (!_isPremiumCover(cardSkinId)) return base;
+    _PremiumClock.ensureRunning();
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        base,
+        IgnorePointer(
+          child: AnimatedBuilder(
+            animation: _PremiumClock.phase,
+            builder: (_, __) => CustomPaint(
+              painter: _PremiumCoverShimmer(_PremiumClock.phase.value, cardSkinId),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
