@@ -15,11 +15,15 @@
 - ⚠️ **הפעלת בילדים דורשת אדם** (ל-cowork/agent אין הרשאת Actions/tag) — לבצע דרך רותם.
 
 ## 1. בילד אנדרואיד (AAB) → Google Play
-1. הפעל את workflow **Build AAB** (Actions → Build AAB → Run) עם `build_name=1.4.0`,
-   או דחוף תג `aab-v*`. הבילד חתום ב-EA:3B (דורש שה-4 secrets מוגדרים — ראה CLAUDE.md).
-2. Play Console → האפליקציה → **Production** (או Testing אם רוצים גל הדרגתי) →
-   **Create new release** → העלה את ה-AAB.
-3. **Release notes (עברית):** ראה נוסח למטה. שמור.
+**ה-AAB כבר נבנה ומסופק** (רותם מעביר את הקובץ `whoisthere-1.4.0.aab`):
+versionName **1.4.0**, versionCode **100**, חתום במפתח ההעלאה **EA:3B** (מאומת).
+אין צורך לבנות מחדש — פשוט להעלות:
+1. Play Console → האפליקציה → **Production** (או Testing אם רוצים גל הדרגתי) →
+   **Create new release** → העלה את `whoisthere-1.4.0.aab`.
+2. **Release notes (עברית):** ראה נוסח למטה. שמור והגש לבדיקה.
+
+(גיבוי אם צריך בילד חדש: workflow **Build AAB** ב-Actions עם `build_name=1.4.0`,
+versionCode חייב להיות גבוה מ-100.)
 
 ## 2. בילד iOS → TestFlight → App Store
 1. דחוף תג **`ios-v*`** מענף ההשקה → Codemagic בונה IPA ומעלה ל-TestFlight אוטומטית.
