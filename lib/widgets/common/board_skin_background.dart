@@ -11,8 +11,7 @@ class _CW {
   final List<Color> grad;
   final Color glowA;
   final Color? glowB;
-  final bool stars;
-  const _CW(this.grad, this.glowA, {this.glowB, this.stars = false});
+  const _CW(this.grad, this.glowA, {this.glowB});
 }
 
 const Map<String, _CW> _boardColorways = {
@@ -29,15 +28,15 @@ const Map<String, _CW> _boardColorways = {
   'ember': _CW([Color(0xFFFF8A3A), Color(0xFFB0402A), Color(0xFF3A0E08)],
       Color(0xFFFFB03A), glowB: Color(0xFFFF6EA6)),
   'aurora': _CW([Color(0xFF12B5A6), Color(0xFF1F5AB0), Color(0xFF0E1F4A)],
-      Color(0xFF3FE0C0), glowB: Color(0xFF6E8CFF), stars: true),
+      Color(0xFF3FE0C0), glowB: Color(0xFF6E8CFF)),
   'sunset': _CW([Color(0xFFFF6EA6), Color(0xFFE0673D), Color(0xFF3A0E28)],
       Color(0xFFFFB03A)),
   'galaxy': _CW([Color(0xFF6A4AD1), Color(0xFF2E2A8A), Color(0xFF120A33)],
-      Color(0xFF8C5AE0), glowB: Color(0xFF3E7BE0), stars: true),
+      Color(0xFF8C5AE0), glowB: Color(0xFF3E7BE0)),
   'royal_gold': _CW([Color(0xFFFFD84D), Color(0xFFB08020), Color(0xFF3A2A05)],
       Color(0xFFFFE98A)),
   'nebula': _CW([Color(0xFFC04AD1), Color(0xFF5A2A8A), Color(0xFF1A0A33)],
-      Color(0xFFFF6EA6), glowB: Color(0xFF6E8CFF), stars: true),
+      Color(0xFFFF6EA6), glowB: Color(0xFF6E8CFF)),
   'emerald_dream': _CW([Color(0xFF2FD6A0), Color(0xFF0B8A5A), Color(0xFF04231A)],
       Color(0xFF3FE0A0)),
 };
@@ -147,15 +146,26 @@ class BoardSkinBackground extends StatelessWidget {
     // below, so they are ADDED alongside the built-ins, never replacing them.
     final builtIn = _boardColorways[id];
     if (builtIn != null) {
+      // Quality escalates with price tier so pricier skins look clearly richer:
+      //   basic  → clean gradient + glow
+      //   rare   → + a static starfield sparkle
+      //   premium→ + animated twinkling sparkles and a slow shimmer sweep
+      final tier = boardSkinFor(id).tier;
+      final isRare = tier == BoardSkinTier.rare;
+      final isPremium = tier == BoardSkinTier.premium;
       return [
         _base(builtIn.grad,
             begin: Alignment.topLeft, end: Alignment.bottomRight),
         _glow(builtIn.glowA, const Alignment(-0.45, -0.85), 1.0, 0.30),
         if (builtIn.glowB != null)
           _glow(builtIn.glowB!, const Alignment(0.55, 0.9), 0.9, 0.22),
-        if (builtIn.stars)
-          _stars(color: Colors.white, count: 70, seed: 7, maxRadius: 1.3),
-        _vignette(0.24),
+        if (isRare)
+          _stars(color: Colors.white, count: 55, seed: 7, maxRadius: 1.1),
+        if (isPremium) ...[
+          _stars(color: Colors.white, count: 40, seed: 7, maxRadius: 1.0),
+          const _PremiumSparkleLayer(),
+        ],
+        _vignette(isPremium ? 0.20 : 0.26),
       ];
     }
     final live = boardSkinFor(id);
@@ -307,6 +317,115 @@ class BoardSkinBackground extends StatelessWidget {
         ];
     }
   }
+}
+
+/// Premium-only animated layer: twinkling 4-point sparkles plus a slow diagonal
+/// shimmer sweep. Reserved for 1000-coin skins so they read as clearly superior.
+class _PremiumSparkleLayer extends StatefulWidget {
+  const _PremiumSparkleLayer();
+
+  @override
+  State<_PremiumSparkleLayer> createState() => _PremiumSparkleLayerState();
+}
+
+class _PremiumSparkleLayerState extends State<_PremiumSparkleLayer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 4200))
+      ..repeat();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: RepaintBoundary(
+          child: AnimatedBuilder(
+            animation: _c,
+            builder: (_, __) =>
+                CustomPaint(painter: _PremiumSparklePainter(_c.value)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PremiumSparklePainter extends CustomPainter {
+  final double t; // 0..1 loop
+  _PremiumSparklePainter(this.t);
+
+  static const _count = 16;
+
+  void _star(Canvas c, Offset o, double r, double opacity, Color color) {
+    if (opacity <= 0.01) return;
+    final paint = Paint()
+      ..color = color.withOpacity(opacity.clamp(0.0, 1.0))
+      ..strokeWidth = math.max(0.8, r * 0.22)
+      ..strokeCap = StrokeCap.round;
+    // 4-point sparkle: vertical + horizontal spokes.
+    c.drawLine(Offset(o.dx, o.dy - r), Offset(o.dx, o.dy + r), paint);
+    c.drawLine(Offset(o.dx - r, o.dy), Offset(o.dx + r, o.dy), paint);
+    // Soft core.
+    c.drawCircle(o, r * 0.30,
+        Paint()..color = color.withOpacity((opacity * 0.9).clamp(0.0, 1.0)));
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rnd = math.Random(99);
+    const gold = Color(0xFFFFE9A8);
+    for (var i = 0; i < _count; i++) {
+      final dx = rnd.nextDouble() * size.width;
+      final dy = rnd.nextDouble() * size.height;
+      final phase = rnd.nextDouble();
+      final baseR = 3.0 + rnd.nextDouble() * 4.0;
+      // Twinkle: each sparkle pulses on its own phase.
+      final tw = 0.5 + 0.5 * math.sin((t + phase) * math.pi * 2);
+      final r = baseR * (0.6 + 0.4 * tw);
+      final color = i.isEven ? gold : Colors.white;
+      _star(canvas, Offset(dx, dy), r, 0.15 + 0.75 * tw, color);
+    }
+
+    // Slow diagonal shimmer sweep across the board.
+    final sweep = (t * 1.6 - 0.3); // -0.3..1.3
+    final cx = size.width * sweep;
+    final bandW = size.width * 0.22;
+    final rect = Rect.fromLTWH(cx - bandW, 0, bandW * 2, size.height);
+    if (rect.right > 0 && rect.left < size.width) {
+      canvas.save();
+      canvas.translate(size.width * 0.12, 0);
+      canvas.drawRect(
+        rect,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              Colors.white.withOpacity(0),
+              Colors.white.withOpacity(0.10),
+              Colors.white.withOpacity(0),
+            ],
+          ).createShader(rect)
+          ..blendMode = BlendMode.plus,
+      );
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PremiumSparklePainter old) => old.t != t;
 }
 
 /// Scatters small static "stars" deterministically (seeded) across the canvas.

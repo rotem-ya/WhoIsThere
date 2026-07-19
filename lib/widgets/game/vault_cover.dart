@@ -2099,9 +2099,19 @@ class _SkinPreviewPainter extends CustomPainter {
         ).createShader(shadeRect),
     );
 
-    // Diagonal light streak — a subtle premium gleam.
+    // Quality escalates with price tier: rare skins add a soft sparkle, premium
+    // skins add a bright gold gleam + gold sparkles + a gold rim, so pricier
+    // covers read as clearly superior.
+    final price = kAvailableCardSkins
+        .firstWhere((s) => s.id == id,
+            orElse: () => const CardSkin(id: '', name: '', price: 0))
+        .price;
+    final isRare = price >= 200 && price < 1000;
+    final isPremium = price >= 1000;
+
+    // Diagonal light streak — stronger for premium (a real gleam).
     final streak = Paint()
-      ..color = Colors.white.withOpacity(0.06)
+      ..color = Colors.white.withOpacity(isPremium ? 0.16 : 0.06)
       ..style = PaintingStyle.fill;
     final sp = Path()
       ..moveTo(size.width * 0.05, size.height)
@@ -2111,8 +2121,32 @@ class _SkinPreviewPainter extends CustomPainter {
       ..close();
     canvas.drawPath(sp, streak);
 
-    // Thin bright rim.
-    _tierBorder(canvas, rect, Colors.white.withOpacity(0.22), width: 1.4);
+    // Sparkles (static): a few for rare, a gold cluster for premium.
+    if (isRare || isPremium) {
+      final rnd = math.Random(id.hashCode);
+      final n = isPremium ? 7 : 3;
+      final spColor = isPremium ? const Color(0xFFFFE9A8) : Colors.white;
+      for (var i = 0; i < n; i++) {
+        final o = Offset(size.width * (0.15 + rnd.nextDouble() * 0.7),
+            size.height * (0.12 + rnd.nextDouble() * 0.6));
+        final r = size.width * (isPremium ? 0.07 : 0.05) * (0.7 + rnd.nextDouble() * 0.6);
+        final p = Paint()
+          ..color = spColor.withOpacity(isPremium ? 0.85 : 0.55)
+          ..strokeWidth = math.max(0.8, r * 0.22)
+          ..strokeCap = StrokeCap.round;
+        canvas.drawLine(Offset(o.dx, o.dy - r), Offset(o.dx, o.dy + r), p);
+        canvas.drawLine(Offset(o.dx - r, o.dy), Offset(o.dx + r, o.dy), p);
+        canvas.drawCircle(o, r * 0.28, Paint()..color = spColor.withOpacity(isPremium ? 0.9 : 0.6));
+      }
+    }
+
+    // Rim — gold and slightly thicker for premium, else a thin bright rim.
+    _tierBorder(
+      canvas,
+      rect,
+      isPremium ? const Color(0xFFFFD84D).withOpacity(0.75) : Colors.white.withOpacity(0.22),
+      width: isPremium ? 2.0 : 1.4,
+    );
   }
 
   @override
