@@ -38,10 +38,21 @@ bool _isPremiumCover(String id) {
 class _PremiumCoverShimmer extends CustomPainter {
   final double t;
   final String seedId;
-  _PremiumCoverShimmer(this.t, this.seedId);
+  final int index;
+  final int gridSize;
+  _PremiumCoverShimmer(this.t, this.seedId, {this.index = 0, this.gridSize = 1});
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(Canvas tileCanvas, Size tileSize) {
+    // Draw the gleam over the WHOLE board and clip to this tile, so one gold
+    // band sweeps across the assembled image (not a separate sweep per tile).
+    final g = gridSize < 1 ? 1 : gridSize;
+    final size = Size(tileSize.width * g, tileSize.height * g);
+    final row = index ~/ g, col = index % g;
+    tileCanvas.save();
+    tileCanvas.clipRect(Offset.zero & tileSize);
+    tileCanvas.translate(-col * tileSize.width, -row * tileSize.height);
+    final canvas = tileCanvas;
     // Moving diagonal gold gleam.
     final sweep = t * 1.6 - 0.3; // -0.3..1.3
     final cx = size.width * sweep;
@@ -80,10 +91,12 @@ class _PremiumCoverShimmer extends CustomPainter {
       canvas.drawLine(Offset(o.dx, o.dy - r), Offset(o.dx, o.dy + r), p);
       canvas.drawLine(Offset(o.dx - r, o.dy), Offset(o.dx + r, o.dy), p);
     }
+    tileCanvas.restore();
   }
 
   @override
-  bool shouldRepaint(covariant _PremiumCoverShimmer old) => old.t != t;
+  bool shouldRepaint(covariant _PremiumCoverShimmer old) =>
+      old.t != t || old.index != index || old.gridSize != gridSize;
 }
 
 Future<ui.Image> _decodeUiImage(Uint8List bytes) {
@@ -240,7 +253,10 @@ class _VaultCoverState extends State<VaultCover>
                       ? CustomPaint(
                           painter: _ImageFillPainter(_skinImage!,
                               index: widget.index, gridSize: widget.gridSize))
-                      : _CoverArt(cardSkinId: widget.cardSkinId),
+                      : _CoverArt(
+                          cardSkinId: widget.cardSkinId,
+                          index: widget.index,
+                          gridSize: widget.gridSize),
                 );
               }
               // Animating: show iris opening
@@ -2113,11 +2129,16 @@ class _CardSkinPreviewState extends State<CardSkinPreview> {
 /// (1000-coin) skins. Non-premium skins render just the static painter.
 class _CoverArt extends StatelessWidget {
   final String cardSkinId;
-  const _CoverArt({required this.cardSkinId});
+  final int index;
+  final int gridSize;
+  const _CoverArt(
+      {required this.cardSkinId, this.index = 0, this.gridSize = 1});
 
   @override
   Widget build(BuildContext context) {
-    final base = CustomPaint(painter: _SkinPreviewPainter(cardSkinId));
+    final base = CustomPaint(
+        painter:
+            _SkinPreviewPainter(cardSkinId, index: index, gridSize: gridSize));
     if (!_isPremiumCover(cardSkinId)) return base;
     _PremiumClock.ensureRunning();
     return Stack(
@@ -2128,7 +2149,8 @@ class _CoverArt extends StatelessWidget {
           child: AnimatedBuilder(
             animation: _PremiumClock.phase,
             builder: (_, __) => CustomPaint(
-              painter: _PremiumCoverShimmer(_PremiumClock.phase.value, cardSkinId),
+              painter: _PremiumCoverShimmer(_PremiumClock.phase.value,
+                  cardSkinId, index: index, gridSize: gridSize),
             ),
           ),
         ),
@@ -2142,7 +2164,13 @@ class _CoverArt extends StatelessWidget {
 
 class _SkinPreviewPainter extends CustomPainter {
   final String id;
-  _SkinPreviewPainter(this.id);
+  // The cover is ONE board-wide composition; each tile paints its own slice so
+  // the closed board assembles into a single image (one gradient, one emblem,
+  // sparkles spread across the whole board) — not a repeated design per tile.
+  // gridSize=1 (store preview) draws the whole design in one square.
+  final int index;
+  final int gridSize;
+  _SkinPreviewPainter(this.id, {this.index = 0, this.gridSize = 1});
 
   void _bg(Canvas c, Rect r, List<Color> colors,
       {Alignment b = Alignment.topLeft, Alignment e = Alignment.bottomRight}) {
@@ -2162,15 +2190,21 @@ class _SkinPreviewPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final center = Offset(size.width / 2, size.height / 2);
-    _paintSkin(canvas, size, rect, center);
+    final g = gridSize < 1 ? 1 : gridSize;
+    final full = Size(size.width * g, size.height * g);
+    final row = index ~/ g, col = index % g;
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
+    // Shift so this tile shows its cell of the full-board composition.
+    canvas.translate(-col * size.width, -row * size.height);
+    _paintSkin(
+        canvas, full, Offset.zero & full, Offset(full.width / 2, full.height / 2));
+    canvas.restore();
   }
 
   void _paintSkin(Canvas canvas, Size size, Rect rect, Offset center) {
-    // Clean, glossy Candy jelly cover — one coherent look for every skin, in a
-    // distinct colorway per id. Reads premium in the store preview and as a
-    // tiled board in-game (each tile draws its own self-contained jelly).
+    // Clean, glossy Candy jelly cover — ONE board-wide composition ([size] is
+    // the whole board when in-game; each tile clips to its own cell above).
     final cw = _kJellyCover[id] ?? const [Color(0xFF7B3FD1), Color(0xFF3A1B6E)];
     final light = cw[0], dark = cw[1];
 
@@ -2282,5 +2316,6 @@ class _SkinPreviewPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SkinPreviewPainter o) => o.id != id;
+  bool shouldRepaint(covariant _SkinPreviewPainter o) =>
+      o.id != id || o.index != index || o.gridSize != gridSize;
 }
