@@ -225,9 +225,13 @@ class BoardSkinBackground extends StatelessWidget {
           _vignette(),
         ];
       case 'none':
-        // App-default deep navy board.
+        // App-default — the Candy grape ground with soft pink + teal glows,
+        // matching the rest of the app so the default board looks designed.
         return [
-          _base(const [Color(0xFF0A1A2E), Color(0xFF04091A)]),
+          _base(const [Color(0xFF5B2AA6), Color(0xFF3A1B6E), Color(0xFF22103F)]),
+          _glow(const Color(0xFFFF6EA6), const Alignment(-0.5, -0.9), 0.9, 0.16),
+          _glow(const Color(0xFF12B5A6), const Alignment(0.6, 0.9), 0.9, 0.14),
+          _vignette(0.30),
         ];
       default:
         // Admin-created skins (live catalog) without an image: a generic

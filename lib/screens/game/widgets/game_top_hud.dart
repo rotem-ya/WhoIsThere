@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/game_constants.dart';
 import '../../../core/constants/player_rank.dart';
+import '../../../core/theme/candy_theme.dart';
 import '../../../models/player_model.dart';
 import '../../../providers/providers.dart';
 import '../../../services/reward_calculator.dart';
@@ -81,7 +82,7 @@ class TopHud extends StatelessWidget {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+        padding: const EdgeInsets.fromLTRB(12, 5, 12, 3),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -102,24 +103,24 @@ class TopHud extends StatelessWidget {
                 _SmallBackButton(onTap: onBack),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             if (players.isNotEmpty)
               AnimatedContainer(
                 duration: const Duration(milliseconds: 400),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF081E3A).withOpacity(0.90),
+                  color: Candy.surfaceLow.withOpacity(0.82),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isEndgame
                         ? const Color(0xFFFF9F43).withOpacity(0.55)
-                        : const Color(0xFF1890D0).withOpacity(0.50),
+                        : Candy.teal.withOpacity(0.45),
                     width: 1.0,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF0040A0).withOpacity(0.30),
-                      blurRadius: 20,
+                      color: Candy.bevel(Candy.grape).withOpacity(0.35),
+                      blurRadius: 18,
                       offset: const Offset(0, 4),
                     ),
                   ],
@@ -159,10 +160,10 @@ class _SmallBackButton extends StatelessWidget {
         width: 30,
         height: 30,
         decoration: BoxDecoration(
-          color: const Color(0xFF0D1E30).withOpacity(0.75),
+          color: Candy.surfaceLow.withOpacity(0.75),
           shape: BoxShape.circle,
           border: Border.all(
-            color: const Color(0xFF2A5070).withOpacity(0.45),
+            color: Candy.teal.withOpacity(0.45),
             width: 0.8,
           ),
         ),

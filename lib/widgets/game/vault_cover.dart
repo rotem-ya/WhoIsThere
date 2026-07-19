@@ -261,6 +261,31 @@ class _ImageFillPainter extends CustomPainter {
 
 // ── Improved iris painter ──────────────────────────────────────────────────────
 
+/// The baked-image card catalog (kAvailableCardSkins) uses ids that no longer
+/// have their own procedural art. Map each onto one of the rich, code-drawn
+/// styles that DO exist, so dropping the low-quality baked photos still yields a
+/// distinct, designed cover per skin (and the free default reads as Candy).
+const Map<String, String> _kSkinStyleAlias = {
+  'default': 'royal_throne', // free default → clean royal purple (Candy)
+  'minimal_lines': 'urban_concrete',
+  'minimal_calm': 'quiet_night',
+  'nature_leaves': 'valley_green',
+  'nature_waves': 'mediterranean_blue',
+  'nature_anemone': 'anemone_red',
+  'mosaic_arabesque': 'oriental_arabesque',
+  'mosaic_tiles': 'kotel_stones',
+  'mosaic_star': 'jerusalem_of_gold',
+  'neon_grid': 'jerusalem_neon',
+  'neon_wave': 'blue_fire',
+  'neon_cyber': 'cyber_future_israel',
+  'cosmic_galaxy': 'space_cluster',
+  'cosmic_aurora': 'meteor_shower',
+  'cosmic_fireice': 'lava_core',
+  'royal_magen': 'royal_sapphire',
+};
+
+String _canonicalSkinId(String id) => _kSkinStyleAlias[id] ?? id;
+
 class _AperturePainter extends CustomPainter {
   final double progress;
   final String cardSkinId;
@@ -279,7 +304,8 @@ class _AperturePainter extends CustomPainter {
   });
 
   // ── Per-skin colour scheme ─────────────────────────────────────────────────
-  static _SkinPalette _palette(String id) {
+  static _SkinPalette _palette(String rawId) {
+    final id = _canonicalSkinId(rawId);
     switch (id) {
       case 'classic':
         return const _SkinPalette(
@@ -784,7 +810,8 @@ class _AperturePainter extends CustomPainter {
 
   static void _drawPattern(
       Canvas canvas, Size size, Rect rect, Offset center,
-      _SkinPalette pal, String skinId) {
+      _SkinPalette pal, String rawSkinId) {
+    final skinId = _canonicalSkinId(rawSkinId);
     final rngA = math.Random(1337);
     final linePaint = Paint()
       ..style = PaintingStyle.stroke
@@ -1988,7 +2015,7 @@ class _CardSkinPreviewState extends State<CardSkinPreview> {
 
 class _SkinPreviewPainter extends CustomPainter {
   final String id;
-  _SkinPreviewPainter(this.id);
+  _SkinPreviewPainter(String rawId) : id = _canonicalSkinId(rawId);
 
   static final _rng = math.Random(42);
 
