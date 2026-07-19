@@ -4,6 +4,44 @@ import 'package:flutter/material.dart';
 
 import '../../models/board_skin.dart';
 
+/// A bright Candy colorway for a board skin: a glossy 3-stop gradient plus one
+/// or two soft accent glows (and optional starfield). Clean and coherent with
+/// the app's Candy line — no muddy dark photos.
+class _CW {
+  final List<Color> grad;
+  final Color glowA;
+  final Color? glowB;
+  final bool stars;
+  const _CW(this.grad, this.glowA, {this.glowB, this.stars = false});
+}
+
+const Map<String, _CW> _boardColorways = {
+  'none': _CW([Color(0xFF6A34BE), Color(0xFF3A1B6E), Color(0xFF22103F)],
+      Color(0xFFFF6EA6), glowB: Color(0xFF12B5A6)),
+  'midnight': _CW([Color(0xFF3E5BC0), Color(0xFF22306E), Color(0xFF0E1430)],
+      Color(0xFF6E8CFF)),
+  'deep_sea': _CW([Color(0xFF12B5A6), Color(0xFF0B6E64), Color(0xFF04231F)],
+      Color(0xFF3FE0D0)),
+  'plum': _CW([Color(0xFF8A3FD1), Color(0xFF4A228A), Color(0xFF1E0E38)],
+      Color(0xFFFF6EA6)),
+  'forest': _CW([Color(0xFF5AC06A), Color(0xFF2E7A3E), Color(0xFF0E2A14)],
+      Color(0xFF8CE05A)),
+  'ember': _CW([Color(0xFFFF8A3A), Color(0xFFB0402A), Color(0xFF3A0E08)],
+      Color(0xFFFFB03A), glowB: Color(0xFFFF6EA6)),
+  'aurora': _CW([Color(0xFF12B5A6), Color(0xFF1F5AB0), Color(0xFF0E1F4A)],
+      Color(0xFF3FE0C0), glowB: Color(0xFF6E8CFF), stars: true),
+  'sunset': _CW([Color(0xFFFF6EA6), Color(0xFFE0673D), Color(0xFF3A0E28)],
+      Color(0xFFFFB03A)),
+  'galaxy': _CW([Color(0xFF6A4AD1), Color(0xFF2E2A8A), Color(0xFF120A33)],
+      Color(0xFF8C5AE0), glowB: Color(0xFF3E7BE0), stars: true),
+  'royal_gold': _CW([Color(0xFFFFD84D), Color(0xFFB08020), Color(0xFF3A2A05)],
+      Color(0xFFFFE98A)),
+  'nebula': _CW([Color(0xFFC04AD1), Color(0xFF5A2A8A), Color(0xFF1A0A33)],
+      Color(0xFFFF6EA6), glowB: Color(0xFF6E8CFF), stars: true),
+  'emerald_dream': _CW([Color(0xFF2FD6A0), Color(0xFF0B8A5A), Color(0xFF04231A)],
+      Color(0xFF3FE0A0)),
+};
+
 /// Rich, layered background for an equipped board skin. Each skin is a bespoke
 /// composition (base gradient + radial glows + light beams + starfields +
 /// vignette) rather than a flat colour swap, so every skin reads as distinct
@@ -133,6 +171,22 @@ class BoardSkinBackground extends StatelessWidget {
           ),
         ),
         _vignette(0.40),
+      ];
+    }
+    // Bright Candy colorway (clean glossy gradient + soft glows) — the new,
+    // consistent look for every bundled skin. Admin live skins (not in the map)
+    // still fall through to the legacy switch / default below.
+    final cw = _boardColorways[id];
+    if (cw != null) {
+      return [
+        _base(cw.grad,
+            begin: Alignment.topLeft, end: Alignment.bottomRight),
+        _glow(cw.glowA, const Alignment(-0.45, -0.85), 1.0, 0.30),
+        if (cw.glowB != null)
+          _glow(cw.glowB!, const Alignment(0.55, 0.9), 0.9, 0.22),
+        if (cw.stars)
+          _stars(color: Colors.white, count: 70, seed: 7, maxRadius: 1.3),
+        _vignette(0.24),
       ];
     }
     switch (id) {
