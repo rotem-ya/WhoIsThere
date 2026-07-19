@@ -35,25 +35,20 @@ final firestoreSkinsProvider = StreamProvider<List<CardSkin>>((ref) {
   });
 });
 
-/// Merge a live Firestore skin over its bundled counterpart. The live doc wins
-/// for price/name, BUT when the skin's art is BAKED into the app
-/// ([bundled.assetPath] set) that local asset ALWAYS wins for the image —
-/// rendering instantly with no cloud read. Cloud cover images therefore only
-/// apply to skins that aren't baked (e.g. brand-new admin skins). This is what
-/// makes the periodic bake fast: once shipped, baked skins never hit Storage.
+/// Merge a live Firestore skin over its bundled counterpart. Built-in covers
+/// render from CODE (VaultCover's Candy jelly, keyed by id), so an admin doc for
+/// a bundled id may adjust name/price only — never a cover image and never
+/// hiding it: we drop coverImageUrl/previewImageUrl and force active. Brand-new
+/// admin ids (not bundled) are appended untouched, so admin skins are ADDED as
+/// images alongside the built-ins, never replacing them.
 CardSkin _mergeSkin(CardSkin? override, CardSkin bundled) {
   if (override == null) return bundled;
-  if (bundled.assetPath != null) {
-    return CardSkin(
-      id: override.id,
-      name: override.name,
-      price: override.price,
-      assetPath: bundled.assetPath,
-      previewImageUrl: override.previewImageUrl,
-      active: override.active,
-    );
-  }
-  return override;
+  return CardSkin(
+    id: bundled.id,
+    name: override.name,
+    price: override.price,
+    active: true,
+  );
 }
 
 /// Merged skin list: Firestore skins when available, otherwise hardcoded fallback.

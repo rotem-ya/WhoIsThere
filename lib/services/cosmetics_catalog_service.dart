@@ -87,24 +87,22 @@ class CosmeticsCatalogService {
         kBoardSkins, data['boardSkins'], _parseBoardSkin, (x) => x.id);
     liveAvatarChoices = _merge<AvatarChoice>(
         kAvatarChoices, data['avatars'], _parseAvatar, (x) => x.id);
-    // Baked local assets always win: re-apply bundled assetPath onto any live
-    // board skin whose id is baked, so a live imageUrl can't override it.
-    final bakedBoard = {
-      for (final b in kBoardSkins)
-        if (b.assetPath != null) b.id: b.assetPath!
-    };
-    if (bakedBoard.isNotEmpty && liveBoardSkins != null) {
+    // Built-in board skins render from code (BoardSkinBackground colorways).
+    // Admin overrides for a bundled id may adjust name/price only — never an
+    // image and never hiding them: strip imageUrl/assetPath and force active so
+    // an admin edit can't clobber or hide the built-in set. NEW admin ids are
+    // untouched, so they are ADDED to the store (as images), never replacing.
+    final bundledBoardIds = {for (final b in kBoardSkins) b.id};
+    if (liveBoardSkins != null) {
       liveBoardSkins = [
         for (final s in liveBoardSkins!)
-          bakedBoard.containsKey(s.id) && s.assetPath == null
+          bundledBoardIds.contains(s.id)
               ? BoardSkin(
                   id: s.id,
                   name: s.name,
                   price: s.price,
                   colors: s.colors,
-                  imageUrl: s.imageUrl,
-                  assetPath: bakedBoard[s.id],
-                  active: s.active)
+                  active: true)
               : s,
       ];
     }

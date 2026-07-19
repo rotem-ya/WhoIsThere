@@ -141,6 +141,23 @@ class BoardSkinBackground extends StatelessWidget {
       );
 
   List<Widget> _layersFor(String id) {
+    // Built-in skins ALWAYS render from their Candy colorway — an admin image
+    // (or any live-catalog override) can never clobber a bundled id. New admin
+    // skins use NEW ids (not in this map) and fall through to the image path
+    // below, so they are ADDED alongside the built-ins, never replacing them.
+    final builtIn = _boardColorways[id];
+    if (builtIn != null) {
+      return [
+        _base(builtIn.grad,
+            begin: Alignment.topLeft, end: Alignment.bottomRight),
+        _glow(builtIn.glowA, const Alignment(-0.45, -0.85), 1.0, 0.30),
+        if (builtIn.glowB != null)
+          _glow(builtIn.glowB!, const Alignment(0.55, 0.9), 0.9, 0.22),
+        if (builtIn.stars)
+          _stars(color: Colors.white, count: 70, seed: 7, maxRadius: 1.3),
+        _vignette(0.24),
+      ];
+    }
     final live = boardSkinFor(id);
     // A BAKED local asset (release bake) always wins — instant, no cloud read.
     if (live.id == id && live.assetPath != null) {
@@ -171,22 +188,6 @@ class BoardSkinBackground extends StatelessWidget {
           ),
         ),
         _vignette(0.40),
-      ];
-    }
-    // Bright Candy colorway (clean glossy gradient + soft glows) — the new,
-    // consistent look for every bundled skin. Admin live skins (not in the map)
-    // still fall through to the legacy switch / default below.
-    final cw = _boardColorways[id];
-    if (cw != null) {
-      return [
-        _base(cw.grad,
-            begin: Alignment.topLeft, end: Alignment.bottomRight),
-        _glow(cw.glowA, const Alignment(-0.45, -0.85), 1.0, 0.30),
-        if (cw.glowB != null)
-          _glow(cw.glowB!, const Alignment(0.55, 0.9), 0.9, 0.22),
-        if (cw.stars)
-          _stars(color: Colors.white, count: 70, seed: 7, maxRadius: 1.3),
-        _vignette(0.24),
       ];
     }
     switch (id) {
