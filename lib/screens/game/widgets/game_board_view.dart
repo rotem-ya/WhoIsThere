@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -367,14 +368,18 @@ class _CountdownOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isUrgent = secondsLeft <= 2;
+    final isUrgent = secondsLeft <= 3;
     final ringColor = isUrgent ? AppColors.danger : AppColors.primary;
     final ringSize = tileSize * 0.60;
 
-    return Container(
-      color: const Color(0xF0050A14),
-      child: Center(
-        child: Stack(
+    // As time runs low the tile background flushes red, and the ring+number
+    // pulse, so the last seconds feel urgent.
+    final bg = isUrgent
+        ? Color.lerp(const Color(0xF0050A14), const Color(0xF03A0505),
+            ((4 - secondsLeft) / 3).clamp(0.0, 1.0))!
+        : const Color(0xF0050A14);
+
+    final core = Stack(
           alignment: Alignment.center,
           children: [
             SizedBox(
@@ -414,7 +419,20 @@ class _CountdownOverlay extends StatelessWidget {
               ),
             ),
           ],
-        ),
+        );
+
+    return Container(
+      color: bg,
+      child: Center(
+        child: isUrgent
+            ? core
+                .animate(onPlay: (c) => c.repeat(reverse: true))
+                .scaleXY(
+                    begin: 1.0,
+                    end: 1.16,
+                    duration: 380.ms,
+                    curve: Curves.easeInOut)
+            : core,
       ),
     );
   }

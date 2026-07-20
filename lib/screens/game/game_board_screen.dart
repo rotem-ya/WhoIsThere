@@ -6,6 +6,7 @@ import 'dart:math' show Random, min, pi, sin;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_styles.dart';
@@ -3201,13 +3202,41 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 ),
               ),
             if (_showCorrectGuess) ...[
+              // Bright radial flash burst — pops white/gold then fades, giving
+              // the correct guess an instant hit of impact behind the confetti.
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      gradient: RadialGradient(
+                        radius: 0.75,
+                        colors: [
+                          Color(0xCCFFFFFF),
+                          Color(0x66FFE9A8),
+                          Color(0x00FFE9A8),
+                        ],
+                        stops: [0.0, 0.35, 0.85],
+                      ),
+                    ),
+                  )
+                      .animate()
+                      .fadeIn(duration: 90.ms)
+                      .then()
+                      .fadeOut(duration: 460.ms, curve: Curves.easeOut)
+                      .scaleXY(
+                          begin: 0.35,
+                          end: 1.25,
+                          duration: 550.ms,
+                          curve: Curves.easeOutCubic),
+                ),
+              ),
               Align(
                 alignment: Alignment.topLeft,
                 child: ConfettiWidget(
                   confettiController: _confettiLeft,
                   blastDirection: -pi / 4,
-                  colors: const [Candy.teal, Candy.gold, Colors.white],
-                  numberOfParticles: 22,
+                  colors: const [Candy.teal, Candy.gold, Candy.pink, Colors.white],
+                  numberOfParticles: 26,
                   gravity: 0.18,
                   shouldLoop: false,
                 ),
@@ -3217,8 +3246,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 child: ConfettiWidget(
                   confettiController: _confettiRight,
                   blastDirection: -3 * pi / 4,
-                  colors: const [Candy.teal, Candy.gold, Colors.white],
-                  numberOfParticles: 22,
+                  colors: const [Candy.teal, Candy.gold, Candy.pink, Colors.white],
+                  numberOfParticles: 26,
                   gravity: 0.18,
                   shouldLoop: false,
                 ),
@@ -3238,7 +3267,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                         ),
                       ],
                     ),
-                  ),
+                  )
+                      .animate()
+                      .scaleXY(
+                          begin: 0.5,
+                          end: 1.0,
+                          duration: 520.ms,
+                          curve: Curves.elasticOut)
+                      .fadeIn(duration: 160.ms),
                 ),
               ),
             ],
