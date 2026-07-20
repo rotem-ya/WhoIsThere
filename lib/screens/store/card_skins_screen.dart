@@ -15,6 +15,7 @@ import '../../widgets/common/app_header.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_icon.dart';
 import '../../widgets/game/vault_cover.dart'; // CardSkinPreview
+import '../../widgets/store/premium_unlock.dart';
 
 final selectedSkinProvider = StreamProvider.autoDispose<String>((ref) {
   final userAsync = ref.watch(firebaseUserProvider);
@@ -175,6 +176,10 @@ class CardSkinsScreen extends ConsumerWidget {
       });
 
       if (!context.mounted) return;
+      SfxService.instance.purchase();
+      if (skin.tier == SkinTier.premium) {
+        PremiumUnlock.celebrate(context, skin.name);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${skin.name} נרכש! לחץ "הצמד" כדי להפעיל')),
       );

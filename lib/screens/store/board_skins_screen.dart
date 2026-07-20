@@ -15,6 +15,7 @@ import '../../widgets/common/app_header.dart';
 import '../../widgets/common/board_skin_background.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_icon.dart';
+import '../../widgets/store/premium_unlock.dart';
 
 /// The board background skin the current user has equipped (defaults 'none').
 final selectedBoardSkinProvider = StreamProvider.autoDispose<String>((ref) {
@@ -222,6 +223,10 @@ class BoardSkinsScreen extends ConsumerWidget {
 
       if (!context.mounted) return;
       SfxService.instance.purchase();
+      // Top-tier items get a prestige "premium unlocked" reveal (no confetti).
+      if (skin.tier == BoardSkinTier.premium) {
+        PremiumUnlock.celebrate(context, skin.name);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${skin.name} נרכש! לחץ "הצמד" כדי להפעיל')),
       );

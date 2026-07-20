@@ -17,6 +17,7 @@ import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/player_name_text.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_icon.dart';
+import '../../widgets/store/premium_unlock.dart';
 
 /// The avatar the current user has equipped (defaults to 'auto').
 final selectedAvatarProvider = StreamProvider.autoDispose<String>((ref) {
@@ -224,6 +225,9 @@ class AvatarsScreen extends ConsumerWidget {
 
       SfxService.instance.purchase();
       if (!context.mounted) return;
+      if (avatar.tier == AvatarTier.premium) {
+        PremiumUnlock.celebrate(context, avatar.name);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${avatar.name} נרכש! לחץ "הצמד" כדי להפעיל')),
       );
