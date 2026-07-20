@@ -25,6 +25,7 @@ import '../friends/widgets/groups_tab.dart';
 import '../../services/analytics_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../services/settings_service.dart';
+import '../../services/sfx_service.dart';
 import '../../services/content_manifest_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -45,6 +46,7 @@ class LobbyScreen extends ConsumerStatefulWidget {
 
 class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   bool _isStarting = false;
+  bool _launching = false;
   bool _codeCopied = false;
   bool _lobbyLogged = false;
   bool _autoInvitePrompted = false;
@@ -538,10 +540,17 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         }
 
         if (room.phase == GamePhase.playing) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) context.go('/game/${room.id}');
-          });
-          return const SizedBox.shrink();
+          // A short, punchy launch beat before the game screen. All clients
+          // flip to "playing" together, so the "מתחילים!" flash reads as a
+          // shared opening rather than a hard cut. Fires once.
+          if (!_launching) {
+            _launching = true;
+            SfxService.instance.reveal();
+            Future.delayed(const Duration(milliseconds: 1050), () {
+              if (context.mounted) context.go('/game/${room.id}');
+            });
+          }
+          return const _LaunchOverlay();
         }
 
         final isHost = currentUser?.id == room.hostId;
@@ -1035,7 +1044,11 @@ class _PlayerGrid extends StatelessWidget {
       ),
       itemBuilder: (context, index) {
         if (index < players.length) {
+          // A stable key per player preserves each tile's identity across
+          // rebuilds, so only a genuinely new joiner plays the entrance pop
+          // (existing tiles don't re-animate every time the room updates).
           return _PlayerAvatarTile(
+            key: ValueKey(players[index].id),
             player: players[index],
             isMe: players[index].id == currentUserId,
             delay: Duration(milliseconds: 120 + index * 55),
@@ -1055,6 +1068,7 @@ class _PlayerAvatarTile extends StatelessWidget {
   final Duration delay;
 
   const _PlayerAvatarTile({
+    super.key,
     required this.player,
     required this.isMe,
     this.delay = Duration.zero,
@@ -1142,8 +1156,62 @@ class _PlayerAvatarTile extends StatelessWidget {
       ],
     )
         .animate()
-        .fadeIn(delay: delay, duration: 280.ms, curve: Curves.easeOut)
-        .slideX(begin: -0.06, end: 0, delay: delay, duration: 280.ms, curve: Curves.easeOut);
+        .fadeIn(delay: delay, duration: 300.ms, curve: Curves.easeOut)
+        .scaleXY(
+            begin: 0.86,
+            end: 1.0,
+            delay: delay,
+            duration: 420.ms,
+            curve: Curves.easeOutBack)
+        .slideY(begin: 0.14, end: 0, delay: delay, duration: 320.ms, curve: Curves.easeOut);
+  }
+}
+
+// ── Launch beat: a brief "מתחילים!" flash while the game screen loads ───────
+
+class _LaunchOverlay extends StatelessWidget {
+  const _LaunchOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(gradient: Candy.bg),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🎬', style: TextStyle(fontSize: 60))
+                .animate()
+                .scaleXY(
+                    begin: 0.4,
+                    end: 1.0,
+                    duration: 420.ms,
+                    curve: Curves.easeOutBack)
+                .then()
+                .shakeX(hz: 3, amount: 2),
+            const SizedBox(height: 14),
+            const Text(
+              'מתחילים!',
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 34,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
+              ),
+            )
+                .animate()
+                .fadeIn(delay: 120.ms, duration: 260.ms)
+                .scaleXY(
+                    begin: 0.7,
+                    end: 1.0,
+                    delay: 120.ms,
+                    duration: 460.ms,
+                    curve: Curves.elasticOut),
+          ],
+        ),
+      ),
+    );
   }
 }
 
