@@ -25,17 +25,19 @@ import '../../screens/voting/vote_difficulty_screen.dart';
 import '../../screens/voting/vote_image_screen.dart';
 import '../../screens/win/win_screen.dart';
 
-/// A gentle fade-through page transition (fade + tiny upward drift) used for
-/// every route, replacing the platform-default page cut. Kept short (220ms) so
-/// navigation still feels snappy. Honors the OS "reduce motion" accessibility
-/// setting by dropping the animation entirely.
+/// A gentle fade-through page transition (fade + tiny upward drift + subtle
+/// settle-in scale) used for every route, replacing the platform-default page
+/// cut. It follows the Material "fade through" feel: the incoming screen fades
+/// and scales up from 0.98 so it reads as arriving with depth rather than a
+/// flat cross-fade. Kept short (240ms) so navigation still feels snappy. Honors
+/// the OS "reduce motion" accessibility setting by dropping the animation.
 CustomTransitionPage<void> _fadeThroughPage(
   GoRouterState state,
   Widget child,
 ) {
   return CustomTransitionPage<void>(
     key: state.pageKey,
-    transitionDuration: const Duration(milliseconds: 220),
+    transitionDuration: const Duration(milliseconds: 240),
     reverseTransitionDuration: const Duration(milliseconds: 180),
     child: child,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -49,7 +51,10 @@ CustomTransitionPage<void> _fadeThroughPage(
             begin: const Offset(0, 0.02),
             end: Offset.zero,
           ).animate(curved),
-          child: child,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.98, end: 1.0).animate(curved),
+            child: child,
+          ),
         ),
       );
     },
