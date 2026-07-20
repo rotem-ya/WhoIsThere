@@ -27,13 +27,15 @@ class CoinFly {
     required Offset from,
     int count = 12,
     bool sound = true,
+    GlobalKey? targetKey,
   }) {
     final overlay = Overlay.maybeOf(context, rootOverlay: true);
     if (overlay == null) return;
 
-    // Resolve the target from the wallet anchor; fall back near the top.
+    // Resolve the target from the given anchor (or the global wallet anchor);
+    // fall back near the top when neither is on screen.
     Offset target;
-    final anchorCtx = walletAnchorKey.currentContext;
+    final anchorCtx = (targetKey ?? walletAnchorKey).currentContext;
     final anchorBox = anchorCtx?.findRenderObject() as RenderBox?;
     if (anchorBox != null && anchorBox.hasSize) {
       target = anchorBox.localToGlobal(anchorBox.size.center(Offset.zero));

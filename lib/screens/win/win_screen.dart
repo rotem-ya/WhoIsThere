@@ -21,6 +21,7 @@ import '../../widgets/common/app_card.dart';
 import '../../widgets/common/banner_ad_widget.dart';
 import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/win_effect_overlay.dart';
+import '../../widgets/economy/coin_fly.dart';
 
 class WinScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -43,6 +44,21 @@ class _WinScreenState extends ConsumerState<WinScreen>
   // Loss-consolation rewarded ad: idle → busy → done (one per screen visit;
   // the daily applyAdReward cap still applies server-side).
   String _consolation = 'idle';
+  // Anchors so earned coins can fly from the reward box up to the balance.
+  final GlobalKey _placementKey = GlobalKey();
+  final GlobalKey _consolationKey = GlobalKey();
+
+  /// Sends a coin burst from a reward box toward the wallet counter (falls back
+  /// to the top of the screen when no wallet is on screen).
+  void _flyCoinsFrom(GlobalKey key, int coins) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = key.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.hasSize) return;
+      final from = box.localToGlobal(box.size.center(Offset.zero));
+      CoinFly.burst(context, from: from, count: (coins ~/ 3).clamp(6, 16));
+    });
+  }
 
   Future<void> _watchConsolation() async {
     if (_consolation != 'idle') return;
@@ -64,7 +80,16 @@ class _WinScreenState extends ConsumerState<WinScreen>
         return;
       }
       final granted = await ref.read(economyServiceProvider).applyAdReward(uid);
-      if (mounted) setState(() => _consolation = granted ? 'done' : 'idle');
+      if (mounted) {
+        setState(() => _consolation = granted ? 'done' : 'idle');
+        if (granted) {
+          Future.delayed(const Duration(milliseconds: 250), () {
+            if (mounted) {
+              _flyCoinsFrom(_consolationKey, EconomyConfig.adRewardCoins);
+            }
+          });
+        }
+      }
     } catch (_) {
       if (mounted) setState(() => _consolation = 'idle');
     }
@@ -114,7 +139,15 @@ class _WinScreenState extends ConsumerState<WinScreen>
       final reward = await ref
           .read(roomServiceProvider)
           .claimPlacementReward(widget.roomId, currentUser.id);
-      if (mounted) setState(() => _placementReward = reward);
+      if (mounted) {
+        setState(() => _placementReward = reward);
+        if (reward > 0) {
+          // Let the placement box finish its entrance, then rain the coins.
+          Future.delayed(const Duration(milliseconds: 780), () {
+            if (mounted) _flyCoinsFrom(_placementKey, reward);
+          });
+        }
+      }
       // Record this match for the friends leaderboard + per-game history.
       // Each client records only its own result (idempotent per player/room).
       unawaited(ref
@@ -357,7 +390,7 @@ class _WinScreenState extends ConsumerState<WinScreen>
                   // ── Friends placement coin gift (1st = 20, 2nd = 5) ────
                   if (room.isFriendsGame && (_placementReward ?? 0) > 0) ...[
                     const SizedBox(height: AppSpacing.sm),
-                    _PlacementRewardBox(coins: _placementReward!),
+                    _PlacementRewardBox(key: _placementKey, coins: _placementReward!),
                   ],
 
                   // ── Loss consolation: rewarded ad for non-winners ──────
@@ -365,6 +398,7 @@ class _WinScreenState extends ConsumerState<WinScreen>
                     const SizedBox(height: AppSpacing.sm),
                     _consolation == 'done'
                         ? Container(
+                            key: _consolationKey,
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
@@ -678,7 +712,7 @@ class _TotalRewardBox extends StatelessWidget {
 class _PlacementRewardBox extends StatelessWidget {
   final int coins;
 
-  const _PlacementRewardBox({required this.coins});
+  const _PlacementRewardBox({super.key, required this.coins});
 
   @override
   Widget build(BuildContext context) {
