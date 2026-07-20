@@ -18,6 +18,7 @@ import '../../../services/settings_service.dart';
 import '../../../services/sfx_service.dart';
 import '../../../widgets/common/app_share_badges.dart';
 import '../../../widgets/common/banner_ad_widget.dart';
+import '../../../widgets/economy/coin_fly.dart';
 import '../../../widgets/economy/coin_icon.dart';
 import 'round_gallery_view.dart';
 
@@ -837,6 +838,7 @@ class _RewardSummaryState extends State<_RewardSummary> {
   bool _showPerfect = false;
   bool _showPenalty = false;
   bool _showTotal = false;
+  final GlobalKey _totalKey = GlobalKey();
 
   @override
   void initState() {
@@ -886,6 +888,19 @@ class _RewardSummaryState extends State<_RewardSummary> {
     SfxService.instance.coinGain();
     if (SettingsService.instance.vibrationEnabled) {
       HapticFeedback.mediumImpact();
+    }
+    // A burst of coins lifts off the total toward the balance. The tally
+    // already plays its own coin sound, so the flight stays silent.
+    if (widget.breakdown.total > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final box =
+            _totalKey.currentContext?.findRenderObject() as RenderBox?;
+        if (box == null || !box.hasSize) return;
+        final from = box.localToGlobal(box.size.center(Offset.zero));
+        final count = (widget.breakdown.total ~/ 8).clamp(8, 18);
+        CoinFly.burst(context, from: from, count: count, sound: false);
+      });
     }
   }
 
@@ -950,7 +965,7 @@ class _RewardSummaryState extends State<_RewardSummary> {
                 ? Column(
                     children: [
                       const SizedBox(height: 8),
-                      _TotalRow(total: b.total),
+                      _TotalRow(key: _totalKey, total: b.total),
                     ],
                   )
                 : const SizedBox.shrink(),
@@ -1024,7 +1039,7 @@ class _RewardRow extends StatelessWidget {
 
 class _TotalRow extends StatelessWidget {
   final int total;
-  const _TotalRow({required this.total});
+  const _TotalRow({super.key, required this.total});
 
   @override
   Widget build(BuildContext context) {
