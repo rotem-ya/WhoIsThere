@@ -90,7 +90,7 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1050),
+      duration: const Duration(milliseconds: 1750),
     )..addListener(_tick);
     _coins = List.generate(widget.count, (i) {
       // Each coin starts a little apart from the source and lands staggered.
@@ -106,7 +106,7 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
         origin: widget.from + Offset(jx, jy),
         control: control,
         start: start,
-        end: (start + 0.62).clamp(0.0, 1.0),
+        end: (start + 0.70).clamp(0.0, 1.0),
         size: 20 + _rng.nextDouble() * 12,
         spin: (_rng.nextDouble() - 0.5) * 5,
       );
@@ -152,7 +152,8 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
     final raw = (_ctrl.value - coin.start) / (coin.end - coin.start);
     if (raw <= 0) return const SizedBox.shrink();
     final t = raw.clamp(0.0, 1.0);
-    final eased = Curves.easeInCubic.transform(t);
+    // A gentle ease so the coins float rather than whip into the wallet.
+    final eased = Curves.easeInOutCubic.transform(t);
     // Quadratic bezier from origin -> control -> target.
     final pos = _bezier(coin.origin, coin.control, widget.to, eased);
     // Shrink and fade as it reaches the wallet.
