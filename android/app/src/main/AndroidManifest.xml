@@ -3,6 +3,11 @@
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- Required on Android 13+ (API 33) for any notification, including FCM
+         push, to be allowed to display. Without this, FirebaseMessaging's
+         requestPermission() has nothing to prompt for and pushes arrive but
+         are never shown. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Save-to-gallery (gal package): only needed on API <=29, scoped storage
          covers newer versions without this permission. -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
