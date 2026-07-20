@@ -24,6 +24,7 @@ import '../../services/feedback_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/economy/coin_display.dart';
+import '../../widgets/economy/coin_fly.dart';
 import '../../widgets/economy/coin_icon.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
 import '../../models/room_model.dart';
@@ -860,7 +861,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           // and the wide coins capsule from overlapping the icons.
                           const SizedBox(height: 8),
                           _step(
-                            const Center(child: CoinDisplay()),
+                            Center(child: CoinDisplay(key: walletAnchorKey)),
                             delayMs: 40, durationMs: 380, dy: -10,
                           ),
                           // ── Hero grid takes all remaining vertical space ──

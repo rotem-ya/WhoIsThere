@@ -8,6 +8,7 @@ import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
 import '../../services/reward_calculator.dart';
 import '../../services/settings_service.dart';
+import 'coin_fly.dart';
 import 'coin_icon.dart';
 
 void showDailyRewardSheet(BuildContext context, WidgetRef ref) {
@@ -35,6 +36,7 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
   bool _doubled = false;
 
   late final AnimationController _claimAnim;
+  final GlobalKey _successKey = GlobalKey();
   static final AudioPlayer _coinsPlayer = AudioPlayer(playerId: 'daily-coins');
   static final AssetSource _coinsSound = AssetSource('sounds/daily_coins.mp3');
 
@@ -51,6 +53,19 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
   void dispose() {
     _claimAnim.dispose();
     super.dispose();
+  }
+
+  /// Shoots a coin burst from the reward card up to the wallet counter. The
+  /// sheet already plays its own reward jingle, so the flight is silent here.
+  void _flyCoins() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = _successKey.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.hasSize) return;
+      final from = box.localToGlobal(box.size.center(Offset.zero));
+      final count = (_earnedCoins ~/ 6).clamp(6, 16);
+      CoinFly.burst(context, from: from, count: count, sound: false);
+    });
   }
 
   Future<void> _claim() async {
@@ -72,6 +87,7 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
           _isClaiming = false;
         });
         _claimAnim.forward();
+        _flyCoins();
         final sfxScale = SettingsService.instance.sfxVolume;
         _coinsPlayer.stop().then((_) async {
           await _coinsPlayer.setVolume(sfxScale);
@@ -122,6 +138,7 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
           _doubled = true;
           _earnedCoins += bonus;
         });
+        _flyCoins();
         final sfxScale = SettingsService.instance.sfxVolume;
         _coinsPlayer.stop().then((_) async {
           await _coinsPlayer.setVolume(sfxScale);
@@ -215,7 +232,8 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
             child: _claimed
-                ? _ClaimSuccess(coins: _earnedCoins, anim: _claimAnim)
+                ? _ClaimSuccess(
+                    key: _successKey, coins: _earnedCoins, anim: _claimAnim)
                 : _CoinsPreview(coins: coinsToday),
           ),
           const SizedBox(height: 22),
@@ -509,7 +527,7 @@ class _CoinsPreview extends StatelessWidget {
 class _ClaimSuccess extends StatelessWidget {
   final int coins;
   final AnimationController anim;
-  const _ClaimSuccess({required this.coins, required this.anim});
+  const _ClaimSuccess({super.key, required this.coins, required this.anim});
 
   @override
   Widget build(BuildContext context) {
