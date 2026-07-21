@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/game_categories.dart';
 import '../../../core/constants/game_constants.dart';
+import '../../../core/theme/candy_theme.dart';
 import '../../../models/friend_models.dart';
 import '../../../providers/providers.dart';
 import '../../../widgets/chat/chat_sheet.dart';
+import '../../../widgets/common/empty_state.dart';
 
 /// טאב "קבוצות" — קבוצות חברים קבועות: פתיחת משחק לכל החבורה בלחיצה (הזמנות
 /// פוש לכולם), טבלת ניקוד מצטברת לקבוצה, וצ'אט קבוצתי קבוע.
@@ -52,13 +54,12 @@ class GroupsTab extends ConsumerWidget {
         const SizedBox(height: 12),
         if (groups.isEmpty)
           const Padding(
-            padding: EdgeInsets.all(28),
-            child: Center(
-              child: Text(
-                'צרו קבוצה קבועה של חברים,\nמשחק לכל החבורה בלחיצה אחת! 🎮',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white54, fontSize: 15),
-              ),
+            padding: EdgeInsets.only(top: 10),
+            child: EmptyState(
+              emoji: '🎮',
+              title: 'אין עדיין קבוצות',
+              subtitle: 'צרו קבוצה קבועה של חברים\nומשחק לכל החבורה בלחיצה אחת',
+              accent: Candy.pink,
             ),
           )
         else

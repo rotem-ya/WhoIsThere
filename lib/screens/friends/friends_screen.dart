@@ -12,6 +12,7 @@ import '../../providers/providers.dart';
 import '../../services/analytics_service.dart';
 import '../../services/friends_service.dart';
 import '../../widgets/chat/chat_sheet.dart';
+import '../../widgets/common/empty_state.dart';
 import 'widgets/groups_tab.dart';
 
 /// Friends hub: a cumulative leaderboard, the friends list with pending
@@ -372,17 +373,14 @@ class _LeaderboardTab extends ConsumerWidget {
         ]),
         data: (rows) {
           if (rows.length <= 1) {
-            return ListView(children: const [
-              SizedBox(height: 80),
-              Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    'עדיין אין חברים בטבלה.\nהוסיפו חברים ושחקו יחד כדי לראות מי מוביל!',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white54, fontSize: 15),
-                  ),
-                ),
+            return ListView(children: [
+              const SizedBox(height: 56),
+              EmptyState(
+                emoji: '🏆',
+                title: 'הטבלה מחכה לחברים',
+                subtitle: 'הוסיפו חברים ושחקו יחד\nכדי לראות מי מוביל',
+                actionLabel: '➕ הוסף חבר',
+                onAction: () => DefaultTabController.of(context).animateTo(3),
               ),
             ]);
           }
@@ -549,12 +547,14 @@ class _FriendsTab extends ConsumerWidget {
                   fontWeight: FontWeight.w800)),
         ),
         if (friends.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(
-              child: Text('עדיין אין חברים.\nעברו ל"הוסף חבר" כדי להתחיל.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white54, fontSize: 15)),
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: EmptyState(
+              emoji: '🧩',
+              title: 'עדיין אין חברים',
+              subtitle: 'הוסיפו חבר וקבלו קוד אישי\nכדי לשחק יחד ולצבור ניקוד',
+              actionLabel: '➕ הוסף חבר',
+              onAction: () => DefaultTabController.of(context).animateTo(3),
             ),
           )
         else
