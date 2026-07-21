@@ -23,6 +23,7 @@ import '../../widgets/common/banner_ad_widget.dart';
 import '../../services/feedback_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../widgets/common/pressable_scale.dart';
+import '../../widgets/common/tilt_card.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_fly.dart';
 import '../../widgets/economy/coin_icon.dart';
@@ -1005,7 +1006,7 @@ class _GameTypeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PressableScale(
+    return TiltCard(
       onTap: onTap == null
           ? null
           : () {
