@@ -740,75 +740,12 @@ class _Header extends StatelessWidget {
             child: Column(
               children: [
                 // Glowing turn pill with a live 10s countdown so whose turn it
-                // is (and how long is left) is unmistakable.
-                ValueListenableBuilder<int>(
-                  valueListenable: secondsListenable,
-                  builder: (context, secs, _) {
-                    final urgent = isMyTurn && secs > 0 && secs <= 3;
-                    final accent =
-                        urgent ? const Color(0xFFE0563D) : _kGold;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 220),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isMyTurn
-                            ? accent.withOpacity(0.16)
-                            : Colors.white.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: isMyTurn
-                              ? accent.withOpacity(0.85)
-                              : Colors.white24,
-                          width: 1.2,
-                        ),
-                        boxShadow: isMyTurn
-                            ? [
-                                BoxShadow(
-                                    color: accent.withOpacity(0.42),
-                                    blurRadius: 16)
-                              ]
-                            : const [],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            isMyTurn ? 'תורך, בחר אות' : 'תור $oppName',
-                            style: TextStyle(
-                              color: isMyTurn ? Colors.white : Colors.white60,
-                              fontSize: 15.5,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          if (secs > 0) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              width: 24,
-                              height: 24,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isMyTurn
-                                    ? accent
-                                    : Colors.white.withOpacity(0.18),
-                              ),
-                              child: Text(
-                                '$secs',
-                                style: TextStyle(
-                                  color: isMyTurn
-                                      ? Candy.bgBottom
-                                      : Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    );
-                  },
+                // is (and how long is left) is unmistakable. It breathes on
+                // your turn and taps a light haptic the moment it flips to you.
+                _TurnPill(
+                  isMyTurn: isMyTurn,
+                  oppName: oppName,
+                  secondsListenable: secondsListenable,
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -821,6 +758,141 @@ class _Header extends StatelessWidget {
           const SizedBox(width: 48),
         ],
       ),
+    );
+  }
+}
+
+// ── Turn pill: breathing glow on your turn + haptic when it flips to you ────
+
+class _TurnPill extends StatefulWidget {
+  final bool isMyTurn;
+  final String oppName;
+  final ValueNotifier<int> secondsListenable;
+
+  const _TurnPill({
+    required this.isMyTurn,
+    required this.oppName,
+    required this.secondsListenable,
+  });
+
+  @override
+  State<_TurnPill> createState() => _TurnPillState();
+}
+
+class _TurnPillState extends State<_TurnPill>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    );
+    if (widget.isMyTurn) _pulse.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_TurnPill old) {
+    super.didUpdateWidget(old);
+    if (widget.isMyTurn && !old.isMyTurn) {
+      // The turn just became mine: a light tap + start breathing.
+      HapticFeedback.lightImpact();
+      _pulse.repeat(reverse: true);
+    } else if (!widget.isMyTurn && old.isMyTurn) {
+      _pulse.stop();
+      _pulse.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: widget.secondsListenable,
+      builder: (context, secs, _) {
+        final isMyTurn = widget.isMyTurn;
+        final urgent = isMyTurn && secs > 0 && secs <= 3;
+        final accent = urgent ? const Color(0xFFE0563D) : _kGold;
+        return AnimatedBuilder(
+          animation: _pulse,
+          builder: (context, child) {
+            // Breathe: 0..1 eased both ways drives glow + a hair of scale.
+            final p = isMyTurn
+                ? Curves.easeInOut.transform(_pulse.value)
+                : 0.0;
+            final glow = 12.0 + 14.0 * p;
+            final glowOp = 0.30 + 0.30 * p;
+            final scale = 1.0 + 0.03 * p;
+            return Transform.scale(
+              scale: scale,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isMyTurn
+                      ? accent.withOpacity(0.16)
+                      : Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: isMyTurn ? accent.withOpacity(0.85) : Colors.white24,
+                    width: 1.2,
+                  ),
+                  boxShadow: isMyTurn
+                      ? [
+                          BoxShadow(
+                              color: accent.withOpacity(glowOp),
+                              blurRadius: glow)
+                        ]
+                      : const [],
+                ),
+                child: child,
+              ),
+            );
+          },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isMyTurn ? 'תורך, בחר אות' : 'תור ${widget.oppName}',
+                style: TextStyle(
+                  color: isMyTurn ? Colors.white : Colors.white60,
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              if (secs > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  width: 24,
+                  height: 24,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color:
+                        isMyTurn ? accent : Colors.white.withOpacity(0.18),
+                  ),
+                  child: Text(
+                    '$secs',
+                    style: TextStyle(
+                      color: isMyTurn ? Candy.bgBottom : Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
