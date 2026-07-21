@@ -54,6 +54,9 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   String? _loadingImageId;
   int? _selectedSlot; // null → auto-target the first empty slot
   bool _submitting = false;
+  // Consecutive hits (a letter that lands green/yellow); a miss resets it.
+  // Surfaces a "🔥 xN" chip once it reaches 2, for a little momentum reward.
+  int _streak = 0;
   String? _lastBotTurnKey;
   bool _winSoundPlayed = false;
   bool _startTriggered = false;
@@ -228,16 +231,19 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
       _selectedSlot = null;
     });
     if (!res.accepted) return;
-    // Feedback sounds for my own board.
+    // Feedback sounds for my own board + a running "hits" streak.
     if (res.win) {
       // win fanfare handled by the finished overlay
     } else if (res.feedback == LetterFeedback.exact) {
       SfxService.instance.letterCorrect();
       SfxService.instance.reveal();
+      setState(() => _streak++);
     } else if (res.feedback == LetterFeedback.present) {
       SfxService.instance.reveal();
+      setState(() => _streak++);
     } else {
       SfxService.instance.letterWrong();
+      if (_streak != 0) setState(() => _streak = 0);
     }
   }
 
@@ -466,7 +472,9 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                         }
                       : null,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
+                _StreakChip(streak: _streak),
+                const SizedBox(height: 4),
                 // Glow the whole keyboard on your turn so it's unmistakable.
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
@@ -897,6 +905,52 @@ class _TurnPillState extends State<_TurnPill>
   }
 }
 
+// ── Streak chip: "🔥 xN" that pops in once you string hits together ─────────
+
+class _StreakChip extends StatelessWidget {
+  final int streak;
+  const _StreakChip({required this.streak});
+
+  @override
+  Widget build(BuildContext context) {
+    final show = streak >= 2;
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 260),
+      transitionBuilder: (child, anim) => ScaleTransition(
+        scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+        child: FadeTransition(opacity: anim, child: child),
+      ),
+      child: !show
+          ? const SizedBox(height: 24, key: ValueKey('none'))
+          : Container(
+              key: ValueKey(streak),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFF8A3D), Color(0xFFE0563D)],
+                ),
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: [
+                  BoxShadow(
+                      color: const Color(0xFFE0563D).withOpacity(0.5),
+                      blurRadius: 12),
+                ],
+              ),
+              child: Text(
+                '🔥 רצף x$streak',
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+    );
+  }
+}
+
 // ── Answer slots ────────────────────────────────────────────────────────────
 
 class _Slots extends StatelessWidget {
@@ -1074,7 +1128,7 @@ class _Keyboard extends StatelessWidget {
   }
 }
 
-class _Key extends StatelessWidget {
+class _Key extends StatefulWidget {
   final String label;
   final double size;
   final bool enabled;
@@ -1090,27 +1144,56 @@ class _Key extends StatelessWidget {
   });
 
   @override
+  State<_Key> createState() => _KeyState();
+}
+
+class _KeyState extends State<_Key> {
+  bool _down = false;
+
+  void _setDown(bool v) {
+    if (widget.enabled && _down != v) setState(() => _down = v);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final dark = color == Colors.white;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(11),
-        child: Ink(
-          width: size,
-          height: size + 10,
+    final dark = widget.color == Colors.white;
+    return GestureDetector(
+      onTapDown: (_) => _setDown(true),
+      onTapUp: (_) {
+        _setDown(false);
+        if (widget.enabled) widget.onTap();
+      },
+      onTapCancel: () => _setDown(false),
+      // A quick key-press pop: squash on down, spring back with a hair of
+      // overshoot on release, so every letter feels tactile.
+      child: AnimatedScale(
+        scale: _down ? 0.86 : 1.0,
+        duration: Duration(milliseconds: _down ? 70 : 150),
+        curve: _down ? Curves.easeOut : Curves.easeOutBack,
+        child: Container(
+          width: widget.size,
+          height: widget.size + 10,
           decoration: BoxDecoration(
-            color: enabled ? color : color.withOpacity(0.45),
+            color: widget.enabled
+                ? widget.color
+                : widget.color.withOpacity(0.45),
             borderRadius: BorderRadius.circular(11),
             border: Border.all(color: _kGold.withOpacity(0.45), width: 1.2),
+            boxShadow: _down
+                ? [
+                    BoxShadow(
+                        color: _kGold.withOpacity(0.35),
+                        blurRadius: 10,
+                        spreadRadius: 0.5)
+                  ]
+                : const [],
           ),
           child: Center(
             child: Text(
-              label,
+              widget.label,
               style: TextStyle(
                 color: dark ? Candy.bgBottom : Colors.white,
-                fontSize: math.max(18, size * 0.56),
+                fontSize: math.max(18, widget.size * 0.56),
                 fontWeight: FontWeight.w900,
                 height: 1,
               ),
