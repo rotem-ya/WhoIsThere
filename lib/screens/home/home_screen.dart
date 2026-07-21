@@ -27,6 +27,7 @@ import '../../widgets/common/tilt_card.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_fly.dart';
 import '../../widgets/economy/coin_icon.dart';
+import '../../widgets/economy/daily_spin_sheet.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
 import '../../models/room_model.dart';
 
@@ -853,6 +854,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 SizedBox(width: 8),
                                 _SettingsIconButton(),
                                 Spacer(),
+                                _DailySpinButton(),
+                                SizedBox(width: 8),
                                 _DailyRewardButton(),
                               ],
                             ),
@@ -1241,6 +1244,75 @@ class _DailyRewardButton extends ConsumerWidget {
                         height: 1,
                       ),
                     ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Daily spin-wheel button (top bar) ─────────────────────────────────────
+
+class _DailySpinButton extends ConsumerWidget {
+  const _DailySpinButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final wallet = ref.watch(walletProvider).valueOrNull;
+    final isAvailable = isDailySpinAvailable(wallet?.lastDailySpinAt);
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        if (isAvailable) {
+          showDailySpinSheet(context, ref);
+        } else {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(const SnackBar(
+              content: Text('גלגל המזל כבר סובב היום'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ));
+        }
+      },
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        opacity: isAvailable ? 1.0 : 0.38,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF050A14).withOpacity(0.60),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: isAvailable
+                      ? Candy.teal.withOpacity(0.80)
+                      : Colors.white.withOpacity(0.15),
+                  width: isAvailable ? 1.5 : 1.0,
+                ),
+              ),
+              child: const Center(
+                child: Icon(Icons.casino_rounded, color: Candy.teal, size: 20),
+              ),
+            ),
+            if (isAvailable)
+              Positioned(
+                top: -5,
+                right: -5,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Candy.teal,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppStyles.navyTop, width: 1.5),
                   ),
                 ),
               ),

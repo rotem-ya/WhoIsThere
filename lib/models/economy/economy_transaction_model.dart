@@ -23,6 +23,7 @@ enum TransactionType {
   blackoutCardPurchase,
   peekCardPurchase,
   freeEntry,
+  dailySpin,
 }
 
 class EconomyTransactionModel {

@@ -10,6 +10,9 @@ class UserEconomyModel {
   final DateTime? lastDailyRewardAt;
   final int dailyStreak;
 
+  // Daily spin-wheel tracking (all UTC)
+  final DateTime? lastDailySpinAt;
+
   // Ad reward tracking (all UTC)
   final int adRewardsTodayCount;
   final DateTime? adRewardWindowStart; // start of the UTC day window
@@ -29,6 +32,7 @@ class UserEconomyModel {
     required this.totalSpent,
     this.lastDailyRewardAt,
     required this.dailyStreak,
+    this.lastDailySpinAt,
     required this.adRewardsTodayCount,
     this.adRewardWindowStart,
     this.lastFreeEntryAt,
@@ -44,6 +48,7 @@ class UserEconomyModel {
         totalSpent: 0,
         lastDailyRewardAt: null,
         dailyStreak: 0,
+        lastDailySpinAt: null,
         adRewardsTodayCount: 0,
         adRewardWindowStart: null,
         lastFreeEntryAt: null,
@@ -61,6 +66,8 @@ class UserEconomyModel {
       lastDailyRewardAt:
           (d['lastDailyRewardAt'] as Timestamp?)?.toDate().toUtc(),
       dailyStreak: (d['dailyStreak'] as num? ?? 0).toInt(),
+      lastDailySpinAt:
+          (d['lastDailySpinAt'] as Timestamp?)?.toDate().toUtc(),
       adRewardsTodayCount: (d['adRewardsTodayCount'] as num? ?? 0).toInt(),
       adRewardWindowStart:
           (d['adRewardWindowStart'] as Timestamp?)?.toDate().toUtc(),
@@ -78,6 +85,8 @@ class UserEconomyModel {
         if (lastDailyRewardAt != null)
           'lastDailyRewardAt': Timestamp.fromDate(lastDailyRewardAt!),
         'dailyStreak': dailyStreak,
+        if (lastDailySpinAt != null)
+          'lastDailySpinAt': Timestamp.fromDate(lastDailySpinAt!),
         'adRewardsTodayCount': adRewardsTodayCount,
         if (adRewardWindowStart != null)
           'adRewardWindowStart': Timestamp.fromDate(adRewardWindowStart!),
@@ -94,6 +103,7 @@ class UserEconomyModel {
     int? totalSpent,
     DateTime? lastDailyRewardAt,
     int? dailyStreak,
+    DateTime? lastDailySpinAt,
     int? adRewardsTodayCount,
     DateTime? adRewardWindowStart,
     DateTime? lastFreeEntryAt,
@@ -108,6 +118,7 @@ class UserEconomyModel {
         totalSpent: totalSpent ?? this.totalSpent,
         lastDailyRewardAt: lastDailyRewardAt ?? this.lastDailyRewardAt,
         dailyStreak: dailyStreak ?? this.dailyStreak,
+        lastDailySpinAt: lastDailySpinAt ?? this.lastDailySpinAt,
         adRewardsTodayCount: adRewardsTodayCount ?? this.adRewardsTodayCount,
         adRewardWindowStart: adRewardWindowStart ?? this.adRewardWindowStart,
         lastFreeEntryAt: lastFreeEntryAt ?? this.lastFreeEntryAt,
