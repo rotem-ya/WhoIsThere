@@ -47,19 +47,27 @@ class DailyQuestService {
     required int plays,
     required int discoveries,
   }) async {
-    final today = questDayKey();
-    final snap = await _questRef(uid).get();
-    if (snap.exists && (snap.data()?['dayKey'] as String?) == today) return;
+    // Best-effort: a transient Firestore hiccup here must never crash the home
+    // screen (this is called fire-and-forget from a post-frame callback).
+    try {
+      final today = questDayKey();
+      final snap = await _questRef(uid).get();
+      if (snap.exists && (snap.data()?['dayKey'] as String?) == today) return;
 
-    final index = questIndexForDay();
-    final baseline = _counterFor(kDailyQuests[index].kind,
-        wins: wins, plays: plays, discoveries: discoveries);
-    await _questRef(uid).set(DailyQuestModel(
-      dayKey: today,
-      index: index,
-      baseline: baseline,
-      claimed: false,
-    ).toMap());
+      final index = questIndexForDay();
+      final baseline = _counterFor(kDailyQuests[index].kind,
+          wins: wins, plays: plays, discoveries: discoveries);
+      await _questRef(uid).set(DailyQuestModel(
+        dayKey: today,
+        index: index,
+        baseline: baseline,
+        claimed: false,
+      ).toMap());
+    } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log('ECONOMY',
+          'DAILY_QUEST_ENSURE_ERROR ${msg.length > 80 ? msg.substring(0, 80) : msg}');
+    }
   }
 
   /// Compute the live state from a stored record + current counters.

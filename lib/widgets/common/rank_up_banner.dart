@@ -85,7 +85,13 @@ class _RankUpBannerState extends ConsumerState<RankUpBanner> {
   void _openLadder() {
     final pts = ref.read(currentUserProvider).valueOrNull?.totalPoints ?? 0;
     _clear();
-    RankLadderSheet.show(context, pts);
+    // The banner is mounted ABOVE the router's Navigator (global overlay), so
+    // its own context has no Navigator — showModalBottomSheet(context) would
+    // crash on Navigator.of. Use the router's navigator context instead.
+    final navCtx =
+        ref.read(routerProvider).routerDelegate.navigatorKey.currentContext;
+    if (navCtx == null) return;
+    RankLadderSheet.show(navCtx, pts);
   }
 
   @override

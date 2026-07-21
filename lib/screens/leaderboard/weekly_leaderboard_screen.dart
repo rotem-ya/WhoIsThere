@@ -39,13 +39,22 @@ class _WeeklyLeaderboardScreenState
   Future<void> _loadExtras() async {
     final uid = ref.read(firebaseUserProvider).valueOrNull?.uid;
     if (uid == null) return;
-    final svc = ref.read(weeklyLeaderboardServiceProvider);
-    final rank = await svc.myRank(uid);
-    final prize = await svc.lastWeekPrizeStatus(uid);
-    if (mounted) setState(() {
-      _myRank = rank;
-      _prize = prize;
-    });
+    // Fail-soft: if the board isn't reachable yet (e.g. Firestore rules not
+    // deployed, or a transient permission error) just skip the rank/prize
+    // extras rather than crashing — the standings stream handles its own state.
+    try {
+      final svc = ref.read(weeklyLeaderboardServiceProvider);
+      final rank = await svc.myRank(uid);
+      final prize = await svc.lastWeekPrizeStatus(uid);
+      if (mounted) {
+        setState(() {
+          _myRank = rank;
+          _prize = prize;
+        });
+      }
+    } catch (_) {
+      // Degrade gracefully — no rank chip, no prize card.
+    }
   }
 
   Future<void> _claimPrize() async {
