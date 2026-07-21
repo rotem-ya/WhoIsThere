@@ -3604,6 +3604,8 @@ class _RoundInterludeOverlay extends StatelessWidget {
                         ),
                       ),
                       // ── התמונות שנחשפו עד כה ────────────────────────────
+                      // The just-solved image "drops" from the hero above into
+                      // its slot in the strip, so the story-so-far visibly grows.
                       if (doneIds.length > 1) ...[
                         const SizedBox(height: 12),
                         Wrap(
@@ -3613,7 +3615,24 @@ class _RoundInterludeOverlay extends StatelessWidget {
                           children: [
                             for (final id in doneIds)
                               if (gallery[id] != null)
-                                _thumb(gallery[id]!.imageUrl, 44),
+                                if (id == room.lastRoundImageId)
+                                  _thumb(gallery[id]!.imageUrl, 44, glow: true)
+                                      .animate()
+                                      .moveY(
+                                          begin: -70,
+                                          end: 0,
+                                          delay: 480.ms,
+                                          duration: 640.ms,
+                                          curve: Curves.easeOutBack)
+                                      .scaleXY(
+                                          begin: 2.4,
+                                          end: 1.0,
+                                          delay: 480.ms,
+                                          duration: 640.ms,
+                                          curve: Curves.easeOutBack)
+                                      .fadeIn(delay: 480.ms, duration: 220.ms)
+                                else
+                                  _thumb(gallery[id]!.imageUrl, 44),
                           ],
                         ),
                       ],
