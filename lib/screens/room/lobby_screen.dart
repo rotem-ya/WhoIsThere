@@ -11,7 +11,7 @@ import '../../core/constants/ad_constants.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_constants.dart';
-// player_rank removed — using discoveredCount badge instead;
+import '../../core/constants/player_rank.dart';
 import '../../core/theme/app_styles.dart';
 import '../../core/theme/candy_theme.dart';
 import '../../providers/providers.dart';
@@ -1078,6 +1078,10 @@ class _PlayerAvatarTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final base = isMe ? 'אני' : (player.name.isNotEmpty ? player.name : 'שחקן');
     final label = player.isHost ? '$base ⭐' : base;
+    // A thin ring around each avatar, tinted by the player's rank tier — a
+    // subtle at-a-glance sense of who's a veteran. "You" is still marked by the
+    // card's cyan border/glow, so the ring stays free to signal rank for all.
+    final rank = PlayerRankX.fromPoints(player.totalPoints);
 
     return Stack(
       clipBehavior: Clip.none,
@@ -1096,16 +1100,22 @@ class _PlayerAvatarTile extends StatelessWidget {
           child: Row(
             textDirection: TextDirection.rtl,
             children: [
-              // Avatar with cyan ring for current user
+              // Avatar wrapped in a rank-tinted ring + soft matching glow.
               Container(
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isMe ? AppStyles.cyanGlow : Colors.white38,
+                    color: rank.color.withOpacity(0.92),
                     width: 2,
                   ),
-                  boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.5) : null,
+                  boxShadow: [
+                    BoxShadow(
+                      color: rank.color.withOpacity(0.45),
+                      blurRadius: 6,
+                      spreadRadius: 0.4,
+                    ),
+                  ],
                 ),
                 child: PlayerAvatar(
                     name: player.name,
