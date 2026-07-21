@@ -13,6 +13,7 @@ import '../../services/analytics_service.dart';
 import '../../services/friends_service.dart';
 import '../../widgets/chat/chat_sheet.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/skeleton.dart';
 import 'widgets/groups_tab.dart';
 
 /// Friends hub: a cumulative leaderboard, the friends list with pending
@@ -365,8 +366,9 @@ class _LeaderboardTab extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(friendsLeaderboardProvider),
       child: boardAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: AppStyles.cyanGlow)),
+        loading: () => ListView(
+          children: const [SizedBox(height: 8), SkeletonList(rows: 6)],
+        ),
         error: (e, _) => ListView(children: const [
           SizedBox(height: 80),
           Center(child: Text('שגיאה בטעינה', style: TextStyle(color: Colors.white54))),
