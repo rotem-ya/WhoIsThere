@@ -35,6 +35,56 @@ class Candy {
     stops: [0.0, 0.45, 1.0],
   );
 
+  /// Selectable background moods. The default [grape] is the canonical Candy
+  /// ground; the others re-tint only the page background so the accents, jelly
+  /// surfaces and text stay readable. Chosen by the player in Settings.
+  static LinearGradient bgVariant(int index) {
+    switch (index) {
+      case 1: // night — deep indigo
+        return const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF243B8F), Color(0xFF141C54), Color(0xFF070B24)],
+          stops: [0.0, 0.45, 1.0],
+        );
+      case 2: // sea — ocean teal
+        return const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF0E6C7C), Color(0xFF0A4653), Color(0xFF04222C)],
+          stops: [0.0, 0.45, 1.0],
+        );
+      case 3: // sunset — warm pink to plum
+        return const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFC2456A), Color(0xFF6E2A5C), Color(0xFF2C1230)],
+          stops: [0.0, 0.45, 1.0],
+        );
+      case 0:
+      default:
+        return bg;
+    }
+  }
+
+  /// The darkest ground for a variant — used for the Scaffold base color so no
+  /// seams show behind the gradient.
+  static Color bgVariantBottom(int index) {
+    switch (index) {
+      case 1:
+        return const Color(0xFF070B24);
+      case 2:
+        return const Color(0xFF04222C);
+      case 3:
+        return const Color(0xFF2C1230);
+      default:
+        return bgBottom;
+    }
+  }
+
+  /// Human labels + a preview swatch color for the Settings picker.
+  static const List<String> bgVariantLabels = ['ענבים', 'לילה', 'ים', 'שקיעה'];
+
   /// A darker shade of [c], used for the solid "jelly bevel" beneath a surface.
   static Color bevel(Color c) => Color.lerp(c, Colors.black, 0.34)!;
 

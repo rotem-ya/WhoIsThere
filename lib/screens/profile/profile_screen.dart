@@ -253,7 +253,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ref.watch(selectedAvatarProvider).valueOrNull ?? 'auto';
 
     return AppScaffold(
-      backgroundGradient: Candy.bg,
       padding: EdgeInsets.zero,
       child: userAsync.when(
         data: (user) {

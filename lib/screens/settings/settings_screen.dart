@@ -6,6 +6,7 @@ import '../../core/theme/candy_theme.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../providers/providers.dart';
+import '../../services/settings_service.dart';
 import '../../widgets/common/app_header.dart';
 import '../game/game_board_screen.dart';
 
@@ -17,7 +18,6 @@ class SettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
 
     return AppScaffold(
-      backgroundGradient: Candy.bg,
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         children: [
@@ -68,6 +68,15 @@ class SettingsScreen extends ConsumerWidget {
                   onChanged: (v) => ref
                       .read(settingsProvider.notifier)
                       .setVibrationEnabled(v),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _ThemeSection(
+                  selected: ref.watch(bgVariantProvider),
+                  onSelect: (i) {
+                    HapticFeedback.selectionClick();
+                    ref.read(bgVariantProvider.notifier).state = i;
+                    SettingsService.instance.setBgVariant(i);
+                  },
                 ),
               ],
             ),
@@ -222,6 +231,113 @@ class _VibrationSection extends StatelessWidget {
             activeTrackColor: Candy.gold.withOpacity(0.35),
             inactiveThumbColor: Colors.white30,
             inactiveTrackColor: Colors.white12,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Background theme picker ──────────────────────────────────────────────────
+
+class _ThemeSection extends StatelessWidget {
+  final int selected;
+  final ValueChanged<int> onSelect;
+
+  const _ThemeSection({required this.selected, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return _SettingsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.palette_rounded, color: Candy.gold, size: 22),
+              SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  'רקע המשחק',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              for (var i = 0; i < Candy.bgVariantLabels.length; i++)
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                        right: i == 0 ? 0 : 6, left: i == 3 ? 0 : 6),
+                    child: _Swatch(
+                      index: i,
+                      label: Candy.bgVariantLabels[i],
+                      selected: selected == i,
+                      onTap: () => onSelect(i),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Swatch extends StatelessWidget {
+  final int index;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _Swatch({
+    required this.index,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: 56,
+            decoration: BoxDecoration(
+              gradient: Candy.bgVariant(index),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: selected ? Candy.gold : Colors.white24,
+                width: selected ? 2.4 : 1,
+              ),
+              boxShadow: selected
+                  ? [BoxShadow(color: Candy.gold.withOpacity(0.4), blurRadius: 12)]
+                  : null,
+            ),
+            child: selected
+                ? const Icon(Icons.check_rounded,
+                    color: Colors.white, size: 22)
+                : null,
+          ),
+          const SizedBox(height: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: selected ? Candy.gold : Colors.white54,
+              fontSize: 12,
+              fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
+            ),
           ),
         ],
       ),

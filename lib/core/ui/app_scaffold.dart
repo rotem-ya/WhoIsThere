@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/providers.dart';
 import '../theme/candy_theme.dart';
 
-class AppScaffold extends StatelessWidget {
+class AppScaffold extends ConsumerWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final Color? backgroundColor;
@@ -19,19 +21,21 @@ class AppScaffold extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final content = Padding(
       padding: padding,
       child: child,
     );
 
-    // Default to the unified Candy ground so every screen shares the same
-    // look; a screen may still override with its own color or gradient.
+    final variant = ref.watch(bgVariantProvider);
+
+    // Default to the player's chosen Candy ground so every screen shares the
+    // same look; a screen may still override with its own color or gradient.
     final gradient = backgroundGradient ??
-        (backgroundColor == null ? Candy.bg : null);
+        (backgroundColor == null ? Candy.bgVariant(variant) : null);
 
     return Scaffold(
-      backgroundColor: backgroundColor ?? Candy.bgBottom,
+      backgroundColor: backgroundColor ?? Candy.bgVariantBottom(variant),
       body: Container(
         width: double.infinity,
         height: double.infinity,

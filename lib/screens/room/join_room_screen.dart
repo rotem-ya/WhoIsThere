@@ -158,7 +158,6 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
     );
 
     return AppScaffold(
-      backgroundGradient: Candy.bg,
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         children: [

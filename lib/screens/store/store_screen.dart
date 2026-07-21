@@ -76,7 +76,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
         _handleBack();
       },
       child: AppScaffold(
-      backgroundGradient: Candy.bg,
       padding: EdgeInsets.zero,
       child: Column(
         children: [

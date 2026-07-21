@@ -168,6 +168,7 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
 
     final playerCount = roomAsync.valueOrNull?.players.length ?? 1;
     final target = widget.targetPlayers;
+    final bgVariant = ref.watch(bgVariantProvider);
 
     return PopScope(
       canPop: false,
@@ -175,12 +176,12 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
         if (!didPop) _cancel();
       },
       child: Scaffold(
-        backgroundColor: Candy.bgBottom,
+        backgroundColor: Candy.bgVariantBottom(bgVariant),
         body: Stack(
           children: [
-            const Positioned.fill(
+            Positioned.fill(
               child: DecoratedBox(
-                decoration: BoxDecoration(gradient: Candy.bg),
+                decoration: BoxDecoration(gradient: Candy.bgVariant(bgVariant)),
               ),
             ),
             SafeArea(

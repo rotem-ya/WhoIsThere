@@ -27,6 +27,12 @@ import '../models/friend_models.dart';
 // Services
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 final roomServiceProvider = Provider<RoomService>((ref) => RoomService());
+
+/// Selected background mood (0 grape / 1 night / 2 sea / 3 sunset). Seeded from
+/// persisted settings; the Settings picker updates it so every screen using the
+/// shared Candy ground re-tints live.
+final bgVariantProvider = StateProvider<int>(
+    (ref) => SettingsService.instance.bgVariant);
 final appUpdateServiceProvider =
     Provider<AppUpdateService>((ref) => AppUpdateService());
 

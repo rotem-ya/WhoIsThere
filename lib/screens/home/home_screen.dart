@@ -818,12 +818,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _handleHomeBack();
         },
         child: Scaffold(
-          backgroundColor: AppStyles.navyTop,
+          backgroundColor: Candy.bgVariantBottom(ref.watch(bgVariantProvider)),
           body: Stack(
             children: [
-              const Positioned.fill(
+              Positioned.fill(
                 child: DecoratedBox(
-                  decoration: BoxDecoration(gradient: Candy.bg),
+                  decoration: BoxDecoration(
+                      gradient: Candy.bgVariant(ref.watch(bgVariantProvider))),
                 ),
               ),
               SafeArea(
