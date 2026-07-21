@@ -110,33 +110,45 @@ class _DailyQuestCardState extends ConsumerState<DailyQuestCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Header row: short label + reward (both short, never clip).
                         Row(
                           textDirection: TextDirection.rtl,
                           children: [
-                            Expanded(
-                              child: Text(
-                                'משימה יומית: ${state.template.label}',
-                                textDirection: TextDirection.rtl,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w800,
-                                ),
+                            const Text(
+                              'משימה יומית',
+                              style: TextStyle(
+                                color: Candy.gold,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.2,
                               ),
                             ),
+                            const SizedBox(width: 8),
                             Text.rich(
                               TextSpan(text: '+${state.template.reward} ', children: [
-                                coinSpan(size: 12),
+                                coinSpan(size: 11),
                               ]),
                               style: const TextStyle(
                                 color: Candy.gold,
-                                fontSize: 12,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 2),
+                        // The task itself gets the full width and may wrap.
+                        Text(
+                          state.template.label,
+                          textDirection: TextDirection.rtl,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            height: 1.15,
+                          ),
                         ),
                         const SizedBox(height: 5),
                         ClipRRect(
