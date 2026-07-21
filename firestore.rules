@@ -201,6 +201,22 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // ── Weekly global leaderboard ────────────────────────────────────────────
+    // Each ISO week is its own board (leaderboards/weekly_{weekKey}). Any signed
+    // in user may READ the standings; a user may only write their OWN entry and
+    // their OWN prize-claim marker. Non-sensitive (display name + points).
+    match /leaderboards/{board} {
+      allow read: if signedIn();
+      match /entries/{uid} {
+        allow read: if signedIn();
+        allow create, update: if signedIn() && request.auth.uid == uid;
+      }
+      match /claims/{uid} {
+        allow read: if signedIn();
+        allow create, update: if signedIn() && request.auth.uid == uid;
+      }
+    }
+
     // ── Deny everything else ─────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
