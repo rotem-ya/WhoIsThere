@@ -24,6 +24,7 @@ enum TransactionType {
   peekCardPurchase,
   freeEntry,
   dailySpin,
+  dailyQuest,
 }
 
 class EconomyTransactionModel {

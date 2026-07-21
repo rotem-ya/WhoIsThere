@@ -27,6 +27,7 @@ import '../../widgets/common/tilt_card.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_fly.dart';
 import '../../widgets/economy/coin_icon.dart';
+import '../../widgets/economy/daily_quest_card.dart';
 import '../../widgets/economy/daily_spin_sheet.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
 import '../../models/room_model.dart';
@@ -970,6 +971,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             delayMs: 460, durationMs: 260, dy: 5,
                           ),
+                          SizedBox(height: verySmall ? 6 : 10),
+                          const DailyQuestCard(),
                           SizedBox(height: verySmall ? 6 : 10),
                           const BannerAdWidget(),
                           SizedBox(height: verySmall ? 4 : 8),

@@ -18,6 +18,8 @@ import '../services/friends_service.dart';
 import '../services/groups_service.dart';
 import '../services/content_manifest_service.dart';
 import '../services/cosmetics_catalog_service.dart';
+import '../services/daily_quest_service.dart';
+import '../models/daily_quest.dart';
 import '../models/user_model.dart';
 import '../models/room_model.dart';
 import '../models/game_image_model.dart';
@@ -33,6 +35,33 @@ final roomServiceProvider = Provider<RoomService>((ref) => RoomService());
 /// shared Candy ground re-tints live.
 final bgVariantProvider = StateProvider<int>(
     (ref) => SettingsService.instance.bgVariant);
+
+// ── Daily quest ─────────────────────────────────────────────────────────────
+final dailyQuestServiceProvider =
+    Provider<DailyQuestService>((ref) => DailyQuestService(FirebaseFirestore.instance));
+
+/// The raw persisted quest record for the current user (null until it exists).
+final dailyQuestDocProvider = StreamProvider.autoDispose<DailyQuestModel?>((ref) {
+  final uid = ref.watch(firebaseUserProvider).valueOrNull?.uid;
+  if (uid == null) return const Stream.empty();
+  return ref.watch(dailyQuestServiceProvider).questStream(uid);
+});
+
+/// The live, display-ready quest state (template + progress), recomputed as the
+/// wallet counters and the user's discoveries change. Returns null while
+/// loading or before today's quest is initialised.
+final dailyQuestStateProvider = Provider.autoDispose<DailyQuestState?>((ref) {
+  final model = ref.watch(dailyQuestDocProvider).valueOrNull;
+  final wallet = ref.watch(walletProvider).valueOrNull;
+  final user = ref.watch(currentUserProvider).valueOrNull;
+  if (model == null || wallet == null) return null;
+  return ref.watch(dailyQuestServiceProvider).stateFrom(
+        model,
+        wins: wallet.totalMatchesWon,
+        plays: wallet.totalMatchesPlayed,
+        discoveries: user?.discoveredImageIds.length ?? 0,
+      );
+});
 final appUpdateServiceProvider =
     Provider<AppUpdateService>((ref) => AppUpdateService());
 
