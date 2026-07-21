@@ -19,6 +19,7 @@ import '../services/groups_service.dart';
 import '../services/content_manifest_service.dart';
 import '../services/cosmetics_catalog_service.dart';
 import '../services/daily_quest_service.dart';
+import '../services/weekly_leaderboard_service.dart';
 import '../models/daily_quest.dart';
 import '../models/user_model.dart';
 import '../models/room_model.dart';
@@ -35,6 +36,16 @@ final roomServiceProvider = Provider<RoomService>((ref) => RoomService());
 /// shared Candy ground re-tints live.
 final bgVariantProvider = StateProvider<int>(
     (ref) => SettingsService.instance.bgVariant);
+
+// ── Weekly leaderboard ────────────────────────────────────────────────────
+final weeklyLeaderboardServiceProvider = Provider<WeeklyLeaderboardService>(
+    (ref) => WeeklyLeaderboardService(FirebaseFirestore.instance));
+
+/// Live top-N standings for the current ISO week.
+final weeklyTopProvider =
+    StreamProvider.autoDispose<List<WeeklyEntry>>((ref) {
+  return ref.watch(weeklyLeaderboardServiceProvider).topStream(limit: 25);
+});
 
 // ── Daily quest ─────────────────────────────────────────────────────────────
 final dailyQuestServiceProvider =

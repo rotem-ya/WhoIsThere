@@ -355,6 +355,51 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   }
 }
 
+// ── Weekly global leaderboard entry button ────────────────────────────────
+
+class _WeeklyBoardButton extends StatelessWidget {
+  const _WeeklyBoardButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        context.push('/weekly');
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [
+            Candy.gold.withOpacity(0.22),
+            Candy.tangerine.withOpacity(0.12),
+          ]),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Candy.gold.withOpacity(0.5)),
+        ),
+        child: Row(
+          textDirection: TextDirection.rtl,
+          children: const [
+            Text('🏆', style: TextStyle(fontSize: 24)),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'טבלה שבועית עולמית',
+                textDirection: TextDirection.rtl,
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900),
+              ),
+            ),
+            Icon(Icons.chevron_left_rounded, color: Colors.white54),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Leaderboard tab ───────────────────────────────────────────────────────────
 
 class _LeaderboardTab extends ConsumerWidget {
@@ -376,7 +421,11 @@ class _LeaderboardTab extends ConsumerWidget {
         data: (rows) {
           if (rows.length <= 1) {
             return ListView(children: [
-              const SizedBox(height: 56),
+              const Padding(
+                padding: EdgeInsets.all(12),
+                child: _WeeklyBoardButton(),
+              ),
+              const SizedBox(height: 44),
               EmptyState(
                 emoji: '🏆',
                 title: 'הטבלה מחכה לחברים',
@@ -389,6 +438,8 @@ class _LeaderboardTab extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.all(12),
             children: [
+              const _WeeklyBoardButton(),
+              const SizedBox(height: 12),
               for (var i = 0; i < rows.length; i++) _scoreRow(i + 1, rows[i]),
               if (games.isNotEmpty) ...[
                 const SizedBox(height: 18),

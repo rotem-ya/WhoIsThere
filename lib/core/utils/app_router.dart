@@ -24,6 +24,7 @@ import '../../screens/store/avatars_screen.dart';
 import '../../screens/voting/vote_difficulty_screen.dart';
 import '../../screens/voting/vote_image_screen.dart';
 import '../../screens/win/win_screen.dart';
+import '../../screens/leaderboard/weekly_leaderboard_screen.dart';
 
 /// A gentle fade-through page transition (fade + tiny upward drift + subtle
 /// settle-in scale) used for every route, replacing the platform-default page
@@ -189,6 +190,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         pageBuilder: (context, state) =>
             _fadeThroughPage(state, const SettingsScreen()),
+      ),
+      GoRoute(
+        path: '/weekly',
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const WeeklyLeaderboardScreen()),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

@@ -1621,6 +1621,19 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       }
     }
 
+    // Weekly global leaderboard: every finished game (all modes) adds my match
+    // score to my entry for this ISO week. Runs once per game (guarded above).
+    final me = room.players[uid];
+    final myScore = me?.score ?? 0;
+    if (myScore > 0) {
+      unawaited(ref.read(weeklyLeaderboardServiceProvider).recordPoints(
+            uid: uid,
+            name: me?.name ?? 'שחקן',
+            photoUrl: me?.photoUrl,
+            points: myScore,
+          ));
+    }
+
     final isWin = room.winnerId == uid;
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
     // A win is the best moment to (rarely) ask for a store rating.
