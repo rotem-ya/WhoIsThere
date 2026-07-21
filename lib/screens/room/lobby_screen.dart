@@ -30,6 +30,7 @@ import '../../services/content_manifest_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../widgets/common/app_feedback.dart';
+import '../../widgets/common/branded_loader.dart';
 import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/player_name_text.dart';
 import '../../widgets/common/pressable_scale.dart';
@@ -838,14 +839,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         ), // Scaffold
         ); // PopScope
       },
-      loading: () => const Scaffold(
-        backgroundColor: AppStyles.navyTop,
-        body: Center(
-          child: CircularProgressIndicator(color: AppStyles.bananaYellow),
-        ),
-      ),
+      loading: () => const BrandedLoader(),
       error: (e, _) => Scaffold(
-        backgroundColor: AppStyles.navyTop,
+        backgroundColor: Candy.bgBottom,
         body: Center(
           child: Text('שגיאה: $e', style: AppStyles.bodyLarge),
         ),

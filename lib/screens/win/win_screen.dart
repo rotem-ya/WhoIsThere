@@ -19,6 +19,7 @@ import '../../models/player_model.dart';
 import '../../models/room_model.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/banner_ad_widget.dart';
+import '../../widgets/common/branded_loader.dart';
 import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/win_effect_overlay.dart';
 import '../../widgets/economy/coin_fly.dart';
@@ -492,8 +493,7 @@ class _WinScreenState extends ConsumerState<WinScreen>
         ), // AppScaffold
         ); // PopScope
       },
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => const BrandedLoader(),
       error: (e, _) => Scaffold(body: Center(child: Text('שגיאה: $e'))),
     );
   }

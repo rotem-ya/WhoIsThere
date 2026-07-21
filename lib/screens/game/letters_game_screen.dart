@@ -21,6 +21,7 @@ import '../../services/analytics_service.dart';
 import '../../services/review_prompt_service.dart';
 import '../../services/settings_service.dart';
 import '../../services/sfx_service.dart';
+import '../../widgets/common/matchmaking_tiles.dart';
 
 /// The letters game (משחק האותיות) — a Wordle-style image-reveal duel.
 /// Turn-based 1v1: on your turn you place a letter into a slot. A correct
@@ -529,8 +530,8 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                     color: _kGoldLight, fontSize: 26, fontWeight: FontWeight.w900)),
             const SizedBox(height: 18),
             if (isRandom) ...[
-              const CircularProgressIndicator(color: _kGold),
-              const SizedBox(height: 20),
+              const MatchmakingTiles(tile: 30, gap: 7),
+              const SizedBox(height: 22),
               const Text('מחפש יריב…',
                   style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
@@ -578,8 +579,8 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white54, fontSize: 13)),
               const SizedBox(height: 24),
-              const CircularProgressIndicator(color: _kGold),
-              const SizedBox(height: 12),
+              const MatchmakingTiles(tile: 26, gap: 6),
+              const SizedBox(height: 14),
               const Text('ממתין לחבר…',
                   style: TextStyle(color: Colors.white70, fontSize: 14)),
               const SizedBox(height: 18),
@@ -589,7 +590,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                     style: TextStyle(color: _kGoldLight, fontSize: 16, fontWeight: FontWeight.w800)),
               ),
             ] else ...[
-              const CircularProgressIndicator(color: _kGold),
+              const MatchmakingTiles(tile: 28, gap: 6),
               const SizedBox(height: 18),
               const Text('ממתין שהמשחק יתחיל…',
                   style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),

@@ -2389,7 +2389,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 top: false,
                 child: roomAsync.when(
               loading: () => const Center(
-                child: CircularProgressIndicator(color: Color(0xFF8B6FFF)),
+                child: CircularProgressIndicator(color: Candy.teal),
               ),
               error: (e, _) {
                 final msg = e.toString();

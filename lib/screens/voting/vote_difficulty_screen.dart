@@ -12,6 +12,7 @@ import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/room_model.dart';
 import '../../widgets/common/app_button.dart';
+import '../../widgets/common/branded_loader.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_header.dart';
 
@@ -181,8 +182,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
         ), // AppScaffold
         ); // PopScope
       },
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => const BrandedLoader(),
       error: (e, _) => Scaffold(body: Center(child: Text('שגיאה: $e'))),
     );
   }

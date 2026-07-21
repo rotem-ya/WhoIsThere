@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/app_colors.dart';
 import '../../core/theme/candy_theme.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
@@ -97,7 +96,6 @@ class CardSkinsScreen extends ConsumerWidget {
     }
 
     return AppScaffold(
-      backgroundGradient: AppColors.pageBackground,
       padding: EdgeInsets.zero,
       child: Column(
         children: [

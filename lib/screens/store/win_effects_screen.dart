@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/app_colors.dart';
 import '../../core/theme/candy_theme.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
@@ -74,7 +73,6 @@ class WinEffectsScreen extends ConsumerWidget {
         catalog.where((e) => e.tier == WinEffectTier.premium).toList();
 
     return AppScaffold(
-      backgroundGradient: AppColors.pageBackground,
       padding: EdgeInsets.zero,
       child: Column(
         children: [
