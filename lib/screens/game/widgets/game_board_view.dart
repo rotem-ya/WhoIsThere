@@ -176,6 +176,11 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
   bool _pressed = false;
   late AnimationController _popCtrl;
   late Animation<double> _popScale;
+  // A quick 3D flip-in: the tile swings from edge-on down to flat over the
+  // first part of the reveal, so a slice "flips open" into place. Only active
+  // during a live reveal (already-open tiles sit flat).
+  late Animation<double> _flipAngle;
+  bool _revealing = false;
   Timer? _countdownTimer;
   int _secondsLeft = 10;
 
@@ -184,7 +189,7 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
     super.initState();
     _popCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 380),
+      duration: const Duration(milliseconds: 460),
     );
     // Bounce: 1.0 → 1.10 → 0.96 → 1.0
     _popScale = TweenSequence<double>([
@@ -192,6 +197,16 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
       TweenSequenceItem(tween: Tween(begin: 1.10, end: 0.96), weight: 32),
       TweenSequenceItem(tween: Tween(begin: 0.96, end: 1.0), weight: 40),
     ]).animate(_popCtrl);
+    // Swing from edge-on (~72°) to flat within the first ~55% of the reveal.
+    _flipAngle = Tween<double>(begin: 1.25, end: 0.0).animate(
+      CurvedAnimation(
+          parent: _popCtrl, curve: const Interval(0.0, 0.55, curve: Curves.easeOut)),
+    );
+    _popCtrl.addStatusListener((s) {
+      if (s == AnimationStatus.completed && _revealing) {
+        setState(() => _revealing = false);
+      }
+    });
     if (widget.isPendingReveal) _startCountdown();
   }
 
@@ -199,6 +214,7 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
   void didUpdateWidget(_Tile oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isRevealed && !oldWidget.isRevealed) {
+      _revealing = true;
       _popCtrl.forward(from: 0.0);
     }
     if (widget.isPendingReveal && !oldWidget.isPendingReveal) {
@@ -260,11 +276,23 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
       width: widget.tileSize,
       height: widget.tileSize,
       child: AnimatedBuilder(
-        animation: _popScale,
-        builder: (context, child) => Transform.scale(
-          scale: _pressed ? kTapScale : _popScale.value,
-          child: child,
-        ),
+        animation: _popCtrl,
+        builder: (context, child) {
+          final scale = _pressed ? kTapScale : _popScale.value;
+          if (!_revealing) {
+            return Transform.scale(scale: scale, child: child);
+          }
+          // Perspective + rotateX gives the slice a real 3D flip-down.
+          final m = Matrix4.identity()
+            ..setEntry(3, 2, 0.0015)
+            ..rotateX(_flipAngle.value)
+            ..scale(scale, scale);
+          return Transform(
+            alignment: Alignment.center,
+            transform: m,
+            child: child,
+          );
+        },
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: _canTap
@@ -349,6 +377,18 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
                       tileSize: widget.tileSize,
                     ),
                   ),
+                // A one-shot diagonal light sweep across the freshly revealed
+                // slice, so each reveal catches the eye.
+                if (_revealing)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: AnimatedBuilder(
+                        animation: _popCtrl,
+                        builder: (context, _) =>
+                            CustomPaint(painter: _RevealFlash(_popCtrl.value)),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -356,6 +396,49 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
       ),
     );
   }
+}
+
+// ── Reveal light sweep ──────────────────────────────────────────────────────
+//
+// A bright diagonal band that slides across the tile once as it opens, then
+// fades. Driven by the 0..1 reveal progress.
+class _RevealFlash extends CustomPainter {
+  final double t;
+  _RevealFlash(this.t);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Sweep runs during the middle of the reveal, then is gone.
+    final sweep = ((t - 0.15) / 0.6).clamp(0.0, 1.0);
+    if (sweep <= 0 || sweep >= 1) return;
+    final fade = 1.0 - (sweep - 0.5).abs() * 2; // peak brightness mid-sweep
+    final w = size.width;
+    final h = size.height;
+    // Diagonal band position travels from top-left to bottom-right.
+    final cx = (sweep * 1.6 - 0.3) * w;
+    final band = w * 0.55;
+    final rect = Offset.zero & size;
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withOpacity(0.0),
+          Colors.white.withOpacity(0.55 * fade),
+          Colors.white.withOpacity(0.0),
+        ],
+        stops: [
+          ((cx - band) / w).clamp(0.0, 1.0),
+          (cx / w).clamp(0.0, 1.0),
+          ((cx + band) / w).clamp(0.0, 1.0),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, w, h))
+      ..blendMode = BlendMode.plus;
+    canvas.drawRect(rect, paint);
+  }
+
+  @override
+  bool shouldRepaint(_RevealFlash old) => old.t != t;
 }
 
 // ── Countdown overlay ────────────────────────────────────────────────────────
