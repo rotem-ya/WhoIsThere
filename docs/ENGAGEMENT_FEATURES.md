@@ -23,11 +23,11 @@
 - פרס פודיום שבוע שעבר: 100/50/25 מטבעות, אידמפוטנטי דרך claims doc.
 - ניקוד נרשם ב-`_triggerMatchReward` (game_board_screen) — פעם אחת לכל משחק, כל המצבים.
 
-### ⚠️ קריטי לפני שהפיצ'ר עובד
-נוספו חוקים ל-`firestore.rules` (בלוק `match /leaderboards/{board}`). **חוקי Firestore
-נפרסים רק מ-`main`** דרך `deploy-firestore-rules.yml`. עד שהחוקים החדשים ב-main ונפרסו,
-כתיבות ל-`leaderboards/**` **נדחות** (ה-catch-all חוסם). לכן: למזג את שינוי ה-rules ל-main
-(או להריץ את ה-workflow) לפני/בסמוך לשחרור הגרסה שכוללת את הטבלה השבועית.
+### ✅ חוקי Firestore — נפרסו (2026-07-21)
+בלוק `match /leaderboards/{board}` נוסף ל-`firestore.rules` **ונפרס ל-main** (commit
+`0b9c0c6`, workflow `deploy-firestore-rules.yml` run #19 = success). החוקים חיים ב-Firestore,
+כך שהטבלה השבועית עובדת מלאה כבר בבילד 1.4.2 הקיים (כתיבה עצמית ל-entries/claims, קריאה
+ל-signedIn). אין צורך בבילד חדש כדי שהטבלה תתחיל לתפקד.
 
 ### חוזה אדמין (לרישום ב-FROM_GAME_PENDING של ריפו האדמין)
 - אוסף חדש `leaderboards/**` (קריאה ציבורית ל-signedIn). אם האדמין ירצה לצפות/למחוק —
