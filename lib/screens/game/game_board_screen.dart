@@ -34,6 +34,7 @@ import '../../core/utils/chat_filter.dart';
 import '../../widgets/chat/chat_sheet.dart';
 import '../../providers/providers.dart';
 import '../../services/settings_service.dart';
+import '../../services/sfx_service.dart';
 import '../../services/analytics_service.dart';
 import '../../services/reward_calculator.dart';
 import '../../services/review_prompt_service.dart';
@@ -174,6 +175,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   GameImageModel? _interludeImage;
   String? _interludeImageLoadingId;
   int? _interludeDismissedUntilMs;
+  int? _interludeSoundAt; // plays the transition whoosh once per interlude
   Timer? _interludeTimer;
 
   // Bot typing simulation
@@ -3031,6 +3033,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     room.lastRoundImageId != null &&
                     _interludeDismissedUntilMs != interludeUntil;
                 if (interludeActive) {
+                  if (_interludeSoundAt != interludeUntil) {
+                    _interludeSoundAt = interludeUntil;
+                    SfxService.instance.transition();
+                  }
                   unawaited(_ensureInterludeImage(room.lastRoundImageId!));
                   unawaited(_ensureInterludeGallery(room));
                   _interludeTimer?.cancel();

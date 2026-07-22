@@ -46,6 +46,16 @@ class SfxService {
   final AudioPlayer _chat = AudioPlayer(playerId: 'sfx-chat');
   final AudioPlayer _rankUp = AudioPlayer(playerId: 'sfx-rank-up');
 
+  // ── Boost sounds (v1.4.x) — drop the files into assets/sounds/ui/ to enable.
+  final AudioPlayer _transition = AudioPlayer(playerId: 'sfx-transition');
+  final AudioPlayer _streak = AudioPlayer(playerId: 'sfx-streak');
+  final AudioPlayer _tileFlip = AudioPlayer(playerId: 'sfx-tile-flip');
+  final AudioPlayer _coinShower = AudioPlayer(playerId: 'sfx-coin-shower');
+  final AudioPlayer _spinTick = AudioPlayer(playerId: 'sfx-spin-tick');
+  final AudioPlayer _spinLand = AudioPlayer(playerId: 'sfx-spin-land');
+  final AudioPlayer _questDone = AudioPlayer(playerId: 'sfx-quest-done');
+  final AudioPlayer _heartbeat = AudioPlayer(playerId: 'sfx-heartbeat');
+
   static final AssetSource _uiClickSound = AssetSource('sounds/ui/ui_click.ogg');
   static final AssetSource _uiCtaSound = AssetSource('sounds/ui/ui_cta.ogg');
   static final AssetSource _uiBackSound = AssetSource('sounds/ui/ui_back.ogg');
@@ -58,6 +68,15 @@ class SfxService {
   static final AssetSource _notifySound = AssetSource('sounds/ui/notify.ogg');
   static final AssetSource _chatSound = AssetSource('sounds/ui/chat_pop.ogg');
   static final AssetSource _rankUpSound = AssetSource('sounds/ui/rank_up.ogg');
+
+  static final AssetSource _transitionSound = AssetSource('sounds/ui/transition.ogg');
+  static final AssetSource _streakSound = AssetSource('sounds/ui/streak.ogg');
+  static final AssetSource _tileFlipSound = AssetSource('sounds/ui/tile_flip.ogg');
+  static final AssetSource _coinShowerSound = AssetSource('sounds/ui/coin_shower.ogg');
+  static final AssetSource _spinTickSound = AssetSource('sounds/ui/spin_tick.ogg');
+  static final AssetSource _spinLandSound = AssetSource('sounds/ui/spin_land.ogg');
+  static final AssetSource _questDoneSound = AssetSource('sounds/ui/quest_complete.ogg');
+  static final AssetSource _heartbeatSound = AssetSource('sounds/ui/heartbeat.ogg');
 
   Future<void> _play(AudioPlayer player, AssetSource src, {double scale = 1.0}) async {
     try {
@@ -118,4 +137,23 @@ class SfxService {
 
   /// Player crossed into a new rank tier — a triumphant jingle.
   Future<void> rankUp() => _play(_rankUp, _rankUpSound);
+
+  // ── Boost moments (v1.4.x) — silent until the assets are dropped in ────────
+  /// Whoosh between rounds (the round interlude).
+  Future<void> transition() => _play(_transition, _transitionSound, scale: 0.8);
+  /// Consecutive-hits streak; pitch/energy can be implied by [level] volume.
+  Future<void> streak(int level) =>
+      _play(_streak, _streakSound, scale: (0.6 + level * 0.08).clamp(0.6, 1.0));
+  /// A tile flips open on the board.
+  Future<void> tileFlip() => _play(_tileFlip, _tileFlipSound, scale: 0.5);
+  /// A cascade of coins flying to the wallet.
+  Future<void> coinShower() => _play(_coinShower, _coinShowerSound);
+  /// Spin wheel ratchet tick (played repeatedly while spinning).
+  Future<void> spinTick() => _play(_spinTick, _spinTickSound, scale: 0.5);
+  /// Spin wheel lands on a prize.
+  Future<void> spinLand() => _play(_spinLand, _spinLandSound);
+  /// A daily quest was completed / claimed.
+  Future<void> questComplete() => _play(_questDone, _questDoneSound);
+  /// A single heartbeat thump during the final urgent seconds.
+  Future<void> heartbeat() => _play(_heartbeat, _heartbeatSound, scale: 0.7);
 }

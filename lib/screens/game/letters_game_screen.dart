@@ -239,9 +239,11 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
       SfxService.instance.letterCorrect();
       SfxService.instance.reveal();
       setState(() => _streak++);
+      if (_streak >= 2) SfxService.instance.streak(_streak);
     } else if (res.feedback == LetterFeedback.present) {
       SfxService.instance.reveal();
       setState(() => _streak++);
+      if (_streak >= 2) SfxService.instance.streak(_streak);
     } else {
       SfxService.instance.letterWrong();
       if (_streak != 0) setState(() => _streak = 0);

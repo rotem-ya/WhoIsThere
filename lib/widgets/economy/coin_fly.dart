@@ -114,8 +114,9 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
       );
     });
     _ctrl.forward().whenComplete(widget.onDone);
-    // Kick off the shower with one satisfying coin sound.
-    if (widget.sound) SfxService.instance.coinGain();
+    // Kick off with the richer coin-shower sound (falls back to silence until
+    // the asset is added; the per-landing coinGain ticks still play).
+    if (widget.sound) SfxService.instance.coinShower();
   }
 
   void _tick() {

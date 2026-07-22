@@ -57,7 +57,19 @@ class _DailySpinSheetState extends ConsumerState<_DailySpinSheet>
   double _toTurns = 0; // target
   bool _spinning = false;
   int? _wonCoins;
+  double _lastTickTurns = 0;
   final GlobalKey _wheelKey = GlobalKey();
+
+  // Plays a ratchet tick each time the wheel crosses a segment boundary.
+  void _spinTicker() {
+    final n = EconomyConfig.dailySpinSegments.length;
+    final turns = _fromTurns + (_toTurns - _fromTurns) *
+        Curves.easeOutQuart.transform(_spin.value);
+    if ((turns - _lastTickTurns).abs() >= 1.0 / n) {
+      _lastTickTurns = turns;
+      SfxService.instance.spinTick();
+    }
+  }
 
   @override
   void initState() {
@@ -102,14 +114,18 @@ class _DailySpinSheetState extends ConsumerState<_DailySpinSheet>
       final landing = (n - res.index) % n * seg - seg / 2; // turns, [0,1)
       _fromTurns = _toTurns;
       _toTurns = _fromTurns.floorToDouble() + 5 + landing;
-      SfxService.instance.reveal();
+      // Ratchet ticks while it spins (throttled by segment crossings).
+      _lastTickTurns = _fromTurns;
+      _spin.addListener(_spinTicker);
       await _spin.forward(from: 0);
+      _spin.removeListener(_spinTicker);
       if (!mounted) return;
       setState(() {
         _spinning = false;
         _wonCoins = res.coins;
       });
       HapticFeedback.mediumImpact();
+      SfxService.instance.spinLand();
       SfxService.instance.coinGain();
       _flyCoins(res.coins);
       await Future.delayed(const Duration(milliseconds: 2400));

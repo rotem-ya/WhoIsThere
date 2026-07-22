@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../models/card_skin.dart';
 import '../../../providers/skin_providers.dart';
+import '../../../services/sfx_service.dart';
 import '../../../utils/game_constants.dart';
 import '../../../widgets/game/vault_cover.dart';
 
@@ -215,6 +216,7 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
     super.didUpdateWidget(oldWidget);
     if (widget.isRevealed && !oldWidget.isRevealed) {
       _revealing = true;
+      SfxService.instance.tileFlip();
       _popCtrl.forward(from: 0.0);
     }
     if (widget.isPendingReveal && !oldWidget.isPendingReveal) {
@@ -239,7 +241,11 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
     if (deadline == null) return;
     final remaining = deadline - DateTime.now().millisecondsSinceEpoch;
     final secs = (remaining / 1000).ceil().clamp(0, 10);
-    if (mounted && secs != _secondsLeft) setState(() => _secondsLeft = secs);
+    if (mounted && secs != _secondsLeft) {
+      // A heartbeat thump on each of the final urgent seconds.
+      if (secs >= 1 && secs <= 3) SfxService.instance.heartbeat();
+      setState(() => _secondsLeft = secs);
+    }
   }
 
   void _stopCountdown() {

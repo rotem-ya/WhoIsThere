@@ -44,6 +44,7 @@ class _DailyQuestCardState extends ConsumerState<DailyQuestCard> {
       setState(() => _claiming = false);
       if (coins != null && coins > 0) {
         HapticFeedback.mediumImpact();
+        SfxService.instance.questComplete();
         SfxService.instance.coinGain();
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
