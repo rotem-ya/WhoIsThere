@@ -58,6 +58,9 @@ class SfxService {
   final AudioPlayer _appear = AudioPlayer(playerId: 'sfx-appear');
   final AudioPlayer _trickCast = AudioPlayer(playerId: 'sfx-trick-cast');
   final AudioPlayer _trickHit = AudioPlayer(playerId: 'sfx-trick-hit');
+  final AudioPlayer _toolBomb = AudioPlayer(playerId: 'sfx-tool-bomb');
+  final AudioPlayer _toolFastfwd = AudioPlayer(playerId: 'sfx-tool-fastfwd');
+  final AudioPlayer _toolTargeted = AudioPlayer(playerId: 'sfx-tool-targeted');
 
   static final AssetSource _uiClickSound = AssetSource('sounds/ui/ui_click.ogg');
   static final AssetSource _uiCtaSound = AssetSource('sounds/ui/ui_cta.ogg');
@@ -83,6 +86,9 @@ class SfxService {
   static final AssetSource _appearSound = AssetSource('sounds/ui/appear.ogg');
   static final AssetSource _trickCastSound = AssetSource('sounds/ui/trick_cast.ogg');
   static final AssetSource _trickHitSound = AssetSource('sounds/ui/trick_hit.ogg');
+  static final AssetSource _toolBombSound = AssetSource('sounds/ui/tool_bomb.ogg');
+  static final AssetSource _toolFastfwdSound = AssetSource('sounds/ui/tool_fastfwd.ogg');
+  static final AssetSource _toolTargetedSound = AssetSource('sounds/ui/tool_targeted.ogg');
 
   Future<void> _play(AudioPlayer player, AssetSource src, {double scale = 1.0}) async {
     try {
@@ -171,4 +177,12 @@ class SfxService {
   Future<void> trickCast() => _play(_trickCast, _trickCastSound, scale: 0.9);
   /// You got hit by a trick (your board darkened / you were blocked / stunned).
   Future<void> trickHit() => _play(_trickHit, _trickHitSound);
+
+  // ── Detective reveal tools ────────────────────────────────────────────────
+  /// 💣 Bomb tool — a punchy explosion.
+  Future<void> toolBomb() => _play(_toolBomb, _toolBombSound);
+  /// ⚡ Fast-forward tool — a quick rising whoosh.
+  Future<void> toolFastForward() => _play(_toolFastfwd, _toolFastfwdSound);
+  /// 🎯 Targeted reveal tool — a lock-on ping.
+  Future<void> toolTargeted() => _play(_toolTargeted, _toolTargetedSound);
 }

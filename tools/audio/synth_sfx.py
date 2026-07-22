@@ -200,6 +200,53 @@ def sfx_coin_shower():
         y[start:end] += w[:end - start] * amp
     return softclip(y * 0.46)
 
+def sfx_tool_bomb():
+    # 💣 bomb reveal: a punchy explosion — bright crack + low boom + rumble.
+    lr = np.random.default_rng(5150)
+    n = int(0.6 * SR)
+    t = np.arange(n) / SR
+    x = t / t[-1]
+    # sharp initial crack
+    crack = lr.uniform(-1, 1, n) * np.exp(-t / 0.04)
+    crack = onepole_hp(crack, 1200) * 0.7
+    # low boom punch, pitch dropping fast
+    pitch = 140 * np.exp(-8 * x) + 45
+    boom = np.sin(2 * np.pi * np.cumsum(pitch) / SR) * np.exp(-t / 0.16)
+    boom += 0.6 * np.sin(2 * np.pi * 0.5 * np.cumsum(pitch) / SR) * np.exp(-t / 0.20)
+    # low rumble tail
+    rumble = lr.uniform(-1, 1, n) * np.exp(-t / 0.22)
+    rumble = onepole_lp(rumble, 220) * 0.5
+    return softclip((onepole_lp(boom, 1600) + crack + rumble) * 1.2)
+
+def sfx_tool_fastfwd():
+    # ⚡ fast-forward: a quick rising whoosh (several tiles pop at once).
+    lr = np.random.default_rng(6006)
+    n = int(0.4 * SR)
+    t = np.arange(n) / SR
+    x = t / t[-1]
+    sweep = 400 + 3000 * x
+    nz = lr.uniform(-1, 1, n)
+    riser = svf_bandpass(nz, sweep, q=5) * (x ** 1.2)
+    tone_ = 0.4 * np.sin(2 * np.pi * np.cumsum(sweep) / SR) * (x ** 1.5)
+    return onepole_hp(riser, 400) + tone_
+
+def sfx_tool_targeted():
+    # 🎯 targeted reveal: two locate blips then a confirm chord (lock-on).
+    n = int(0.3 * SR)
+    y = np.zeros(n)
+    for st, f in [(0.0, 1200), (0.08, 1600)]:
+        s = int(st * SR)
+        m = n - s
+        tt = np.arange(m) / SR
+        y[s:] += np.sin(2 * np.pi * f * tt) * np.exp(-tt / 0.03) * 0.5
+    s = int(0.16 * SR)
+    m = n - s
+    tt = np.arange(m) / SR
+    conf = (np.sin(2 * np.pi * 880 * tt) + 0.6 * np.sin(2 * np.pi * 1320 * tt)) \
+        * np.exp(-tt / 0.08)
+    y[s:] += conf * 0.5
+    return y
+
 def sfx_trick_cast():
     # deploying a trick (block/blackout/stun): a quick rising magical zap.
     lr = np.random.default_rng(3311)
@@ -317,11 +364,16 @@ sfx = {
     'appear.ogg': sfx_appear,
     'trick_cast.ogg': sfx_trick_cast,
     'trick_hit.ogg': sfx_trick_hit,
+    'tool_bomb.ogg': sfx_tool_bomb,
+    'tool_fastfwd.ogg': sfx_tool_fastfwd,
+    'tool_targeted.ogg': sfx_tool_targeted,
 }
 
 peaks = {'coin_shower.ogg': -2.5, 'heartbeat.ogg': -4.0, 'spin_tick.ogg': -3.0,
          'tile_flip.ogg': -5.0, 'appear.ogg': -6.0,
-         'trick_cast.ogg': -3.0, 'trick_hit.ogg': -3.0}
+         'trick_cast.ogg': -3.0, 'trick_hit.ogg': -3.0,
+         'tool_bomb.ogg': -2.5, 'tool_fastfwd.ogg': -3.0,
+         'tool_targeted.ogg': -3.5}
 
 
 def generate(only=None):

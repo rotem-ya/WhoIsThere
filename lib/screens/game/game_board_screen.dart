@@ -1931,6 +1931,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       }
     }
     QaLoggerService.instance.log('GAME', 'TOOL_BOMB tiles=${cluster.length}');
+    SfxService.instance.toolBomb();
     setState(() {
       _personalRevealedTiles.addAll(cluster);
       _bombUses++;
@@ -1971,6 +1972,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       picks.add(i);
     }
     QaLoggerService.instance.log('GAME', 'TOOL_FASTFWD tiles=${picks.length}');
+    SfxService.instance.toolFastForward();
     setState(() {
       _personalRevealedTiles.addAll(picks);
       _fastForwardUses++;
@@ -1990,6 +1992,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       return;
     }
     QaLoggerService.instance.log('GAME', 'TOOL_TARGETED tile=$chosen');
+    SfxService.instance.toolTargeted();
     setState(() {
       _personalRevealedTiles.add(chosen);
       _targetedUses++;
