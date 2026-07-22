@@ -92,7 +92,7 @@ class _CoinFlyLayerState extends State<_CoinFlyLayer>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1750),
+      duration: const Duration(milliseconds: 2400),
     )..addListener(_tick);
     _coins = List.generate(widget.count, (i) {
       // Each coin starts a little apart from the source and lands staggered.

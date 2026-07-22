@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/theme/candy_theme.dart';
+import '../../services/sfx_service.dart';
 
 /// A prestige "premium unlocked" celebration — deliberately NOT confetti.
 ///
@@ -24,6 +25,7 @@ class PremiumUnlock {
     final overlay = Overlay.maybeOf(context, rootOverlay: true);
     if (overlay == null) return;
     _showing = true;
+    SfxService.instance.appear();
 
     late final OverlayEntry entry;
     entry = OverlayEntry(

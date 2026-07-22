@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/providers.dart';
 import '../../services/music_service.dart';
+import '../../services/sfx_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../screens/auth/auth_screen.dart';
 import '../../screens/game/game_board_screen.dart';
@@ -77,7 +78,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/auth',
     refreshListenable: notifier,
     redirect: notifier.redirect,
-    observers: [MusicRouteObserver()],
+    observers: [MusicRouteObserver(), PopupSoundObserver()],
     routes: [
       GoRoute(
         path: '/splash',
@@ -250,6 +251,19 @@ class MusicRouteObserver extends NavigatorObserver {
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) =>
       _apply(previousRoute);
+}
+
+/// Plays a soft "appear" pop whenever a dialog / popup route is pushed, so
+/// things that appear on top of the screen get a light sound. Bottom sheets are
+/// excluded because AppBottomSheet already plays its own open sound, and page
+/// navigations are PageRoutes (not PopupRoutes) so they are untouched.
+class PopupSoundObserver extends NavigatorObserver {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is PopupRoute && route is! ModalBottomSheetRoute) {
+      SfxService.instance.appear();
+    }
+  }
 }
 
 /// Listens to [firebaseUserProvider] and notifies GoRouter to re-run

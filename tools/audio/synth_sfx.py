@@ -175,27 +175,45 @@ def sfx_tile_flip():
     return y
 
 def sfx_coin_shower():
-    # rich coin cascade: many bright metallic tings, dense then thinning
-    dur = 0.8
+    # rich coin cascade: many bright metallic tings, dense then thinning.
+    # v2: slower and more spread out (1.3s) so it breathes with the slower coin
+    # fly. Own local RNG so it regenerates in isolation.
+    lr = np.random.default_rng(9021)
+    dur = 1.3
     n = int(dur * SR)
     y = np.zeros(n)
-    count = 46
+    count = 60
     for _ in range(count):
-        # earlier = denser
-        pos = rng.beta(1.6, 2.4)
-        start = int(pos * (dur - 0.12) * SR)
-        base = rng.uniform(1400, 2600)
-        d = rng.uniform(0.05, 0.13)
+        # earlier = denser, but the tail lingers longer than before
+        pos = lr.beta(1.5, 2.8)
+        start = int(pos * (dur - 0.16) * SR)
+        base = lr.uniform(1300, 2500)
+        d = lr.uniform(0.06, 0.16)
         m = int(d * SR)
         tt = np.arange(m) / SR
         w = np.zeros(m)
         for h, a in [(1, 1.0), (2.76, 0.6), (5.4, 0.35), (8.2, 0.18)]:
             w += a * np.sin(2 * np.pi * base * h * tt)
-        w *= exp_decay(m, d * 0.4)
-        amp = rng.uniform(0.5, 1.0) * (1.0 - 0.35 * pos)
+        w *= exp_decay(m, d * 0.42)
+        amp = lr.uniform(0.5, 1.0) * (1.0 - 0.30 * pos)
         end = min(start + m, n)
         y[start:end] += w[:end - start] * amp
-    return softclip(y * 0.5)
+    return softclip(y * 0.46)
+
+def sfx_appear():
+    # soft "pop" for something appearing (dialog / overlay). A gentle upward
+    # blip, lowpassed and short, so it stays subtle when things pop in often.
+    n = int(0.17 * SR)
+    t = np.arange(n) / SR
+    x = t / t[-1]
+    pitch = 380 + 360 * np.clip(x / 0.6, 0, 1)  # rise then hold
+    body = np.sin(2 * np.pi * np.cumsum(pitch) / SR)
+    body += 0.3 * np.sin(2 * np.pi * 2 * np.cumsum(pitch) / SR)  # soft harmonic
+    env = np.exp(-t / 0.06)
+    atk = int(0.006 * SR)
+    env[:atk] *= np.linspace(0, 1, atk)
+    spark = 0.18 * np.sin(2 * np.pi * 1500 * t) * np.exp(-t / 0.03)
+    return onepole_lp(body * env, 2600) * 0.9 + spark
 
 def sfx_spin_tick():
     # single sharp ratchet tick
@@ -261,10 +279,11 @@ sfx = {
     'spin_land.ogg': sfx_spin_land,
     'quest_complete.ogg': sfx_quest_complete,
     'heartbeat.ogg': sfx_heartbeat,
+    'appear.ogg': sfx_appear,
 }
 
 peaks = {'coin_shower.ogg': -2.5, 'heartbeat.ogg': -4.0, 'spin_tick.ogg': -3.0,
-         'tile_flip.ogg': -5.0}
+         'tile_flip.ogg': -5.0, 'appear.ogg': -6.0}
 
 
 def generate(only=None):

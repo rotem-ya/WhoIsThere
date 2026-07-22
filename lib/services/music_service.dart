@@ -19,11 +19,12 @@ class MusicService {
 
   final AudioPlayer _player = AudioPlayer(playerId: 'menu-music');
 
-  static const _paths = {
-    MenuTrack.menu: 'sounds/music_menu.mp3',
-    // MenuTrack.lobby intentionally has no track: the lobby stays silent.
-    MenuTrack.win: 'sounds/music_win.mp3',
-  };
+  // Menu-side background music was removed by design: only the in-game
+  // background music (owned by the game board's own player) plays now. Every
+  // MenuTrack therefore maps to nothing and play() is a silent no-op. The
+  // service and route observer are kept so a track can be re-introduced later
+  // by adding an entry here.
+  static const Map<MenuTrack, String> _paths = {};
 
   MenuTrack _current = MenuTrack.none;
   bool _started = false;

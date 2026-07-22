@@ -55,6 +55,7 @@ class SfxService {
   final AudioPlayer _spinLand = AudioPlayer(playerId: 'sfx-spin-land');
   final AudioPlayer _questDone = AudioPlayer(playerId: 'sfx-quest-done');
   final AudioPlayer _heartbeat = AudioPlayer(playerId: 'sfx-heartbeat');
+  final AudioPlayer _appear = AudioPlayer(playerId: 'sfx-appear');
 
   static final AssetSource _uiClickSound = AssetSource('sounds/ui/ui_click.ogg');
   static final AssetSource _uiCtaSound = AssetSource('sounds/ui/ui_cta.ogg');
@@ -77,6 +78,7 @@ class SfxService {
   static final AssetSource _spinLandSound = AssetSource('sounds/ui/spin_land.ogg');
   static final AssetSource _questDoneSound = AssetSource('sounds/ui/quest_complete.ogg');
   static final AssetSource _heartbeatSound = AssetSource('sounds/ui/heartbeat.ogg');
+  static final AssetSource _appearSound = AssetSource('sounds/ui/appear.ogg');
 
   Future<void> _play(AudioPlayer player, AssetSource src, {double scale = 1.0}) async {
     try {
@@ -156,4 +158,7 @@ class SfxService {
   Future<void> questComplete() => _play(_questDone, _questDoneSound);
   /// A single heartbeat thump during the final urgent seconds.
   Future<void> heartbeat() => _play(_heartbeat, _heartbeatSound, scale: 0.7);
+  /// A soft pop for something appearing (dialog / overlay). Kept quiet so it
+  /// stays subtle when popups show often.
+  Future<void> appear() => _play(_appear, _appearSound, scale: 0.55);
 }
