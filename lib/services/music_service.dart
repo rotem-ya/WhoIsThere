@@ -21,7 +21,7 @@ class MusicService {
 
   static const _paths = {
     MenuTrack.menu: 'sounds/music_menu.mp3',
-    MenuTrack.lobby: 'sounds/music_lobby.mp3',
+    // MenuTrack.lobby intentionally has no track: the lobby stays silent.
     MenuTrack.win: 'sounds/music_win.mp3',
   };
 

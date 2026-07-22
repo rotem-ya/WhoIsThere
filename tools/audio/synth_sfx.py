@@ -149,16 +149,30 @@ def sfx_streak():
     return y
 
 def sfx_tile_flip():
-    # soft card flip: short filtered noise fwip + tiny pitch blip
-    n = int(0.2 * SR)
+    # card flip, v2: airy downward swish (the card turning over) landing on a
+    # soft woody tap (the card settling). Self-contained RNG so it can be
+    # regenerated in isolation without shifting the other effects' noise.
+    lr = np.random.default_rng(4242)
+    n = int(0.18 * SR)
     t = np.arange(n) / SR
     x = t / t[-1]
-    nz = noise(n)
-    sweep = 1800 + 2600 * x
-    bp = svf_bandpass(nz, sweep, q=3)
-    body = bp * exp_decay(n, 0.045) * (0.6 + 0.4 * x)
-    blip = 0.3 * sine(700 - 200 * x, t) * exp_decay(n, 0.03)
-    return onepole_hp(body, 400) * 0.9 + blip
+    # airy swish: bandpass noise sweeping downward, smooth single hump
+    sweep = 2800 * np.exp(-3.0 * x) + 750
+    nz = lr.uniform(-1, 1, n)
+    swish = svf_bandpass(nz, sweep, q=2.2)
+    swish *= np.sin(np.pi * np.clip(x / 0.7, 0, 1)) ** 1.3
+    swish = onepole_hp(swish, 450)
+    # soft woody tap near the end (card lays down)
+    ts = int(0.11 * SR)
+    m = n - ts
+    tt = np.arange(m) / SR
+    click = lr.uniform(-1, 1, m) * exp_decay(m, 0.004)
+    click = onepole_hp(click, 1800)
+    wood = np.sin(2 * np.pi * 205 * tt) * exp_decay(m, 0.02)
+    tap = onepole_lp(click, 6000) * 0.6 + onepole_lp(wood, 900) * 0.5
+    y = swish * 0.7
+    y[ts:] += tap
+    return y
 
 def sfx_coin_shower():
     # rich coin cascade: many bright metallic tings, dense then thinning
@@ -249,9 +263,22 @@ sfx = {
     'heartbeat.ogg': sfx_heartbeat,
 }
 
-print('SFX (assets/sounds/ui/*.ogg):')
 peaks = {'coin_shower.ogg': -2.5, 'heartbeat.ogg': -4.0, 'spin_tick.ogg': -3.0,
          'tile_flip.ogg': -5.0}
-for name, fn in sfx.items():
-    save_ogg(name, fn(), peak_db=peaks.get(name, -2.0))
-print('SFX done.')
+
+
+def generate(only=None):
+    """Write the SFX. Pass only={'tile_flip.ogg', ...} to regenerate a subset
+    (each effect is deterministic in isolation for the noise-independent ones;
+    tile_flip uses its own local RNG)."""
+    print('SFX (assets/sounds/ui/*.ogg):')
+    for name, fn in sfx.items():
+        if only and name not in only:
+            continue
+        save_ogg(name, fn(), peak_db=peaks.get(name, -2.0))
+    print('SFX done.')
+
+
+if __name__ == '__main__':
+    import sys
+    generate(only=set(sys.argv[1:]) or None)

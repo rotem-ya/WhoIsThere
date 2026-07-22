@@ -227,11 +227,12 @@ class MusicRouteObserver extends NavigatorObserver {
     MenuTrack track;
     if (path.startsWith('/game') ||
         path.startsWith('/letters') ||
-        path.startsWith('/vote')) {
-      track = MenuTrack.none; // the game screen owns music in-game
-    } else if (path.startsWith('/lobby') ||
+        path.startsWith('/vote') ||
+        path.startsWith('/lobby') ||
         path.startsWith('/finding-players')) {
-      track = MenuTrack.lobby;
+      // Silent: in-game the game screen owns audio; the lobby and matchmaking
+      // waiting screens stay quiet on purpose (no background music there).
+      track = MenuTrack.none;
     } else if (path.startsWith('/win')) {
       track = MenuTrack.win;
     } else {
