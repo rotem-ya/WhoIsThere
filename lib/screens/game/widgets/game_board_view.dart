@@ -33,6 +33,9 @@ class GameBoardView extends ConsumerStatefulWidget {
 
   final VoidCallback? onTapRevealed;
 
+  // When true, still-hidden tiles reveal their picture in a staggered burst.
+  final bool burstReveal;
+
   const GameBoardView({
     super.key,
     required this.gridSize,
@@ -47,6 +50,7 @@ class GameBoardView extends ConsumerStatefulWidget {
     this.pendingRevealTileIndex,
     this.revealDeadlineMs,
     this.spotlightCells = const {},
+    this.burstReveal = false,
   });
 
   @override
@@ -124,6 +128,7 @@ class _GameBoardViewState extends ConsumerState<GameBoardView> {
                         isPendingReveal: index == widget.pendingRevealTileIndex,
                         revealDeadlineMs: widget.revealDeadlineMs,
                         spotlightPeek: widget.spotlightCells.contains(index),
+                        burst: widget.burstReveal,
                       ),
                   ],
                 ),
@@ -151,6 +156,7 @@ class _Tile extends StatefulWidget {
   final bool isPendingReveal;
   final int? revealDeadlineMs;
   final bool spotlightPeek;
+  final bool burst;
 
   const _Tile({
     required this.index,
@@ -167,6 +173,7 @@ class _Tile extends StatefulWidget {
     this.isPendingReveal = false,
     this.revealDeadlineMs,
     this.spotlightPeek = false,
+    this.burst = false,
   });
 
   @override
@@ -183,6 +190,9 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
   late Animation<double> _flipAngle;
   bool _revealing = false;
   Timer? _countdownTimer;
+  Timer? _burstTimer;
+  // True once this tile's picture has popped in during a correct-guess burst.
+  bool _burstShown = false;
   int _secondsLeft = 10;
 
   @override
@@ -226,6 +236,20 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
     } else if (widget.isPendingReveal && widget.revealDeadlineMs != oldWidget.revealDeadlineMs) {
       _updateSecondsLeft();
     }
+    // Correct-guess burst: a hidden tile pops its picture in on a diagonal
+    // stagger, so the full image assembles across the board.
+    if (widget.burst && !oldWidget.burst && !widget.isRevealed) {
+      final row = widget.index ~/ widget.gridSize;
+      final col = widget.index % widget.gridSize;
+      final delayMs = (row + col) * 45;
+      _burstTimer?.cancel();
+      _burstTimer = Timer(Duration(milliseconds: delayMs), () {
+        if (mounted) setState(() => _burstShown = true);
+      });
+    } else if (!widget.burst && oldWidget.burst) {
+      _burstTimer?.cancel();
+      _burstShown = false;
+    }
   }
 
   void _startCountdown() {
@@ -256,6 +280,7 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    _burstTimer?.cancel();
     _popCtrl.dispose();
     super.dispose();
   }
@@ -381,6 +406,27 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
                     child: _CountdownOverlay(
                       secondsLeft: _secondsLeft,
                       tileSize: widget.tileSize,
+                    ),
+                  ),
+                // Correct-guess burst: the hidden slice pops in over the cover.
+                if (widget.burst && !widget.isRevealed)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 240),
+                        opacity: _burstShown ? 1.0 : 0.0,
+                        child: AnimatedScale(
+                          duration: const Duration(milliseconds: 320),
+                          curve: Curves.easeOutBack,
+                          scale: _burstShown ? 1.0 : 0.72,
+                          child: _ImageSlice(
+                            index: widget.index,
+                            gridSize: widget.gridSize,
+                            tileSize: widget.tileSize,
+                            imageUrl: widget.imageUrl,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 // A one-shot diagonal light sweep across the freshly revealed

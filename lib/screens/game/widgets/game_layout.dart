@@ -70,6 +70,9 @@ class GameLayout extends StatelessWidget {
   final VoidCallback? onVoteSkip;
   // Turn-based letter guessing (additive hint layer, host-toggled).
   final ValueChanged<String>? onGuessLetterTurn;
+  // When true, the still-hidden board tiles reveal their picture in a
+  // staggered burst (played on a correct guess).
+  final bool burstReveal;
 
   const GameLayout({
     required this.room,
@@ -118,6 +121,7 @@ class GameLayout extends StatelessWidget {
     this.showBuyLetter = false,
     this.onVoteSkip,
     this.onGuessLetterTurn,
+    this.burstReveal = false,
   });
 
   @override
@@ -259,6 +263,7 @@ class GameLayout extends StatelessWidget {
                       pendingRevealTileIndex: room.pendingRevealTileIndex,
                       revealDeadlineMs: room.revealDeadlineMs,
                       spotlightCells: _isBlackedOut ? const {} : spotlightCells,
+                      burstReveal: burstReveal && !_isBlackedOut,
                     ),
                     if (_isBlackedOut)
                       Positioned.fill(

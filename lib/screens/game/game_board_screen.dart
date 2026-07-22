@@ -164,6 +164,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   // paired with a haptic burst, to make the win land with impact.
   late final AnimationController _heroShake;
 
+  // Wrong-guess shake — a short side-to-side jolt + red flash on YOUR own
+  // wrong guess, so a miss stings (Wordle-style).
+  late final AnimationController _wrongShake;
+
   // Round-start hype intro (היכון · 3 · 2 · 1 · גלו!) — shown once when this
   // client first enters the playing phase. Purely cosmetic anticipation and
   // non-blocking (input passes through); the reveal engine is server-driven.
@@ -458,6 +462,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _heroShake = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 520),
+    );
+    _wrongShake = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 460),
     );
     WidgetsBinding.instance.addObserver(this);
     unawaited(WakelockPlus.enable());
@@ -1060,6 +1068,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _confettiLeft.dispose();
     _confettiRight.dispose();
     _heroShake.dispose();
+    _wrongShake.dispose();
     WidgetsBinding.instance.removeObserver(this);
     unawaited(WakelockPlus.disable());
     unawaited(_bgPlayer.stop());
@@ -2204,6 +2213,30 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     return Offset(dx, dy);
   }
 
+  /// Horizontal side-to-side jolt for a wrong guess (decaying).
+  Offset _wrongShakeOffset() {
+    if (!_wrongShake.isAnimating) return Offset.zero;
+    final t = _wrongShake.value;
+    final amp = 12.0 * (1.0 - t);
+    return Offset(sin(t * pi * 10) * amp, 0);
+  }
+
+  /// Red flash opacity while the wrong-guess shake plays (quick in, fade out).
+  double _wrongFlashOpacity() {
+    if (!_wrongShake.isAnimating) return 0.0;
+    final t = _wrongShake.value;
+    // Rise over the first 20%, then ease back to zero.
+    final v = t < 0.2 ? t / 0.2 : 1.0 - (t - 0.2) / 0.8;
+    return (v.clamp(0.0, 1.0)) * 0.28;
+  }
+
+  /// Fire the wrong-guess feedback (shake + red flash + haptic).
+  void _triggerWrongShake() {
+    if (!mounted) return;
+    _wrongShake.forward(from: 0.0);
+    HapticFeedback.heavyImpact();
+  }
+
   void _handleGuessTap(RoomModel room, String userId, bool canGuessNow) {
     if (!canGuessNow) {
       QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED_BLOCKED phase=${room.turnPhase.name}');
@@ -2378,9 +2411,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       child: Scaffold(
         backgroundColor: AppStyles.navyTop,
         body: AnimatedBuilder(
-          animation: _heroShake,
+          animation: Listenable.merge([_heroShake, _wrongShake]),
           builder: (context, child) => Transform.translate(
-            offset: _heroShakeOffset(),
+            offset: _heroShakeOffset() + _wrongShakeOffset(),
             child: child,
           ),
           child: Stack(
@@ -2880,6 +2913,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       unawaited(_playCorrectDing());
                     } else if (!isCorrect) {
                       unawaited(_playWrongBuzz());
+                      // Your own miss stings: jolt the board + red flash.
+                      if (isLocalGuess) _triggerWrongShake();
                     }
                     // Small touch: a correct guess floats a 🎉 with the scorer's
                     // name — makes "someone scored" feel alive.
@@ -3059,6 +3094,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   isBusy: _isBusy,
                   canGuessNow: canGuessNow,
                   isSolo: isSolo,
+                  burstReveal: _showCorrectGuess,
                   revealRatio: revealRatio,
                   potTotal: room.potTotal,
                   showBanner: _showBanner,
@@ -3220,6 +3256,30 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   onTap: () => _openChat(_lastRoom!),
                 ),
               ),
+            // Wrong-guess red vignette flash (transparent center, red edges).
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _wrongShake,
+                  builder: (_, __) {
+                    final o = _wrongFlashOpacity();
+                    if (o <= 0) return const SizedBox.shrink();
+                    return DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          radius: 1.1,
+                          colors: [
+                            const Color(0xFFFF3030).withOpacity(0),
+                            Color(0xFFFF2020).withOpacity(o),
+                          ],
+                          stops: const [0.5, 1.0],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
             if (_showCorrectGuess) ...[
               // Bright radial flash burst — pops white/gold then fades, giving
               // the correct guess an instant hit of impact behind the confetti.
