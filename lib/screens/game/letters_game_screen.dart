@@ -938,16 +938,68 @@ class _StreakChip extends StatelessWidget {
                       blurRadius: 12),
                 ],
               ),
-              child: Text(
-                '🔥 רצף x$streak',
+              child: Row(
                 textDirection: TextDirection.rtl,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w900,
-                ),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _FlickerFlame(),
+                  const SizedBox(width: 4),
+                  Text(
+                    'רצף x$streak',
+                    textDirection: TextDirection.rtl,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
               ),
             ),
+    );
+  }
+}
+
+/// A small flame emoji that flickers (scale + slight sway), so the streak badge
+/// reads as a live fire rather than a static glyph.
+class _FlickerFlame extends StatefulWidget {
+  const _FlickerFlame();
+
+  @override
+  State<_FlickerFlame> createState() => _FlickerFlameState();
+}
+
+class _FlickerFlameState extends State<_FlickerFlame>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, child) {
+        final t = Curves.easeInOut.transform(_c.value);
+        return Transform.rotate(
+          angle: (t - 0.5) * 0.18,
+          child: Transform.scale(scale: 0.9 + 0.22 * t, child: child),
+        );
+      },
+      child: const Text('🔥', style: TextStyle(fontSize: 14)),
     );
   }
 }

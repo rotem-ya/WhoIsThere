@@ -27,6 +27,7 @@ import '../../widgets/common/tilt_card.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_fly.dart';
 import '../../widgets/economy/coin_icon.dart';
+import '../../widgets/common/candy_particles.dart';
 import '../../widgets/economy/daily_quest_card.dart';
 import '../../widgets/economy/daily_spin_sheet.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
@@ -829,6 +830,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       gradient: Candy.bgVariant(ref.watch(bgVariantProvider))),
                 ),
               ),
+              const Positioned.fill(child: CandyParticles()),
               SafeArea(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -899,7 +901,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   ],
                                 ),
                               ),
-                            ),
+                            )
+                                // A light sweep glints across the title every
+                                // few seconds so the hero feels alive.
+                                .animate(onPlay: (c) => c.repeat())
+                                .shimmer(
+                                    delay: 2800.ms,
+                                    duration: 1500.ms,
+                                    color: Colors.white.withOpacity(0.55)),
                             delayMs: 200, durationMs: 380, dy: 8,
                           ),
                           const SizedBox(height: 6),

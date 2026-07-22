@@ -410,6 +410,8 @@ class _LeaderboardTab extends ConsumerWidget {
 
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(friendsLeaderboardProvider),
+      color: Candy.gold,
+      backgroundColor: Candy.surfaceLow,
       child: boardAsync.when(
         loading: () => ListView(
           children: const [SizedBox(height: 8), SkeletonList(rows: 6)],

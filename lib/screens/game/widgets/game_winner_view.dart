@@ -245,9 +245,18 @@ class _GameWinnerViewState extends State<GameWinnerView>
         ConfettiWidget(
           confettiController: _confettiController,
           blastDirection: math.pi / 2,
-          emissionFrequency: 0.08,
-          numberOfParticles: 18,
-          gravity: 0.16,
+          emissionFrequency: 0.10,
+          numberOfParticles: 30,
+          maxBlastForce: 22,
+          minBlastForce: 8,
+          gravity: 0.18,
+          colors: const [
+            Candy.teal,
+            Candy.pink,
+            Candy.tangerine,
+            Candy.gold,
+            Colors.white,
+          ],
           shouldLoop: false,
         ),
         Padding(

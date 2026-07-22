@@ -116,12 +116,17 @@ class _AnimatedCoinChipState extends State<_AnimatedCoinChip>
                 duration: const Duration(milliseconds: 220),
                 transitionBuilder: (child, anim) => FadeTransition(
                   opacity: anim,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.4),
-                      end: Offset.zero,
-                    ).animate(anim),
-                    child: child,
+                  child: ScaleTransition(
+                    // A tiny pop on every counted value so the tally feels alive.
+                    scale: Tween<double>(begin: 0.72, end: 1.0).animate(
+                        CurvedAnimation(parent: anim, curve: Curves.easeOutBack)),
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.4),
+                        end: Offset.zero,
+                      ).animate(anim),
+                      child: child,
+                    ),
                   ),
                 ),
                 child: Text(
