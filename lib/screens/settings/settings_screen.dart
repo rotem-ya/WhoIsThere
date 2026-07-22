@@ -6,6 +6,7 @@ import '../../core/theme/candy_theme.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../providers/providers.dart';
+import '../../services/music_service.dart';
 import '../../services/settings_service.dart';
 import '../../widgets/common/app_header.dart';
 import '../game/game_board_screen.dart';
@@ -44,9 +45,12 @@ class SettingsScreen extends ConsumerWidget {
                   onChangeEnd: (v) {
                     HapticFeedback.lightImpact();
                     GameBoardScreen.applyLiveMusicScale(v);
+                    MusicService.instance.applyVolume();
                   },
-                  onMuteToggle: () =>
-                      ref.read(settingsProvider.notifier).toggleMusicMute(),
+                  onMuteToggle: () {
+                    ref.read(settingsProvider.notifier).toggleMusicMute();
+                    MusicService.instance.applyVolume();
+                  },
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _SoundSection(

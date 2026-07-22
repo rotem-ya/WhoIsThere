@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/providers.dart';
+import '../../services/music_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../screens/auth/auth_screen.dart';
 import '../../screens/game/game_board_screen.dart';
@@ -38,6 +39,9 @@ CustomTransitionPage<void> _fadeThroughPage(
 ) {
   return CustomTransitionPage<void>(
     key: state.pageKey,
+    // The concrete path (e.g. "/game/abc") — read by MusicRouteObserver to pick
+    // the right menu track (or to stop menu music on game routes).
+    name: state.matchedLocation,
     transitionDuration: const Duration(milliseconds: 240),
     reverseTransitionDuration: const Duration(milliseconds: 180),
     child: child,
@@ -73,6 +77,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/auth',
     refreshListenable: notifier,
     redirect: notifier.redirect,
+    observers: [MusicRouteObserver()],
     routes: [
       GoRoute(
         path: '/splash',
@@ -211,6 +216,40 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return router;
 });
+
+/// Picks the menu-side background track from the active route. In-game routes
+/// (game / letters / vote) STOP menu music so only the game board's own player
+/// plays — never two mp3 streams at once (iOS-crash-safe). Fully fail-soft via
+/// MusicService (silent until the mp3 files exist).
+class MusicRouteObserver extends NavigatorObserver {
+  void _apply(Route<dynamic>? route) {
+    final path = route?.settings.name ?? '';
+    MenuTrack track;
+    if (path.startsWith('/game') ||
+        path.startsWith('/letters') ||
+        path.startsWith('/vote')) {
+      track = MenuTrack.none; // the game screen owns music in-game
+    } else if (path.startsWith('/lobby') ||
+        path.startsWith('/finding-players')) {
+      track = MenuTrack.lobby;
+    } else if (path.startsWith('/win')) {
+      track = MenuTrack.win;
+    } else {
+      track = MenuTrack.menu; // home / friends / store / profile / settings / …
+    }
+    MusicService.instance.play(track);
+  }
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) =>
+      _apply(route);
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) =>
+      _apply(newRoute);
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) =>
+      _apply(previousRoute);
+}
 
 /// Listens to [firebaseUserProvider] and notifies GoRouter to re-run
 /// redirect logic — without recreating the [GoRouter] instance.
