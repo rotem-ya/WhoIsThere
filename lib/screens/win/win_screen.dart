@@ -17,6 +17,7 @@ import '../../providers/providers.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
 import '../../models/room_model.dart';
+import '../../widgets/common/animated_count.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/banner_ad_widget.dart';
 import '../../widgets/common/branded_loader.dart';
@@ -572,8 +573,8 @@ class _ScoreRow extends StatelessWidget {
                   duration: 240.ms,
                   curve: Curves.easeOut),
           const SizedBox(width: 4),
-          Text(
-            '${player.score}',
+          AnimatedCount(
+            value: player.score,
             style: AppTextStyles.body.copyWith(
               color: scoreColor,
               fontWeight: FontWeight.w900,

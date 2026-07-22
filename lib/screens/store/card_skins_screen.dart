@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/candy_theme.dart';
+import '../../widgets/common/pressable.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
@@ -394,7 +395,7 @@ class _SkinTile extends StatelessWidget {
             ? accent.withOpacity(0.55)
             : accent.withOpacity(0.22);
 
-    return GestureDetector(
+    return Pressable(
       onTap: isSelected ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),

@@ -12,6 +12,7 @@ import '../../providers/providers.dart';
 import '../../services/analytics_service.dart';
 import '../../services/friends_service.dart';
 import '../../widgets/chat/chat_sheet.dart';
+import '../../widgets/common/coin_refresh.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/skeleton.dart';
 import 'widgets/groups_tab.dart';
@@ -408,55 +409,70 @@ class _LeaderboardTab extends ConsumerWidget {
     final boardAsync = ref.watch(friendsLeaderboardProvider);
     final games = ref.watch(friendGamesProvider).valueOrNull ?? const [];
 
-    return RefreshIndicator(
+    return CoinRefresh(
       onRefresh: () async => ref.invalidate(friendsLeaderboardProvider),
-      color: Candy.gold,
-      backgroundColor: Candy.surfaceLow,
-      child: boardAsync.when(
-        loading: () => ListView(
-          children: const [SizedBox(height: 8), SkeletonList(rows: 6)],
-        ),
-        error: (e, _) => ListView(children: const [
-          SizedBox(height: 80),
-          Center(child: Text('שגיאה בטעינה', style: TextStyle(color: Colors.white54))),
-        ]),
+      padding: const EdgeInsets.all(12),
+      slivers: boardAsync.when(
+        loading: () => const [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: SkeletonList(rows: 6),
+            ),
+          ),
+        ],
+        error: (e, _) => const [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.only(top: 80),
+              child: Center(
+                child: Text('שגיאה בטעינה',
+                    style: TextStyle(color: Colors.white54)),
+              ),
+            ),
+          ),
+        ],
         data: (rows) {
           if (rows.length <= 1) {
-            return ListView(children: [
-              const Padding(
-                padding: EdgeInsets.all(12),
-                child: _WeeklyBoardButton(),
-              ),
-              const SizedBox(height: 44),
-              EmptyState(
-                emoji: '🏆',
-                title: 'הטבלה מחכה לחברים',
-                subtitle: 'הוסיפו חברים ושחקו יחד\nכדי לראות מי מוביל',
-                actionLabel: '➕ הוסף חבר',
-                onAction: () => DefaultTabController.of(context).animateTo(3),
-              ),
-            ]);
-          }
-          return ListView(
-            padding: const EdgeInsets.all(12),
-            children: [
-              const _WeeklyBoardButton(),
-              const SizedBox(height: 12),
-              for (var i = 0; i < rows.length; i++) _scoreRow(i + 1, rows[i]),
-              if (games.isNotEmpty) ...[
-                const SizedBox(height: 18),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                  child: Text('משחקים אחרונים',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800)),
+            return [
+              const SliverToBoxAdapter(child: _WeeklyBoardButton()),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 44),
+                  child: EmptyState(
+                    emoji: '🏆',
+                    title: 'הטבלה מחכה לחברים',
+                    subtitle: 'הוסיפו חברים ושחקו יחד\nכדי לראות מי מוביל',
+                    actionLabel: '➕ הוסף חבר',
+                    onAction: () =>
+                        DefaultTabController.of(context).animateTo(3),
+                  ),
                 ),
-                for (final g in games) _gameRow(g),
-              ],
-            ],
-          );
+              ),
+            ];
+          }
+          return [
+            SliverList(
+              delegate: SliverChildListDelegate([
+                const _WeeklyBoardButton(),
+                const SizedBox(height: 12),
+                for (var i = 0; i < rows.length; i++)
+                  _scoreRow(i + 1, rows[i]),
+                if (games.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                    child: Text('משחקים אחרונים',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800)),
+                  ),
+                  for (final g in games) _gameRow(g),
+                ],
+              ]),
+            ),
+          ];
         },
       ),
     );

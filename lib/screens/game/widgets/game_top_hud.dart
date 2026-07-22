@@ -8,6 +8,7 @@ import '../../../core/theme/candy_theme.dart';
 import '../../../models/player_model.dart';
 import '../../../providers/providers.dart';
 import '../../../services/reward_calculator.dart';
+import '../../../widgets/common/animated_count.dart';
 import '../../../widgets/common/player_avatar.dart';
 import '../../../widgets/economy/coin_display.dart';
 
@@ -403,8 +404,8 @@ class _PlayerCell extends ConsumerWidget {
             ),
           ),
         const SizedBox(width: 4),
-        Text(
-          '${player.score}',
+        AnimatedCount(
+          value: player.score,
           style: TextStyle(
             color: Colors.white.withOpacity(0.45),
             fontSize: 10,
@@ -453,8 +454,8 @@ class _PlayerCell extends ConsumerWidget {
         const SizedBox(width: 3),
         Text(rank.emoji, style: const TextStyle(fontSize: 10.5)),
         const Spacer(),
-        Text(
-          '${player.score}',
+        AnimatedCount(
+          value: player.score,
           style: TextStyle(
             color: Colors.white.withOpacity(0.6),
             fontSize: 11.5,
