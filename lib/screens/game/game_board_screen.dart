@@ -321,9 +321,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int? _localGuessDeadlineMs;
   int _sessionWatchdogEventCount = 0;
   bool? _lastGuessEventCorrect;
-  // Rising-edge trackers for "you got hit by a trick" (blackout / guess-block).
+  // Rising-edge trackers for "you got hit by a trick" (blackout / guess-block /
+  // stun). Stun uses blockedGuessers (a reveal-cycle cutoff), the others use ms.
   int _lastMyBlackoutUntil = 0;
   int _lastMyGuessBlockUntil = 0;
+  int _lastMyStunUntil = 0;
 
   // Passive expiry detection — updated each build, read by _expiryTimer
   RoomModel? _latestRoom;
@@ -2016,6 +2018,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     HapticFeedback.mediumImpact();
     QaLoggerService.instance.log('CARD', 'PEEK_CARD_USED tiles=${hidden.length}');
+    // A soft aperture whoosh as the spotlight peek reveals the hidden tiles.
+    SfxService.instance.reveal();
     setState(() {
       _spotlightCells
         ..clear()
@@ -2732,6 +2736,17 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   });
                 }
                 _lastMyGuessBlockUntil = _myBlockUntil;
+                // Stun card: blockedGuessers[me] is a reveal-cycle cutoff that
+                // jumps up when someone stuns me.
+                final _myStunUntil = currentUserId != null
+                    ? (room.blockedGuessers[currentUserId] ?? 0)
+                    : 0;
+                if (_myStunUntil > _lastMyStunUntil) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) SfxService.instance.trickHit();
+                  });
+                }
+                _lastMyStunUntil = _myStunUntil;
 
                 if (room.imageId.isNotEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) => _loadImage(room.imageId));
