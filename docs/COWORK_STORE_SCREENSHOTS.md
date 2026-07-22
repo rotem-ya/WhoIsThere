@@ -9,8 +9,8 @@
 
 ## 0. קדם-תנאים לבילד (חשוב)
 - כל שינויי Candy + הפוליש נמצאים בענף **`claude/whoishere-visual-sound-rjcdzb`**.
-- ⚠️ **גרסה 1.4.1 (Candy) כבר חיה בגוגל.** הבילד הבא הוא **1.4.2** — עדכון פוליש מעליה
-  (מטבעות עפים, לובי, מעברים, חגיגת פרימיום). הענף כבר מסומן `1.4.2+102`.
+- ⚠️ **גרסה 1.4.1 (Candy) כבר חיה בגוגל.** הבילד הבא הוא **1.4.3** — עדכון פוליש מעליה
+  (מטבעות עפים, לובי, מעברים, חגיגת פרימיום). הענף כבר מסומן `1.4.3+103`.
 - ⚠️ **versionCode חייב להיות גבוה מזה של 1.4.1 החי.** ב-Build AAB ה-versionCode נגזר
   ממספר ריצת ה-workflow (`github.run_number`) שרק עולה, אז ריצה חדשה בדרך כלל תספיק —
   אבל אם Play דוחה על "version code already used", להריץ שוב (המספר יעלה).
@@ -19,16 +19,16 @@
 - ⚠️ **הפעלת בילדים דורשת אדם** (ל-cowork/agent אין הרשאת Actions/tag) — לבצע דרך רותם.
 
 ## 1. בילד אנדרואיד (AAB) → Google Play
-בונים AAB חדש לגרסה **1.4.2** (הפוליש מעל ה-Candy החי):
-workflow **Build AAB** ב-Actions → `build_name=1.4.2` (רותם מריץ, ל-cowork אין הרשאת Actions).
-ה-versionName יהיה **1.4.2** וה-versionCode ממספר ריצת ה-workflow (גבוה מ-1.4.1), חתום **EA:3B**.
+בונים AAB חדש לגרסה **1.4.3** (הפוליש מעל ה-Candy החי):
+workflow **Build AAB** ב-Actions → `build_name=1.4.3` (רותם מריץ, ל-cowork אין הרשאת Actions).
+ה-versionName יהיה **1.4.3** וה-versionCode ממספר ריצת ה-workflow (גבוה מ-1.4.1), חתום **EA:3B**.
 1. Play Console → האפליקציה → **Production** (או Testing אם רוצים גל הדרגתי) →
    **Create new release** → העלה את ה-AAB שנבנה.
 2. **Release notes (עברית):** ראה נוסח למטה. שמור והגש לבדיקה.
 
 ## 2. בילד iOS → TestFlight → App Store
 1. דחוף תג **`ios-v*`** מענף ההשקה → Codemagic בונה IPA ומעלה ל-TestFlight אוטומטית.
-2. App Store Connect → האפליקציה → צור/בחר גרסה חדשה (1.4.2) → קשר את הבילד מ-TestFlight.
+2. App Store Connect → האפליקציה → צור/בחר גרסה חדשה (1.4.3) → קשר את הבילד מ-TestFlight.
 3. העלה צילומי מסך (סעיף 4) + Release notes → **Submit for Review**.
 
 ---

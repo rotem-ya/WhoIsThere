@@ -23,9 +23,9 @@ on:
   workflow_dispatch:
     inputs:
       build_name:
-        description: 'Version name shown to users (e.g. 1.4.2)'
+        description: 'Version name shown to users (e.g. 1.4.3)'
         required: true
-        default: '1.4.2'
+        default: '1.4.3'
   push:
     tags:
       - 'aab-v*'
@@ -102,7 +102,7 @@ jobs:
           KEYSTORE_KEY_PASS: "123456"
         run: |
           flutter build appbundle --release \
-            --build-name="${{ github.event.inputs.build_name || '1.4.2' }}" \
+            --build-name="${{ github.event.inputs.build_name || '1.4.3' }}" \
             --build-number="${{ github.run_number }}"
 
       - name: Verify AAB is signed with the EA:3B upload key
