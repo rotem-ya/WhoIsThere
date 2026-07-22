@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -134,13 +135,38 @@ class _RankUpBannerState extends ConsumerState<RankUpBanner> {
   }
 }
 
-class _RankUpCard extends StatelessWidget {
+class _RankUpCard extends StatefulWidget {
   final PlayerRank rank;
   final VoidCallback onDismiss;
   const _RankUpCard({required this.rank, required this.onDismiss});
 
   @override
+  State<_RankUpCard> createState() => _RankUpCardState();
+}
+
+class _RankUpCardState extends State<_RankUpCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fx;
+
+  @override
+  void initState() {
+    super.initState();
+    _fx = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2600),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _fx.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final rank = widget.rank;
+    final onDismiss = widget.onDismiss;
     final color = rank.color;
     return TweenAnimationBuilder<double>(
       key: ValueKey(rank),
@@ -186,7 +212,25 @@ class _RankUpCard extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(rank.emoji, style: const TextStyle(fontSize: 30)),
+                RepaintBoundary(
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        AnimatedBuilder(
+                          animation: _fx,
+                          builder: (_, __) => CustomPaint(
+                            size: const Size(48, 48),
+                            painter: _RankUpFx(_fx.value, color),
+                          ),
+                        ),
+                        Text(rank.emoji, style: const TextStyle(fontSize: 30)),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,4 +263,56 @@ class _RankUpCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Rotating light rays + a pulsing glow behind the rank badge.
+class _RankUpFx extends CustomPainter {
+  final double t; // 0..1 looping
+  final Color color;
+  const _RankUpFx(this.t, this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxR = size.width / 2;
+
+    // Pulsing glow.
+    final pulse = 0.5 + 0.5 * math.sin(t * 2 * math.pi);
+    canvas.drawCircle(
+      center,
+      maxR * (0.7 + 0.15 * pulse),
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            color.withOpacity(0.35 * pulse + 0.15),
+            color.withOpacity(0),
+          ],
+        ).createShader(Rect.fromCircle(center: center, radius: maxR)),
+    );
+
+    // Rotating rays.
+    const rays = 10;
+    final rot = t * 2 * math.pi;
+    final rayPaint = Paint()
+      ..color = color.withOpacity(0.5)
+      ..style = PaintingStyle.fill;
+    for (var i = 0; i < rays; i++) {
+      final a = rot + i * (2 * math.pi / rays);
+      final inner = maxR * 0.42;
+      final outer = maxR * (0.92 + 0.06 * math.sin(t * 4 * math.pi + i));
+      final w = 0.10;
+      final p = Path()
+        ..moveTo(center.dx + math.cos(a - w) * inner,
+            center.dy + math.sin(a - w) * inner)
+        ..lineTo(center.dx + math.cos(a) * outer,
+            center.dy + math.sin(a) * outer)
+        ..lineTo(center.dx + math.cos(a + w) * inner,
+            center.dy + math.sin(a + w) * inner)
+        ..close();
+      canvas.drawPath(p, rayPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RankUpFx old) => old.t != t || old.color != color;
 }

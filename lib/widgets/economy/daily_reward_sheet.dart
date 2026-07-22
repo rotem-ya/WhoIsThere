@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -200,8 +202,9 @@ class _DailyRewardSheetState extends ConsumerState<_DailyRewardSheet>
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          // Title
-          const Text('🎁', style: TextStyle(fontSize: 52, height: 1)),
+          // Title — an animated gift that wiggles while unclaimed and bursts
+          // open with light rays on claim.
+          _GiftBox(claimed: _claimed, anim: _claimAnim),
           const SizedBox(height: 12),
           Text(
             'פרס יומי!',
@@ -522,6 +525,119 @@ class _CoinsPreview extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Animated gift box ────────────────────────────────────────────────────────
+
+class _GiftBox extends StatefulWidget {
+  final bool claimed;
+  final Animation<double> anim; // the claim animation (0→1 on claim)
+  const _GiftBox({required this.claimed, required this.anim});
+
+  @override
+  State<_GiftBox> createState() => _GiftBoxState();
+}
+
+class _GiftBoxState extends State<_GiftBox>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _wiggle;
+
+  @override
+  void initState() {
+    super.initState();
+    _wiggle = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _wiggle.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 96,
+      height: 96,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_wiggle, widget.anim]),
+        builder: (_, __) {
+          final claimed = widget.claimed;
+          final a = widget.anim.value; // 0..1 while opening
+          // Invite tap: a gentle wiggle + breathe while unclaimed.
+          final w = (_wiggle.value - 0.5);
+          final rot = claimed ? 0.0 : w * 0.14;
+          final scale = claimed
+              ? 1.0 + 0.32 * math.sin(a * math.pi)
+              : 1.0 + 0.05 * math.sin(_wiggle.value * math.pi * 2);
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              if (claimed && a > 0)
+                CustomPaint(size: const Size(96, 96), painter: _GiftRays(a)),
+              Transform.rotate(
+                angle: rot,
+                child: Transform.scale(
+                  scale: scale,
+                  child: Text(
+                    claimed ? '🎉' : '🎁',
+                    style: const TextStyle(fontSize: 52, height: 1),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Expanding golden light rays that burst out once as the gift opens.
+class _GiftRays extends CustomPainter {
+  final double t; // 0..1
+  const _GiftRays(this.t);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxR = size.width / 2;
+    final fade = (1.0 - t).clamp(0.0, 1.0);
+    // Glow.
+    canvas.drawCircle(
+      center,
+      maxR * (0.4 + 0.6 * t),
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            const Color(0xFFFFE082).withOpacity(0.5 * fade),
+            const Color(0x00FFE082),
+          ],
+        ).createShader(Rect.fromCircle(center: center, radius: maxR)),
+    );
+    // Rays shooting outward.
+    const rays = 12;
+    final paint = Paint()
+      ..color = const Color(0xFFFFD54D).withOpacity(0.75 * fade)
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    final inner = maxR * (0.35 + 0.25 * t);
+    final outer = maxR * (0.6 + 0.5 * t);
+    for (var i = 0; i < rays; i++) {
+      final ang = i * (2 * math.pi / rays) + t * 0.6;
+      canvas.drawLine(
+        center + Offset(math.cos(ang), math.sin(ang)) * inner,
+        center + Offset(math.cos(ang), math.sin(ang)) * outer,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GiftRays old) => old.t != t;
 }
 
 class _ClaimSuccess extends StatelessWidget {

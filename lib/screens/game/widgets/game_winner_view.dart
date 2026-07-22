@@ -18,6 +18,7 @@ import '../../../services/settings_service.dart';
 import '../../../services/sfx_service.dart';
 import '../../../widgets/common/app_share_badges.dart';
 import '../../../widgets/common/banner_ad_widget.dart';
+import '../../../widgets/common/parallax_image.dart';
 import '../../../widgets/economy/coin_fly.dart';
 import '../../../widgets/economy/coin_icon.dart';
 import 'round_gallery_view.dart';
@@ -460,15 +461,17 @@ class _WinnerCard extends StatelessWidget {
                 child: SizedBox(
                   width: 116,
                   height: 116,
-                  child: imageUrl!.startsWith('assets/')
-                      ? Image.asset(imageUrl!, fit: BoxFit.cover)
-                      : CachedNetworkImage(
-                          imageUrl: imageUrl!,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => const Center(
-                            child: Text('🏆', style: TextStyle(fontSize: 40)),
+                  child: ParallaxImage(
+                    child: imageUrl!.startsWith('assets/')
+                        ? Image.asset(imageUrl!, fit: BoxFit.cover)
+                        : CachedNetworkImage(
+                            imageUrl: imageUrl!,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => const Center(
+                              child: Text('🏆', style: TextStyle(fontSize: 40)),
+                            ),
                           ),
-                        ),
+                  ),
                 ),
               ),
             ),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +20,7 @@ import '../../models/player_model.dart';
 import '../../models/room_model.dart';
 import '../../widgets/common/animated_count.dart';
 import '../../widgets/common/app_card.dart';
+import '../../widgets/common/parallax_image.dart';
 import '../../widgets/common/banner_ad_widget.dart';
 import '../../widgets/common/branded_loader.dart';
 import '../../widgets/common/player_avatar.dart';
@@ -38,6 +40,9 @@ class _WinScreenState extends ConsumerState<WinScreen>
     with TickerProviderStateMixin {
   late final AnimationController _counterController;
   late final AnimationController _shineController;
+  // A quick decaying screen shake when YOU win, for extra impact on entrance.
+  late final AnimationController _winShake;
+  bool _winShakeFired = false;
   GameImageModel? _gameImage;
   // Friends games: coins gifted for placing 1st (20) / 2nd (5). null until resolved.
   int? _placementReward;
@@ -107,6 +112,10 @@ class _WinScreenState extends ConsumerState<WinScreen>
     _shineController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 560),
+    );
+    _winShake = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
     );
     _loadImage();
     _awardPoints();
@@ -219,6 +228,7 @@ class _WinScreenState extends ConsumerState<WinScreen>
   void dispose() {
     _counterController.dispose();
     _shineController.dispose();
+    _winShake.dispose();
     super.dispose();
   }
 
@@ -234,6 +244,15 @@ class _WinScreenState extends ConsumerState<WinScreen>
         final winner =
             room.winnerId != null ? room.players[room.winnerId] : null;
         final isWinner = currentUser?.id == room.winnerId;
+        if (isWinner && !_winShakeFired) {
+          _winShakeFired = true;
+          Future.delayed(const Duration(milliseconds: 620), () {
+            if (mounted) {
+              _winShake.forward(from: 0);
+              HapticFeedback.heavyImpact();
+            }
+          });
+        }
         final sortedPlayers = room.sortedPlayers;
         final myScore =
             (currentUser != null ? room.players[currentUser.id] : null)
@@ -247,6 +266,17 @@ class _WinScreenState extends ConsumerState<WinScreen>
               ref.read(currentRoomIdProvider.notifier).state = null;
               context.go('/home');
             }
+          },
+          child: AnimatedBuilder(
+          animation: _winShake,
+          builder: (_, child) {
+            if (!_winShake.isAnimating) return child!;
+            final t = _winShake.value;
+            final amp = 10.0 * (1 - t);
+            return Transform.translate(
+              offset: Offset(sin(t * pi * 9) * amp, sin(t * pi * 6) * amp * 0.5),
+              child: child,
+            );
           },
           child: AppScaffold(
           backgroundGradient:
@@ -305,22 +335,26 @@ class _WinScreenState extends ConsumerState<WinScreen>
                       padding: EdgeInsets.zero,
                       child: Column(
                         children: [
-                          ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(24)),
-                            child: _gameImage!.imageUrl.startsWith('assets/')
-                                ? Image.asset(
-                                    _gameImage!.imageUrl,
-                                    height: 140,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                  )
-                                : CachedNetworkImage(
-                                    imageUrl: _gameImage!.imageUrl,
-                                    height: 140,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                  ),
+                          SizedBox(
+                            height: 140,
+                            width: double.infinity,
+                            child: ParallaxImage(
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(24)),
+                              child: _gameImage!.imageUrl.startsWith('assets/')
+                                  ? Image.asset(
+                                      _gameImage!.imageUrl,
+                                      height: 140,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : CachedNetworkImage(
+                                      imageUrl: _gameImage!.imageUrl,
+                                      height: 140,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                            ),
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(
@@ -492,6 +526,7 @@ class _WinScreenState extends ConsumerState<WinScreen>
             ],
           ),
         ), // AppScaffold
+        ), // AnimatedBuilder (win shake)
         ); // PopScope
       },
       loading: () => const BrandedLoader(),
