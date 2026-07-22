@@ -200,6 +200,41 @@ def sfx_coin_shower():
         y[start:end] += w[:end - start] * amp
     return softclip(y * 0.46)
 
+def sfx_trick_cast():
+    # deploying a trick (block/blackout/stun): a quick rising magical zap.
+    lr = np.random.default_rng(3311)
+    n = int(0.34 * SR)
+    t = np.arange(n) / SR
+    x = t / t[-1]
+    # bright rising pitch
+    pitch = 300 + 1400 * x
+    tone_ = np.sin(2 * np.pi * np.cumsum(pitch) / SR)
+    tone_ += 0.4 * np.sin(2 * np.pi * 2 * np.cumsum(pitch) / SR)
+    tone_ *= np.sin(np.pi * np.clip(x / 0.8, 0, 1)) ** 1.2
+    # zappy filtered noise sweeping up
+    nz = lr.uniform(-1, 1, n)
+    zap = svf_bandpass(nz, 800 + 3200 * x, q=4) * (x ** 1.5) * 0.6
+    # sparkle tail
+    spark = 0.25 * np.sin(2 * np.pi * 2000 * t) * np.exp(-t / 0.05) * x
+    return onepole_hp(tone_ * 0.7 + zap, 300) + spark
+
+def sfx_trick_hit():
+    # being hit by a trick (your board darkens / you're blocked): an ominous
+    # descending power-down with a low buzz.
+    lr = np.random.default_rng(7742)
+    n = int(0.42 * SR)
+    t = np.arange(n) / SR
+    x = t / t[-1]
+    # descending pitch power-down
+    pitch = 520 * np.exp(-2.6 * x) + 70
+    body = np.sin(2 * np.pi * np.cumsum(pitch) / SR)
+    body += 0.5 * np.sin(2 * np.pi * 0.5 * np.cumsum(pitch) / SR)  # sub
+    body *= np.exp(-t / 0.22)
+    # gritty buzz that fades
+    buzz = lr.uniform(-1, 1, n)
+    buzz = svf_bandpass(buzz, 220 + 120 * (1 - x), q=2) * np.exp(-t / 0.10) * 0.4
+    return onepole_lp(body, 1400) * 0.9 + buzz
+
 def sfx_appear():
     # soft "pop" for something appearing (dialog / overlay). A gentle upward
     # blip, lowpassed and short, so it stays subtle when things pop in often.
@@ -280,10 +315,13 @@ sfx = {
     'quest_complete.ogg': sfx_quest_complete,
     'heartbeat.ogg': sfx_heartbeat,
     'appear.ogg': sfx_appear,
+    'trick_cast.ogg': sfx_trick_cast,
+    'trick_hit.ogg': sfx_trick_hit,
 }
 
 peaks = {'coin_shower.ogg': -2.5, 'heartbeat.ogg': -4.0, 'spin_tick.ogg': -3.0,
-         'tile_flip.ogg': -5.0, 'appear.ogg': -6.0}
+         'tile_flip.ogg': -5.0, 'appear.ogg': -6.0,
+         'trick_cast.ogg': -3.0, 'trick_hit.ogg': -3.0}
 
 
 def generate(only=None):

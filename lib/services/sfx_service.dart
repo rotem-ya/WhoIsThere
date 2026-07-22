@@ -56,6 +56,8 @@ class SfxService {
   final AudioPlayer _questDone = AudioPlayer(playerId: 'sfx-quest-done');
   final AudioPlayer _heartbeat = AudioPlayer(playerId: 'sfx-heartbeat');
   final AudioPlayer _appear = AudioPlayer(playerId: 'sfx-appear');
+  final AudioPlayer _trickCast = AudioPlayer(playerId: 'sfx-trick-cast');
+  final AudioPlayer _trickHit = AudioPlayer(playerId: 'sfx-trick-hit');
 
   static final AssetSource _uiClickSound = AssetSource('sounds/ui/ui_click.ogg');
   static final AssetSource _uiCtaSound = AssetSource('sounds/ui/ui_cta.ogg');
@@ -79,6 +81,8 @@ class SfxService {
   static final AssetSource _questDoneSound = AssetSource('sounds/ui/quest_complete.ogg');
   static final AssetSource _heartbeatSound = AssetSource('sounds/ui/heartbeat.ogg');
   static final AssetSource _appearSound = AssetSource('sounds/ui/appear.ogg');
+  static final AssetSource _trickCastSound = AssetSource('sounds/ui/trick_cast.ogg');
+  static final AssetSource _trickHitSound = AssetSource('sounds/ui/trick_hit.ogg');
 
   Future<void> _play(AudioPlayer player, AssetSource src, {double scale = 1.0}) async {
     try {
@@ -161,4 +165,10 @@ class SfxService {
   /// A soft pop for something appearing (dialog / overlay). Kept quiet so it
   /// stays subtle when popups show often.
   Future<void> appear() => _play(_appear, _appearSound, scale: 0.55);
+
+  // ── Tricks / action cards ─────────────────────────────────────────────────
+  /// You deployed a trick on someone (block / blackout / stun).
+  Future<void> trickCast() => _play(_trickCast, _trickCastSound, scale: 0.9);
+  /// You got hit by a trick (your board darkened / you were blocked / stunned).
+  Future<void> trickHit() => _play(_trickHit, _trickHitSound);
 }

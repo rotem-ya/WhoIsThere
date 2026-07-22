@@ -8,6 +8,7 @@ import '../../../core/theme/candy_theme.dart';
 import '../../../models/player_model.dart';
 import '../../../providers/providers.dart';
 import '../../../services/reward_calculator.dart';
+import '../../../services/sfx_service.dart';
 import '../../../widgets/common/animated_count.dart';
 import '../../../widgets/common/player_avatar.dart';
 import '../../../widgets/economy/coin_display.dart';
@@ -499,6 +500,7 @@ class _PlayerActionSheetState extends ConsumerState<_PlayerActionSheet> {
     if (_busy) return;
     setState(() => _busy = true);
     HapticFeedback.mediumImpact();
+    SfxService.instance.trickCast();
     await ref.read(roomServiceProvider).applyGuessBlockCard(
       roomId: widget.roomId,
       actorUid: widget.myUid,
@@ -512,6 +514,7 @@ class _PlayerActionSheetState extends ConsumerState<_PlayerActionSheet> {
     if (_busy) return;
     setState(() => _busy = true);
     HapticFeedback.mediumImpact();
+    SfxService.instance.trickCast();
     await ref.read(roomServiceProvider).applyBlackoutCard(
       roomId: widget.roomId,
       actorUid: widget.myUid,

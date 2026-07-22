@@ -321,6 +321,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int? _localGuessDeadlineMs;
   int _sessionWatchdogEventCount = 0;
   bool? _lastGuessEventCorrect;
+  // Rising-edge trackers for "you got hit by a trick" (blackout / guess-block).
+  int _lastMyBlackoutUntil = 0;
+  int _lastMyGuessBlockUntil = 0;
 
   // Passive expiry detection — updated each build, read by _expiryTimer
   RoomModel? _latestRoom;
@@ -2702,6 +2705,31 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 }
                 _lastGuessEventCorrect = _guessEventCorrect;
 
+                // Trick hit: play an ominous sound the moment a blackout or a
+                // guess-block gets (re)applied to ME (rising edge on the
+                // expiry timestamp).
+                final _nowForHit = DateTime.now().millisecondsSinceEpoch;
+                final _myBlackoutUntil = currentUserId != null
+                    ? (room.blackoutActiveUntilMs[currentUserId] ?? 0)
+                    : 0;
+                if (_myBlackoutUntil > _lastMyBlackoutUntil &&
+                    _myBlackoutUntil > _nowForHit) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) SfxService.instance.trickHit();
+                  });
+                }
+                _lastMyBlackoutUntil = _myBlackoutUntil;
+                final _myBlockUntil = currentUserId != null
+                    ? (room.guessBlockedUntilMs[currentUserId] ?? 0)
+                    : 0;
+                if (_myBlockUntil > _lastMyGuessBlockUntil &&
+                    _myBlockUntil > _nowForHit) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) SfxService.instance.trickHit();
+                  });
+                }
+                _lastMyGuessBlockUntil = _myBlockUntil;
+
                 if (room.imageId.isNotEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) => _loadImage(room.imageId));
                 }
@@ -3147,6 +3175,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                           !room.tricksEnabled)
                       ? null
                       : (targetId) async {
+                    SfxService.instance.trickCast();
                     final success = await ref.read(roomServiceProvider).applyStunCard(
                       roomId: room.id,
                       actorUid: currentUserId,
