@@ -20,7 +20,9 @@ import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../services/app_update_service.dart';
 import '../../widgets/common/banner_ad_widget.dart';
+import '../../widgets/common/pressable.dart';
 import '../../services/feedback_service.dart';
+import '../../services/settings_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/common/tilt_card.dart';
@@ -925,6 +927,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             delayMs: 300, durationMs: 320,
                           ),
+                          const _WinStreakBanner(),
                           SizedBox(height: verySmall ? 10 : compact ? 14 : 20),
                           _step(
                             Column(
@@ -981,6 +984,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             delayMs: 460, durationMs: 260, dy: 5,
                           ),
                           SizedBox(height: verySmall ? 6 : 10),
+                          _RecentGamesStrip(onReplay: _showPlaySheet),
+                          const _TipOfDayCard(),
+                          SizedBox(height: verySmall ? 6 : 10),
                           const DailyQuestCard(),
                           SizedBox(height: verySmall ? 6 : 10),
                           const BannerAdWidget(),
@@ -994,6 +1000,220 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Recent games quick-replay strip ───────────────────────────────────────
+
+class _RecentGamesStrip extends StatelessWidget {
+  final void Function(_GameKind) onReplay;
+  const _RecentGamesStrip({required this.onReplay});
+
+  static const Map<String, ({_GameKind kind, String emoji, String label})> _map = {
+    'places': (kind: _GameKind.places, emoji: '🏞️', label: 'זיהוי מקומות'),
+    'heat': (kind: _GameKind.heat, emoji: '🐢', label: 'חי צומח דומם'),
+    'proverbs': (kind: _GameKind.proverbs, emoji: '🧩', label: 'זהו את הפתגם'),
+    'letters': (kind: _GameKind.letters, emoji: '🔤', label: 'משחק האותיות'),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final recent = SettingsService.instance.recentGames
+        .where((g) => _map.containsKey(g.kind))
+        .toList();
+    if (recent.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 4, bottom: 6),
+            child: Text(
+              'המשך לשחק',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.85),
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 44,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: recent.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, i) {
+                final g = recent[i];
+                final m = _map[g.kind]!;
+                return Pressable(
+                  onTap: () => onReplay(m.kind),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: Candy.jellyFill(Candy.surface),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: (g.won ? Candy.gold : Colors.white)
+                            .withOpacity(0.22),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(m.emoji, style: const TextStyle(fontSize: 18)),
+                        const SizedBox(width: 6),
+                        Text(
+                          m.label,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(g.won ? '🏆' : '↻',
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: g.won
+                                    ? Candy.gold
+                                    : Colors.white.withOpacity(0.5))),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Win streak banner ─────────────────────────────────────────────────────
+
+class _WinStreakBanner extends ConsumerWidget {
+  const _WinStreakBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final streak = ref.watch(walletProvider).valueOrNull?.winStreak ?? 0;
+    if (streak < 2) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFF7A1A), Color(0xFFFFB03A)],
+          ),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF7A1A).withOpacity(0.45),
+              blurRadius: 16,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🔥', style: TextStyle(fontSize: 18))
+                .animate(onPlay: (c) => c.repeat(reverse: true))
+                .scaleXY(begin: 0.9, end: 1.15, duration: 620.ms),
+            const SizedBox(width: 8),
+            Text(
+              '$streak ניצחונות ברצף!',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14.5,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(duration: 260.ms).scaleXY(begin: 0.85, end: 1.0);
+  }
+}
+
+// ── Tip of the day ────────────────────────────────────────────────────────
+
+class _TipOfDayCard extends StatelessWidget {
+  const _TipOfDayCard();
+
+  static const List<String> _tips = [
+    'נחשו מוקדם ככל האפשר, ככה תרוויחו יותר מטבעות.',
+    'רצף כניסה יומי מגדיל את הבונוס במטבעות בכל יום.',
+    'שחקו עם חברים בחדר פרטי, בלי תשלום כניסה.',
+    'אספו מטבעות ופתחו רקעים חדשים ללוח בחנות.',
+    'כרטיס החשכה מסתיר את הלוח מהיריב לכמה שניות.',
+    'כרטיס עצור עוצר את היריב לתור שלם.',
+    'גלו עוד מקומות כדי לפתוח כרטיסי פעולה חדשים.',
+    'בחי צומח דומם אפשר להצביע להחליף פריט כשאף אחד לא יודע.',
+    'סובבו את גלגל המזל פעם ביום לסיבוב חינם.',
+    'השלימו את המשימה היומית ואספו פרס נוסף.',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    // Rotate by day so the tip is stable within a day and changes daily.
+    final dayIndex =
+        DateTime.now().difference(DateTime(2026, 1, 1)).inDays.abs();
+    final tip = _tips[dayIndex % _tips.length];
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Candy.grape.withOpacity(0.35),
+            Candy.bgMid.withOpacity(0.55),
+          ],
+          begin: Alignment.centerRight,
+          end: Alignment.centerLeft,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Candy.gold.withOpacity(0.28), width: 1),
+      ),
+      child: Row(
+        children: [
+          const Text('💡', style: TextStyle(fontSize: 22)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'טיפ היום',
+                  style: TextStyle(
+                    color: Candy.gold,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  tip,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

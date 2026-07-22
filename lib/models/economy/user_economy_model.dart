@@ -24,6 +24,8 @@ class UserEconomyModel {
   final int totalMatchesPlayed;
   final int totalMatchesWon;
   final int totalHintsUsed;
+  // Consecutive wins (resets to 0 on a loss). Drives the "🔥 X streak" banner.
+  final int winStreak;
 
   const UserEconomyModel({
     required this.uid,
@@ -39,6 +41,7 @@ class UserEconomyModel {
     required this.totalMatchesPlayed,
     required this.totalMatchesWon,
     required this.totalHintsUsed,
+    this.winStreak = 0,
   });
 
   factory UserEconomyModel.empty(String uid) => UserEconomyModel(
@@ -55,6 +58,7 @@ class UserEconomyModel {
         totalMatchesPlayed: 0,
         totalMatchesWon: 0,
         totalHintsUsed: 0,
+        winStreak: 0,
       );
 
   factory UserEconomyModel.fromFirestore(String uid, Map<String, dynamic> d) {
@@ -75,6 +79,7 @@ class UserEconomyModel {
       totalMatchesPlayed: (d['totalMatchesPlayed'] as num? ?? 0).toInt(),
       totalMatchesWon: (d['totalMatchesWon'] as num? ?? 0).toInt(),
       totalHintsUsed: (d['totalHintsUsed'] as num? ?? 0).toInt(),
+      winStreak: (d['winStreak'] as num? ?? 0).toInt(),
     );
   }
 
@@ -95,6 +100,7 @@ class UserEconomyModel {
         'totalMatchesPlayed': totalMatchesPlayed,
         'totalMatchesWon': totalMatchesWon,
         'totalHintsUsed': totalHintsUsed,
+        'winStreak': winStreak,
       };
 
   UserEconomyModel copyWith({
@@ -110,6 +116,7 @@ class UserEconomyModel {
     int? totalMatchesPlayed,
     int? totalMatchesWon,
     int? totalHintsUsed,
+    int? winStreak,
   }) =>
       UserEconomyModel(
         uid: uid,
@@ -125,5 +132,6 @@ class UserEconomyModel {
         totalMatchesPlayed: totalMatchesPlayed ?? this.totalMatchesPlayed,
         totalMatchesWon: totalMatchesWon ?? this.totalMatchesWon,
         totalHintsUsed: totalHintsUsed ?? this.totalHintsUsed,
+        winStreak: winStreak ?? this.winStreak,
       );
 }

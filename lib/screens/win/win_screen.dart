@@ -15,6 +15,7 @@ import '../../core/constants/ad_constants.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/constants/economy_config.dart';
 import '../../providers/providers.dart';
+import '../../services/settings_service.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
 import '../../models/room_model.dart';
@@ -144,6 +145,19 @@ class _WinScreenState extends ConsumerState<WinScreen>
     if (room == null || currentUser == null) return;
     final myPlayer = room.players[currentUser.id];
     if (myPlayer == null) return;
+    // Record this game for the home quick-replay strip.
+    final kind = room.mode == 'letters'
+        ? 'letters'
+        : room.isProverbs
+            ? 'proverbs'
+            : room.isHeat
+                ? 'heat'
+                : 'places';
+    unawaited(SettingsService.instance.pushRecentGame(
+      kind,
+      currentUser.id == room.winnerId,
+      DateTime.now().millisecondsSinceEpoch,
+    ));
     if (room.isFriendsGame) {
       // Friends games are per-match: score is NOT added to lifetime points.
       // Instead, the top-2 finishers receive a coin gift (20 / 5).

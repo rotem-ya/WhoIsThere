@@ -143,6 +143,8 @@ class EconomyService {
         statUpdater: (w) => w.copyWith(
           totalMatchesPlayed: w.totalMatchesPlayed + 1,
           totalMatchesWon: isWin ? w.totalMatchesWon + 1 : null,
+          // Consecutive wins: bump on a win, reset to 0 on a loss.
+          winStreak: isWin ? w.winStreak + 1 : 0,
         ),
       );
       QaLoggerService.instance.log('ECONOMY', 'REWARD_DELTA_OK delta=${breakdown.total}');

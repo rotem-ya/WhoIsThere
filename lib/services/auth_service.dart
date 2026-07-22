@@ -600,6 +600,9 @@ class AuthService {
           'totalMatchesPlayed': s('totalMatchesPlayed') + t('totalMatchesPlayed'),
           'totalMatchesWon':    s('totalMatchesWon') + t('totalMatchesWon'),
           'totalHintsUsed':     s('totalHintsUsed') + t('totalHintsUsed'),
+          'winStreak':          s('winStreak') > t('winStreak')
+              ? s('winStreak')
+              : t('winStreak'),
         }, SetOptions(merge: true));
       }
 
