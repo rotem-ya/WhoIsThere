@@ -841,7 +841,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     final iconSize = verySmall ? 140.0 : compact ? 170.0 : 200.0;
                     return Padding(
                       padding: EdgeInsets.symmetric(horizontal: compact ? 20 : 24),
-                      child: Column(
+                      child: SingleChildScrollView(
+                        child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           SizedBox(height: verySmall ? 4 : 8),
@@ -874,8 +875,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             Center(child: CoinDisplay(key: walletAnchorKey)),
                             delayMs: 40, durationMs: 380, dy: -10,
                           ),
-                          // ── Hero grid takes all remaining vertical space ──
-                          Expanded(
+                          // ── Hero grid (fixed height; the page scrolls) ──
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                                vertical: verySmall ? 8 : 16),
                             child: Center(
                               child: _step(
                                 RepaintBoundary(child: _HomeHeroPeekGrid(size: iconSize)),
@@ -992,6 +995,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           const BannerAdWidget(),
                           SizedBox(height: verySmall ? 4 : 8),
                         ],
+                      ),
                       ),
                     );
                   },

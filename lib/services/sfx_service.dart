@@ -107,6 +107,8 @@ class SfxService {
   Future<void> purchase() => _play(_coin, _coinSound);
   /// A light pop for equipping/selecting a cosmetic.
   Future<void> equip() => _play(_pop, _popSound);
+  /// A friendly "someone joined" pop for the matchmaking / lobby screens.
+  Future<void> playerJoin() => _play(_pop, _popSound);
 
   // ── Letters game ──────────────────────────────────────────────────────────
   /// Correct letter placed (green).

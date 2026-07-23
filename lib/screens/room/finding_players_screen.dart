@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/candy_theme.dart';
 import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
+import '../../services/sfx_service.dart';
 import '../../widgets/common/matchmaking_tiles.dart';
 import '../../widgets/common/pressable_scale.dart';
 
@@ -92,6 +93,7 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
     final name = 'שחקן $botIndex';
     setState(() => _joinedNames.add(name));
     HapticFeedback.lightImpact();
+    SfxService.instance.playerJoin();
 
     // Fetch fresh room and check if we're done.
     final updatedRoom =
