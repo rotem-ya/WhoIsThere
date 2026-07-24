@@ -81,6 +81,7 @@ flutter:
   assets:
     - assets/images/tiles/
     - assets/images/places/
+    - assets/images/mascot/
     - assets/game_places/images/
     - assets/game_places/data/
     - assets/sounds/

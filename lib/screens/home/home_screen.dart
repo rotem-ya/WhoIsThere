@@ -1223,12 +1223,15 @@ class _TipOfDayCard extends StatelessWidget {
     const bubbleColor = Color(0xFF2B1D52);
     return Row(
       children: [
-        // Mascot: Chakmon the wise owl. He bobs gently so he feels alive and
-        // "speaks" the daily tip through the bubble beside him.
-        const Text('🦉', style: TextStyle(fontSize: 40))
+        // Mascot: the detective. He bobs gently so he feels alive and "speaks"
+        // the daily tip through the bubble beside him. Baked from a 3D model to
+        // a transparent PNG (no live WebView), on-theme with the game's
+        // guess/discover detective ranks.
+        Image.asset('assets/images/mascot/detective.png',
+                height: 58, filterQuality: FilterQuality.medium)
             .animate(onPlay: (c) => c.repeat(reverse: true))
             .moveY(begin: 0, end: -3, duration: 1200.ms, curve: Curves.easeInOut),
-        const SizedBox(width: 2),
+        const SizedBox(width: 4),
         Expanded(
           child: Stack(
             clipBehavior: Clip.none,
