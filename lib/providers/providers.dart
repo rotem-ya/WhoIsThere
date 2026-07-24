@@ -19,7 +19,10 @@ import '../services/groups_service.dart';
 import '../services/content_manifest_service.dart';
 import '../services/cosmetics_catalog_service.dart';
 import '../services/daily_quest_service.dart';
+import '../services/quests_service.dart';
+import '../services/rewards_config_service.dart';
 import '../services/weekly_leaderboard_service.dart';
+import '../models/quests_state.dart';
 import '../models/daily_quest.dart';
 import '../models/user_model.dart';
 import '../models/room_model.dart';
@@ -73,6 +76,51 @@ final dailyQuestStateProvider = Provider.autoDispose<DailyQuestState?>((ref) {
         discoveries: user?.discoveredImageIds.length ?? 0,
       );
 });
+// ── Rewards hub: multi-quest (daily + weekly), config-driven ────────────────
+final questsServiceProvider =
+    Provider<QuestsService>((ref) => QuestsService(FirebaseFirestore.instance));
+
+/// Raw persisted multi-quest state for the current user.
+final questsDocProvider = StreamProvider.autoDispose<QuestsDoc?>((ref) {
+  final uid = ref.watch(firebaseUserProvider).valueOrNull?.uid;
+  if (uid == null) return const Stream.empty();
+  return ref.watch(questsServiceProvider).stream(uid);
+});
+
+/// The live list of quest views (daily then weekly) with progress, recomputed
+/// as counters and the admin config change.
+final questViewsProvider = Provider.autoDispose<List<QuestView>>((ref) {
+  ref.watch(rewardsRevisionProvider);
+  final doc = ref.watch(questsDocProvider).valueOrNull;
+  final wallet = ref.watch(walletProvider).valueOrNull;
+  final user = ref.watch(currentUserProvider).valueOrNull;
+  if (wallet == null) return const [];
+  final cfg = RewardsConfigService.instance.config;
+  return ref.watch(questsServiceProvider).viewsFrom(
+        doc,
+        wins: wallet.totalMatchesWon,
+        plays: wallet.totalMatchesPlayed,
+        discoveries: user?.discoveredImageIds.length ?? 0,
+        dailyDefs: cfg.activeDaily,
+        weeklyDefs: cfg.activeWeekly,
+      );
+});
+
+/// Bumps whenever the admin rewards config changes, so hub screens rebuild.
+final rewardsRevisionProvider = StreamProvider.autoDispose<int>((ref) {
+  final notifier = RewardsConfigService.instance.revision;
+  late final void Function() listener;
+  final controller = StreamController<int>();
+  controller.add(notifier.value);
+  listener = () => controller.add(notifier.value);
+  notifier.addListener(listener);
+  ref.onDispose(() {
+    notifier.removeListener(listener);
+    controller.close();
+  });
+  return controller.stream;
+});
+
 final appUpdateServiceProvider =
     Provider<AppUpdateService>((ref) => AppUpdateService());
 
