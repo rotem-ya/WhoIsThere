@@ -1,11 +1,15 @@
-# Android → Google Play דרך Codemagic (אוטומטי, כמו iOS→TestFlight)
+# שיגור לשתי החנויות בריצה אחת (Codemagic)
 
-הוגדר workflow חדש ב-`codemagic.yaml` בשם **`android-googleplay`**. הוא בונה AAB
-חתום ב-EA:3B ומעלה אותו אוטומטית ל-Google Play — בדיוק כמו שמסלול ה-iOS מעלה
-ל-TestFlight.
+הוגדר workflow מאוחד ב-`codemagic.yaml` בשם **`stores-release`**. בריצה **אחת**
+(על מכונת macOS) הוא בונה גם IPA וגם AAB, ומעלה אותם **בו-זמנית**:
+- IPA → App Store / TestFlight
+- AAB (חתום EA:3B) → Google Play (Internal testing)
 
-**טריגר:** דחיפת תג `aab-v*` (למשל `aab-v5`) לענף ההשקה. אפשר גם Start build
-ידני ב-Codemagic UI.
+**טריגר:** דחיפת תג `release-v*` (למשל `release-v1`) לענף ההשקה. אפשר גם Start
+build ידני ב-Codemagic UI.
+
+> נשאר גם `ios-testflight` (תג `ios-v*`) כגיבוי לתיקון iOS-בלבד. מסלול ה-AAB דרך
+> GitHub Actions (`build-aab.yml`) עדיין קיים כגיבוי ידני.
 
 ---
 
@@ -40,17 +44,19 @@
 
 ---
 
-## איך משגרים גרסה
+## איך משגרים גרסה (שתי החנויות ביחד)
 
 ```bash
-git tag aab-v5 origin/claude/whoishere-visual-sound-rjcdzb
-git push origin aab-v5
+git tag release-v1 origin/claude/whoishere-visual-sound-rjcdzb
+git push origin release-v1
 ```
 
-Codemagic יבנה AAB, יאמת שהוא חתום ב-EA:3B, ויעלה אותו למסלול **Internal
-testing** אוטומטית (בלי המתנת review). testers פנימיים יקבלו אותו מיד.
+Codemagic יבנה IPA + AAB באותה ריצה, יאמת חתימת EA:3B ל-AAB, ויעלה:
+- ל-**TestFlight** (בלי submit ל-review)
+- ל-**Google Play → Internal testing** (בלי המתנת review). testers פנימיים
+  יקבלו את שתי הגרסאות מיד.
 
-- **לשנות מסלול:** ב-`codemagic.yaml` תחת `android-googleplay` → `vars.PLAY_TRACK`
+- **לשנות מסלול:** ב-`codemagic.yaml` תחת `stores-release` → `vars.PLAY_TRACK`
   (`internal` / `alpha` / `beta` / `production`).
 - **versionCode:** נגזר מ-`PROJECT_BUILD_NUMBER + 100` — תמיד גבוה מ-40 (הקוד
   הכי גבוה שנבנה ב-GitHub Actions), כך שאין התנגשות "קוד כפול".

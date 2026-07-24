@@ -1,14 +1,16 @@
 # Codemagic CI — build WhoIsThere and ship to the stores.
-#   • ios-testflight     → build IPA + upload to TestFlight   (tag: ios-v*)
-#   • android-googleplay → build AAB + upload to Google Play  (tag: aab-v*)
+#   • stores-release  → ONE run: build IPA + AAB, upload to BOTH TestFlight and
+#                       Google Play in a single build   (tag: release-v*)  ← main
+#   • ios-testflight  → iOS only: build IPA + upload to TestFlight (tag: ios-v*)
+#                       kept as a fallback for iOS-only hotfixes.
 #
 # One-time iOS setup in the Codemagic UI (see IOS_TESTFLIGHT_SETUP.md):
 #   1. Connect this repository (rotem-ya/WhoIsThere) as an app.
 #   2. Teams → Integrations → App Store Connect API key named "Apple_Key_Trivia"
 #      (Key ID 995PSX889V) — referenced below under `integrations`.
 #   3. In App Store Connect, create the app with bundle id  com.rotem.whoisthere.
-# One-time Android setup: add a Google Play service-account JSON as the
-#   `google_play` env var group (see the android-googleplay block below).
+# One-time Android setup (see ANDROID_GOOGLEPLAY_SETUP.md): add a Google Play
+#   service-account JSON as the `google_play` env var group.
 # Then push the matching tag; Codemagic handles signing automatically.
 
 workflows:
@@ -232,35 +234,49 @@ workflows:
         submit_to_testflight: true
 
   # ===========================================================================
-  # Android → Google Play (mirror of the iOS→TestFlight flow above).
+  # stores-release — ONE build that ships to BOTH stores.
   #
-  # One-time setup (analogous to the Apple ASC key — only rotem can do it):
-  #   1. Google Play Console → Setup → API access → link/create a Google Cloud
-  #      project, then create a *service account* and grant it access to this
-  #      app (Users & permissions → Release apps to testing tracks, at least).
-  #   2. Download the service-account JSON key.
-  #   3. Codemagic UI → this app → Environment variables → group `google_play`,
-  #      add variable `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS` = the whole JSON,
-  #      mark it Secure.
-  # After that, pushing a tag like `aab-v5` builds a signed AAB and publishes it
-  # to the Internal testing track automatically. Signing reuses the same EA:3B
-  # Play upload key as build-aab.yml (decoded from android/app/upload_keystore.b64),
-  # so no keystore upload is needed in Codemagic.
+  # Runs on macOS (the only instance that can build a signed iOS IPA); the same
+  # machine also builds the Android AAB. Publishing pushes the IPA to TestFlight
+  # AND the AAB to Google Play in the same run.
+  #
+  # Trigger: push a tag like `release-v1` to the release branch.
+  #   git tag release-v1 origin/claude/whoishere-visual-sound-rjcdzb
+  #   git push origin release-v1
+  #
+  # Prerequisites (one-time, only rotem can do — same as the per-store setup):
+  #   • iOS:     the `Apple_Key_Trivia` ASC API key integration (already set up).
+  #   • Android: the `google_play` env var group holding a Play service-account
+  #              JSON as GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+  #              (see ANDROID_GOOGLEPLAY_SETUP.md).
+  # If the Google Play credentials are missing, the AAB still builds but the
+  # Play upload step fails — set them up before using this workflow.
+  #
+  # iOS signing steps are identical to `ios-testflight` (the proven, stabilized
+  # flow). Android reuses the same EA:3B Play upload key as build-aab.yml,
+  # decoded from android/app/upload_keystore.b64 (no keystore upload needed).
   # ===========================================================================
-  android-googleplay:
-    name: WhoIsThere Android — Google Play
+  stores-release:
+    name: WhoIsThere — App Store + Google Play (one run)
     triggering:
       events:
         - tag
       tag_patterns:
-        - pattern: 'aab-v*'
+        - pattern: 'release-v*'
           include: true
-    instance_type: linux_x2
-    max_build_duration: 60
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    integrations:
+      app_store_connect: Apple_Key_Trivia
     environment:
       groups:
         - google_play          # provides GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-      flutter: 3.27.4          # matches the working build-aab.yml Android build
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.rotem.whoisthere
+      flutter: 3.24.5          # iOS-proven; the app's SDK range builds Android on it too
+      xcode: latest
+      cocoapods: default
       vars:
         # EA:3B Play upload key — the ONLY key Play accepts (identical to
         # build-aab.yml). Repo is public; rotate post-launch (see CLAUDE.md TODO).
@@ -269,23 +285,138 @@ workflows:
         KEYSTORE_KEY_PASS: "123456"
         PLAY_TRACK: "internal"  # switch to "production" for a public release
     scripts:
-      - name: Restore EA:3B upload keystore
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Fix iOS project assets
+        script: |
+          set -e
+          PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
+          # The project currently contains two Assets.xcassets references.
+          # The resource build phase can point to ios/Assets.xcassets, which has no AppIcon.
+          # Point it back to ios/Runner/Assets.xcassets, where AppIcon.appiconset exists.
+          perl -0pi -e 's/fileRef = 97C146FD1CF9000F007C117D \/\* Assets\.xcassets \*\//fileRef = 97C146FB1CF9000F007C117D \/\* Assets.xcassets \*\//g' "$PBXPROJ"
+          grep -n "Assets.xcassets in Resources" "$PBXPROJ"
+          # App Store Connect rejects app icons that contain transparency or an alpha channel.
+          python3 tool/ci/flatten_ios_app_icons.py ios/Runner/Assets.xcassets/AppIcon.appiconset
+      - name: Create fresh Push-enabled App Store profile + verify aps-environment
+        script: |
+          set -e
+          BUNDLE_ID="com.rotem.whoisthere"
+
+          echo "===== A. Resolve Bundle ID resource id ====="
+          app-store-connect bundle-ids list \
+            --bundle-id-identifier "$BUNDLE_ID" --strict-match-identifier \
+            --json > /tmp/bids.json
+          BID=$(python3 -c "import json;d=json.load(open('/tmp/bids.json'));d=d.get('data',d) if isinstance(d,dict) else d;print(d[0]['id'] if d else '')")
+          echo "Bundle ID resource id: '$BID'"
+          [ -z "$BID" ] && { echo 'ERROR: bundle id not found via API'; exit 1; }
+
+          echo "===== B. Collect ALL distribution certificate ids ====="
+          app-store-connect certificates list --json > /tmp/certs.json 2>/dev/null || echo '[]' > /tmp/certs.json
+          CERT_IDS=$(python3 <<'PY'
+          import json
+          try:
+              d = json.load(open('/tmp/certs.json'))
+          except Exception:
+              d = []
+          if isinstance(d, dict):
+              d = d.get('data', [])
+          def ctype(c):
+              return ((c.get('attributes') or {}).get('certificateType') or '').upper()
+          ids = [c['id'] for c in (d or []) if c.get('id') and ctype(c) in ('DISTRIBUTION', 'IOS_DISTRIBUTION')]
+          if not ids:
+              ids = [c['id'] for c in (d or []) if c.get('id') and 'DEVELOPMENT' not in ctype(c)]
+          print(' '.join(ids))
+          PY
+          )
+          echo "Distribution certificate ids: '$CERT_IDS'"
+          [ -z "$CERT_IDS" ] && { echo 'ERROR: no distribution certificate in ASC'; exit 1; }
+
+          echo "===== C. Delete existing App Store profiles for this bundle id ====="
+          for T in IOS_APP_STORE IOS_APP_STORE_ADHOC; do
+            app-store-connect profiles list --bundle-id-identifier "$BUNDLE_ID" --profile-type "$T" --json > /tmp/pl_$T.json 2>/dev/null || echo '[]' > /tmp/pl_$T.json
+            for pid in $(python3 -c "import json;d=json.load(open('/tmp/pl_$T.json'));d=d.get('data',d) if isinstance(d,dict) else d;print(' '.join(x['id'] for x in d if x.get('id')))"); do
+              echo "deleting stale profile $pid ($T)"; app-store-connect profiles delete "$pid" || true
+            done
+          done
+
+          echo "===== D. Wipe on-disk profiles fetched at env-init ====="
+          PROF_DIRS=(
+            "$HOME/Library/MobileDevice/Provisioning Profiles"
+            "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+          )
+          for d in "${PROF_DIRS[@]}"; do
+            rm -f "$d/"*.mobileprovision 2>/dev/null || true
+            mkdir -p "$d"
+          done
+
+          echo "===== E. Create FRESH App Store profile (inherits Push) ====="
+          app-store-connect profiles create "$BID" \
+            --certificate-ids $CERT_IDS \
+            --type IOS_APP_STORE \
+            --name "WhoIsThere App Store CI $PROJECT_BUILD_NUMBER" \
+            --save
+
+          echo "===== F. Verify the freshly-saved profile GRANTS aps-environment ====="
+          python3 - <<'PY'
+          import glob, subprocess, plistlib, sys, os
+          prof_dirs = [
+              os.path.expanduser("~/Library/MobileDevice/Provisioning Profiles"),
+              os.path.expanduser("~/Library/Developer/Xcode/UserData/Provisioning Profiles"),
+          ]
+          files = []
+          for pd in prof_dirs:
+              files += glob.glob(pd + "/*.mobileprovision")
+          if not files:
+              print("ERROR: no provisioning profile on disk after 'profiles create --save'")
+              print("  searched:", prof_dirs); sys.exit(1)
+          ok = False
+          for f in files:
+              raw = subprocess.run(["security", "cms", "-D", "-i", f], capture_output=True).stdout
+              try:
+                  pl = plistlib.loads(raw)
+              except Exception as e:
+                  print("could not decode", f, e); continue
+              ent = pl.get("Entitlements", {})
+              aps = ent.get("aps-environment")
+              print(f"  {os.path.basename(f)}  name={pl.get('Name')!r}  aps-environment={aps!r}")
+              if aps:
+                  ok = True
+          if not ok:
+              print("ERROR: the freshly created profile does NOT grant aps-environment.")
+              print("=> Enable Push on App ID 'com.rotem.whoisthere', then rebuild.")
+              sys.exit(1)
+          print("OK: a profile on disk grants aps-environment (Push). Proceeding.")
+          PY
+      - name: Set up code signing settings on Xcode project (pins the fresh profile)
+        script: xcode-project use-profiles
+      - name: Build signed IPA (iOS)
+        script: |
+          # Offset the Codemagic build counter by 1000 so CFBundleVersion stays
+          # strictly increasing and above the legacy TestFlight builds.
+          BUILD_NUMBER=$((PROJECT_BUILD_NUMBER + 1000))
+          echo "Using iOS build number: $BUILD_NUMBER"
+          flutter build ipa --release \
+            --build-name=1.4.3 \
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
+      - name: Restore EA:3B upload keystore (Android)
         script: |
           set -e
           base64 -d android/app/upload_keystore.b64 > android/app/keystore.jks
           SIZE=$(stat -c%s android/app/keystore.jks 2>/dev/null || stat -f%z android/app/keystore.jks)
           echo "keystore bytes: $SIZE"
           if [ "$SIZE" -lt 2000 ]; then echo "keystore decode failed ($SIZE bytes)"; exit 1; fi
-      - name: Get Flutter packages
-        script: flutter pub get
-      - name: Generate launcher icons
+      - name: Generate launcher icons (Android)
+        # Safe here: the iOS IPA is already built above, so regenerating icons
+        # cannot re-introduce alpha into the already-archived app icon.
         script: dart run flutter_launcher_icons || true
-      - name: Build signed App Bundle
+      - name: Build signed App Bundle (Android)
         script: |
           set -e
           # versionCode must exceed every code already on Play. The GitHub
-          # build-aab path is at 40; offset the Codemagic build counter by 100 so
-          # codes stay strictly increasing and never collide with that path.
+          # build-aab path is at 40; offset the Codemagic counter by 100 so codes
+          # stay strictly increasing and never collide with that path.
           VCODE=$((PROJECT_BUILD_NUMBER + 100))
           echo "Using Android versionCode: $VCODE"
           flutter build appbundle --release \
@@ -302,12 +433,16 @@ workflows:
             exit 1
           fi
     artifacts:
+      - build/ios/ipa/*.ipa
       - build/app/outputs/bundle/release/*.aab
       - build/app/outputs/**/mapping.txt
+      - /tmp/xcodebuild_logs/*.log
     publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
       google_play:
         credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        # Publishes to the Internal testing track (no review wait). The build is
-        # released to testers, not submitted for production review.
+        # Internal testing track (no review wait) — testers get it immediately.
         track: $PLAY_TRACK
         submit_as_draft: false
