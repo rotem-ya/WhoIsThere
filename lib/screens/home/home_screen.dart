@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -844,45 +846,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           SizedBox(height: verySmall ? 4 : 8),
-                          // ── Top bar ──────────────────────────────────
-                          // Row 1: nav icons (left) + daily reward (right).
+                          // ── Top bar: nav icons (left) · coins + gifts (right) ──
                           _step(
                             Row(
                               textDirection: TextDirection.ltr,
-                              children: const [
-                                _ProfileIconButton(),
-                                SizedBox(width: 8),
-                                _StoreIconButton(),
-                                SizedBox(width: 8),
-                                _FriendsIconButton(),
-                                Spacer(),
-                                // The spin wheel now lives inside the rewards hub
-                                // (opened by the gifts button), so the separate
-                                // dice button was removed to declutter the bar.
-                                _DailyRewardButton(),
+                              children: [
+                                const _ProfileIconButton(),
+                                const SizedBox(width: 8),
+                                const _StoreIconButton(),
+                                const SizedBox(width: 8),
+                                const _FriendsIconButton(),
+                                const Spacer(),
+                                // Coins moved up here (compact), between the
+                                // friends and gifts buttons — this frees the whole
+                                // band below for the detective's play area.
+                                CoinDisplay(key: walletAnchorKey, compact: true),
+                                const SizedBox(width: 8),
+                                const _DailyRewardButton(),
                               ],
                             ),
                             delayMs: 0, durationMs: 380, dy: -10,
                           ),
-                          // Tip of the day — bubble just under the top row.
-                          const SizedBox(height: 8),
-                          _step(const _TipOfDayCard(),
-                              delayMs: 60, durationMs: 340, dy: -6),
-                          // Row 2: coins on its own line — keeps the top bar from
-                          // overflowing (which had hidden the daily-reward button)
-                          // and the wide coins capsule from overlapping the icons.
-                          const SizedBox(height: 8),
-                          _step(
-                            Center(child: CoinDisplay(key: walletAnchorKey)),
-                            delayMs: 40, durationMs: 380, dy: -10,
-                          ),
-                          // ── Hero grid takes all remaining vertical space ──
+                          // ── Detective hero scene — the picture-object (image +
+                          // tiles) with the detective roaming, investigating it
+                          // with his magnifier, ducking behind it, and a tip
+                          // bubble that pops in and out (or on tap). Fills the
+                          // space between the top bar and the title.
                           Expanded(
-                            child: Center(
-                              child: _step(
-                                RepaintBoundary(child: _HomeHeroPeekGrid(size: iconSize)),
-                                delayMs: 80, durationMs: 500, dy: 14,
-                              ),
+                            child: _step(
+                              _DetectiveHeroScene(peekSize: iconSize),
+                              delayMs: 80, durationMs: 500, dy: 14,
                             ),
                           ),
                           _step(
@@ -1196,9 +1189,27 @@ class _WinStreakBanner extends ConsumerWidget {
 
 // ── Tip of the day ────────────────────────────────────────────────────────
 
-class _TipOfDayCard extends StatelessWidget {
-  const _TipOfDayCard();
+// Detective pose for a single animation frame.
+class _Pose {
+  final double x, y, angle, sx, sy;
+  final bool behind;
+  const _Pose(this.x, this.y, this.angle, this.sx, this.sy, this.behind);
+}
 
+/// The home hero band: the picture-object (image + revealing tiles) with the
+/// detective roaming around it — walking side to side, investigating it with
+/// his magnifier, ducking behind it — and a tip bubble that pops in and out
+/// (or when you tap him). Built from a single baked PNG; all life is animation.
+class _DetectiveHeroScene extends StatefulWidget {
+  final double peekSize;
+  const _DetectiveHeroScene({required this.peekSize});
+
+  @override
+  State<_DetectiveHeroScene> createState() => _DetectiveHeroSceneState();
+}
+
+class _DetectiveHeroSceneState extends State<_DetectiveHeroScene>
+    with TickerProviderStateMixin {
   static const List<String> _tips = [
     'נחשו מוקדם ככל האפשר, ככה תרוויחו יותר מטבעות.',
     'רצף כניסה יומי מגדיל את הבונוס במטבעות בכל יום.',
@@ -1211,76 +1222,270 @@ class _TipOfDayCard extends StatelessWidget {
     'סובבו את גלגל המזל פעם ביום לסיבוב חינם.',
     'השלימו את המשימה היומית ואספו פרס נוסף.',
   ];
+  static const double _spriteAspect = 363.0 / 420.0;
+
+  late final AnimationController _roam;
+  late final AnimationController _bubbleCtrl;
+  Timer? _bubbleTimer;
+  int _tipIndex = 0;
+  bool _bubbleOn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tipIndex = DateTime.now().difference(DateTime(2026, 1, 1)).inDays.abs() %
+        _tips.length;
+    _roam =
+        AnimationController(vsync: this, duration: const Duration(seconds: 22))
+          ..repeat();
+    _bubbleCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 380));
+    _scheduleBubble(const Duration(seconds: 3));
+  }
+
+  void _scheduleBubble(Duration wait) {
+    _bubbleTimer?.cancel();
+    _bubbleTimer = Timer(wait, _popBubble);
+  }
+
+  void _popBubble() {
+    if (!mounted) return;
+    _bubbleTimer?.cancel();
+    setState(() => _bubbleOn = true);
+    _bubbleCtrl.forward(from: 0);
+    _bubbleTimer = Timer(const Duration(seconds: 4), () {
+      if (!mounted) return;
+      _bubbleCtrl.reverse();
+      _bubbleTimer = Timer(const Duration(milliseconds: 420), () {
+        if (!mounted) return;
+        setState(() {
+          _bubbleOn = false;
+          _tipIndex = (_tipIndex + 1) % _tips.length;
+        });
+        _scheduleBubble(const Duration(seconds: 8));
+      });
+    });
+  }
+
+  void _onTap() {
+    HapticFeedback.selectionClick();
+    if (_bubbleOn) return;
+    _popBubble();
+  }
+
+  @override
+  void dispose() {
+    _bubbleTimer?.cancel();
+    _roam.dispose();
+    _bubbleCtrl.dispose();
+    super.dispose();
+  }
+
+  double _dc(double v, double lo, double hi) =>
+      v < lo ? lo : (v > hi ? hi : v);
+  double _lerp(double a, double b, double t) => a + (b - a) * t;
+  double _seg(double f, double a, double b) => _dc((f - a) / (b - a), 0, 1);
+
+  // Scripted 22-second loop: approach → investigate → duck → cross right →
+  // turn → cross left (passing BEHIND the object) → idle.
+  _Pose _pose(double f, double w, double h, double dw, double dh, double objCx,
+      double objSize) {
+    const pad = 6.0;
+    final xL = pad;
+    final xR = _dc(w - dw - pad, pad, w);
+    final invX = _dc(objCx - objSize * 0.5 - dw * 0.28, xL, xR);
+    final ground = _dc(h - dh - 2, 0, h);
+    double x = xL, y = ground, angle = 0, sx = 1, sy = 1;
+    bool behind = false;
+
+    double hop(double p, [double amp = 4, double steps = 3]) =>
+        -(math.sin(p * math.pi * 2 * steps)).abs() * amp;
+    double wob(double p, [double steps = 3]) =>
+        math.sin(p * math.pi * 2 * steps) * 0.05;
+
+    if (f < 0.20) {
+      final p = _seg(f, 0, 0.20);
+      x = _lerp(xL, invX, Curves.easeInOut.transform(p));
+      y = ground + hop(p);
+      angle = wob(p) + 0.04;
+    } else if (f < 0.34) {
+      final p = _seg(f, 0.20, 0.34);
+      x = invX + math.sin(p * math.pi * 4) * 3; // scanning jitter
+      angle = -0.11 - math.sin(p * math.pi * 2) * 0.02; // leans at the object
+    } else if (f < 0.42) {
+      final p = _seg(f, 0.34, 0.42);
+      final e = p < 0.5 ? p * 2 : (1.0 - p) * 2; // dip then rise
+      x = invX;
+      y = ground + e * 8;
+      sy = 1.0 - e * 0.12;
+      angle = -0.06;
+    } else if (f < 0.62) {
+      final p = _seg(f, 0.42, 0.62);
+      x = _lerp(invX, xR, Curves.easeInOut.transform(p));
+      y = ground + hop(p);
+      angle = wob(p) + 0.04;
+    } else if (f < 0.66) {
+      final p = _seg(f, 0.62, 0.66);
+      x = xR;
+      sx = 1.0 - p * 2; // turn: 1 -> -1
+    } else if (f < 0.86) {
+      final p = _seg(f, 0.66, 0.86);
+      x = _lerp(xR, xL, Curves.easeInOut.transform(p));
+      y = ground + hop(p);
+      angle = -wob(p) - 0.04;
+      sx = -1;
+      behind = ((x + dw / 2) - objCx).abs() < objSize * 0.5;
+    } else {
+      final p = _seg(f, 0.86, 1.0);
+      x = xL;
+      y = ground - (math.sin(p * math.pi * 4)).abs() * 3;
+      sx = p < 0.5 ? -1.0 : 1.0; // face back to the right
+      angle = math.sin(p * math.pi * 2) * 0.03;
+    }
+    return _Pose(x, y, angle, sx, sy, behind);
+  }
+
+  Widget _detectiveLayer(double w, double h, double dw, double dh, double objCx,
+      double objSize,
+      {required bool behindLayer}) {
+    return AnimatedBuilder(
+      animation: _roam,
+      builder: (_, __) {
+        final p = _pose(_roam.value, w, h, dw, dh, objCx, objSize);
+        return SizedBox.expand(
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: Transform.translate(
+              offset: Offset(p.x, p.y),
+              child: Opacity(
+                opacity: p.behind == behindLayer ? 1.0 : 0.0,
+                child: Transform(
+                  alignment: Alignment.bottomCenter,
+                  transform: Matrix4.identity()
+                    ..rotateZ(p.angle)
+                    ..scale(p.sx, p.sy, 1.0),
+                  child: SizedBox(
+                    width: dw,
+                    height: dh,
+                    child: Image.asset('assets/images/mascot/detective.png',
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.medium),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Rotate by day so the tip is stable within a day and changes daily.
-    final dayIndex =
-        DateTime.now().difference(DateTime(2026, 1, 1)).inDays.abs();
-    final tip = _tips[dayIndex % _tips.length];
-    // Opaque bubble colour so the little tail (same fill, no border) blends
-    // seamlessly into the bubble edge.
-    const bubbleColor = Color(0xFF2B1D52);
-    return Row(
-      children: [
-        // Mascot: the detective. He bobs gently so he feels alive and "speaks"
-        // the daily tip through the bubble beside him. Baked from a 3D model to
-        // a transparent PNG (no live WebView), on-theme with the game's
-        // guess/discover detective ranks.
-        Image.asset('assets/images/mascot/detective.png',
-                height: 58, filterQuality: FilterQuality.medium)
-            .animate(onPlay: (c) => c.repeat(reverse: true))
-            .moveY(begin: 0, end: -3, duration: 1200.ms, curve: Curves.easeInOut),
-        const SizedBox(width: 4),
-        Expanded(
+    return LayoutBuilder(
+      builder: (context, cons) {
+        final w = cons.maxWidth;
+        final h = cons.maxHeight;
+        final objSize =
+            _dc(widget.peekSize, 84, math.min(h * 0.82, w * 0.5));
+        final objCx = w / 2;
+        final dh = _dc(h * 0.52, 74, 128);
+        final dw = dh * _spriteAspect;
+
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _onTap,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(
-                padding: const EdgeInsets.fromLTRB(12, 7, 12, 8),
-                decoration: BoxDecoration(
-                  color: bubbleColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border:
-                      Border.all(color: Candy.gold.withOpacity(0.30), width: 1),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'טיפ היום',
-                      style: TextStyle(
-                        color: Candy.gold,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      tip,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        height: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
+              // Detective behind the object (visible only while ducking behind).
+              _detectiveLayer(w, h, dw, dh, objCx, objSize, behindLayer: true),
+              // The picture-object (image + revealing tiles), centred.
+              Center(
+                child: RepaintBoundary(child: _HomeHeroPeekGrid(size: objSize)),
               ),
-              // Speech-bubble tail pointing at the owl (physical right in RTL).
-              Positioned(
-                right: -4,
-                top: 16,
-                child: Transform.rotate(
-                  angle: 0.7853981633974483, // 45°
-                  child: Container(width: 11, height: 11, color: bubbleColor),
-                ),
+              // Detective in front (default).
+              _detectiveLayer(w, h, dw, dh, objCx, objSize, behindLayer: false),
+              // Tip bubble that pops in/out above the detective's head.
+              AnimatedBuilder(
+                animation: Listenable.merge([_roam, _bubbleCtrl]),
+                builder: (_, __) {
+                  final v = _bubbleCtrl.value;
+                  if (v <= 0.001) return const SizedBox.shrink();
+                  final p = _pose(_roam.value, w, h, dw, dh, objCx, objSize);
+                  const bw = 208.0;
+                  final bx =
+                      _dc(p.x + dw / 2 - bw / 2, 6, math.max(6.0, w - bw - 6));
+                  final topY = _dc(p.y - 82, 0, h);
+                  return SizedBox.expand(
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: Transform.translate(
+                        offset: Offset(bx, topY),
+                        child: Opacity(
+                          opacity: _dc(v, 0, 1),
+                          child: Transform.scale(
+                            scale: 0.7 +
+                                0.3 * Curves.easeOutBack.transform(_dc(v, 0, 1)),
+                            alignment: Alignment.bottomCenter,
+                            child: SizedBox(width: bw, child: _bubble()),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _bubble() {
+    const c = Color(0xFF2B1D52);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 9),
+          decoration: BoxDecoration(
+            color: c,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Candy.gold.withOpacity(0.35), width: 1),
+            boxShadow: const [
+              BoxShadow(
+                  color: Colors.black38, blurRadius: 12, offset: Offset(0, 4)),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('טיפ היום',
+                  style: TextStyle(
+                      color: Candy.gold,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900)),
+              const SizedBox(height: 1),
+              Text(_tips[_tipIndex],
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2)),
+            ],
+          ),
+        ),
+        // Tail pointing down toward the detective.
+        Transform.translate(
+          offset: const Offset(0, -1),
+          child: Transform.rotate(
+            angle: 0.7853981633974483,
+            child: Container(width: 11, height: 11, color: c),
           ),
         ),
       ],
