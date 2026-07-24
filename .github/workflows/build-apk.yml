@@ -113,3 +113,16 @@ jobs:
           body: "Latest launch APK — branch ${{ github.ref_name }}, commit ${{ github.sha }}"
           files: build/app/outputs/flutter-apk/app-release.apk
           make_latest: false
+
+      # Direct, mobile-friendly download for the v1.4.4 rewards-hub QA builds.
+      # Stable URL, no login / no unzip:
+      #   https://github.com/rotem-ya/WhoIsThere/releases/download/qa-1.4.4/app-release.apk
+      - name: Publish APK to qa-1.4.4 release
+        if: github.ref == 'refs/heads/claude/rewards-hub-v1.4.4'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: qa-1.4.4
+          name: QA build (v1.4.4 — מרכז פרסים)
+          body: "Latest v1.4.4 QA APK — branch ${{ github.ref_name }}, commit ${{ github.sha }}"
+          files: build/app/outputs/flutter-apk/app-release.apk
+          make_latest: false
