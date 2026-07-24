@@ -110,15 +110,19 @@ class _DailySpinSheetState extends ConsumerState<_DailySpinSheet>
 
       // Land segment res.index under the top pointer, after several turns.
       final n = EconomyConfig.dailySpinSegments.length;
-      final seg = 1.0 / n;
-      final landing = (n - res.index) % n * seg - seg / 2; // turns, [0,1)
+      final idx = n == 0 ? 0 : res.index.clamp(0, n - 1);
+      final seg = n == 0 ? 1.0 : 1.0 / n;
+      final landing = n == 0 ? 0.0 : (n - idx) % n * seg - seg / 2; // turns
       _fromTurns = _toTurns;
       _toTurns = _fromTurns.floorToDouble() + 5 + landing;
       // Ratchet ticks while it spins (throttled by segment crossings).
       _lastTickTurns = _fromTurns;
       _spin.addListener(_spinTicker);
-      await _spin.forward(from: 0);
-      _spin.removeListener(_spinTicker);
+      // A disposed/cancelled controller must not crash the app.
+      try {
+        await _spin.forward(from: 0);
+      } catch (_) {}
+      if (mounted) _spin.removeListener(_spinTicker);
       if (!mounted) return;
       setState(() {
         _spinning = false;
@@ -167,7 +171,8 @@ class _DailySpinSheetState extends ConsumerState<_DailySpinSheet>
         left: 20,
         right: 20,
       ),
-      child: Column(
+      child: SingleChildScrollView(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
@@ -304,6 +309,7 @@ class _DailySpinSheetState extends ConsumerState<_DailySpinSheet>
               ),
             ),
         ],
+      ),
       ),
     );
   }

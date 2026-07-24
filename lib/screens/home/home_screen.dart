@@ -841,8 +841,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     final iconSize = verySmall ? 140.0 : compact ? 170.0 : 200.0;
                     return Padding(
                       padding: EdgeInsets.symmetric(horizontal: compact ? 20 : 24),
-                      child: SingleChildScrollView(
-                        child: Column(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           SizedBox(height: verySmall ? 4 : 8),
@@ -857,8 +856,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 _StoreIconButton(),
                                 SizedBox(width: 8),
                                 _FriendsIconButton(),
-                                SizedBox(width: 8),
-                                _SettingsIconButton(),
                                 Spacer(),
                                 _DailySpinButton(),
                                 SizedBox(width: 8),
@@ -867,6 +864,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             delayMs: 0, durationMs: 380, dy: -10,
                           ),
+                          // Tip of the day — bubble just under the top row.
+                          const SizedBox(height: 8),
+                          _step(const _TipOfDayCard(),
+                              delayMs: 60, durationMs: 340, dy: -6),
                           // Row 2: coins on its own line — keeps the top bar from
                           // overflowing (which had hidden the daily-reward button)
                           // and the wide coins capsule from overlapping the icons.
@@ -875,10 +876,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             Center(child: CoinDisplay(key: walletAnchorKey)),
                             delayMs: 40, durationMs: 380, dy: -10,
                           ),
-                          // ── Hero grid (fixed height; the page scrolls) ──
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                                vertical: verySmall ? 8 : 16),
+                          // ── Hero grid takes all remaining vertical space ──
+                          Expanded(
                             child: Center(
                               child: _step(
                                 RepaintBoundary(child: _HomeHeroPeekGrid(size: iconSize)),
@@ -988,14 +987,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           SizedBox(height: verySmall ? 6 : 10),
                           _RecentGamesStrip(onReplay: _showPlaySheet),
-                          const _TipOfDayCard(),
-                          SizedBox(height: verySmall ? 6 : 10),
                           const DailyQuestCard(),
                           SizedBox(height: verySmall ? 6 : 10),
                           const BannerAdWidget(),
                           SizedBox(height: verySmall ? 4 : 8),
                         ],
-                      ),
                       ),
                     );
                   },
@@ -1779,50 +1775,6 @@ class _FriendsIconButton extends ConsumerWidget {
                     ),
                   ),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Settings icon button (top-left, next to store) ───────────────────────
-
-class _SettingsIconButton extends StatelessWidget {
-  const _SettingsIconButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () {
-          HapticFeedback.lightImpact();
-          context.push('/settings');
-        },
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Center(
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: const Color(0xFF050A14).withOpacity(0.60),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.15),
-                  width: 1.0,
-                ),
-              ),
-              child: const Icon(
-                Icons.settings_rounded,
-                color: Colors.white70,
-                size: 20,
-              ),
             ),
           ),
         ),

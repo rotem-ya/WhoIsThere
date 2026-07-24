@@ -230,8 +230,9 @@ class EconomyService {
   Future<({int index, int coins})?> claimDailySpin(String uid) async {
     final now = DateTime.now().toUtc();
     final ref = _walletRef(uid);
-    final index = _drawSpinIndex();
-    final coins = EconomyConfig.dailySpinSegments[index];
+    final segs = EconomyConfig.dailySpinSegments;
+    final index = segs.isEmpty ? 0 : _drawSpinIndex().clamp(0, segs.length - 1);
+    final coins = segs.isEmpty ? 0 : segs[index];
 
     ({int index, int coins})? result;
     try {

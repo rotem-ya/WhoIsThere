@@ -533,6 +533,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               const SizedBox(height: AppSpacing.sm),
 
+              // ── Settings (moved here from the home top bar) ──────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Center(
+                  child: TextButton.icon(
+                    onPressed: () => context.push('/settings'),
+                    icon: const Icon(Icons.settings_rounded,
+                        size: 18, color: Colors.white70),
+                    label: const Text('הגדרות',
+                        style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.sm),
+
               // ── Send feedback ────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
