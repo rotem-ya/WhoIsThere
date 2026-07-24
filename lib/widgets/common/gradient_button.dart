@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/candy_theme.dart';
 import 'app_feedback.dart';
 
 class GradientButton extends StatefulWidget {
   final String text;
   final VoidCallback? onPressed;
+
+  /// Async tap handler. When provided, the button shows a spinner in place of
+  /// its label while the future runs, and ignores further taps until it
+  /// settles — so callers don't have to thread their own loading flag.
+  final Future<void> Function()? onPressedAsync;
+
+  /// Force the loading spinner on (for callers that manage their own state).
+  final bool loading;
   final LinearGradient? gradient;
   final double? width;
   final double height;
@@ -15,6 +23,8 @@ class GradientButton extends StatefulWidget {
     super.key,
     required this.text,
     this.onPressed,
+    this.onPressedAsync,
+    this.loading = false,
     this.gradient,
     this.width,
     this.height = 56,
@@ -27,14 +37,37 @@ class GradientButton extends StatefulWidget {
 
 class _GradientButtonState extends State<GradientButton> {
   bool _pressed = false;
+  bool _busy = false;
 
   void _onDown(_) => setState(() => _pressed = true);
   void _onUp(_) => setState(() => _pressed = false);
   void _onCancel() => setState(() => _pressed = false);
 
+  bool get _loading => widget.loading || _busy;
+
+  Future<void> _handleTap() async {
+    AppFeedback.primary();
+    if (widget.onPressedAsync != null) {
+      if (_busy) return;
+      setState(() => _busy = true);
+      try {
+        await widget.onPressedAsync!.call();
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+    } else {
+      widget.onPressed?.call();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final enabled = widget.onPressed != null;
+    // "Active" look (colored fill + shadow) whenever there's a handler, even
+    // while loading; taps only fire when not mid-flight.
+    final hasHandler =
+        widget.onPressed != null || widget.onPressedAsync != null;
+    final enabled = hasHandler && !_loading;
+    final active = hasHandler; // keeps the color during the loading spinner
 
     // Press: 90 ms down, 140 ms up — no bounce.
     return AnimatedScale(
@@ -51,24 +84,24 @@ class _GradientButtonState extends State<GradientButton> {
         width: widget.width ?? double.infinity,
         height: widget.height,
         decoration: BoxDecoration(
-          gradient: enabled
-              ? (widget.gradient ?? AppColors.primaryGradient)
+          gradient: active
+              ? (widget.gradient ?? Candy.jellyFill(Candy.tangerine))
               : const LinearGradient(colors: [Colors.grey, Colors.grey]),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.white.withOpacity(0.16), width: 1),
           // Shadow compresses on press, expands on release.
-          boxShadow: enabled
+          boxShadow: active
               ? _pressed
                   ? [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.14),
+                        color: Candy.tangerine.withOpacity(0.14),
                         blurRadius: 6,
                         offset: const Offset(0, 3),
                       ),
                     ]
                   : [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.35),
+                        color: Candy.tangerine.withOpacity(0.35),
                         blurRadius: 18,
                         offset: const Offset(0, 10),
                       ),
@@ -83,12 +116,7 @@ class _GradientButtonState extends State<GradientButton> {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: !enabled
-                ? null
-                : () {
-                    AppFeedback.primary();
-                    widget.onPressed?.call();
-                  },
+            onTap: !enabled ? null : _handleTap,
             onTapDown: enabled ? _onDown : null,
             onTapCancel: enabled ? _onCancel : null,
             onTapUp: enabled ? _onUp : null,
@@ -102,24 +130,34 @@ class _GradientButtonState extends State<GradientButton> {
                       .animate(onPlay: (c) => c.repeat())
                       .slideX(begin: -1.4, end: 1.4, duration: 2200.ms),
                 Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (widget.icon != null) ...[
-                        Icon(widget.icon, color: Colors.white, size: 22),
-                        const SizedBox(width: 8),
-                      ],
-                      Text(
-                        widget.text,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.4,
+                  child: _loading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.6,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (widget.icon != null) ...[
+                              Icon(widget.icon, color: Colors.white, size: 22),
+                              const SizedBox(width: 8),
+                            ],
+                            Text(
+                              widget.text,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
                 ),
               ],
             ),

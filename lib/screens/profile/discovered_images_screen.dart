@@ -9,6 +9,7 @@ import '../../core/ui/app_text_styles.dart';
 import '../../models/game_image_model.dart';
 import '../../providers/providers.dart';
 import '../../widgets/common/app_header.dart';
+import '../../widgets/common/skeleton.dart';
 
 // Normalized (x=0→1 W→E, y=0→1 N→S) for each place ID.
 // Bounding box: N=33.40°, S=29.45°, W=34.15°, E=35.90°
@@ -152,8 +153,8 @@ class DiscoveredImagesScreen extends ConsumerWidget {
                   imageMap: imageMap,
                 );
               },
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.accent),
+              loading: () => const SingleChildScrollView(
+                child: SkeletonGrid(count: 12),
               ),
               error: (e, _) => const _EmptyState(),
             ),

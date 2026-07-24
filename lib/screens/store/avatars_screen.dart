@@ -4,7 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/candy_theme.dart';
+import '../../widgets/common/pressable.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
@@ -16,6 +17,7 @@ import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/player_name_text.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_icon.dart';
+import '../../widgets/store/premium_unlock.dart';
 
 /// The avatar the current user has equipped (defaults to 'auto').
 final selectedAvatarProvider = StreamProvider.autoDispose<String>((ref) {
@@ -71,7 +73,6 @@ class AvatarsScreen extends ConsumerWidget {
         catalog.where((a) => a.tier == AvatarTier.premium).toList();
 
     return AppScaffold(
-      backgroundGradient: AppColors.pageBackground,
       padding: EdgeInsets.zero,
       child: Column(
         children: [
@@ -106,7 +107,7 @@ class AvatarsScreen extends ConsumerWidget {
                 const _SectionHeader(
                     label: 'חינמי',
                     icon: Icons.star_outline_rounded,
-                    color: Color(0xFF8090B0)),
+                    color: Candy.inkMuted),
                 const SizedBox(height: AppSpacing.sm),
                 _AvatarGrid(
                   avatars: free,
@@ -122,7 +123,7 @@ class AvatarsScreen extends ConsumerWidget {
                     label: 'בסיסי  50–150',
                     trailingCoin: true,
                     icon: Icons.palette_outlined,
-                    color: Color(0xFF4CA1AF)),
+                    color: Candy.teal),
                 const SizedBox(height: AppSpacing.sm),
                 _AvatarGrid(
                   avatars: basic,
@@ -138,7 +139,7 @@ class AvatarsScreen extends ConsumerWidget {
                     label: 'נדיר  300–500',
                     trailingCoin: true,
                     icon: Icons.auto_awesome_outlined,
-                    color: Color(0xFF00FFFF)),
+                    color: Candy.teal),
                 const SizedBox(height: AppSpacing.sm),
                 _AvatarGrid(
                   avatars: rare,
@@ -154,7 +155,7 @@ class AvatarsScreen extends ConsumerWidget {
                     label: 'פרימיום  1000',
                     trailingCoin: true,
                     icon: Icons.diamond_outlined,
-                    color: Color(0xFFFFD700)),
+                    color: Candy.gold),
                 const SizedBox(height: AppSpacing.sm),
                 _AvatarGrid(
                   avatars: prem,
@@ -181,6 +182,7 @@ class AvatarsScreen extends ConsumerWidget {
   ) async {
     HapticFeedback.lightImpact();
     if (currentCoins < avatar.price) {
+      SfxService.instance.denied();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('אין מספיק מטבעות!')),
       );
@@ -222,6 +224,9 @@ class AvatarsScreen extends ConsumerWidget {
 
       SfxService.instance.purchase();
       if (!context.mounted) return;
+      if (avatar.tier == AvatarTier.premium) {
+        PremiumUnlock.celebrate(context, avatar.name);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${avatar.name} נרכש! לחץ "הצמד" כדי להפעיל')),
       );
@@ -282,7 +287,7 @@ class _AvatarHero extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [accent.withOpacity(0.22), const Color(0xFF0A1228)],
+            colors: [accent.withOpacity(0.22), Candy.surfaceLow],
           ),
           borderRadius: BorderRadius.circular(22),
           border: Border.all(color: accent.withOpacity(0.45), width: 1.2),
@@ -335,7 +340,7 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.label,
     required this.icon,
-    this.color = const Color(0xFFD4AF37),
+    this.color = Candy.gold,
     this.trailingCoin = false,
   });
 
@@ -444,7 +449,7 @@ class _AvatarTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const gold = Color(0xFFD4AF37);
+    const gold = Candy.gold;
     final accent = avatar.accent;
 
     final borderColor = isSelected
@@ -453,13 +458,13 @@ class _AvatarTile extends StatelessWidget {
             ? accent.withOpacity(0.55)
             : accent.withOpacity(0.22);
 
-    return GestureDetector(
+    return Pressable(
       onTap: isSelected ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFF0A1228),
+          color: Candy.surfaceLow,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: borderColor, width: isSelected ? 2.2 : 1.2),
           boxShadow: [
@@ -529,7 +534,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const gold = Color(0xFFD4AF37);
+    const gold = Candy.gold;
     final accent = avatar.accent;
 
     if (isSelected) {

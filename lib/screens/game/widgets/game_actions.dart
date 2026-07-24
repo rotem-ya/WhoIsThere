@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/ad_constants.dart';
 import '../../../core/constants/economy_config.dart';
 import '../../../core/constants/game_constants.dart';
+import '../../../core/theme/candy_theme.dart';
 import '../../../models/player_model.dart';
 import '../../../providers/providers.dart';
 import '../../../services/feedback_service.dart';
@@ -166,6 +167,28 @@ class GameActions extends ConsumerWidget {
     }
     final enabledToolCount = tools.where((t) => t.enabled).length;
 
+    // Secondary actions rendered side by side in a single compact row.
+    final _secondary = <Widget>[
+      if (tools.isNotEmpty)
+        _ToolsButton(
+          toolCount: enabledToolCount,
+          onTap: () => showGameToolsSheet(context, tools),
+        ),
+      if (canUseStunCard && onStunCard != null)
+        _StunCardButton(
+          stunCardCount: stunCardCount,
+          targets: stunTargets,
+          onStun: onStunCard!,
+        ),
+      if (showSkipVote && onVoteSkip != null)
+        _SkipVoteButton(
+          voteCount: skipVoteCount,
+          threshold: skipVoteThreshold,
+          iVoted: iVotedSkip,
+          onTap: onVoteSkip!,
+        ),
+    ];
+
     return SafeArea(
       top: false,
       child: Padding(
@@ -182,7 +205,7 @@ class GameActions extends ConsumerWidget {
                     'פרס הניצחון מחכה!',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: Color(0xFFFFE082),
+                      color: Candy.gold,
                       fontSize: 13,
                       fontWeight: FontWeight.w900,
                     ),
@@ -207,32 +230,18 @@ class GameActions extends ConsumerWidget {
                   bonus: earlyBonus,
                 ),
               ],
-              // All spend-to-help tools behind one compact button → opens a
-              // tidy sheet. Keeps the board large and the screen uncluttered.
-              if (tools.isNotEmpty) ...[
+              // Secondary actions share ONE compact row (tools / stun / replace
+              // item) instead of stacking full-width buttons — that keeps the
+              // board image as large as possible and the screen uncluttered.
+              if (_secondary.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                _ToolsButton(
-                  toolCount: enabledToolCount,
-                  onTap: () => showGameToolsSheet(context, tools),
-                ),
-              ],
-              // Stun card — only in multiplayer when user has cards
-              if (canUseStunCard && onStunCard != null) ...[
-                const SizedBox(height: 6),
-                _StunCardButton(
-                  stunCardCount: stunCardCount,
-                  targets: stunTargets,
-                  onStun: onStunCard!,
-                ),
-              ],
-              // חי-צומח-דומם: propose replacing the current item (needs majority).
-              if (showSkipVote && onVoteSkip != null) ...[
-                const SizedBox(height: 6),
-                _SkipVoteButton(
-                  voteCount: skipVoteCount,
-                  threshold: skipVoteThreshold,
-                  iVoted: iVotedSkip,
-                  onTap: onVoteSkip!,
+                Row(
+                  children: [
+                    for (var i = 0; i < _secondary.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      Expanded(child: _secondary[i]),
+                    ],
+                  ],
                 ),
               ],
             ],
@@ -265,10 +274,10 @@ class _ToolsButton extends StatelessWidget {
       child: Container(
         height: 40,
         decoration: BoxDecoration(
-          color: const Color(0xFF07101F).withOpacity(0.56),
+          color: Candy.surfaceLow.withOpacity(0.56),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: const Color(0xFF4A8BAA).withOpacity(0.32),
+            color: Candy.teal.withOpacity(0.40),
             width: 0.8,
           ),
         ),
@@ -276,22 +285,26 @@ class _ToolsButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text('🛠️', style: TextStyle(fontSize: 15)),
-            const SizedBox(width: 7),
-            const Text(
-              'תחבולות',
-              textDirection: TextDirection.rtl,
-              style: TextStyle(
-                color: Color(0xFF6FB0CF),
-                fontSize: 14.5,
-                fontWeight: FontWeight.w800,
+            const SizedBox(width: 6),
+            const Flexible(
+              child: Text(
+                'תחבולות',
+                textDirection: TextDirection.rtl,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Candy.teal,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
             if (toolCount > 0) ...[
-              const SizedBox(width: 7),
+              const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF20A8E0).withOpacity(0.25),
+                  color: Candy.blue.withOpacity(0.30),
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: Text(
@@ -347,35 +360,35 @@ class _ActionButton extends StatelessWidget {
           height: 48,
           decoration: BoxDecoration(
             gradient: isPrimary
-                ? const LinearGradient(
+                ? LinearGradient(
                     colors: [
-                      Color(0xFF20A8E0),
-                      Color(0xFF0E88C8),
-                      Color(0xFF0868A8),
-                      Color(0xFF054880),
+                      Candy.glossy(Candy.teal),
+                      Candy.teal,
+                      Candy.blue,
+                      Candy.bevel(Candy.blue),
                     ],
-                    stops: [0.0, 0.38, 0.72, 1.0],
+                    stops: const [0.0, 0.38, 0.72, 1.0],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   )
                 : null,
-            color: isPrimary ? null : const Color(0xFF081828).withOpacity(0.65),
+            color: isPrimary ? null : Candy.surfaceLow.withOpacity(0.65),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isPrimary
-                  ? Colors.white.withOpacity(0.35)
-                  : const Color(0xFF2080C0).withOpacity(isActive ? 0.45 : 0.20),
+                  ? Colors.white.withOpacity(0.38)
+                  : Candy.teal.withOpacity(isActive ? 0.45 : 0.20),
               width: 1.0,
             ),
             boxShadow: glow
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF10A0E0).withOpacity(0.60),
+                      color: Candy.teal.withOpacity(0.60),
                       blurRadius: 20,
                       offset: const Offset(0, 5),
                     ),
                     BoxShadow(
-                      color: const Color(0xFF0050B0).withOpacity(0.45),
+                      color: Candy.bevel(Candy.blue).withOpacity(0.45),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
@@ -383,7 +396,7 @@ class _ActionButton extends StatelessWidget {
                 : isPrimary
                     ? [
                         BoxShadow(
-                          color: const Color(0xFF0050B0).withOpacity(0.45),
+                          color: Candy.bevel(Candy.blue).withOpacity(0.45),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -587,18 +600,18 @@ class _SkipVoteButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFFF2B441);
+    const accent = Candy.tangerine;
     return GestureDetector(
       onTap: () {
         FeedbackService.click();
         onTap();
       },
       child: Container(
-        height: 42,
+        height: 40,
         decoration: BoxDecoration(
           color: iVoted
               ? accent.withOpacity(0.16)
-              : const Color(0xFF07101F).withOpacity(0.56),
+              : Candy.surfaceLow.withOpacity(0.56),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: accent.withOpacity(iVoted ? 0.7 : 0.4),
@@ -608,19 +621,23 @@ class _SkipVoteButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('🔁', style: TextStyle(fontSize: 16)),
-            const SizedBox(width: 6),
-            Text(
-              iVoted ? 'בטל הצבעה' : 'אף אחד לא יודע? החלף פריט',
-              textDirection: TextDirection.rtl,
-              style: const TextStyle(
-                color: accent,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
+            const Text('🔁', style: TextStyle(fontSize: 15)),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                iVoted ? 'בטל' : 'החלף פריט',
+                textDirection: TextDirection.rtl,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: accent,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
             if (threshold > 0) ...[
-              const SizedBox(width: 7),
+              const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
                 decoration: BoxDecoration(
@@ -709,12 +726,12 @@ class _StunCardButton extends StatelessWidget {
     return GestureDetector(
       onTap: () => _showTargetPicker(context),
       child: Container(
-        height: 42,
+        height: 40,
         decoration: BoxDecoration(
-          color: const Color(0xFF07101F).withOpacity(0.56),
+          color: Candy.surfaceLow.withOpacity(0.56),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: const Color(0xFF8B4FBF).withOpacity(0.45),
+            color: Candy.grape.withOpacity(0.55),
             width: 0.8,
           ),
         ),
@@ -723,13 +740,17 @@ class _StunCardButton extends StatelessWidget {
           children: [
             const Text('🔒', style: TextStyle(fontSize: 16)),
             const SizedBox(width: 6),
-            Text(
-              'עצור שחקן ($stunCardCount)',
-              textDirection: TextDirection.rtl,
-              style: const TextStyle(
-                color: Color(0xFFCF9FFF),
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
+            Flexible(
+              child: Text(
+                'עצור ($stunCardCount)',
+                textDirection: TextDirection.rtl,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFFD8B4FF),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ],

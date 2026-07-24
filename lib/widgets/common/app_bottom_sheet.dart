@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/ui/app_spacing.dart';
+import '../../services/sfx_service.dart';
 
 class AppBottomSheet extends StatelessWidget {
   final Widget child;
@@ -17,7 +18,8 @@ class AppBottomSheet extends StatelessWidget {
     required Widget child,
     EdgeInsetsGeometry padding = const EdgeInsets.all(AppSpacing.lg),
   }) {
-    return showModalBottomSheet<T>(
+    SfxService.instance.sheetOpen();
+    final future = showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -28,6 +30,8 @@ class AppBottomSheet extends StatelessWidget {
         );
       },
     );
+    future.whenComplete(() => SfxService.instance.sheetClose());
+    return future;
   }
 
   @override

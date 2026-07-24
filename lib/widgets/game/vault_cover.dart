@@ -3,9 +3,101 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../../models/card_skin.dart';
+
+/// One app-wide clock (single Ticker) that drives the animated shimmer on every
+/// premium card cover, so N tiles cost ONE ticker instead of N controllers.
+/// Loops 0..1 every 4.2s; premium covers listen and repaint from it.
+class _PremiumClock {
+  _PremiumClock._();
+  static final ValueNotifier<double> phase = ValueNotifier<double>(0);
+  static Ticker? _ticker;
+  static void ensureRunning() {
+    if (_ticker != null) return;
+    _ticker = Ticker((elapsed) {
+      phase.value = (elapsed.inMilliseconds % 4200) / 4200.0;
+    })..start();
+  }
+}
+
+/// True when a card skin id belongs to the premium (1000-coin) tier — these get
+/// the animated gold shimmer.
+bool _isPremiumCover(String id) {
+  for (final s in kAvailableCardSkins) {
+    if (s.id == id) return s.price >= 1000;
+  }
+  return false;
+}
+
+/// Animated gold gleam + twinkle drawn OVER the static premium jelly cover.
+/// [t] is the shared clock phase (0..1). Kept cheap: one moving band + a few
+/// pulsing gold sparkles.
+class _PremiumCoverShimmer extends CustomPainter {
+  final double t;
+  final String seedId;
+  final int index;
+  final int gridSize;
+  _PremiumCoverShimmer(this.t, this.seedId, {this.index = 0, this.gridSize = 1});
+
+  @override
+  void paint(Canvas tileCanvas, Size tileSize) {
+    // Draw the gleam over the WHOLE board and clip to this tile, so one gold
+    // band sweeps across the assembled image (not a separate sweep per tile).
+    final g = gridSize < 1 ? 1 : gridSize;
+    final size = Size(tileSize.width * g, tileSize.height * g);
+    final row = index ~/ g, col = index % g;
+    tileCanvas.save();
+    tileCanvas.clipRect(Offset.zero & tileSize);
+    tileCanvas.translate(-col * tileSize.width, -row * tileSize.height);
+    final canvas = tileCanvas;
+    // Moving diagonal gold gleam.
+    final sweep = t * 1.6 - 0.3; // -0.3..1.3
+    final cx = size.width * sweep;
+    final bandW = size.width * 0.28;
+    final rect = Rect.fromLTWH(cx - bandW, -size.height * 0.2,
+        bandW * 2, size.height * 1.4);
+    canvas.save();
+    canvas.translate(size.width * 0.1, 0);
+    canvas.rotate(-0.32);
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [
+            const Color(0x00FFE9A8),
+            const Color(0x66FFE9A8),
+            const Color(0x00FFE9A8),
+          ],
+        ).createShader(rect)
+        ..blendMode = BlendMode.plus,
+    );
+    canvas.restore();
+
+    // A few twinkling gold sparkles.
+    final rnd = math.Random(seedId.hashCode ^ 0x9E3);
+    for (var i = 0; i < 4; i++) {
+      final o = Offset(size.width * (0.2 + rnd.nextDouble() * 0.6),
+          size.height * (0.15 + rnd.nextDouble() * 0.6));
+      final ph = rnd.nextDouble();
+      final tw = 0.5 + 0.5 * math.sin((t + ph) * math.pi * 2);
+      final r = size.width * 0.06 * (0.6 + 0.4 * tw);
+      final p = Paint()
+        ..color = const Color(0xFFFFE9A8).withOpacity((0.2 + 0.7 * tw).clamp(0.0, 1.0))
+        ..strokeWidth = math.max(0.8, r * 0.22)
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(Offset(o.dx, o.dy - r), Offset(o.dx, o.dy + r), p);
+      canvas.drawLine(Offset(o.dx - r, o.dy), Offset(o.dx + r, o.dy), p);
+    }
+    tileCanvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _PremiumCoverShimmer old) =>
+      old.t != t || old.index != index || old.gridSize != gridSize;
+}
 
 Future<ui.Image> _decodeUiImage(Uint8List bytes) {
   final completer = Completer<ui.Image>();
@@ -161,7 +253,10 @@ class _VaultCoverState extends State<VaultCover>
                       ? CustomPaint(
                           painter: _ImageFillPainter(_skinImage!,
                               index: widget.index, gridSize: widget.gridSize))
-                      : CustomPaint(painter: _SkinPreviewPainter(widget.cardSkinId)),
+                      : _CoverArt(
+                          cardSkinId: widget.cardSkinId,
+                          index: widget.index,
+                          gridSize: widget.gridSize),
                 );
               }
               // Animating: show iris opening
@@ -261,6 +356,53 @@ class _ImageFillPainter extends CustomPainter {
 
 // ── Improved iris painter ──────────────────────────────────────────────────────
 
+/// The baked-image card catalog (kAvailableCardSkins) uses ids that no longer
+/// have their own procedural art. Map each onto one of the rich, code-drawn
+/// styles that DO exist, so dropping the low-quality baked photos still yields a
+/// distinct, designed cover per skin (and the free default reads as Candy).
+const Map<String, String> _kSkinStyleAlias = {
+  'default': 'royal_throne', // free default → clean royal purple (Candy)
+  'minimal_lines': 'urban_concrete',
+  'minimal_calm': 'quiet_night',
+  'nature_leaves': 'valley_green',
+  'nature_waves': 'mediterranean_blue',
+  'nature_anemone': 'anemone_red',
+  'mosaic_arabesque': 'oriental_arabesque',
+  'mosaic_tiles': 'kotel_stones',
+  'mosaic_star': 'jerusalem_of_gold',
+  'neon_grid': 'jerusalem_neon',
+  'neon_wave': 'blue_fire',
+  'neon_cyber': 'cyber_future_israel',
+  'cosmic_galaxy': 'space_cluster',
+  'cosmic_aurora': 'meteor_shower',
+  'cosmic_fireice': 'lava_core',
+  'royal_magen': 'royal_sapphire',
+};
+
+String _canonicalSkinId(String id) => _kSkinStyleAlias[id] ?? id;
+
+/// Clean Candy jelly colorways for the static tile cover, keyed by the real
+/// catalog id — [light, dark]. Renders as a glossy jelly tile (see
+/// _SkinPreviewPainter), consistent with the app's look.
+const Map<String, List<Color>> _kJellyCover = {
+  'default': [Color(0xFF7B3FD1), Color(0xFF3A1B6E)], // grape (free default)
+  'minimal_lines': [Color(0xFF5B7BD1), Color(0xFF2E3F7A)],
+  'minimal_calm': [Color(0xFF12B5A6), Color(0xFF0B5A52)],
+  'nature_leaves': [Color(0xFF8CE05A), Color(0xFF3F7A2E)],
+  'nature_waves': [Color(0xFF3E7BE0), Color(0xFF1F3F8A)],
+  'nature_anemone': [Color(0xFFFF6B6B), Color(0xFF9E2B3E)],
+  'mosaic_arabesque': [Color(0xFF9B5AE0), Color(0xFF4A2A8A)],
+  'mosaic_tiles': [Color(0xFF3FD6CF), Color(0xFF1F6E6A)],
+  'mosaic_star': [Color(0xFFFFD84D), Color(0xFF9A7014)],
+  'neon_grid': [Color(0xFFFF6EA6), Color(0xFF9E2F62)],
+  'neon_wave': [Color(0xFF3EA8E0), Color(0xFF1F5A8A)],
+  'neon_cyber': [Color(0xFF8C6EF0), Color(0xFF3A2E8A)],
+  'cosmic_galaxy': [Color(0xFF6A4AD1), Color(0xFF2E1F6E)],
+  'cosmic_aurora': [Color(0xFF3FD6A0), Color(0xFF1F6E5A)],
+  'cosmic_fireice': [Color(0xFFFF9E4A), Color(0xFF9E3050)],
+  'royal_magen': [Color(0xFFFFE07A), Color(0xFF7A5A10)],
+};
+
 class _AperturePainter extends CustomPainter {
   final double progress;
   final String cardSkinId;
@@ -279,7 +421,8 @@ class _AperturePainter extends CustomPainter {
   });
 
   // ── Per-skin colour scheme ─────────────────────────────────────────────────
-  static _SkinPalette _palette(String id) {
+  static _SkinPalette _palette(String rawId) {
+    final id = _canonicalSkinId(rawId);
     switch (id) {
       case 'classic':
         return const _SkinPalette(
@@ -784,7 +927,8 @@ class _AperturePainter extends CustomPainter {
 
   static void _drawPattern(
       Canvas canvas, Size size, Rect rect, Offset center,
-      _SkinPalette pal, String skinId) {
+      _SkinPalette pal, String rawSkinId) {
+    final skinId = _canonicalSkinId(rawSkinId);
     final rngA = math.Random(1337);
     final linePaint = Paint()
       ..style = PaintingStyle.stroke
@@ -1976,9 +2120,41 @@ class _CardSkinPreviewState extends State<CardSkinPreview> {
       );
     }
     return RepaintBoundary(
-      child: CustomPaint(
-        painter: _SkinPreviewPainter(widget.cardSkinId),
-      ),
+      child: _CoverArt(cardSkinId: widget.cardSkinId),
+    );
+  }
+}
+
+/// The static jelly cover, plus an animated gold shimmer overlay for premium
+/// (1000-coin) skins. Non-premium skins render just the static painter.
+class _CoverArt extends StatelessWidget {
+  final String cardSkinId;
+  final int index;
+  final int gridSize;
+  const _CoverArt(
+      {required this.cardSkinId, this.index = 0, this.gridSize = 1});
+
+  @override
+  Widget build(BuildContext context) {
+    final base = CustomPaint(
+        painter:
+            _SkinPreviewPainter(cardSkinId, index: index, gridSize: gridSize));
+    if (!_isPremiumCover(cardSkinId)) return base;
+    _PremiumClock.ensureRunning();
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        base,
+        IgnorePointer(
+          child: AnimatedBuilder(
+            animation: _PremiumClock.phase,
+            builder: (_, __) => CustomPaint(
+              painter: _PremiumCoverShimmer(_PremiumClock.phase.value,
+                  cardSkinId, index: index, gridSize: gridSize),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1988,36 +2164,18 @@ class _CardSkinPreviewState extends State<CardSkinPreview> {
 
 class _SkinPreviewPainter extends CustomPainter {
   final String id;
-  _SkinPreviewPainter(this.id);
-
-  static final _rng = math.Random(42);
-
-  // Pre-seed random dot positions once per skin so they're consistent
-  static final Map<String, List<Offset>> _dots = {};
-  static List<Offset> _getDots(String id, int n, double w, double h) {
-    if (!_dots.containsKey(id)) {
-      final rng = math.Random(id.hashCode);
-      _dots[id] = List.generate(n, (_) => Offset(rng.nextDouble() * w, rng.nextDouble() * h));
-    }
-    return _dots[id]!;
-  }
+  // The cover is ONE board-wide composition; each tile paints its own slice so
+  // the closed board assembles into a single image (one gradient, one emblem,
+  // sparkles spread across the whole board) — not a repeated design per tile.
+  // gridSize=1 (store preview) draws the whole design in one square.
+  final int index;
+  final int gridSize;
+  _SkinPreviewPainter(this.id, {this.index = 0, this.gridSize = 1});
 
   void _bg(Canvas c, Rect r, List<Color> colors,
       {Alignment b = Alignment.topLeft, Alignment e = Alignment.bottomRight}) {
     c.drawRect(r, Paint()
       ..shader = LinearGradient(colors: colors, begin: b, end: e).createShader(r));
-  }
-
-  void _bgRadial(Canvas c, Rect r, List<Color> colors,
-      {Alignment center = Alignment.center, double radius = 0.9}) {
-    c.drawRect(r, Paint()
-      ..shader = RadialGradient(colors: colors, center: center, radius: radius).createShader(r));
-  }
-
-  void _glow(Canvas c, Offset pt, double radius, Color color) {
-    c.drawCircle(pt, radius, Paint()
-      ..color = color
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.55));
   }
 
   void _tierBorder(Canvas c, Rect r, Color color, {double width = 1.5}) {
@@ -2032,535 +2190,132 @@ class _SkinPreviewPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final center = Offset(size.width / 2, size.height / 2);
-    _paintSkin(canvas, size, rect, center);
+    final g = gridSize < 1 ? 1 : gridSize;
+    final full = Size(size.width * g, size.height * g);
+    final row = index ~/ g, col = index % g;
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
+    // Shift so this tile shows its cell of the full-board composition.
+    canvas.translate(-col * size.width, -row * size.height);
+    _paintSkin(
+        canvas, full, Offset.zero & full, Offset(full.width / 2, full.height / 2));
+    canvas.restore();
   }
 
   void _paintSkin(Canvas canvas, Size size, Rect rect, Offset center) {
-    final w = size.width;
-    final h = size.height;
-    final lp = Paint()..style = PaintingStyle.stroke..strokeCap = StrokeCap.round;
-    final fp = Paint()..style = PaintingStyle.fill;
+    // Clean, glossy Candy jelly cover — ONE board-wide composition ([size] is
+    // the whole board when in-game; each tile clips to its own cell above).
+    final cw = _kJellyCover[id] ?? const [Color(0xFF7B3FD1), Color(0xFF3A1B6E)];
+    final light = cw[0], dark = cw[1];
 
-    switch (id) {
+    // Base vertical jelly gradient.
+    final gloss = Color.lerp(light, Colors.white, 0.18)!;
+    _bg(canvas, rect, [gloss, light, dark],
+        b: Alignment.topCenter, e: Alignment.bottomCenter);
 
-      // ── BASIC ─────────────────────────────────────────────────────────────
+    // Top glossy sheen over the upper ~48%.
+    final sheenRect = Rect.fromLTWH(0, 0, size.width, size.height * 0.48);
+    canvas.drawRect(
+      sheenRect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.white.withOpacity(0.30), Colors.white.withOpacity(0)],
+        ).createShader(sheenRect),
+    );
 
-      case 'mediterranean_blue':
-        _bg(canvas, rect, [const Color(0xFF4CA1AF), const Color(0xFF0D2137)],
-            b: Alignment.topCenter, e: Alignment.bottomCenter);
-        for (var i = 0; i < 5; i++) {
-          final by = h * (0.18 + i * 0.16);
-          final path = Path();
-          lp..color = Colors.white.withOpacity(0.16 + i * 0.04)..strokeWidth = 1.8;
-          var first = true;
-          for (var x = 0.0; x < w; x += 3) {
-            final y = by + math.sin(x * 0.09 + i) * 5;
-            if (first) { path.moveTo(x, y); first = false; } else path.lineTo(x, y);
-          }
-          canvas.drawPath(path, lp);
-        }
-        _tierBorder(canvas, rect, const Color(0xFF4CA1AF));
+    // Soft bottom inner shadow for depth.
+    final shadeRect = Rect.fromLTWH(
+        0, size.height * 0.6, size.width, size.height * 0.4);
+    canvas.drawRect(
+      shadeRect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.black.withOpacity(0), Colors.black.withOpacity(0.20)],
+        ).createShader(shadeRect),
+    );
 
-      case 'valley_green':
-        _bg(canvas, rect, [const Color(0xFF92FE9D), const Color(0xFF00693A)],
-            b: Alignment.topCenter, e: Alignment.bottomCenter);
-        fp.color = Colors.white.withOpacity(0.22);
-        for (var i = 0; i < 14; i++) {
-          final a = i * 2.41;
-          final r = w * (0.08 + (i % 5) * 0.08);
-          canvas.drawOval(Rect.fromCenter(
-            center: Offset(center.dx + math.cos(a) * r, center.dy + math.sin(a) * r),
-            width: 14, height: 7), fp);
-        }
-        _tierBorder(canvas, rect, const Color(0xFF00C9FF));
+    // Quality escalates with price tier: rare skins add a soft sparkle, premium
+    // skins add a bright gold gleam + gold sparkles + a gold rim, so pricier
+    // covers read as clearly superior.
+    final price = kAvailableCardSkins
+        .firstWhere((s) => s.id == id,
+            orElse: () => const CardSkin(id: '', name: '', price: 0))
+        .price;
+    final isRare = price >= 200 && price < 1000;
+    final isPremium = price >= 1000;
 
-      case 'negev_sands':
-        _bgRadial(canvas, rect, [const Color(0xFFFFB04A), const Color(0xFFE07030), const Color(0xFF5C2A00)],
-            center: Alignment(0, 0.4));
-        lp..color = Colors.white.withOpacity(0.22)..strokeWidth = 1.2;
-        final dc = Offset(center.dx, h * 0.82);
-        for (var i = 1; i <= 8; i++) {
-          canvas.drawOval(Rect.fromCenter(center: dc, width: i * w * 0.22, height: i * h * 0.10), lp);
-        }
-        _tierBorder(canvas, rect, const Color(0xFFFFAA80));
+    // Diagonal light streak — stronger for premium (a real gleam).
+    final streak = Paint()
+      ..color = Colors.white.withOpacity(isPremium ? 0.16 : 0.06)
+      ..style = PaintingStyle.fill;
+    final sp = Path()
+      ..moveTo(size.width * 0.05, size.height)
+      ..lineTo(size.width * 0.45, 0)
+      ..lineTo(size.width * 0.62, 0)
+      ..lineTo(size.width * 0.22, size.height)
+      ..close();
+    canvas.drawPath(sp, streak);
 
-      case 'quiet_night':
-        _bg(canvas, rect, [const Color(0xFF0A0E1A), const Color(0xFF1A2040)],
-            b: Alignment.topCenter, e: Alignment.bottomCenter);
-        fp.color = Colors.white.withOpacity(0.80);
-        for (final pt in _getDots('quiet_night', 55, w, h)) {
-          canvas.drawCircle(pt, _rng.nextDouble() * 1.4 + 0.4, fp);
-        }
-        // Large bright stars
-        for (var i = 0; i < 6; i++) {
-          canvas.drawCircle(_getDots('quiet_night', 55, w, h)[i], 2.2,
-              fp..color = Colors.white.withOpacity(0.95));
-        }
-        // Moon
-        _glow(canvas, Offset(w * 0.76, h * 0.18), w * 0.14, Colors.white.withOpacity(0.18));
-        canvas.drawCircle(Offset(w * 0.76, h * 0.18), w * 0.10,
-            fp..color = Colors.white.withOpacity(0.22));
-        _tierBorder(canvas, rect, const Color(0xFFC0C8E8));
-
-      case 'dawn_light':
-        _bgRadial(canvas, rect, [const Color(0xFFFF9A4E), const Color(0xFFFF5090), const Color(0xFF200030)],
-            center: const Alignment(0, 0.9), radius: 1.1);
-        lp..color = Colors.white.withOpacity(0.18)..strokeWidth = 1.4;
-        final sun = Offset(center.dx, h * 1.05);
-        for (var i = 0; i < 14; i++) {
-          final a = -math.pi + (i / 14) * math.pi;
-          canvas.drawLine(sun, Offset(sun.dx + math.cos(a) * w * 1.5, sun.dy + math.sin(a) * h * 1.5), lp);
-        }
-        _tierBorder(canvas, rect, const Color(0xFFFF9A9E));
-
-      case 'urban_concrete':
-        _bg(canvas, rect, [const Color(0xFF828C96), const Color(0xFF1E2830)]);
-        lp..color = Colors.black.withOpacity(0.18)..strokeWidth = 0.8;
-        const gs = 18.0;
-        for (var x = 0.0; x < w; x += gs) canvas.drawLine(Offset(x, 0), Offset(x, h), lp);
-        for (var y = 0.0; y < h; y += gs) canvas.drawLine(Offset(0, y), Offset(w, y), lp);
-        lp.color = Colors.white.withOpacity(0.08);
-        for (var x = 0.0; x < w; x += gs) canvas.drawLine(Offset(x, 0), Offset(x, h), lp);
-        _tierBorder(canvas, rect, const Color(0xFF90A0B0));
-
-      case 'default': // default card back = Israeli flag (shares this artwork)
-      case 'classic_zionist':
-        canvas.drawRect(rect, fp..color = const Color(0xFFF0F4FF));
-        fp.color = const Color(0xFF0038B8);
-        canvas.drawRect(Rect.fromLTWH(0, h * 0.18, w, h * 0.13), fp);
-        canvas.drawRect(Rect.fromLTWH(0, h * 0.69, w, h * 0.13), fp);
-        // Star of David (two triangles)
-        lp..color = const Color(0xFF0038B8).withOpacity(0.55)..strokeWidth = 1.5;
-        final sr = w * 0.18;
-        for (var tri = 0; tri < 2; tri++) {
-          final tp = Path();
-          for (var pt = 0; pt < 3; pt++) {
-            final a = pt * (2 * math.pi / 3) + (tri == 0 ? -math.pi / 2 : math.pi / 2);
-            final p = Offset(center.dx + sr * math.cos(a), center.dy + sr * math.sin(a));
-            if (pt == 0) tp.moveTo(p.dx, p.dy); else tp.lineTo(p.dx, p.dy);
-          }
-          tp.close();
-          canvas.drawPath(tp, lp);
-        }
-        _tierBorder(canvas, rect, const Color(0xFF0038B8), width: 1.8);
-
-      case 'summer_pastel':
-        _bg(canvas, rect, [const Color(0xFFFF90B0), const Color(0xFF90E8C0)]);
-        fp.color = Colors.white.withOpacity(0.22);
-        for (var i = 0; i < 8; i++) {
-          final a = i * 2.1;
-          final r = w * (0.12 + (i % 3) * 0.14);
-          canvas.drawCircle(Offset(center.dx + math.cos(a) * r, center.dy + math.sin(a) * r),
-              14 + (i % 4) * 8.0, fp);
-        }
-        _tierBorder(canvas, rect, const Color(0xFFFFAABB));
-
-      case 'simple_gold_basic':
-        _bg(canvas, rect, [const Color(0xFFFFD700), const Color(0xFFB8860B)]);
-        lp..color = Colors.white.withOpacity(0.22)..strokeWidth = 1.0;
-        const ds = 22.0;
-        for (var x = -ds; x < w + ds; x += ds) {
-          for (var y = -ds; y < h + ds; y += ds) {
-            final dp = Path()
-              ..moveTo(x, y - ds * 0.5)..lineTo(x + ds * 0.5, y)
-              ..lineTo(x, y + ds * 0.5)..lineTo(x - ds * 0.5, y)..close();
-            canvas.drawPath(dp, lp);
-          }
-        }
-        _tierBorder(canvas, rect, const Color(0xFFFFD700), width: 2.0);
-
-      case 'terracotta_earth':
-        const bands = [Color(0xFFD4875A), Color(0xFFC07040), Color(0xFFB05830),
-          Color(0xFF81B29A), Color(0xFF6EA088), Color(0xFF4E8070)];
-        for (var i = 0; i < bands.length; i++) {
-          canvas.drawRect(Rect.fromLTWH(0, h / bands.length * i, w, h / bands.length + 1),
-              fp..color = bands[i]);
-        }
-        _tierBorder(canvas, rect, const Color(0xFFA0522D));
-
-      // ── RARE ──────────────────────────────────────────────────────────────
-
-      case 'jerusalem_neon':
-        canvas.drawRect(rect, fp..color = const Color(0xFF060606));
-        // Stone rows
-        lp..color = const Color(0xFFFF00FF).withOpacity(0.20)..strokeWidth = 0.7;
-        const rh = 16.0;
-        for (var row = 0; row * rh < h; row++) {
-          canvas.drawLine(Offset(0, row * rh), Offset(w, row * rh), lp);
-          final off = (row % 2) * 18.0;
-          for (var x = off; x < w; x += 36.0) canvas.drawLine(Offset(x, row * rh), Offset(x, row * rh + rh), lp);
-        }
-        // Neon outer ring glow
-        _glow(canvas, center, w * 0.55, const Color(0xFFFF00FF).withOpacity(0.40));
-        lp..color = const Color(0xFFFF00FF)..strokeWidth = 2.0;
-        canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(4), const Radius.circular(8)), lp);
-        _tierBorder(canvas, rect, const Color(0xFFFF00FF), width: 2.5);
-
-      case 'steel_armor':
-        _bg(canvas, rect, [const Color(0xFFD0D8E8), const Color(0xFF2A3040)]);
-        lp..color = Colors.white.withOpacity(0.14)..strokeWidth = 0.5;
-        for (var y = 0.0; y < h; y += 2.5) canvas.drawLine(Offset(0, y), Offset(w, y), lp);
-        // Angled specular highlights
-        lp..color = Colors.white.withOpacity(0.35)..strokeWidth = 3.0;
-        canvas.drawLine(const Offset(0, 0), Offset(w * 0.6, h), lp);
-        lp..color = Colors.white.withOpacity(0.15)..strokeWidth = 6.0;
-        canvas.drawLine(Offset(w * 0.5, 0), Offset(w, h * 0.6), lp);
-        _tierBorder(canvas, rect, const Color(0xFFC0C0C0), width: 2.0);
-
-      case 'space_cluster':
-        _bg(canvas, rect, [const Color(0xFF03001A), const Color(0xFF1A0840)]);
-        fp.color = Colors.white;
-        for (final pt in _getDots('space_cluster', 70, w, h)) {
-          canvas.drawCircle(pt, _rng.nextDouble() * 1.5 + 0.3, fp..color = Colors.white.withOpacity(0.7));
-        }
-        for (var i = 0; i < 8; i++) {
-          canvas.drawCircle(_getDots('space_cluster', 70, w, h)[i], 2.5,
-              fp..color = Colors.white);
-        }
-        _glow(canvas, Offset(w * 0.35, h * 0.45), w * 0.25, const Color(0xFF6020A0).withOpacity(0.40));
-        _glow(canvas, Offset(w * 0.72, h * 0.62), w * 0.18, const Color(0xFF204080).withOpacity(0.35));
-        _tierBorder(canvas, rect, const Color(0xFF00FFFF));
-
-      case 'blue_fire':
-        _bgRadial(canvas, rect, [const Color(0xFF00E0FF), const Color(0xFF0030A0), const Color(0xFF000008)],
-            center: Alignment.center, radius: 0.7);
-        for (var i = 0; i < 6; i++) {
-          final path = Path();
-          var first = true;
-          for (var y = 0.0; y < h; y += 3) {
-            final x = w * (0.15 + i * 0.14) + math.sin(y * 0.07 + i * 0.9) * w * 0.12;
-            if (first) { path.moveTo(x, y); first = false; } else path.lineTo(x, y);
-          }
-          canvas.drawPath(path, lp
-            ..color = const Color(0xFF00FFFF).withOpacity(0.15 + i * 0.04)
-            ..strokeWidth = 1.5);
-        }
-        _glow(canvas, center, w * 0.3, const Color(0xFF00FFFF).withOpacity(0.30));
-        _tierBorder(canvas, rect, const Color(0xFF00FFFF), width: 2.0);
-
-      case 'hermon_glacier':
-        _bgRadial(canvas, rect, [Colors.white, const Color(0xFFB0E4F8), const Color(0xFF0A3050)],
-            center: Alignment.center, radius: 0.8);
-        lp..color = const Color(0xFF80D0F0).withOpacity(0.55)..strokeWidth = 0.9;
-        for (var crack = 0; crack < 16; crack++) {
-          var angle = crack * math.pi * 2 / 16;
-          var cx = center.dx, cy = center.dy;
-          final path = Path()..moveTo(cx, cy);
-          for (var step = 0; step < 7; step++) {
-            angle += (_rng.nextDouble() - 0.5) * 0.45;
-            cx += math.cos(angle) * w * 0.09;
-            cy += math.sin(angle) * h * 0.09;
-            path.lineTo(cx, cy);
-          }
-          canvas.drawPath(path, lp);
-        }
-        _glow(canvas, center, w * 0.18, Colors.white.withOpacity(0.50));
-        _tierBorder(canvas, rect, const Color(0xFFB3E5FC), width: 2.0);
-
-      case 'oriental_arabesque':
-        _bg(canvas, rect, [const Color(0xFF134E5E), const Color(0xFF071828)]);
-        lp..color = const Color(0xFFD4AF37).withOpacity(0.60)..strokeWidth = 1.2;
-        const sp = 26.0;
-        for (var gx = sp * 0.5; gx < w + sp; gx += sp) {
-          for (var gy = sp * 0.5; gy < h + sp; gy += sp) {
-            const sr = sp * 0.44;
-            for (var pt = 0; pt < 8; pt++) {
-              final a1 = pt * math.pi / 4;
-              final a2 = a1 + math.pi / 8;
-              canvas.drawLine(
-                Offset(gx + math.cos(a1) * sr, gy + math.sin(a1) * sr),
-                Offset(gx + math.cos(a2) * sr * 0.42, gy + math.sin(a2) * sr * 0.42), lp);
-            }
-          }
-        }
-        _tierBorder(canvas, rect, const Color(0xFFD4AF37), width: 2.0);
-
-      case 'ancient_gold_rare':
-        _bg(canvas, rect, [const Color(0xFF6A4010), const Color(0xFF0A0600)]);
-        lp..color = const Color(0xFFD4A030).withOpacity(0.30)..strokeWidth = 0.7;
-        for (var i = 0; i < 28; i++) {
-          final x1 = _rng.nextDouble() * w;
-          final y1 = _rng.nextDouble() * h;
-          final len = 10.0 + _rng.nextDouble() * 28;
-          final ang = _rng.nextDouble() * math.pi;
-          canvas.drawLine(Offset(x1, y1), Offset(x1 + math.cos(ang) * len, y1 + math.sin(ang) * len), lp);
-        }
-        _glow(canvas, center, w * 0.30, const Color(0xFFFF8800).withOpacity(0.35));
-        _tierBorder(canvas, rect, const Color(0xFFFF8C00), width: 2.0);
-
-      case 'brushed_titanium':
-        _bg(canvas, rect, [const Color(0xFF60707A), const Color(0xFF12181E)]);
-        lp..color = Colors.white.withOpacity(0.09)..strokeWidth = 0.5;
-        for (var y = 0.0; y < h; y += 2.0) canvas.drawLine(Offset(0, y), Offset(w, y), lp);
-        lp..color = Colors.white.withOpacity(0.30)..strokeWidth = 4.0;
-        canvas.drawLine(const Offset(0, 0), Offset(w * 0.7, h), lp);
-        // Neon green accent bar at bottom
-        canvas.drawRect(Rect.fromLTWH(0, h * 0.90, w, h * 0.10),
-            fp..color = const Color(0xFF39FF14).withOpacity(0.70));
-        _tierBorder(canvas, rect, const Color(0xFF39FF14), width: 2.0);
-
-      case 'eilat_coral':
-        _bg(canvas, rect, [const Color(0xFFFF6B6B), const Color(0xFF005590)]);
-        lp..color = Colors.white.withOpacity(0.22)..strokeWidth = 1.0;
-        for (var i = 0; i < 7; i++) {
-          final bx = w * (i / 6.0);
-          final path = Path();
-          var first = true;
-          for (var y = 0.0; y < h; y += 3) {
-            final x = bx + math.sin(y * 0.06 + i * 1.4) * w * 0.12;
-            if (first) { path.moveTo(x, y); first = false; } else path.lineTo(x, y);
-          }
-          canvas.drawPath(path, lp);
-        }
-        fp.color = Colors.white.withOpacity(0.45);
-        for (final pt in _getDots('eilat_coral', 30, w, h)) {
-          canvas.drawCircle(pt, _rng.nextDouble() * 1.8 + 0.5, fp);
-        }
-        _tierBorder(canvas, rect, const Color(0xFF00FFFF), width: 2.0);
-
-      case 'meteor_shower':
-        canvas.drawRect(rect, fp..color = const Color(0xFF000000));
-        lp..color = Colors.white.withOpacity(0.55)..strokeWidth = 1.2;
-        for (var i = 0; i < 10; i++) {
-          final x1 = _rng.nextDouble() * w * 1.3 - w * 0.15;
-          final y1 = _rng.nextDouble() * h * 0.6;
-          final len = 25.0 + _rng.nextDouble() * 50;
-          canvas.drawLine(Offset(x1, y1), Offset(x1 + len * 0.5, y1 + len), lp);
-        }
-        fp.color = Colors.white;
-        for (final pt in _getDots('meteor_shower', 25, w, h)) {
-          canvas.drawCircle(pt, _rng.nextDouble() * 1.2 + 0.3, fp);
-        }
-        _tierBorder(canvas, rect, Colors.white.withOpacity(0.50));
-
-      // ── PREMIUM ───────────────────────────────────────────────────────────
-
-      case 'royal_throne':
-        _bg(canvas, rect, [const Color(0xFF3A0860), const Color(0xFF06001A)]);
-        _glow(canvas, center, w * 0.45, const Color(0xFF6441A5).withOpacity(0.50));
-        // Ornate gold inner frame
-        const fi = 7.0;
-        final frameRect = rect.deflate(fi);
-        lp..color = const Color(0xFFFFD700).withOpacity(0.90)..strokeWidth = 2.5;
-        canvas.drawRRect(RRect.fromRectAndRadius(frameRect, const Radius.circular(6)), lp);
-        // Corner diamond gems
-        for (final cp in [
-          Offset(frameRect.left, frameRect.top), Offset(frameRect.right, frameRect.top),
-          Offset(frameRect.left, frameRect.bottom), Offset(frameRect.right, frameRect.bottom),
-        ]) {
-          canvas.drawCircle(cp, 4.5, fp..color = const Color(0xFFCC2233));
-          canvas.drawCircle(cp, 4.5, lp..color = const Color(0xFFFFD700)..strokeWidth = 1.2);
-        }
-        // Crown center glyph
-        _glow(canvas, center, w * 0.15, const Color(0xFFFFD700).withOpacity(0.40));
-        canvas.drawCircle(center, w * 0.08, lp..color = const Color(0xFFFFD700)..strokeWidth = 1.5);
-        _tierBorder(canvas, rect, const Color(0xFFFFD700), width: 3.0);
-
-      case 'ancient_scroll':
-        _bg(canvas, rect, [const Color(0xFFF5E6B2), const Color(0xFFD2A860)],
-            b: Alignment.topLeft, e: Alignment.bottomRight);
-        // Dark edges (aged)
-        for (final edge in [Alignment.topCenter, Alignment.bottomCenter, Alignment.centerLeft, Alignment.centerRight]) {
-          canvas.drawRect(rect, Paint()
-            ..shader = RadialGradient(
-              colors: [Colors.transparent, const Color(0xFF6B3800).withOpacity(0.55)],
-              center: edge, radius: 0.8).createShader(rect));
-        }
-        // Text lines
-        lp..color = const Color(0xFF5A2A00).withOpacity(0.35)..strokeWidth = 0.9;
-        for (var y = h * 0.15; y < h * 0.90; y += 9.0) {
-          final lineW = w * (0.5 + _rng.nextDouble() * 0.40);
-          canvas.drawLine(Offset(w * 0.08, y), Offset(w * 0.08 + lineW, y), lp);
-        }
-        // Crack lines
-        lp..color = const Color(0xFF8B5A00).withOpacity(0.50)..strokeWidth = 0.6;
-        for (var i = 0; i < 5; i++) {
-          var cx = w * 0.2 + i * w * 0.15, cy = h * 0.3 + i * h * 0.08;
-          final cp = Path()..moveTo(cx, cy);
-          var angle = i * 1.2;
-          for (var s = 0; s < 4; s++) {
-            angle += (_rng.nextDouble() - 0.5) * 1.2;
-            cx += math.cos(angle) * 12; cy += math.sin(angle) * 12;
-            cp.lineTo(cx, cy);
-          }
-          canvas.drawPath(cp, lp);
-        }
-        _tierBorder(canvas, rect, const Color(0xFF8B5A00), width: 2.5);
-
-      case 'jerusalem_of_gold':
-        _bg(canvas, rect, [const Color(0xFFFFFFCC), const Color(0xFFFFD700), const Color(0xFFC8780A)],
-            b: Alignment.topCenter, e: Alignment.bottomCenter);
-        // Radial rays
-        lp..color = Colors.white.withOpacity(0.20)..strokeWidth = 1.0;
-        for (var i = 0; i < 20; i++) {
-          final a = (i / 20) * 2 * math.pi;
-          canvas.drawLine(center, Offset(center.dx + math.cos(a) * w, center.dy + math.sin(a) * h), lp);
-        }
-        // Jerusalem skyline
-        final sky = Path()..moveTo(0, h * 0.78);
-        const jgX = [0.0, 0.06, 0.14, 0.22, 0.34, 0.46, 0.58, 0.68, 0.78, 0.88, 1.0];
-        const jgH = [0.0, 0.10, 0.06, 0.18, 0.04, 0.24, 0.08, 0.14, 0.05, 0.10, 0.0];
-        for (var i = 0; i < jgX.length; i++) {
-          sky.lineTo(w * jgX[i], h * (0.78 - jgH[i]));
-        }
-        sky..lineTo(w, h)..lineTo(0, h)..close();
-        canvas.drawPath(sky, fp..color = const Color(0xFFA06000).withOpacity(0.45));
-        _glow(canvas, center, w * 0.4, const Color(0xFFFFFF80).withOpacity(0.35));
-        _tierBorder(canvas, rect, const Color(0xFFFFD700), width: 3.0);
-
-      case 'kotel_stones':
-        _bg(canvas, rect, [const Color(0xFFD8C8A8), const Color(0xFF705040)]);
-        // Stone rows
-        lp..color = const Color(0xFF7A6050).withOpacity(0.60)..strokeWidth = 1.2;
-        const ksRowH = 18.0;
-        const ksStoneW = 40.0;
-        for (var row = 0; row * ksRowH < h + ksRowH; row++) {
-          final y = row * ksRowH;
-          canvas.drawLine(Offset(0, y), Offset(w, y), lp);
-          final off = (row % 2) * ksStoneW * 0.5;
-          for (var x = off; x < w; x += ksStoneW) {
-            canvas.drawLine(Offset(x, y), Offset(x, y + ksRowH), lp);
-          }
-        }
-        // Golden glow from cracks
-        for (final gpt in [Offset(w * 0.25, h * 0.45), Offset(w * 0.72, h * 0.28), Offset(w * 0.50, h * 0.72)]) {
-          _glow(canvas, gpt, w * 0.08, const Color(0xFFFFD700).withOpacity(0.50));
-        }
-        _tierBorder(canvas, rect, const Color(0xFFFFD700), width: 2.5);
-
-      case 'anemone_red':
-        _bgRadial(canvas, rect, [const Color(0xFFED1C24), const Color(0xFF4A0808)]);
-        // 6 petal shapes
-        for (var i = 0; i < 6; i++) {
-          final a = (i / 6) * 2 * math.pi;
-          final pr = w * 0.32;
-          canvas.save();
-          canvas.translate(center.dx + math.cos(a) * pr * 0.45, center.dy + math.sin(a) * pr * 0.45);
-          canvas.rotate(a);
-          canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: pr * 0.50, height: pr * 1.10),
-              fp..color = const Color(0xFFFF5060).withOpacity(0.35));
-          canvas.restore();
-        }
-        lp..color = const Color(0xFFFFD700).withOpacity(0.35)..strokeWidth = 1.0;
-        for (var r = 12.0; r < w * 0.55; r += 16) canvas.drawCircle(center, r, lp);
-        _glow(canvas, center, w * 0.15, const Color(0xFFFF8080).withOpacity(0.50));
-        _tierBorder(canvas, rect, const Color(0xFFFFD700), width: 2.5);
-
-      case 'salt_sunset':
-        _bg(canvas, rect, [const Color(0xFF4A00E0), const Color(0xFFAA1080), const Color(0xFFFF8C00)],
-            b: Alignment.topLeft, e: Alignment.bottomRight);
-        // Crystal dots
-        for (final pt in _getDots('salt_sunset', 70, w, h)) {
-          canvas.drawCircle(pt, 0.5 + _rng.nextDouble() * 2.5,
-              fp..color = Colors.white.withOpacity(0.20 + _rng.nextDouble() * 0.45));
-        }
-        // Prismatic rays
-        lp..color = const Color(0xFFFF00FF).withOpacity(0.18)..strokeWidth = 0.8;
-        for (var i = 0; i < 12; i++) {
-          final a = (i / 12) * 2 * math.pi;
-          canvas.drawLine(center, Offset(center.dx + math.cos(a) * w, center.dy + math.sin(a) * h), lp);
-        }
-        _glow(canvas, center, w * 0.25, Colors.white.withOpacity(0.20));
-        _tierBorder(canvas, rect, const Color(0xFFFF00FF), width: 2.5);
-
-      case 'royal_sapphire':
-        _bgRadial(canvas, rect, [const Color(0xFF1A40FF), const Color(0xFF0000A0), const Color(0xFF000030)]);
-        // Facet lines from center
-        lp..color = Colors.white.withOpacity(0.45)..strokeWidth = 1.0;
-        for (var i = 0; i < 12; i++) {
-          final a = (i / 12) * 2 * math.pi;
-          canvas.drawLine(center, Offset(center.dx + math.cos(a) * w, center.dy + math.sin(a) * h), lp);
-        }
-        lp..color = Colors.white.withOpacity(0.25)..strokeWidth = 1.5;
-        canvas.drawLine(Offset(0, 0), Offset(w, h), lp);
-        canvas.drawLine(Offset(w, 0), Offset(0, h), lp);
-        _glow(canvas, center, w * 0.12, Colors.white.withOpacity(0.55));
-        canvas.drawCircle(center, w * 0.06, fp..color = Colors.white.withOpacity(0.80));
-        _tierBorder(canvas, rect, const Color(0xFF88AAFF), width: 2.5);
-
-      case 'lava_core':
-        canvas.drawRect(rect, fp..color = const Color(0xFF060200));
-        // Glowing crack web
-        lp..color = const Color(0xFFFF6000).withOpacity(0.80)..strokeWidth = 2.0;
-        for (var crack = 0; crack < 7; crack++) {
-          var angle = crack * math.pi * 2 / 7;
-          var cx = center.dx, cy = center.dy;
-          final path = Path()..moveTo(cx, cy);
-          for (var step = 0; step < 8; step++) {
-            angle += (_rng.nextDouble() - 0.5) * 0.65;
-            cx += math.cos(angle) * w * 0.095;
-            cy += math.sin(angle) * h * 0.095;
-            path.lineTo(cx, cy);
-          }
-          canvas.drawPath(path, lp);
-        }
-        _glow(canvas, center, w * 0.25, const Color(0xFFFF4000).withOpacity(0.60));
-        _tierBorder(canvas, rect, const Color(0xFFFF4500), width: 2.5);
-
-      case 'diamond_shield':
-        _bgRadial(canvas, rect, [Colors.white, const Color(0xFFB0D8FF), const Color(0xFF0030A0)]);
-        // Star of David (two triangles, large)
-        lp..color = const Color(0xFF0060CC).withOpacity(0.60)..strokeWidth = 1.8;
-        final dsr = w * 0.38;
-        for (var tri = 0; tri < 2; tri++) {
-          final tp = Path();
-          for (var pt = 0; pt < 3; pt++) {
-            final a = pt * (2 * math.pi / 3) + (tri == 0 ? -math.pi / 2 : math.pi / 2);
-            final p = Offset(center.dx + dsr * math.cos(a), center.dy + dsr * math.sin(a));
-            if (pt == 0) tp.moveTo(p.dx, p.dy); else tp.lineTo(p.dx, p.dy);
-          }
-          tp.close();
-          canvas.drawPath(tp, lp);
-        }
-        // Prismatic facet lines
-        lp..color = const Color(0xFF6699FF).withOpacity(0.35)..strokeWidth = 0.8;
-        for (var i = 0; i < 8; i++) {
-          final a = (i / 8) * 2 * math.pi;
-          canvas.drawLine(center, Offset(center.dx + math.cos(a) * dsr * 1.3, center.dy + math.sin(a) * dsr * 1.3), lp);
-        }
-        _glow(canvas, center, w * 0.12, Colors.white.withOpacity(0.70));
-        _tierBorder(canvas, rect, const Color(0xFFE8E8FF), width: 2.5);
-
-      case 'cyber_future_israel':
-        canvas.drawRect(rect, fp..color = const Color(0xFF000000));
-        // Circuit grid
-        lp..color = const Color(0xFF00FFFF).withOpacity(0.30)..strokeWidth = 0.8;
-        const cg = 20.0;
-        for (var x = cg; x < w; x += cg) {
-          for (var y = cg; y < h; y += cg) {
-            if ((x ~/ cg + y ~/ cg) % 2 == 0) {
-              canvas.drawLine(Offset(x - cg, y), Offset(x, y), lp);
-            } else {
-              canvas.drawLine(Offset(x, y - cg), Offset(x, y), lp);
-            }
-            canvas.drawCircle(Offset(x, y), 1.8, fp..color = const Color(0xFF00FFFF).withOpacity(0.45));
-          }
-        }
-        // Cyan Star of David
-        lp..color = const Color(0xFF00FFFF).withOpacity(0.60)..strokeWidth = 1.5;
-        final csr = w * 0.26;
-        for (var tri = 0; tri < 2; tri++) {
-          final tp = Path();
-          for (var pt = 0; pt < 3; pt++) {
-            final a = pt * (2 * math.pi / 3) + (tri == 0 ? -math.pi / 2 : math.pi / 2);
-            final p = Offset(center.dx + csr * math.cos(a), center.dy + csr * math.sin(a));
-            if (pt == 0) tp.moveTo(p.dx, p.dy); else tp.lineTo(p.dx, p.dy);
-          }
-          tp.close();
-          canvas.drawPath(tp, lp);
-        }
-        _glow(canvas, center, w * 0.18, const Color(0xFF00FFFF).withOpacity(0.30));
-        _tierBorder(canvas, rect, const Color(0xFF00FFFF), width: 2.5);
-
-      default:
-        // Fallback: gold gradient
-        _bg(canvas, rect, [const Color(0xFFD4AF37), const Color(0xFF4A3200)]);
-        _tierBorder(canvas, rect, const Color(0xFFD4AF37));
+    // Sparkles (static): a few for rare, a gold cluster for premium.
+    if (isRare || isPremium) {
+      final rnd = math.Random(id.hashCode);
+      final n = isPremium ? 7 : 3;
+      final spColor = isPremium ? const Color(0xFFFFE9A8) : Colors.white;
+      for (var i = 0; i < n; i++) {
+        final o = Offset(size.width * (0.15 + rnd.nextDouble() * 0.7),
+            size.height * (0.12 + rnd.nextDouble() * 0.6));
+        final r = size.width * (isPremium ? 0.07 : 0.05) * (0.7 + rnd.nextDouble() * 0.6);
+        final p = Paint()
+          ..color = spColor.withOpacity(isPremium ? 0.85 : 0.55)
+          ..strokeWidth = math.max(0.8, r * 0.22)
+          ..strokeCap = StrokeCap.round;
+        canvas.drawLine(Offset(o.dx, o.dy - r), Offset(o.dx, o.dy + r), p);
+        canvas.drawLine(Offset(o.dx - r, o.dy), Offset(o.dx + r, o.dy), p);
+        canvas.drawCircle(o, r * 0.28, Paint()..color = spColor.withOpacity(isPremium ? 0.9 : 0.6));
+      }
     }
+
+    // Star of David emblem for the royal magen cover (justifies its name).
+    if (id == 'royal_magen') {
+      final cx = size.width / 2, cy = size.height / 2;
+      final rad = size.width * 0.26;
+      final gold = Paint()
+        ..color = Colors.white.withOpacity(0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(1.2, size.width * 0.02)
+        ..strokeJoin = StrokeJoin.round;
+      Path tri(double rot) {
+        final p = Path();
+        for (var k = 0; k < 3; k++) {
+          final a = rot + k * 2 * math.pi / 3;
+          final o = Offset(cx + rad * math.cos(a), cy + rad * math.sin(a));
+          if (k == 0) {
+            p.moveTo(o.dx, o.dy);
+          } else {
+            p.lineTo(o.dx, o.dy);
+          }
+        }
+        return p..close();
+      }
+
+      canvas.drawPath(tri(-math.pi / 2), gold);
+      canvas.drawPath(tri(math.pi / 2), gold);
+    }
+
+    // Rim — gold and slightly thicker for premium, else a thin bright rim.
+    _tierBorder(
+      canvas,
+      rect,
+      isPremium ? const Color(0xFFFFD84D).withOpacity(0.75) : Colors.white.withOpacity(0.22),
+      width: isPremium ? 2.0 : 1.4,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _SkinPreviewPainter o) => o.id != id;
+  bool shouldRepaint(covariant _SkinPreviewPainter o) =>
+      o.id != id || o.index != index || o.gridSize != gridSize;
 }

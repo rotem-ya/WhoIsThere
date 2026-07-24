@@ -3,9 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/game_constants.dart';
+import '../../../core/constants/player_rank.dart';
+import '../../../core/theme/candy_theme.dart';
 import '../../../models/player_model.dart';
 import '../../../providers/providers.dart';
 import '../../../services/reward_calculator.dart';
+import '../../../services/sfx_service.dart';
+import '../../../widgets/common/animated_count.dart';
 import '../../../widgets/common/player_avatar.dart';
 import '../../../widgets/economy/coin_display.dart';
 
@@ -80,7 +84,7 @@ class TopHud extends StatelessWidget {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+        padding: const EdgeInsets.fromLTRB(12, 5, 12, 3),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -101,24 +105,24 @@ class TopHud extends StatelessWidget {
                 _SmallBackButton(onTap: onBack),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             if (players.isNotEmpty)
               AnimatedContainer(
                 duration: const Duration(milliseconds: 400),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF081E3A).withOpacity(0.90),
+                  color: Candy.surfaceLow.withOpacity(0.82),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isEndgame
                         ? const Color(0xFFFF9F43).withOpacity(0.55)
-                        : const Color(0xFF1890D0).withOpacity(0.50),
+                        : Candy.teal.withOpacity(0.45),
                     width: 1.0,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF0040A0).withOpacity(0.30),
-                      blurRadius: 20,
+                      color: Candy.bevel(Candy.grape).withOpacity(0.35),
+                      blurRadius: 18,
                       offset: const Offset(0, 4),
                     ),
                   ],
@@ -158,10 +162,10 @@ class _SmallBackButton extends StatelessWidget {
         width: 30,
         height: 30,
         decoration: BoxDecoration(
-          color: const Color(0xFF0D1E30).withOpacity(0.75),
+          color: Candy.surfaceLow.withOpacity(0.75),
           shape: BoxShape.circle,
           border: Border.all(
-            color: const Color(0xFF2A5070).withOpacity(0.45),
+            color: Candy.teal.withOpacity(0.45),
             width: 0.8,
           ),
         ),
@@ -200,51 +204,41 @@ class _PlayerGrid extends StatelessWidget {
     this.showExposure = false,
   });
 
+  Widget _cell(int i, bool compact) => _PlayerCell(
+        player: players[i],
+        isGuessing: players[i].id == guessModePlayerId,
+        isStunned: stunnedPlayerIds.contains(players[i].id),
+        isMe: players[i].id == myUid,
+        myUid: myUid,
+        roomId: roomId,
+        isSolo: isSolo,
+        guessBlock5Count: guessBlock5Count,
+        guessBlock10Count: guessBlock10Count,
+        blackoutCardCount: blackoutCardCount,
+        tricksDisabled: tricksDisabled,
+        showExposure: showExposure,
+        compact: compact,
+      );
+
   @override
   Widget build(BuildContext context) {
+    // Keep the grid to at most 2 rows so the board below gets maximum height.
+    // 5+ players collapse to compact first-letter cells and pack 3-4 per row
+    // (instead of 2), so an 8-player lobby is 2 rows, not 4.
+    final compact = players.length >= 5;
+    final cols = players.length >= 7 ? 4 : (players.length >= 5 ? 3 : 2);
     final rows = <Widget>[];
-    for (var i = 0; i < players.length; i += 2) {
+    for (var i = 0; i < players.length; i += cols) {
       if (rows.isNotEmpty) rows.add(const SizedBox(height: 4));
-      rows.add(Row(
-        children: [
-          Expanded(
-            child: _PlayerCell(
-              player: players[i],
-              isGuessing: players[i].id == guessModePlayerId,
-              isStunned: stunnedPlayerIds.contains(players[i].id),
-              isMe: players[i].id == myUid,
-              myUid: myUid,
-              roomId: roomId,
-              isSolo: isSolo,
-              guessBlock5Count: guessBlock5Count,
-              guessBlock10Count: guessBlock10Count,
-              blackoutCardCount: blackoutCardCount,
-              tricksDisabled: tricksDisabled,
-              showExposure: showExposure,
-            ),
-          ),
-          if (i + 1 < players.length) ...[
-            const SizedBox(width: 6),
-            Expanded(
-              child: _PlayerCell(
-                player: players[i + 1],
-                isGuessing: players[i + 1].id == guessModePlayerId,
-                isStunned: stunnedPlayerIds.contains(players[i + 1].id),
-                isMe: players[i + 1].id == myUid,
-                myUid: myUid,
-                roomId: roomId,
-                isSolo: isSolo,
-                guessBlock5Count: guessBlock5Count,
-                guessBlock10Count: guessBlock10Count,
-                blackoutCardCount: blackoutCardCount,
-                tricksDisabled: tricksDisabled,
-                showExposure: showExposure,
-              ),
-            ),
-          ] else
-            const Expanded(child: SizedBox()),
-        ],
-      ));
+      final cells = <Widget>[];
+      for (var c = 0; c < cols; c++) {
+        if (c > 0) cells.add(const SizedBox(width: 6));
+        final idx = i + c;
+        cells.add(Expanded(
+          child: idx < players.length ? _cell(idx, compact) : const SizedBox(),
+        ));
+      }
+      rows.add(Row(children: cells));
     }
     return Column(mainAxisSize: MainAxisSize.min, children: rows);
   }
@@ -265,6 +259,8 @@ class _PlayerCell extends ConsumerWidget {
   final int guessBlock10Count;
   final int blackoutCardCount;
   final bool showExposure;
+  // Crowded lobbies: collapse to a first-letter circle to save vertical space.
+  final bool compact;
 
   const _PlayerCell({
     required this.player,
@@ -279,6 +275,7 @@ class _PlayerCell extends ConsumerWidget {
     this.guessBlock10Count = 0,
     this.blackoutCardCount = 0,
     this.showExposure = false,
+    this.compact = false,
   });
 
   bool get _canTarget =>
@@ -304,15 +301,15 @@ class _PlayerCell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rawName = player.name.length > 9 ? player.name.substring(0, 9) : player.name;
-    final name = player.isHost ? '$rawName ⭐' : rawName;
+    final rank = PlayerRankX.fromPoints(player.totalPoints);
     return GestureDetector(
       onTap: _canTarget ? () => _showActionSheet(context) : null,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding:
+                EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: 3),
             decoration: BoxDecoration(
               color: isStunned
                   ? const Color(0xFF2A1040).withOpacity(0.75)
@@ -329,59 +326,7 @@ class _PlayerCell extends ConsumerWidget {
                 width: isStunned || isGuessing ? 1.0 : 0.8,
               ),
             ),
-            child: Row(
-              children: [
-                PlayerAvatar(
-                  name: player.name,
-                  seed: player.name,
-                  radius: 10,
-                  avatarId: player.avatarId,
-                  frameId: player.frameId,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: isGuessing ? const Color(0xFF80C080) : Colors.white70,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                if (isStunned)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 3),
-                    child: Text('🔒', style: TextStyle(fontSize: 9)),
-                  )
-                else if (isGuessing)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4),
-                    child: Text('✍', style: TextStyle(fontSize: 10)),
-                  ),
-                // Private rooms: show how many times this player has already
-                // seen the current image (0 = first time) next to their name.
-                if (showExposure && !player.isBot)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 3),
-                    child: Text(
-                      '👁${player.priorExposureCount}',
-                      style: const TextStyle(fontSize: 9, color: Colors.amber),
-                    ),
-                  ),
-                const SizedBox(width: 4),
-                Text(
-                  '${player.score}',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.45),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
+            child: compact ? _buildCompact(rank) : _buildFull(rank),
           ),
           Positioned(
             top: -7,
@@ -390,6 +335,135 @@ class _PlayerCell extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget? _statusIcon() {
+    if (isStunned) return const Text('🔒', style: TextStyle(fontSize: 9));
+    if (isGuessing) return const Text('✍', style: TextStyle(fontSize: 10));
+    return null;
+  }
+
+  // Roomy layout (≤6 players): avatar + a small name with the rank shown as a
+  // tiny "exponent" line above it, plus status / exposure / score.
+  Widget _buildFull(PlayerRank rank) {
+    final rawName =
+        player.name.length > 9 ? player.name.substring(0, 9) : player.name;
+    final name = player.isHost ? '$rawName ⭐' : rawName;
+    final status = _statusIcon();
+    return Row(
+      children: [
+        PlayerAvatar(
+          name: player.name,
+          seed: player.name,
+          radius: 11,
+          avatarId: player.avatarId,
+          frameId: player.frameId,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Rank tucked above the name like a superscript.
+              Text(
+                '${rank.emoji} ${rank.label}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 7.5,
+                  height: 1,
+                  color: rank.color,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color:
+                      isGuessing ? const Color(0xFF80C080) : Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  height: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (status != null)
+          Padding(padding: const EdgeInsets.only(left: 3), child: status),
+        if (showExposure && !player.isBot)
+          Padding(
+            padding: const EdgeInsets.only(left: 3),
+            child: Text(
+              '👁${player.priorExposureCount}',
+              style: const TextStyle(fontSize: 9, color: Colors.amber),
+            ),
+          ),
+        const SizedBox(width: 4),
+        AnimatedCount(
+          value: player.score,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.45),
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Crowded layout (7-8 players): the name collapses to its first letter in a
+  // rank-colored circle, with the rank emoji as the marker and the score — no
+  // full name, so the grid stays short and the board gets maximum size.
+  Widget _buildCompact(PlayerRank rank) {
+    final trimmed = player.name.trim();
+    final letter = trimmed.isNotEmpty ? trimmed.substring(0, 1) : '?';
+    // Narrow cell for 3-4 columns: rank-colored letter circle (gold ring for
+    // the host), rank emoji marker, score. Turn/stun state reads from the
+    // cell's background/border color.
+    return Row(
+      children: [
+        Container(
+          width: 23,
+          height: 23,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: rank.color.withOpacity(0.22),
+            border: Border.all(
+              color: player.isHost
+                  ? const Color(0xFFFFD54F)
+                  : rank.color.withOpacity(0.75),
+              width: player.isHost ? 1.5 : 1,
+            ),
+          ),
+          child: Text(
+            letter,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w900,
+              height: 1,
+            ),
+          ),
+        ),
+        const SizedBox(width: 3),
+        Text(rank.emoji, style: const TextStyle(fontSize: 10.5)),
+        const Spacer(),
+        AnimatedCount(
+          value: player.score,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.6),
+            fontSize: 11.5,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -426,6 +500,7 @@ class _PlayerActionSheetState extends ConsumerState<_PlayerActionSheet> {
     if (_busy) return;
     setState(() => _busy = true);
     HapticFeedback.mediumImpact();
+    SfxService.instance.trickCast();
     await ref.read(roomServiceProvider).applyGuessBlockCard(
       roomId: widget.roomId,
       actorUid: widget.myUid,
@@ -439,6 +514,7 @@ class _PlayerActionSheetState extends ConsumerState<_PlayerActionSheet> {
     if (_busy) return;
     setState(() => _busy = true);
     HapticFeedback.mediumImpact();
+    SfxService.instance.trickCast();
     await ref.read(roomServiceProvider).applyBlackoutCard(
       roomId: widget.roomId,
       actorUid: widget.myUid,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,13 +15,18 @@ import '../../core/constants/ad_constants.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/constants/economy_config.dart';
 import '../../providers/providers.dart';
+import '../../services/settings_service.dart';
 import '../../models/game_image_model.dart';
 import '../../models/player_model.dart';
 import '../../models/room_model.dart';
+import '../../widgets/common/animated_count.dart';
 import '../../widgets/common/app_card.dart';
+import '../../widgets/common/parallax_image.dart';
 import '../../widgets/common/banner_ad_widget.dart';
+import '../../widgets/common/branded_loader.dart';
 import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/win_effect_overlay.dart';
+import '../../widgets/economy/coin_fly.dart';
 
 class WinScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -35,6 +41,9 @@ class _WinScreenState extends ConsumerState<WinScreen>
     with TickerProviderStateMixin {
   late final AnimationController _counterController;
   late final AnimationController _shineController;
+  // A quick decaying screen shake when YOU win, for extra impact on entrance.
+  late final AnimationController _winShake;
+  bool _winShakeFired = false;
   GameImageModel? _gameImage;
   // Friends games: coins gifted for placing 1st (20) / 2nd (5). null until resolved.
   int? _placementReward;
@@ -43,6 +52,21 @@ class _WinScreenState extends ConsumerState<WinScreen>
   // Loss-consolation rewarded ad: idle → busy → done (one per screen visit;
   // the daily applyAdReward cap still applies server-side).
   String _consolation = 'idle';
+  // Anchors so earned coins can fly from the reward box up to the balance.
+  final GlobalKey _placementKey = GlobalKey();
+  final GlobalKey _consolationKey = GlobalKey();
+
+  /// Sends a coin burst from a reward box toward the wallet counter (falls back
+  /// to the top of the screen when no wallet is on screen).
+  void _flyCoinsFrom(GlobalKey key, int coins) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = key.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.hasSize) return;
+      final from = box.localToGlobal(box.size.center(Offset.zero));
+      CoinFly.burst(context, from: from, count: (coins ~/ 3).clamp(6, 16));
+    });
+  }
 
   Future<void> _watchConsolation() async {
     if (_consolation != 'idle') return;
@@ -64,7 +88,16 @@ class _WinScreenState extends ConsumerState<WinScreen>
         return;
       }
       final granted = await ref.read(economyServiceProvider).applyAdReward(uid);
-      if (mounted) setState(() => _consolation = granted ? 'done' : 'idle');
+      if (mounted) {
+        setState(() => _consolation = granted ? 'done' : 'idle');
+        if (granted) {
+          Future.delayed(const Duration(milliseconds: 250), () {
+            if (mounted) {
+              _flyCoinsFrom(_consolationKey, EconomyConfig.adRewardCoins);
+            }
+          });
+        }
+      }
     } catch (_) {
       if (mounted) setState(() => _consolation = 'idle');
     }
@@ -80,6 +113,10 @@ class _WinScreenState extends ConsumerState<WinScreen>
     _shineController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 560),
+    );
+    _winShake = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
     );
     _loadImage();
     _awardPoints();
@@ -108,13 +145,34 @@ class _WinScreenState extends ConsumerState<WinScreen>
     if (room == null || currentUser == null) return;
     final myPlayer = room.players[currentUser.id];
     if (myPlayer == null) return;
+    // Record this game for the home quick-replay strip.
+    final kind = room.mode == 'letters'
+        ? 'letters'
+        : room.isProverbs
+            ? 'proverbs'
+            : room.isHeat
+                ? 'heat'
+                : 'places';
+    unawaited(SettingsService.instance.pushRecentGame(
+      kind,
+      currentUser.id == room.winnerId,
+      DateTime.now().millisecondsSinceEpoch,
+    ));
     if (room.isFriendsGame) {
       // Friends games are per-match: score is NOT added to lifetime points.
       // Instead, the top-2 finishers receive a coin gift (20 / 5).
       final reward = await ref
           .read(roomServiceProvider)
           .claimPlacementReward(widget.roomId, currentUser.id);
-      if (mounted) setState(() => _placementReward = reward);
+      if (mounted) {
+        setState(() => _placementReward = reward);
+        if (reward > 0) {
+          // Let the placement box finish its entrance, then rain the coins.
+          Future.delayed(const Duration(milliseconds: 780), () {
+            if (mounted) _flyCoinsFrom(_placementKey, reward);
+          });
+        }
+      }
       // Record this match for the friends leaderboard + per-game history.
       // Each client records only its own result (idempotent per player/room).
       unawaited(ref
@@ -184,6 +242,7 @@ class _WinScreenState extends ConsumerState<WinScreen>
   void dispose() {
     _counterController.dispose();
     _shineController.dispose();
+    _winShake.dispose();
     super.dispose();
   }
 
@@ -199,6 +258,15 @@ class _WinScreenState extends ConsumerState<WinScreen>
         final winner =
             room.winnerId != null ? room.players[room.winnerId] : null;
         final isWinner = currentUser?.id == room.winnerId;
+        if (isWinner && !_winShakeFired) {
+          _winShakeFired = true;
+          Future.delayed(const Duration(milliseconds: 620), () {
+            if (mounted) {
+              _winShake.forward(from: 0);
+              HapticFeedback.heavyImpact();
+            }
+          });
+        }
         final sortedPlayers = room.sortedPlayers;
         final myScore =
             (currentUser != null ? room.players[currentUser.id] : null)
@@ -212,6 +280,17 @@ class _WinScreenState extends ConsumerState<WinScreen>
               ref.read(currentRoomIdProvider.notifier).state = null;
               context.go('/home');
             }
+          },
+          child: AnimatedBuilder(
+          animation: _winShake,
+          builder: (_, child) {
+            if (!_winShake.isAnimating) return child!;
+            final t = _winShake.value;
+            final amp = 10.0 * (1 - t);
+            return Transform.translate(
+              offset: Offset(sin(t * pi * 9) * amp, sin(t * pi * 6) * amp * 0.5),
+              child: child,
+            );
           },
           child: AppScaffold(
           backgroundGradient:
@@ -270,22 +349,26 @@ class _WinScreenState extends ConsumerState<WinScreen>
                       padding: EdgeInsets.zero,
                       child: Column(
                         children: [
-                          ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(24)),
-                            child: _gameImage!.imageUrl.startsWith('assets/')
-                                ? Image.asset(
-                                    _gameImage!.imageUrl,
-                                    height: 140,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                  )
-                                : CachedNetworkImage(
-                                    imageUrl: _gameImage!.imageUrl,
-                                    height: 140,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                  ),
+                          SizedBox(
+                            height: 140,
+                            width: double.infinity,
+                            child: ParallaxImage(
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(24)),
+                              child: _gameImage!.imageUrl.startsWith('assets/')
+                                  ? Image.asset(
+                                      _gameImage!.imageUrl,
+                                      height: 140,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : CachedNetworkImage(
+                                      imageUrl: _gameImage!.imageUrl,
+                                      height: 140,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                            ),
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(
@@ -357,7 +440,7 @@ class _WinScreenState extends ConsumerState<WinScreen>
                   // ── Friends placement coin gift (1st = 20, 2nd = 5) ────
                   if (room.isFriendsGame && (_placementReward ?? 0) > 0) ...[
                     const SizedBox(height: AppSpacing.sm),
-                    _PlacementRewardBox(coins: _placementReward!),
+                    _PlacementRewardBox(key: _placementKey, coins: _placementReward!),
                   ],
 
                   // ── Loss consolation: rewarded ad for non-winners ──────
@@ -365,6 +448,7 @@ class _WinScreenState extends ConsumerState<WinScreen>
                     const SizedBox(height: AppSpacing.sm),
                     _consolation == 'done'
                         ? Container(
+                            key: _consolationKey,
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
@@ -456,10 +540,10 @@ class _WinScreenState extends ConsumerState<WinScreen>
             ],
           ),
         ), // AppScaffold
+        ), // AnimatedBuilder (win shake)
         ); // PopScope
       },
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => const BrandedLoader(),
       error: (e, _) => Scaffold(body: Center(child: Text('שגיאה: $e'))),
     );
   }
@@ -538,8 +622,8 @@ class _ScoreRow extends StatelessWidget {
                   duration: 240.ms,
                   curve: Curves.easeOut),
           const SizedBox(width: 4),
-          Text(
-            '${player.score}',
+          AnimatedCount(
+            value: player.score,
             style: AppTextStyles.body.copyWith(
               color: scoreColor,
               fontWeight: FontWeight.w900,
@@ -678,7 +762,7 @@ class _TotalRewardBox extends StatelessWidget {
 class _PlacementRewardBox extends StatelessWidget {
   final int coins;
 
-  const _PlacementRewardBox({required this.coins});
+  const _PlacementRewardBox({super.key, required this.coins});
 
   @override
   Widget build(BuildContext context) {

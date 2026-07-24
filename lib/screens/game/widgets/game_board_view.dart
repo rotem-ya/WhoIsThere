@@ -4,11 +4,13 @@ import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../models/card_skin.dart';
 import '../../../providers/skin_providers.dart';
+import '../../../services/sfx_service.dart';
 import '../../../utils/game_constants.dart';
 import '../../../widgets/game/vault_cover.dart';
 
@@ -31,6 +33,9 @@ class GameBoardView extends ConsumerStatefulWidget {
 
   final VoidCallback? onTapRevealed;
 
+  // When true, still-hidden tiles reveal their picture in a staggered burst.
+  final bool burstReveal;
+
   const GameBoardView({
     super.key,
     required this.gridSize,
@@ -45,6 +50,7 @@ class GameBoardView extends ConsumerStatefulWidget {
     this.pendingRevealTileIndex,
     this.revealDeadlineMs,
     this.spotlightCells = const {},
+    this.burstReveal = false,
   });
 
   @override
@@ -122,6 +128,7 @@ class _GameBoardViewState extends ConsumerState<GameBoardView> {
                         isPendingReveal: index == widget.pendingRevealTileIndex,
                         revealDeadlineMs: widget.revealDeadlineMs,
                         spotlightPeek: widget.spotlightCells.contains(index),
+                        burst: widget.burstReveal,
                       ),
                   ],
                 ),
@@ -149,6 +156,7 @@ class _Tile extends StatefulWidget {
   final bool isPendingReveal;
   final int? revealDeadlineMs;
   final bool spotlightPeek;
+  final bool burst;
 
   const _Tile({
     required this.index,
@@ -165,6 +173,7 @@ class _Tile extends StatefulWidget {
     this.isPendingReveal = false,
     this.revealDeadlineMs,
     this.spotlightPeek = false,
+    this.burst = false,
   });
 
   @override
@@ -175,7 +184,15 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
   bool _pressed = false;
   late AnimationController _popCtrl;
   late Animation<double> _popScale;
+  // A quick 3D flip-in: the tile swings from edge-on down to flat over the
+  // first part of the reveal, so a slice "flips open" into place. Only active
+  // during a live reveal (already-open tiles sit flat).
+  late Animation<double> _flipAngle;
+  bool _revealing = false;
   Timer? _countdownTimer;
+  Timer? _burstTimer;
+  // True once this tile's picture has popped in during a correct-guess burst.
+  bool _burstShown = false;
   int _secondsLeft = 10;
 
   @override
@@ -183,7 +200,7 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
     super.initState();
     _popCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 380),
+      duration: const Duration(milliseconds: 460),
     );
     // Bounce: 1.0 → 1.10 → 0.96 → 1.0
     _popScale = TweenSequence<double>([
@@ -191,6 +208,16 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
       TweenSequenceItem(tween: Tween(begin: 1.10, end: 0.96), weight: 32),
       TweenSequenceItem(tween: Tween(begin: 0.96, end: 1.0), weight: 40),
     ]).animate(_popCtrl);
+    // Swing from edge-on (~72°) to flat within the first ~55% of the reveal.
+    _flipAngle = Tween<double>(begin: 1.25, end: 0.0).animate(
+      CurvedAnimation(
+          parent: _popCtrl, curve: const Interval(0.0, 0.55, curve: Curves.easeOut)),
+    );
+    _popCtrl.addStatusListener((s) {
+      if (s == AnimationStatus.completed && _revealing) {
+        setState(() => _revealing = false);
+      }
+    });
     if (widget.isPendingReveal) _startCountdown();
   }
 
@@ -198,6 +225,8 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
   void didUpdateWidget(_Tile oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isRevealed && !oldWidget.isRevealed) {
+      _revealing = true;
+      SfxService.instance.tileFlip();
       _popCtrl.forward(from: 0.0);
     }
     if (widget.isPendingReveal && !oldWidget.isPendingReveal) {
@@ -206,6 +235,20 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
       _stopCountdown();
     } else if (widget.isPendingReveal && widget.revealDeadlineMs != oldWidget.revealDeadlineMs) {
       _updateSecondsLeft();
+    }
+    // Correct-guess burst: a hidden tile pops its picture in on a diagonal
+    // stagger, so the full image assembles across the board.
+    if (widget.burst && !oldWidget.burst && !widget.isRevealed) {
+      final row = widget.index ~/ widget.gridSize;
+      final col = widget.index % widget.gridSize;
+      final delayMs = (row + col) * 45;
+      _burstTimer?.cancel();
+      _burstTimer = Timer(Duration(milliseconds: delayMs), () {
+        if (mounted) setState(() => _burstShown = true);
+      });
+    } else if (!widget.burst && oldWidget.burst) {
+      _burstTimer?.cancel();
+      _burstShown = false;
     }
   }
 
@@ -222,7 +265,11 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
     if (deadline == null) return;
     final remaining = deadline - DateTime.now().millisecondsSinceEpoch;
     final secs = (remaining / 1000).ceil().clamp(0, 10);
-    if (mounted && secs != _secondsLeft) setState(() => _secondsLeft = secs);
+    if (mounted && secs != _secondsLeft) {
+      // A heartbeat thump on each of the final urgent seconds.
+      if (secs >= 1 && secs <= 3) SfxService.instance.heartbeat();
+      setState(() => _secondsLeft = secs);
+    }
   }
 
   void _stopCountdown() {
@@ -233,6 +280,7 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    _burstTimer?.cancel();
     _popCtrl.dispose();
     super.dispose();
   }
@@ -259,11 +307,23 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
       width: widget.tileSize,
       height: widget.tileSize,
       child: AnimatedBuilder(
-        animation: _popScale,
-        builder: (context, child) => Transform.scale(
-          scale: _pressed ? kTapScale : _popScale.value,
-          child: child,
-        ),
+        animation: _popCtrl,
+        builder: (context, child) {
+          final scale = _pressed ? kTapScale : _popScale.value;
+          if (!_revealing) {
+            return Transform.scale(scale: scale, child: child);
+          }
+          // Perspective + rotateX gives the slice a real 3D flip-down.
+          final m = Matrix4.identity()
+            ..setEntry(3, 2, 0.0015)
+            ..rotateX(_flipAngle.value)
+            ..scale(scale, scale);
+          return Transform(
+            alignment: Alignment.center,
+            transform: m,
+            child: child,
+          );
+        },
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: _canTap
@@ -348,6 +408,39 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
                       tileSize: widget.tileSize,
                     ),
                   ),
+                // Correct-guess burst: the hidden slice pops in over the cover.
+                if (widget.burst && !widget.isRevealed)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 240),
+                        opacity: _burstShown ? 1.0 : 0.0,
+                        child: AnimatedScale(
+                          duration: const Duration(milliseconds: 320),
+                          curve: Curves.easeOutBack,
+                          scale: _burstShown ? 1.0 : 0.72,
+                          child: _ImageSlice(
+                            index: widget.index,
+                            gridSize: widget.gridSize,
+                            tileSize: widget.tileSize,
+                            imageUrl: widget.imageUrl,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                // A one-shot diagonal light sweep across the freshly revealed
+                // slice, so each reveal catches the eye.
+                if (_revealing)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: AnimatedBuilder(
+                        animation: _popCtrl,
+                        builder: (context, _) =>
+                            CustomPaint(painter: _RevealFlash(_popCtrl.value)),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -355,6 +448,49 @@ class _TileState extends State<_Tile> with SingleTickerProviderStateMixin {
       ),
     );
   }
+}
+
+// ── Reveal light sweep ──────────────────────────────────────────────────────
+//
+// A bright diagonal band that slides across the tile once as it opens, then
+// fades. Driven by the 0..1 reveal progress.
+class _RevealFlash extends CustomPainter {
+  final double t;
+  _RevealFlash(this.t);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Sweep runs during the middle of the reveal, then is gone.
+    final sweep = ((t - 0.15) / 0.6).clamp(0.0, 1.0);
+    if (sweep <= 0 || sweep >= 1) return;
+    final fade = 1.0 - (sweep - 0.5).abs() * 2; // peak brightness mid-sweep
+    final w = size.width;
+    final h = size.height;
+    // Diagonal band position travels from top-left to bottom-right.
+    final cx = (sweep * 1.6 - 0.3) * w;
+    final band = w * 0.55;
+    final rect = Offset.zero & size;
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withOpacity(0.0),
+          Colors.white.withOpacity(0.55 * fade),
+          Colors.white.withOpacity(0.0),
+        ],
+        stops: [
+          ((cx - band) / w).clamp(0.0, 1.0),
+          (cx / w).clamp(0.0, 1.0),
+          ((cx + band) / w).clamp(0.0, 1.0),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, w, h))
+      ..blendMode = BlendMode.plus;
+    canvas.drawRect(rect, paint);
+  }
+
+  @override
+  bool shouldRepaint(_RevealFlash old) => old.t != t;
 }
 
 // ── Countdown overlay ────────────────────────────────────────────────────────
@@ -367,14 +503,18 @@ class _CountdownOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isUrgent = secondsLeft <= 2;
+    final isUrgent = secondsLeft <= 3;
     final ringColor = isUrgent ? AppColors.danger : AppColors.primary;
     final ringSize = tileSize * 0.60;
 
-    return Container(
-      color: const Color(0xF0050A14),
-      child: Center(
-        child: Stack(
+    // As time runs low the tile background flushes red, and the ring+number
+    // pulse, so the last seconds feel urgent.
+    final bg = isUrgent
+        ? Color.lerp(const Color(0xF0050A14), const Color(0xF03A0505),
+            ((4 - secondsLeft) / 3).clamp(0.0, 1.0))!
+        : const Color(0xF0050A14);
+
+    final core = Stack(
           alignment: Alignment.center,
           children: [
             SizedBox(
@@ -414,7 +554,20 @@ class _CountdownOverlay extends StatelessWidget {
               ),
             ),
           ],
-        ),
+        );
+
+    return Container(
+      color: bg,
+      child: Center(
+        child: isUrgent
+            ? core
+                .animate(onPlay: (c) => c.repeat(reverse: true))
+                .scaleXY(
+                    begin: 1.0,
+                    end: 1.16,
+                    duration: 380.ms,
+                    curve: Curves.easeInOut)
+            : core,
       ),
     );
   }

@@ -55,26 +55,30 @@ class BoardSkin {
       );
 }
 
+// Every skin renders from the layered code composition in BoardSkinBackground
+// (base gradient + glows + starfields + vignette) — clean, designed, and
+// consistent with the Candy line. No baked photos (they read as low-quality);
+// [colors] still drives the store swatch + accent.
 const kBoardSkins = <BoardSkin>[
-  // ── חינמי (ברירת מחדל) ───────────────────────────────────────────────────────
-  BoardSkin(id: 'none', name: 'ברירת מחדל', price: 0),
+  // ── חינמי (ברירת מחדל) ──────────────────────────────────────────────────────
+  BoardSkin(id: 'none', name: 'ברירת מחדל', price: 0, colors: [Color(0xFF6A34BE), Color(0xFF22103F)]),
 
-  // ── בסיסי (50–150) — תמונות מוטמעות (assetPath), gradient כ-fallback ──────────
-  BoardSkin(id: 'midnight', name: 'חצות',     price: 50,  colors: [Color(0xFF13294B), Color(0xFF050A16)], assetPath: 'assets/skins/board_midnight.jpg'),
-  BoardSkin(id: 'deep_sea', name: 'מצולות',   price: 70,  colors: [Color(0xFF003B46), Color(0xFF001518)], assetPath: 'assets/skins/board_deep_sea.jpg'),
-  BoardSkin(id: 'plum',     name: 'שזיף',     price: 90,  colors: [Color(0xFF2E1A47), Color(0xFF0E0518)], assetPath: 'assets/skins/board_plum.jpg'),
-  BoardSkin(id: 'forest',   name: 'יער עד',   price: 110, colors: [Color(0xFF14331F), Color(0xFF04120A)], assetPath: 'assets/skins/board_forest.jpg'),
-  BoardSkin(id: 'ember',    name: 'גחלים',    price: 150, colors: [Color(0xFF3A1410), Color(0xFF120403)], assetPath: 'assets/skins/board_ember.jpg'),
+  // ── בסיסי (50–150) — גרדיאנט נקי + זוהר ──────────────────────────────────────
+  BoardSkin(id: 'midnight', name: 'חצות',       price: 50,  colors: [Color(0xFF3E5BC0), Color(0xFF0E1430)]),
+  BoardSkin(id: 'deep_sea', name: 'מעמקי הים',  price: 70,  colors: [Color(0xFF12B5A6), Color(0xFF04231F)]),
+  BoardSkin(id: 'plum',     name: 'שזיף',        price: 90,  colors: [Color(0xFF8A3FD1), Color(0xFF1E0E38)]),
+  BoardSkin(id: 'forest',   name: 'יער עד',      price: 110, colors: [Color(0xFF5AC06A), Color(0xFF0E2A14)]),
+  BoardSkin(id: 'ember',    name: 'גחלים',       price: 150, colors: [Color(0xFFFF8A3A), Color(0xFF3A0E08)]),
 
-  // ── נדיר (300–500) ───────────────────────────────────────────────────────────
-  BoardSkin(id: 'aurora',   name: 'זוהר הקוטב', price: 300, colors: [Color(0xFF0B3D2E), Color(0xFF134E6F), Color(0xFF050A1A)], assetPath: 'assets/skins/board_aurora.jpg'),
-  BoardSkin(id: 'sunset',   name: 'שקיעה',      price: 380, colors: [Color(0xFF4A1942), Color(0xFF8A2D4B), Color(0xFF1A0512)], assetPath: 'assets/skins/board_sunset.jpg'),
-  BoardSkin(id: 'galaxy',   name: 'גלקסיה',     price: 500, colors: [Color(0xFF1A0B3D), Color(0xFF3D1A6E), Color(0xFF05030F)], assetPath: 'assets/skins/board_galaxy.jpg'),
+  // ── נדיר (300–500) — נוסף שדה כוכבים נוצץ ─────────────────────────────────────
+  BoardSkin(id: 'aurora',   name: 'זוהר הקוטב', price: 300, colors: [Color(0xFF12B5A6), Color(0xFF0E1F4A)]),
+  BoardSkin(id: 'sunset',   name: 'שמי שקיעה',  price: 380, colors: [Color(0xFFFF6EA6), Color(0xFF1A0512)]),
+  BoardSkin(id: 'galaxy',   name: 'שביל החלב',  price: 500, colors: [Color(0xFF6A4AD1), Color(0xFF120A33)]),
 
-  // ── פרימיום (1000) ───────────────────────────────────────────────────────────
-  BoardSkin(id: 'royal_gold', name: 'זהב מלכותי', price: 1000, colors: [Color(0xFF4A3A0B), Color(0xFF8A6D1A), Color(0xFF120D02)], assetPath: 'assets/skins/board_royal_gold.jpg'),
-  BoardSkin(id: 'nebula',     name: 'ערפילית',    price: 1000, colors: [Color(0xFF2B0B3D), Color(0xFF0B2B6E), Color(0xFF6E0B4E), Color(0xFF05030F)], assetPath: 'assets/skins/board_nebula.jpg'),
-  BoardSkin(id: 'emerald_dream', name: 'חלום אמרלד', price: 1000, colors: [Color(0xFF043D2E), Color(0xFF0B6E4E), Color(0xFF02120C)], assetPath: 'assets/skins/board_emerald_dream.jpg'),
+  // ── פרימיום (1000) — נצנצים זוהרים ומונפשים ──────────────────────────────────
+  BoardSkin(id: 'royal_gold', name: 'זהב מלכותי', price: 1000, colors: [Color(0xFFFFD84D), Color(0xFF3A2A05)]),
+  BoardSkin(id: 'nebula',     name: 'ערפילית',    price: 1000, colors: [Color(0xFFC04AD1), Color(0xFF1A0A33)]),
+  BoardSkin(id: 'emerald_dream', name: 'חלום אמרלד', price: 1000, colors: [Color(0xFF2FD6A0), Color(0xFF04231A)]),
 ];
 
 /// Live (bundled+remote merged) catalog — populated by CosmeticsCatalogService.

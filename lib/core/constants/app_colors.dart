@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const primary = Color(0xFFD4AF37);
-  static const primaryDark = Color(0xFF07101F);
+  // Candy Jelly line: gold primary, teal accent (was sky-blue).
+  static const primary = Color(0xFFFFD84D);
+  static const primaryDark = Color(0xFF22103F);
   static const primaryLight = Color(0xFFFFE27A);
-  static const secondary = Color(0xFF87CEEB);
-  static const accent = Color(0xFF87CEEB);
+  static const secondary = Color(0xFF12B5A6);
+  static const accent = Color(0xFF12B5A6);
   static const warning = Color(0xFFFFE27A);
   static const background = Color(0xFF07101F);
   static const darkBlue = Color(0xFF07101F);
   static const surface = Color(0xFFFFFFFF);
-  static const vaultSurface = Color(0xFF0C1624);
+  static const vaultSurface = Color(0xFF4A228A);
   static const error = Color(0xFFE53E3E);
 
   static const backgroundTop = Color(0xFF07101F);
@@ -21,9 +22,10 @@ class AppColors {
   static const danger = Color(0xFFEF4444);
 
   static const pageBackground = LinearGradient(
-    colors: [Color(0xFF07101F), Color(0xFF0E1E35), Color(0xFF050A14)],
+    colors: [Color(0xFF5B2AA6), Color(0xFF3A1B6E), Color(0xFF22103F)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
+    stops: [0.0, 0.45, 1.0],
   );
 
   static const primaryGradient = LinearGradient(
@@ -33,13 +35,13 @@ class AppColors {
   );
 
   static const secondaryGradient = LinearGradient(
-    colors: [Color(0xFF07101F), Color(0xFF0E1E35)],
+    colors: [Color(0xFF6A34BE), Color(0xFF4A228A)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
   static const accentGradient = LinearGradient(
-    colors: [Color(0xFF87CEEB), Color(0xFF2FA7C9)],
+    colors: [Color(0xFF12B5A6), Color(0xFF0B7E74)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

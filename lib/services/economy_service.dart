@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
@@ -141,6 +143,8 @@ class EconomyService {
         statUpdater: (w) => w.copyWith(
           totalMatchesPlayed: w.totalMatchesPlayed + 1,
           totalMatchesWon: isWin ? w.totalMatchesWon + 1 : null,
+          // Consecutive wins: bump on a win, reset to 0 on a loss.
+          winStreak: isWin ? w.winStreak + 1 : 0,
         ),
       );
       QaLoggerService.instance.log('ECONOMY', 'REWARD_DELTA_OK delta=${breakdown.total}');
@@ -216,6 +220,79 @@ class EconomyService {
     }
 
     return result;
+  }
+
+  /// One free spin-wheel per UTC day. Draws a prize by weight, credits the
+  /// coins, and returns the winning segment index (so the wheel lands on it)
+  /// plus the amount. Returns null if today's spin was already used. Idempotent
+  /// per UTC day via [UserEconomyModel.lastDailySpinAt]. Client-trusted, exactly
+  /// like the daily reward.
+  Future<({int index, int coins})?> claimDailySpin(String uid) async {
+    final now = DateTime.now().toUtc();
+    final ref = _walletRef(uid);
+    final segs = EconomyConfig.dailySpinSegments;
+    final index = segs.isEmpty ? 0 : _drawSpinIndex().clamp(0, segs.length - 1);
+    final coins = segs.isEmpty ? 0 : segs[index];
+
+    ({int index, int coins})? result;
+    try {
+      await _db.runTransaction((tx) async {
+        final snap = await tx.get(ref);
+        final wallet = snap.exists
+            ? UserEconomyModel.fromFirestore(uid, snap.data()!)
+            : UserEconomyModel.empty(uid);
+
+        final last = wallet.lastDailySpinAt;
+        if (last != null &&
+            last.year == now.year &&
+            last.month == now.month &&
+            last.day == now.day) {
+          QaLoggerService.instance.log('ECONOMY', 'DAILY_SPIN_ALREADY_CLAIMED');
+          return;
+        }
+
+        final updated = wallet.copyWith(
+          coins: wallet.coins + coins,
+          totalEarned: wallet.totalEarned + coins,
+          lastDailySpinAt: now,
+        );
+        tx.set(ref, updated.toFirestore());
+
+        final txId = _uuid.v4();
+        tx.set(
+            _txCol(uid).doc(txId),
+            EconomyTransactionModel(
+              id: txId,
+              type: TransactionType.dailySpin,
+              delta: coins,
+              balanceAfter: updated.coins,
+              createdAt: now,
+              meta: {'segment': index},
+            ).toFirestore());
+
+        result = (index: index, coins: coins);
+      });
+    } catch (e) {
+      final msg = e.toString();
+      QaLoggerService.instance.log('ECONOMY',
+          'DAILY_SPIN_ERROR ${msg.length > 80 ? msg.substring(0, 80) : msg}');
+      rethrow;
+    }
+
+    if (result != null) await _syncCache(uid);
+    return result;
+  }
+
+  /// Weighted draw over [EconomyConfig.dailySpinWeights].
+  int _drawSpinIndex() {
+    final weights = EconomyConfig.dailySpinWeights;
+    final total = weights.fold<int>(0, (a, b) => a + b);
+    var r = Random().nextInt(total);
+    for (var i = 0; i < weights.length; i++) {
+      if (r < weights[i]) return i;
+      r -= weights[i];
+    }
+    return 0;
   }
 
   /// Doubles today's daily reward after watching a rewarded ad. Grants the

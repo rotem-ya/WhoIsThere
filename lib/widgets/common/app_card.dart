@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../core/ui/app_spacing.dart';
 
 class AppCard extends StatelessWidget {
@@ -20,17 +20,19 @@ class AppCard extends StatelessWidget {
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: AppColors.vaultSurface,
+        gradient: Candy.jellyFill(Candy.surface),
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.10),
-          width: 1.0,
-        ),
+        border: Candy.rim(width: 2, opacity: 0.22),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.35),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Candy.bevel(Candy.surface),
+            offset: const Offset(0, 4),
+            blurRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.30),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
         ],
       ),

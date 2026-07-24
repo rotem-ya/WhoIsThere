@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/app_router.dart';
 import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
+import '../../services/sfx_service.dart';
 
 /// Global floating notice for a pending GAME invite ("X מזמין אותך למשחק"),
 /// rendered above the router like [FriendRequestBanner] so it reaches the
@@ -23,6 +24,7 @@ class GameInviteBanner extends ConsumerStatefulWidget {
 
 class _GameInviteBannerState extends ConsumerState<GameInviteBanner> {
   String _dismissedKey = '';
+  String _lastNotifiedKey = '';
   bool _joining = false;
 
   static bool _suppressedPath(String path) =>
@@ -96,6 +98,13 @@ class _GameInviteBannerState extends ConsumerState<GameInviteBanner> {
         final key = invites.map((i) => '${i.id}:${i.roomId}').join(',');
         if (_suppressedPath(path) || key == _dismissedKey) {
           return const SizedBox.shrink();
+        }
+        // A new/changed invite is about to slide in → chime once.
+        if (key != _lastNotifiedKey) {
+          _lastNotifiedKey = key;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            SfxService.instance.notify();
+          });
         }
 
         final first = invites.first;

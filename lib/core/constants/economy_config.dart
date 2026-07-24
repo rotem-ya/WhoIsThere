@@ -7,6 +7,13 @@ class EconomyConfig {
   // ── Game entry & pot ─────────────────────────────────────────
   static const int gameEntryFee = 20;
 
+  // ── Daily spin wheel ─────────────────────────────────────────
+  // One free spin per UTC day. Segments and their draw weights: the wheel
+  // shows all segment amounts in order; the actual prize is drawn by weight so
+  // the big prizes stay rare. Keep [dailySpinSegments] in sync with the UI.
+  static const List<int> dailySpinSegments = [10, 25, 50, 15, 100, 30, 75, 20];
+  static const List<int> dailySpinWeights = [26, 18, 8, 22, 2, 14, 4, 20];
+
   // ── Friends-game placement rewards (free game, per-match scoring) ──
   // Gift coins to the top finishers of a friends game (1st = 20, 2nd = 5).
   static const int friendsFirstPlaceReward = 20;

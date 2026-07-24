@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/providers.dart';
+import '../../services/music_service.dart';
+import '../../services/sfx_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../screens/auth/auth_screen.dart';
 import '../../screens/game/game_board_screen.dart';
@@ -24,6 +26,46 @@ import '../../screens/store/avatars_screen.dart';
 import '../../screens/voting/vote_difficulty_screen.dart';
 import '../../screens/voting/vote_image_screen.dart';
 import '../../screens/win/win_screen.dart';
+import '../../screens/leaderboard/weekly_leaderboard_screen.dart';
+
+/// A gentle fade-through page transition (fade + tiny upward drift + subtle
+/// settle-in scale) used for every route, replacing the platform-default page
+/// cut. It follows the Material "fade through" feel: the incoming screen fades
+/// and scales up from 0.98 so it reads as arriving with depth rather than a
+/// flat cross-fade. Kept short (240ms) so navigation still feels snappy. Honors
+/// the OS "reduce motion" accessibility setting by dropping the animation.
+CustomTransitionPage<void> _fadeThroughPage(
+  GoRouterState state,
+  Widget child,
+) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    // The concrete path (e.g. "/game/abc") — read by MusicRouteObserver to pick
+    // the right menu track (or to stop menu music on game routes).
+    name: state.matchedLocation,
+    transitionDuration: const Duration(milliseconds: 240),
+    reverseTransitionDuration: const Duration(milliseconds: 180),
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      if (MediaQuery.of(context).disableAnimations) return child;
+      final curved =
+          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.02),
+            end: Offset.zero,
+          ).animate(curved),
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.98, end: 1.0).animate(curved),
+            child: child,
+          ),
+        ),
+      );
+    },
+  );
+}
 
 /// Created exactly once. Auth changes are handled via [_RouterNotifier] +
 /// [GoRouter.refreshListenable] — the router instance is never recreated.
@@ -36,95 +78,129 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/auth',
     refreshListenable: notifier,
     redirect: notifier.redirect,
+    observers: [MusicRouteObserver(), PopupSoundObserver()],
     routes: [
       GoRoute(
         path: '/splash',
-        builder: (context, state) => const SplashScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const SplashScreen()),
       ),
       GoRoute(
         path: '/auth',
-        builder: (context, state) => const AuthScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const AuthScreen()),
       ),
       GoRoute(
         path: '/home',
-        builder: (context, state) => const HomeScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const HomeScreen()),
       ),
       GoRoute(
         path: '/create-room',
-        builder: (context, state) => const CreateRoomScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const CreateRoomScreen()),
       ),
       GoRoute(
         path: '/join-room',
-        builder: (context, state) => JoinRoomScreen(
-          initialCode: state.uri.queryParameters['initialCode'],
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          JoinRoomScreen(
+            initialCode: state.uri.queryParameters['initialCode'],
+          ),
         ),
       ),
       GoRoute(
         path: '/lobby/:roomId',
-        builder: (context, state) =>
-            LobbyScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          LobbyScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/finding-players/:roomId',
-        builder: (context, state) => FindingPlayersScreen(
-          roomId: state.pathParameters['roomId']!,
-          targetPlayers: int.tryParse(
-                  state.uri.queryParameters['target'] ?? '2') ??
-              2,
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          FindingPlayersScreen(
+            roomId: state.pathParameters['roomId']!,
+            targetPlayers:
+                int.tryParse(state.uri.queryParameters['target'] ?? '2') ?? 2,
+          ),
         ),
       ),
       GoRoute(
         path: '/vote-image/:roomId',
-        builder: (context, state) =>
-            VoteImageScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          VoteImageScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/vote-difficulty/:roomId',
-        builder: (context, state) =>
-            VoteDifficultyScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          VoteDifficultyScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/game/:roomId',
-        builder: (context, state) =>
-            GameBoardScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          GameBoardScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/letters/:roomId',
-        builder: (context, state) =>
-            LettersGameScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          LettersGameScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/win/:roomId',
-        builder: (context, state) =>
-            WinScreen(roomId: state.pathParameters['roomId']!),
+        pageBuilder: (context, state) => _fadeThroughPage(
+          state,
+          WinScreen(roomId: state.pathParameters['roomId']!),
+        ),
       ),
       GoRoute(
         path: '/profile',
-        builder: (context, state) => const ProfileScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const ProfileScreen()),
       ),
       GoRoute(
         path: '/friends',
-        builder: (context, state) => const FriendsScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const FriendsScreen()),
       ),
       GoRoute(
         path: '/store',
-        builder: (context, state) => const StoreScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const StoreScreen()),
       ),
       GoRoute(
         path: '/store/skins',
-        builder: (context, state) => const CardSkinsScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const CardSkinsScreen()),
       ),
       GoRoute(
         path: '/store/board',
-        builder: (context, state) => const BoardSkinsScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const BoardSkinsScreen()),
       ),
       GoRoute(
         path: '/store/avatars',
-        builder: (context, state) => const AvatarsScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const AvatarsScreen()),
       ),
       GoRoute(
         path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const SettingsScreen()),
+      ),
+      GoRoute(
+        path: '/weekly',
+        pageBuilder: (context, state) =>
+            _fadeThroughPage(state, const WeeklyLeaderboardScreen()),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
@@ -141,6 +217,54 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return router;
 });
+
+/// Picks the menu-side background track from the active route. In-game routes
+/// (game / letters / vote) STOP menu music so only the game board's own player
+/// plays — never two mp3 streams at once (iOS-crash-safe). Fully fail-soft via
+/// MusicService (silent until the mp3 files exist).
+class MusicRouteObserver extends NavigatorObserver {
+  void _apply(Route<dynamic>? route) {
+    final path = route?.settings.name ?? '';
+    MenuTrack track;
+    if (path.startsWith('/game') ||
+        path.startsWith('/letters') ||
+        path.startsWith('/vote') ||
+        path.startsWith('/lobby') ||
+        path.startsWith('/finding-players')) {
+      // Silent: in-game the game screen owns audio; the lobby and matchmaking
+      // waiting screens stay quiet on purpose (no background music there).
+      track = MenuTrack.none;
+    } else if (path.startsWith('/win')) {
+      track = MenuTrack.win;
+    } else {
+      track = MenuTrack.menu; // home / friends / store / profile / settings / …
+    }
+    MusicService.instance.play(track);
+  }
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) =>
+      _apply(route);
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) =>
+      _apply(newRoute);
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) =>
+      _apply(previousRoute);
+}
+
+/// Plays a soft "appear" pop whenever a dialog / popup route is pushed, so
+/// things that appear on top of the screen get a light sound. Bottom sheets are
+/// excluded because AppBottomSheet already plays its own open sound, and page
+/// navigations are PageRoutes (not PopupRoutes) so they are untouched.
+class PopupSoundObserver extends NavigatorObserver {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is PopupRoute && route is! ModalBottomSheetRoute) {
+      SfxService.instance.appear();
+    }
+  }
+}
 
 /// Listens to [firebaseUserProvider] and notifies GoRouter to re-run
 /// redirect logic — without recreating the [GoRouter] instance.

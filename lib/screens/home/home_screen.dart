@@ -12,6 +12,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/ad_constants.dart';
 import '../../core/constants/build_info.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_categories.dart';
 import '../../core/constants/game_constants.dart';
@@ -19,12 +20,18 @@ import '../../core/theme/app_styles.dart';
 import '../../providers/providers.dart';
 import '../../services/app_update_service.dart';
 import '../../widgets/common/banner_ad_widget.dart';
+import '../../widgets/common/pressable.dart';
 import '../../services/feedback_service.dart';
+import '../../services/settings_service.dart';
 import '../../services/qa_logger_service.dart';
-import '../../widgets/common/ambient_background.dart';
 import '../../widgets/common/pressable_scale.dart';
+import '../../widgets/common/tilt_card.dart';
 import '../../widgets/economy/coin_display.dart';
+import '../../widgets/economy/coin_fly.dart';
 import '../../widgets/economy/coin_icon.dart';
+import '../../widgets/common/candy_particles.dart';
+import '../../widgets/economy/daily_quest_card.dart';
+import '../../widgets/economy/daily_spin_sheet.dart';
 import '../../widgets/economy/daily_reward_sheet.dart';
 import '../../models/room_model.dart';
 
@@ -816,21 +823,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _handleHomeBack();
         },
         child: Scaffold(
-          backgroundColor: AppStyles.navyTop,
+          backgroundColor: Candy.bgVariantBottom(ref.watch(bgVariantProvider)),
           body: Stack(
             children: [
-              const Positioned.fill(child: _VaultBackground()),
-              const Positioned.fill(
-                child: RepaintBoundary(
-                  child: AmbientBackground(
-                    showGrid: false,
-                    showOrbits: false,
-                    showParticles: true,
-                    goldAccent: true,
-                    intensity: 0.28,
-                  ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                      gradient: Candy.bgVariant(ref.watch(bgVariantProvider))),
                 ),
               ),
+              const Positioned.fill(child: CandyParticles()),
               SafeArea(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
@@ -854,20 +856,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 _StoreIconButton(),
                                 SizedBox(width: 8),
                                 _FriendsIconButton(),
-                                SizedBox(width: 8),
-                                _SettingsIconButton(),
                                 Spacer(),
+                                _DailySpinButton(),
+                                SizedBox(width: 8),
                                 _DailyRewardButton(),
                               ],
                             ),
                             delayMs: 0, durationMs: 380, dy: -10,
                           ),
+                          // Tip of the day — bubble just under the top row.
+                          const SizedBox(height: 8),
+                          _step(const _TipOfDayCard(),
+                              delayMs: 60, durationMs: 340, dy: -6),
                           // Row 2: coins on its own line — keeps the top bar from
                           // overflowing (which had hidden the daily-reward button)
                           // and the wide coins capsule from overlapping the icons.
                           const SizedBox(height: 8),
                           _step(
-                            const Center(child: CoinDisplay()),
+                            Center(child: CoinDisplay(key: walletAnchorKey)),
                             delayMs: 40, durationMs: 380, dy: -10,
                           ),
                           // ── Hero grid takes all remaining vertical space ──
@@ -893,13 +899,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   letterSpacing: -1.7,
                                   height: 1,
                                   shadows: const [
-                                    Shadow(color: Color(0xFFD4AF37), blurRadius: 16),
-                                    Shadow(color: Colors.black87, offset: Offset(0, 4), blurRadius: 10),
-                                    Shadow(color: Color(0x55D4AF37), blurRadius: 48, offset: Offset(0, 8)),
+                                    Shadow(color: Candy.pink, blurRadius: 18),
+                                    Shadow(color: Colors.black45, offset: Offset(0, 4), blurRadius: 8),
+                                    Shadow(color: Color(0x66FFD84D), blurRadius: 44, offset: Offset(0, 8)),
                                   ],
                                 ),
                               ),
-                            ),
+                            )
+                                // A light sweep glints across the title every
+                                // few seconds so the hero feels alive.
+                                .animate(onPlay: (c) => c.repeat())
+                                .shimmer(
+                                    delay: 2800.ms,
+                                    duration: 1500.ms,
+                                    color: Colors.white.withOpacity(0.55)),
                             delayMs: 200, durationMs: 380, dy: 8,
                           ),
                           const SizedBox(height: 6),
@@ -908,7 +921,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               'בחרו סוג משחק',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: const Color(0xFF87CEEB).withOpacity(0.86),
+                                color: Candy.gold,
                                 fontSize: verySmall ? 15 : compact ? 17 : 19,
                                 fontWeight: FontWeight.w800,
                                 height: 1.2,
@@ -916,6 +929,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             delayMs: 300, durationMs: 320,
                           ),
+                          const _WinStreakBanner(),
                           SizedBox(height: verySmall ? 10 : compact ? 14 : 20),
                           _step(
                             Column(
@@ -924,9 +938,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   icon: '🏞️',
                                   title: 'זיהוי מקומות',
                                   subtitle: 'מצאו את המקום בתמונה',
-                                  gradientColors: const [Color(0xFF1A4A8A), Color(0xFF0A2356)],
-                                  borderColor: const Color(0xFF4A9EFF),
-                                  glowColor: const Color(0xFF2266CC),
+                                  gradientColors: const [Candy.blue],
+                                  glowColor: Candy.blue,
                                   isLoading: _isCreating,
                                   onTap: _isCreating
                                       ? null
@@ -937,9 +950,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   icon: '🐢',
                                   title: 'חי צומח דומם',
                                   subtitle: 'חיות · צמחים · חפצים ועוד',
-                                  gradientColors: const [Color(0xFF135A4A), Color(0xFF0A2E26)],
-                                  borderColor: const Color(0xFF3DCCAA),
-                                  glowColor: const Color(0xFF1A8866),
+                                  gradientColors: const [Candy.teal],
+                                  glowColor: Candy.teal,
                                   isLoading: _isCreating,
                                   onTap: _isCreating
                                       ? null
@@ -950,9 +962,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   icon: '🧩',
                                   title: 'זהו את הפתגם',
                                   subtitle: 'התמונה רומזת על פתגם עברי',
-                                  gradientColors: const [Color(0xFF5A2A7A), Color(0xFF2A1240)],
-                                  borderColor: const Color(0xFFB57AE8),
-                                  glowColor: const Color(0xFF7A3AAA),
+                                  gradientColors: const [Candy.tangerine],
+                                  glowColor: Candy.tangerine,
                                   isLoading: _isCreating,
                                   onTap: _isCreating
                                       ? null
@@ -963,9 +974,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   icon: '🔤',
                                   title: 'משחק האותיות',
                                   subtitle: 'נחשו את המילה הנסתרת',
-                                  gradientColors: const [Color(0xFF7A5A12), Color(0xFF3C2C06)],
-                                  borderColor: const Color(0xFFD4AF37),
-                                  glowColor: const Color(0xFF8A6E1E),
+                                  gradientColors: const [Candy.pink],
+                                  glowColor: Candy.pink,
                                   isLoading: _loadingLetters,
                                   onTap: (_isCreating || _loadingLetters)
                                       ? null
@@ -975,6 +985,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             delayMs: 460, durationMs: 260, dy: 5,
                           ),
+                          SizedBox(height: verySmall ? 6 : 10),
+                          _RecentGamesStrip(onReplay: _showPlaySheet),
+                          const DailyQuestCard(),
                           SizedBox(height: verySmall ? 6 : 10),
                           const BannerAdWidget(),
                           SizedBox(height: verySmall ? 4 : 8),
@@ -992,60 +1005,216 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _VaultBackground extends StatelessWidget {
-  const _VaultBackground();
+// ── Recent games quick-replay strip ───────────────────────────────────────
+
+class _RecentGamesStrip extends StatelessWidget {
+  final void Function(_GameKind) onReplay;
+  const _RecentGamesStrip({required this.onReplay});
+
+  static const Map<String, ({_GameKind kind, String emoji, String label})> _map = {
+    'places': (kind: _GameKind.places, emoji: '🏞️', label: 'זיהוי מקומות'),
+    'heat': (kind: _GameKind.heat, emoji: '🐢', label: 'חי צומח דומם'),
+    'proverbs': (kind: _GameKind.proverbs, emoji: '🧩', label: 'זהו את הפתגם'),
+    'letters': (kind: _GameKind.letters, emoji: '🔤', label: 'משחק האותיות'),
+  };
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: AppStyles.backgroundGradient,
-      ),
-      child: Stack(
+    final recent = SettingsService.instance.recentGames
+        .where((g) => _map.containsKey(g.kind))
+        .toList();
+    if (recent.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(top: -110, right: -80, child: _Glow(color: Color(0xFFD4AF37), size: 310, opacity: 0.12)),
-          Positioned(bottom: -95, left: -80, child: _Glow(color: Color(0xFF87CEEB), size: 285, opacity: 0.14)),
-          Positioned(top: 190, left: 26, child: _Dot(size: 5, opacity: 0.40)),
-          Positioned(top: 270, right: 34, child: _Dot(size: 4, opacity: 0.28)),
-          Positioned(bottom: 190, right: 52, child: _Dot(size: 6, opacity: 0.24)),
+          Padding(
+            padding: const EdgeInsets.only(right: 4, bottom: 6),
+            child: Text(
+              'המשך לשחק',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.85),
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 44,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: recent.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, i) {
+                final g = recent[i];
+                final m = _map[g.kind]!;
+                return Pressable(
+                  onTap: () => onReplay(m.kind),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: Candy.jellyFill(Candy.surface),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: (g.won ? Candy.gold : Colors.white)
+                            .withOpacity(0.22),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(m.emoji, style: const TextStyle(fontSize: 18)),
+                        const SizedBox(width: 6),
+                        Text(
+                          m.label,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(g.won ? '🏆' : '↻',
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: g.won
+                                    ? Candy.gold
+                                    : Colors.white.withOpacity(0.5))),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _Glow extends StatelessWidget {
-  final Color color;
-  final double size;
-  final double opacity;
+// ── Win streak banner ─────────────────────────────────────────────────────
 
-  const _Glow({required this.color, required this.size, required this.opacity});
+class _WinStreakBanner extends ConsumerWidget {
+  const _WinStreakBanner();
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [BoxShadow(color: color.withOpacity(opacity), blurRadius: 120, spreadRadius: 48)],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final streak = ref.watch(walletProvider).valueOrNull?.winStreak ?? 0;
+    if (streak < 2) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFF7A1A), Color(0xFFFFB03A)],
+          ),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF7A1A).withOpacity(0.45),
+              blurRadius: 16,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🔥', style: TextStyle(fontSize: 18))
+                .animate(onPlay: (c) => c.repeat(reverse: true))
+                .scaleXY(begin: 0.9, end: 1.15, duration: 620.ms),
+            const SizedBox(width: 8),
+            Text(
+              '$streak ניצחונות ברצף!',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14.5,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
       ),
-    );
+    ).animate().fadeIn(duration: 260.ms).scaleXY(begin: 0.85, end: 1.0);
   }
 }
 
-class _Dot extends StatelessWidget {
-  final double size;
-  final double opacity;
+// ── Tip of the day ────────────────────────────────────────────────────────
 
-  const _Dot({required this.size, required this.opacity});
+class _TipOfDayCard extends StatelessWidget {
+  const _TipOfDayCard();
+
+  static const List<String> _tips = [
+    'נחשו מוקדם ככל האפשר, ככה תרוויחו יותר מטבעות.',
+    'רצף כניסה יומי מגדיל את הבונוס במטבעות בכל יום.',
+    'שחקו עם חברים בחדר פרטי, בלי תשלום כניסה.',
+    'אספו מטבעות ופתחו רקעים חדשים ללוח בחנות.',
+    'כרטיס החשכה מסתיר את הלוח מהיריב לכמה שניות.',
+    'כרטיס עצור עוצר את היריב לתור שלם.',
+    'גלו עוד מקומות כדי לפתוח כרטיסי פעולה חדשים.',
+    'בחי צומח דומם אפשר להצביע להחליף פריט כשאף אחד לא יודע.',
+    'סובבו את גלגל המזל פעם ביום לסיבוב חינם.',
+    'השלימו את המשימה היומית ואספו פרס נוסף.',
+  ];
 
   @override
   Widget build(BuildContext context) {
+    // Rotate by day so the tip is stable within a day and changes daily.
+    final dayIndex =
+        DateTime.now().difference(DateTime(2026, 1, 1)).inDays.abs();
+    final tip = _tips[dayIndex % _tips.length];
     return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(opacity)),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Candy.grape.withOpacity(0.35),
+            Candy.bgMid.withOpacity(0.55),
+          ],
+          begin: Alignment.centerRight,
+          end: Alignment.centerLeft,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Candy.gold.withOpacity(0.28), width: 1),
+      ),
+      child: Row(
+        children: [
+          const Text('💡', style: TextStyle(fontSize: 22)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'טיפ היום',
+                  style: TextStyle(
+                    color: Candy.gold,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  tip,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1057,7 +1226,6 @@ class _GameTypeCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final List<Color> gradientColors;
-  final Color borderColor;
   final Color glowColor;
   final bool isLoading;
   final VoidCallback? onTap;
@@ -1067,7 +1235,6 @@ class _GameTypeCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.gradientColors,
-    required this.borderColor,
     required this.glowColor,
     required this.isLoading,
     required this.onTap,
@@ -1075,7 +1242,7 @@ class _GameTypeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PressableScale(
+    return TiltCard(
       onTap: onTap == null
           ? null
           : () {
@@ -1086,23 +1253,12 @@ class _GameTypeCard extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         opacity: onTap == null ? 0.55 : 1,
         child: Container(
-          height: 72,
-          clipBehavior: Clip.antiAlias,
+          height: 74,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: gradientColors,
-            ),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: borderColor.withOpacity(0.7), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: glowColor.withOpacity(0.35),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            gradient: Candy.jellyFill(gradientColors.first),
+            borderRadius: BorderRadius.circular(22),
+            border: Candy.rim(),
+            boxShadow: Candy.jellyShadow(gradientColors.first),
           ),
           child: isLoading
               ? const Center(
@@ -1119,11 +1275,12 @@ class _GameTypeCard extends StatelessWidget {
                       height: 44,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: borderColor.withOpacity(0.16),
-                        borderRadius: BorderRadius.circular(13),
-                        border: Border.all(color: borderColor.withOpacity(0.40)),
+                        color: Candy.bevel(glowColor).withOpacity(0.55),
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(
+                            color: Colors.white.withOpacity(0.55), width: 1.5),
                       ),
-                      child: Text(icon, style: const TextStyle(fontSize: 23)),
+                      child: Text(icon, style: const TextStyle(fontSize: 24)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1167,7 +1324,7 @@ class _GameTypeCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Icon(Icons.chevron_left_rounded,
-                        color: borderColor.withOpacity(0.8), size: 24),
+                        color: Colors.white.withOpacity(0.92), size: 26),
                     const SizedBox(width: 10),
                   ],
                 ),
@@ -1319,6 +1476,75 @@ class _DailyRewardButton extends ConsumerWidget {
                         height: 1,
                       ),
                     ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Daily spin-wheel button (top bar) ─────────────────────────────────────
+
+class _DailySpinButton extends ConsumerWidget {
+  const _DailySpinButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final wallet = ref.watch(walletProvider).valueOrNull;
+    final isAvailable = isDailySpinAvailable(wallet?.lastDailySpinAt);
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        if (isAvailable) {
+          showDailySpinSheet(context, ref);
+        } else {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(const SnackBar(
+              content: Text('גלגל המזל כבר סובב היום'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ));
+        }
+      },
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        opacity: isAvailable ? 1.0 : 0.38,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF050A14).withOpacity(0.60),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: isAvailable
+                      ? Candy.teal.withOpacity(0.80)
+                      : Colors.white.withOpacity(0.15),
+                  width: isAvailable ? 1.5 : 1.0,
+                ),
+              ),
+              child: const Center(
+                child: Icon(Icons.casino_rounded, color: Candy.teal, size: 20),
+              ),
+            ),
+            if (isAvailable)
+              Positioned(
+                top: -5,
+                right: -5,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Candy.teal,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppStyles.navyTop, width: 1.5),
                   ),
                 ),
               ),
@@ -1549,50 +1775,6 @@ class _FriendsIconButton extends ConsumerWidget {
                     ),
                   ),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Settings icon button (top-left, next to store) ───────────────────────
-
-class _SettingsIconButton extends StatelessWidget {
-  const _SettingsIconButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () {
-          HapticFeedback.lightImpact();
-          context.push('/settings');
-        },
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Center(
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: const Color(0xFF050A14).withOpacity(0.60),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.15),
-                  width: 1.0,
-                ),
-              ),
-              child: const Icon(
-                Icons.settings_rounded,
-                color: Colors.white70,
-                size: 20,
-              ),
             ),
           ),
         ),

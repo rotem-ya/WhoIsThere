@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'settings_service.dart';
+import 'sfx_service.dart';
 
 class FeedbackService {
   const FeedbackService._();
@@ -8,6 +9,8 @@ class FeedbackService {
 
   static void click() {
     if (_vibrate) HapticFeedback.lightImpact();
+    // Also give the tap a soft click sound (honors the sfx-volume setting).
+    SfxService.instance.uiClick();
   }
 
   static void reveal() {

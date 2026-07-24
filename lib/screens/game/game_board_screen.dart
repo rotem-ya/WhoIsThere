@@ -6,9 +6,11 @@ import 'dart:math' show Random, min, pi, sin;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_styles.dart';
+import '../../core/theme/candy_theme.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -32,6 +34,7 @@ import '../../core/utils/chat_filter.dart';
 import '../../widgets/chat/chat_sheet.dart';
 import '../../providers/providers.dart';
 import '../../services/settings_service.dart';
+import '../../services/sfx_service.dart';
 import '../../services/analytics_service.dart';
 import '../../services/reward_calculator.dart';
 import '../../services/review_prompt_service.dart';
@@ -161,6 +164,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   // paired with a haptic burst, to make the win land with impact.
   late final AnimationController _heroShake;
 
+  // Wrong-guess shake — a short side-to-side jolt + red flash on YOUR own
+  // wrong guess, so a miss stings (Wordle-style).
+  late final AnimationController _wrongShake;
+
   // Round-start hype intro (היכון · 3 · 2 · 1 · גלו!) — shown once when this
   // client first enters the playing phase. Purely cosmetic anticipation and
   // non-blocking (input passes through); the reveal engine is server-driven.
@@ -172,6 +179,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   GameImageModel? _interludeImage;
   String? _interludeImageLoadingId;
   int? _interludeDismissedUntilMs;
+  int? _interludeSoundAt; // plays the transition whoosh once per interlude
   Timer? _interludeTimer;
 
   // Bot typing simulation
@@ -313,6 +321,11 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
   int? _localGuessDeadlineMs;
   int _sessionWatchdogEventCount = 0;
   bool? _lastGuessEventCorrect;
+  // Rising-edge trackers for "you got hit by a trick" (blackout / guess-block /
+  // stun). Stun uses blockedGuessers (a reveal-cycle cutoff), the others use ms.
+  int _lastMyBlackoutUntil = 0;
+  int _lastMyGuessBlockUntil = 0;
+  int _lastMyStunUntil = 0;
 
   // Passive expiry detection — updated each build, read by _expiryTimer
   RoomModel? _latestRoom;
@@ -454,6 +467,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _heroShake = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 520),
+    );
+    _wrongShake = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 460),
     );
     WidgetsBinding.instance.addObserver(this);
     unawaited(WakelockPlus.enable());
@@ -1056,6 +1073,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     _confettiLeft.dispose();
     _confettiRight.dispose();
     _heroShake.dispose();
+    _wrongShake.dispose();
     WidgetsBinding.instance.removeObserver(this);
     unawaited(WakelockPlus.disable());
     unawaited(_bgPlayer.stop());
@@ -1605,6 +1623,33 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
           .recordMyGroupResult(room: room, myUid: uid));
     }
 
+    // Normal (non-friends) games: the player's match score is added to lifetime
+    // totalPoints, which drives the 7-tier player rank. This previously lived on
+    // win_screen.dart, which is no longer reached (the live end screen is
+    // GameWinnerView) — so ranks had stopped progressing. Guarded by
+    // _rewardApplied above, so it runs exactly once per finished game. Friends
+    // games are per-match (see recordMyResult) and deliberately excluded.
+    if (!room.isFriendsGame) {
+      final myScore = room.players[uid]?.score ?? 0;
+      if (myScore > 0) {
+        unawaited(
+            ref.read(authServiceProvider).updateTotalPoints(uid, myScore));
+      }
+    }
+
+    // Weekly global leaderboard: every finished game (all modes) adds my match
+    // score to my entry for this ISO week. Runs once per game (guarded above).
+    final me = room.players[uid];
+    final myScore = me?.score ?? 0;
+    if (myScore > 0) {
+      unawaited(ref.read(weeklyLeaderboardServiceProvider).recordPoints(
+            uid: uid,
+            name: me?.name ?? 'שחקן',
+            photoUrl: me?.photoUrl,
+            points: myScore,
+          ));
+    }
+
     final isWin = room.winnerId == uid;
     final isSolo = room.players.values.where((p) => !p.isBot).length == 1;
     // A win is the best moment to (rarely) ask for a store rating.
@@ -1763,7 +1808,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     final agreed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0D1E30),
+        backgroundColor: Candy.surfaceLow,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('אין מספיק מטבעות 💡',
             textDirection: TextDirection.rtl,
@@ -1888,6 +1933,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       }
     }
     QaLoggerService.instance.log('GAME', 'TOOL_BOMB tiles=${cluster.length}');
+    SfxService.instance.toolBomb();
     setState(() {
       _personalRevealedTiles.addAll(cluster);
       _bombUses++;
@@ -1928,6 +1974,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       picks.add(i);
     }
     QaLoggerService.instance.log('GAME', 'TOOL_FASTFWD tiles=${picks.length}');
+    SfxService.instance.toolFastForward();
     setState(() {
       _personalRevealedTiles.addAll(picks);
       _fastForwardUses++;
@@ -1947,6 +1994,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       return;
     }
     QaLoggerService.instance.log('GAME', 'TOOL_TARGETED tile=$chosen');
+    SfxService.instance.toolTargeted();
     setState(() {
       _personalRevealedTiles.add(chosen);
       _targetedUses++;
@@ -1970,6 +2018,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
 
     HapticFeedback.mediumImpact();
     QaLoggerService.instance.log('CARD', 'PEEK_CARD_USED tiles=${hidden.length}');
+    // A soft aperture whoosh as the spotlight peek reveals the hidden tiles.
+    SfxService.instance.reveal();
     setState(() {
       _spotlightCells
         ..clear()
@@ -2026,7 +2076,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       child: Container(
                         decoration: BoxDecoration(
                           color: isHidden
-                              ? const Color(0xFF13314F)
+                              ? Candy.surfaceLow
                               : Colors.white10,
                           borderRadius: BorderRadius.circular(5),
                           border: Border.all(
@@ -2173,6 +2223,30 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
     return Offset(dx, dy);
   }
 
+  /// Horizontal side-to-side jolt for a wrong guess (decaying).
+  Offset _wrongShakeOffset() {
+    if (!_wrongShake.isAnimating) return Offset.zero;
+    final t = _wrongShake.value;
+    final amp = 12.0 * (1.0 - t);
+    return Offset(sin(t * pi * 10) * amp, 0);
+  }
+
+  /// Red flash opacity while the wrong-guess shake plays (quick in, fade out).
+  double _wrongFlashOpacity() {
+    if (!_wrongShake.isAnimating) return 0.0;
+    final t = _wrongShake.value;
+    // Rise over the first 20%, then ease back to zero.
+    final v = t < 0.2 ? t / 0.2 : 1.0 - (t - 0.2) / 0.8;
+    return (v.clamp(0.0, 1.0)) * 0.28;
+  }
+
+  /// Fire the wrong-guess feedback (shake + red flash + haptic).
+  void _triggerWrongShake() {
+    if (!mounted) return;
+    _wrongShake.forward(from: 0.0);
+    HapticFeedback.heavyImpact();
+  }
+
   void _handleGuessTap(RoomModel room, String userId, bool canGuessNow) {
     if (!canGuessNow) {
       QaLoggerService.instance.log('GUESS', 'GUESS_BUTTON_TAPPED_BLOCKED phase=${room.turnPhase.name}');
@@ -2244,7 +2318,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       builder: (dialogContext) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          backgroundColor: const Color(0xFF07101F),
+          backgroundColor: Candy.bgBottom,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
             side: BorderSide(color: Colors.white.withOpacity(0.12)),
@@ -2293,7 +2367,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       builder: (dialogContext) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          backgroundColor: const Color(0xFF07101F),
+          backgroundColor: Candy.bgBottom,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
             side: BorderSide(color: Colors.white.withOpacity(0.12)),
@@ -2347,9 +2421,9 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
       child: Scaffold(
         backgroundColor: AppStyles.navyTop,
         body: AnimatedBuilder(
-          animation: _heroShake,
+          animation: Listenable.merge([_heroShake, _wrongShake]),
           builder: (context, child) => Transform.translate(
-            offset: _heroShakeOffset(),
+            offset: _heroShakeOffset() + _wrongShakeOffset(),
             child: child,
           ),
           child: Stack(
@@ -2360,7 +2434,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 top: false,
                 child: roomAsync.when(
               loading: () => const Center(
-                child: CircularProgressIndicator(color: Color(0xFF8B6FFF)),
+                child: CircularProgressIndicator(color: Candy.teal),
               ),
               error: (e, _) {
                 final msg = e.toString();
@@ -2638,6 +2712,42 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 }
                 _lastGuessEventCorrect = _guessEventCorrect;
 
+                // Trick hit: play an ominous sound the moment a blackout or a
+                // guess-block gets (re)applied to ME (rising edge on the
+                // expiry timestamp).
+                final _nowForHit = DateTime.now().millisecondsSinceEpoch;
+                final _myBlackoutUntil = currentUserId != null
+                    ? (room.blackoutActiveUntilMs[currentUserId] ?? 0)
+                    : 0;
+                if (_myBlackoutUntil > _lastMyBlackoutUntil &&
+                    _myBlackoutUntil > _nowForHit) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) SfxService.instance.trickHit();
+                  });
+                }
+                _lastMyBlackoutUntil = _myBlackoutUntil;
+                final _myBlockUntil = currentUserId != null
+                    ? (room.guessBlockedUntilMs[currentUserId] ?? 0)
+                    : 0;
+                if (_myBlockUntil > _lastMyGuessBlockUntil &&
+                    _myBlockUntil > _nowForHit) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) SfxService.instance.trickHit();
+                  });
+                }
+                _lastMyGuessBlockUntil = _myBlockUntil;
+                // Stun card: blockedGuessers[me] is a reveal-cycle cutoff that
+                // jumps up when someone stuns me.
+                final _myStunUntil = currentUserId != null
+                    ? (room.blockedGuessers[currentUserId] ?? 0)
+                    : 0;
+                if (_myStunUntil > _lastMyStunUntil) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) SfxService.instance.trickHit();
+                  });
+                }
+                _lastMyStunUntil = _myStunUntil;
+
                 if (room.imageId.isNotEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) => _loadImage(room.imageId));
                 }
@@ -2849,6 +2959,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                       unawaited(_playCorrectDing());
                     } else if (!isCorrect) {
                       unawaited(_playWrongBuzz());
+                      // Your own miss stings: jolt the board + red flash.
+                      if (isLocalGuess) _triggerWrongShake();
                     }
                     // Small touch: a correct guess floats a 🎉 with the scorer's
                     // name — makes "someone scored" feel alive.
@@ -3002,6 +3114,10 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                     room.lastRoundImageId != null &&
                     _interludeDismissedUntilMs != interludeUntil;
                 if (interludeActive) {
+                  if (_interludeSoundAt != interludeUntil) {
+                    _interludeSoundAt = interludeUntil;
+                    SfxService.instance.transition();
+                  }
                   unawaited(_ensureInterludeImage(room.lastRoundImageId!));
                   unawaited(_ensureInterludeGallery(room));
                   _interludeTimer?.cancel();
@@ -3024,6 +3140,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   isBusy: _isBusy,
                   canGuessNow: canGuessNow,
                   isSolo: isSolo,
+                  burstReveal: _showCorrectGuess,
                   revealRatio: revealRatio,
                   potTotal: room.potTotal,
                   showBanner: _showBanner,
@@ -3076,6 +3193,7 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                           !room.tricksEnabled)
                       ? null
                       : (targetId) async {
+                    SfxService.instance.trickCast();
                     final success = await ref.read(roomServiceProvider).applyStunCard(
                       roomId: room.id,
                       actorUid: currentUserId,
@@ -3185,14 +3303,66 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                   onTap: () => _openChat(_lastRoom!),
                 ),
               ),
+            // Wrong-guess red vignette flash (transparent center, red edges).
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _wrongShake,
+                  builder: (_, __) {
+                    final o = _wrongFlashOpacity();
+                    if (o <= 0) return const SizedBox.shrink();
+                    return DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          radius: 1.1,
+                          colors: [
+                            const Color(0xFFFF3030).withOpacity(0),
+                            Color(0xFFFF2020).withOpacity(o),
+                          ],
+                          stops: const [0.5, 1.0],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
             if (_showCorrectGuess) ...[
+              // Bright radial flash burst — pops white/gold then fades, giving
+              // the correct guess an instant hit of impact behind the confetti.
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      gradient: RadialGradient(
+                        radius: 0.75,
+                        colors: [
+                          Color(0xCCFFFFFF),
+                          Color(0x66FFE9A8),
+                          Color(0x00FFE9A8),
+                        ],
+                        stops: [0.0, 0.35, 0.85],
+                      ),
+                    ),
+                  )
+                      .animate()
+                      .fadeIn(duration: 90.ms)
+                      .then()
+                      .fadeOut(duration: 460.ms, curve: Curves.easeOut)
+                      .scaleXY(
+                          begin: 0.35,
+                          end: 1.25,
+                          duration: 550.ms,
+                          curve: Curves.easeOutCubic),
+                ),
+              ),
               Align(
                 alignment: Alignment.topLeft,
                 child: ConfettiWidget(
                   confettiController: _confettiLeft,
                   blastDirection: -pi / 4,
-                  colors: const [Color(0xFF00F2FF), Color(0xFFFFE14D), Colors.white],
-                  numberOfParticles: 22,
+                  colors: const [Candy.teal, Candy.gold, Candy.pink, Colors.white],
+                  numberOfParticles: 26,
                   gravity: 0.18,
                   shouldLoop: false,
                 ),
@@ -3202,8 +3372,8 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                 child: ConfettiWidget(
                   confettiController: _confettiRight,
                   blastDirection: -3 * pi / 4,
-                  colors: const [Color(0xFF00F2FF), Color(0xFFFFE14D), Colors.white],
-                  numberOfParticles: 22,
+                  colors: const [Candy.teal, Candy.gold, Candy.pink, Colors.white],
+                  numberOfParticles: 26,
                   gravity: 0.18,
                   shouldLoop: false,
                 ),
@@ -3223,7 +3393,14 @@ class _GameBoardScreenState extends ConsumerState<GameBoardScreen>
                         ),
                       ],
                     ),
-                  ),
+                  )
+                      .animate()
+                      .scaleXY(
+                          begin: 0.5,
+                          end: 1.0,
+                          duration: 520.ms,
+                          curve: Curves.elasticOut)
+                      .fadeIn(duration: 160.ms),
                 ),
               ),
             ],
@@ -3396,7 +3573,7 @@ class _RoundInterludeOverlay extends StatelessWidget {
           boxShadow: glow
               ? [
                   BoxShadow(
-                    color: const Color(0xFFD4AF37).withOpacity(0.35),
+                    color: Candy.gold.withOpacity(0.35),
                     blurRadius: 24,
                   ),
                 ]
@@ -3467,7 +3644,7 @@ class _RoundInterludeOverlay extends StatelessWidget {
                         image?.answer ?? '',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          color: Color(0xFFFFE082),
+                          color: Candy.gold,
                           fontSize: 24,
                           fontWeight: FontWeight.w900,
                         ),
@@ -3483,7 +3660,7 @@ class _RoundInterludeOverlay extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0D1E30).withOpacity(0.92),
+                          color: Candy.surfaceLow.withOpacity(0.92),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                               color: Colors.white.withOpacity(0.12)),
@@ -3514,7 +3691,7 @@ class _RoundInterludeOverlay extends StatelessWidget {
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           color: standings[i].name == name
-                                              ? const Color(0xFFFFE082)
+                                              ? Candy.gold
                                               : Colors.white,
                                           fontSize: 15,
                                           fontWeight:
@@ -3553,6 +3730,8 @@ class _RoundInterludeOverlay extends StatelessWidget {
                         ),
                       ),
                       // ── התמונות שנחשפו עד כה ────────────────────────────
+                      // The just-solved image "drops" from the hero above into
+                      // its slot in the strip, so the story-so-far visibly grows.
                       if (doneIds.length > 1) ...[
                         const SizedBox(height: 12),
                         Wrap(
@@ -3562,7 +3741,24 @@ class _RoundInterludeOverlay extends StatelessWidget {
                           children: [
                             for (final id in doneIds)
                               if (gallery[id] != null)
-                                _thumb(gallery[id]!.imageUrl, 44),
+                                if (id == room.lastRoundImageId)
+                                  _thumb(gallery[id]!.imageUrl, 44, glow: true)
+                                      .animate()
+                                      .moveY(
+                                          begin: -70,
+                                          end: 0,
+                                          delay: 480.ms,
+                                          duration: 640.ms,
+                                          curve: Curves.easeOutBack)
+                                      .scaleXY(
+                                          begin: 2.4,
+                                          end: 1.0,
+                                          delay: 480.ms,
+                                          duration: 640.ms,
+                                          curve: Curves.easeOutBack)
+                                      .fadeIn(delay: 480.ms, duration: 220.ms)
+                                else
+                                  _thumb(gallery[id]!.imageUrl, 44),
                           ],
                         ),
                       ],
@@ -3658,7 +3854,7 @@ class _ChatLauncher extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: const Color(0xFF07101F).withOpacity(0.55),
+              color: Candy.bgBottom.withOpacity(0.55),
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white.withOpacity(0.14)),
             ),
@@ -3675,7 +3871,7 @@ class _ChatLauncher extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFFFF3B30),
                   borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: const Color(0xFF07101F), width: 1.5),
+                  border: Border.all(color: Candy.bgBottom, width: 1.5),
                 ),
                 child: Center(
                   child: Text(
@@ -4088,22 +4284,22 @@ class _PurchasedHintsDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: const Color(0xFF07101F),
+      backgroundColor: Candy.bgBottom,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: const Color(0xFFD4AF37).withOpacity(0.5)),
+        side: BorderSide(color: Candy.gold.withOpacity(0.5)),
       ),
       titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
       contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       title: const Row(
         children: [
-          Icon(Icons.lightbulb_rounded, color: Color(0xFFD4AF37), size: 20),
+          Icon(Icons.lightbulb_rounded, color: Candy.gold, size: 20),
           SizedBox(width: 8),
           Text(
             'רמזים',
             style: TextStyle(
-              color: Color(0xFFD4AF37),
+              color: Candy.gold,
               fontSize: 16,
               fontWeight: FontWeight.w900,
             ),
@@ -4121,7 +4317,7 @@ class _PurchasedHintsDialog extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFF0A1A2E),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.25)),
+                border: Border.all(color: Candy.gold.withOpacity(0.25)),
               ),
               child: Text(
                 facts[i],
@@ -4143,7 +4339,7 @@ class _PurchasedHintsDialog extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
           child: const Text(
             'סגור',
-            style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.w900),
+            style: TextStyle(color: Candy.gold, fontWeight: FontWeight.w900),
           ),
         ),
       ],
@@ -4157,7 +4353,7 @@ class _ImageFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF1A1A3E),
+      color: Candy.surfaceLow,
       child: const Center(
         child: Icon(
           Icons.image_not_supported_outlined,

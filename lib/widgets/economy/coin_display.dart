@@ -30,6 +30,8 @@ class _AnimatedCoinChipState extends State<_AnimatedCoinChip>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late Animation<double> _anim;
+  // A celebratory bump — pulses only when the balance grows.
+  Animation<double> _scale = const AlwaysStoppedAnimation(1.0);
   int _from = 0;
 
   @override
@@ -50,6 +52,20 @@ class _AnimatedCoinChipState extends State<_AnimatedCoinChip>
         begin: _from.toDouble(),
         end: widget.amount.toDouble(),
       ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+      _scale = widget.amount > old.amount
+          ? TweenSequence<double>([
+              TweenSequenceItem(
+                tween: Tween(begin: 1.0, end: 1.12)
+                    .chain(CurveTween(curve: Curves.easeOut)),
+                weight: 35,
+              ),
+              TweenSequenceItem(
+                tween: Tween(begin: 1.12, end: 1.0)
+                    .chain(CurveTween(curve: Curves.easeIn)),
+                weight: 65,
+              ),
+            ]).animate(_ctrl)
+          : const AlwaysStoppedAnimation(1.0);
       _ctrl.forward(from: 0);
     }
   }
@@ -71,7 +87,9 @@ class _AnimatedCoinChipState extends State<_AnimatedCoinChip>
       animation: _anim,
       builder: (_, __) {
         final displayed = _anim.value.round().clamp(0, 999999);
-        return Container(
+        return Transform.scale(
+          scale: _scale.value,
+          child: Container(
           height: h,
           padding: EdgeInsets.symmetric(horizontal: px),
           decoration: BoxDecoration(
@@ -98,12 +116,17 @@ class _AnimatedCoinChipState extends State<_AnimatedCoinChip>
                 duration: const Duration(milliseconds: 220),
                 transitionBuilder: (child, anim) => FadeTransition(
                   opacity: anim,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.4),
-                      end: Offset.zero,
-                    ).animate(anim),
-                    child: child,
+                  child: ScaleTransition(
+                    // A tiny pop on every counted value so the tally feels alive.
+                    scale: Tween<double>(begin: 0.72, end: 1.0).animate(
+                        CurvedAnimation(parent: anim, curve: Curves.easeOutBack)),
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.4),
+                        end: Offset.zero,
+                      ).animate(anim),
+                      child: child,
+                    ),
                   ),
                 ),
                 child: Text(
@@ -118,6 +141,7 @@ class _AnimatedCoinChipState extends State<_AnimatedCoinChip>
                 ),
               ),
             ],
+          ),
           ),
         );
       },

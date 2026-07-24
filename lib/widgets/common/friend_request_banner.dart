@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_styles.dart';
 import '../../core/utils/app_router.dart';
 import '../../providers/providers.dart';
+import '../../services/sfx_service.dart';
 
 /// Global floating notice for pending friend requests. Rendered ABOVE the
 /// router (via MaterialApp.builder) so it is visible on every screen — the
@@ -25,6 +26,9 @@ class FriendRequestBanner extends ConsumerStatefulWidget {
 class _FriendRequestBannerState extends ConsumerState<FriendRequestBanner> {
   // The request-id set that was dismissed; a new/changed set shows again.
   String _dismissedKey = '';
+  // The last set we played a notification chime for — so it dings once per
+  // new/changed set, and never while suppressed (during gameplay etc.).
+  String _lastNotifiedKey = '';
 
   static bool _suppressedPath(String path) =>
       path == '/' ||
@@ -51,6 +55,14 @@ class _FriendRequestBannerState extends ConsumerState<FriendRequestBanner> {
         final key = requests.map((r) => r.id).join(',');
         if (_suppressedPath(path) || key == _dismissedKey) {
           return const SizedBox.shrink();
+        }
+
+        // A new/changed request set is about to slide in → chime once.
+        if (key != _lastNotifiedKey) {
+          _lastNotifiedKey = key;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            SfxService.instance.notify();
+          });
         }
 
         final text = requests.length == 1

@@ -2,17 +2,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/candy_theme.dart';
+import '../../widgets/common/pressable.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
 import '../../models/card_skin.dart';
 import '../../providers/providers.dart';
 import '../../providers/skin_providers.dart';
+import '../../services/sfx_service.dart';
 import '../../widgets/common/app_header.dart';
 import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_icon.dart';
 import '../../widgets/game/vault_cover.dart'; // CardSkinPreview
+import '../../widgets/store/premium_unlock.dart';
 
 final selectedSkinProvider = StreamProvider.autoDispose<String>((ref) {
   final userAsync = ref.watch(firebaseUserProvider);
@@ -67,12 +70,12 @@ class CardSkinsScreen extends ConsumerWidget {
 
     // One section per price tier (matches the admin catalog & Gemini styles).
     const tiers = <_TierDef>[
-      _TierDef('חינם', 0, 0, Color(0xFF8090B0), Icons.star_outline_rounded, coin: false),
-      _TierDef('טבע · 50', 1, 50, Color(0xFF4DD0A0), Icons.eco_outlined),
-      _TierDef('פסיפס · 100', 51, 100, Color(0xFFD4AF37), Icons.grid_on_outlined),
-      _TierDef('ניאון · 200', 101, 200, Color(0xFF00E5FF), Icons.bolt_outlined),
-      _TierDef('קוסמי · 500', 201, 500, Color(0xFF9C27B0), Icons.auto_awesome_outlined),
-      _TierDef('זהב מלכותי · 1000', 501, 1 << 30, Color(0xFFFFD700), Icons.diamond_outlined),
+      _TierDef('חינמי', 0, 0, Candy.inkMuted, Icons.star_outline_rounded, coin: false),
+      _TierDef('בסיסי · 50', 1, 50, Candy.teal, Icons.palette_outlined),
+      _TierDef('בסיסי · 100', 51, 100, Candy.teal, Icons.palette_outlined),
+      _TierDef('נדיר · 200', 101, 200, Candy.teal, Icons.auto_awesome_outlined),
+      _TierDef('נדיר · 500', 201, 500, Candy.teal, Icons.auto_awesome_outlined),
+      _TierDef('פרימיום · 1000', 501, 1 << 30, Candy.gold, Icons.diamond_outlined),
     ];
     final sections = <Widget>[];
     for (final t in tiers) {
@@ -94,7 +97,6 @@ class CardSkinsScreen extends ConsumerWidget {
     }
 
     return AppScaffold(
-      backgroundGradient: AppColors.pageBackground,
       padding: EdgeInsets.zero,
       child: Column(
         children: [
@@ -139,6 +141,7 @@ class CardSkinsScreen extends ConsumerWidget {
     int currentCoins,
   ) async {
     if (currentCoins < skin.price) {
+      SfxService.instance.denied();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('אין מספיק מטבעות!')),
       );
@@ -172,6 +175,10 @@ class CardSkinsScreen extends ConsumerWidget {
       });
 
       if (!context.mounted) return;
+      SfxService.instance.purchase();
+      if (skin.tier == SkinTier.premium) {
+        PremiumUnlock.celebrate(context, skin.name);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${skin.name} נרכש! לחץ "הצמד" כדי להפעיל')),
       );
@@ -219,7 +226,7 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.label,
     required this.icon,
-    this.color = const Color(0xFFD4AF37),
+    this.color = Candy.gold,
     this.trailingCoin = false,
   });
 
@@ -334,7 +341,7 @@ Color _skinAccentColor(String id) {
     case 'default':            return const Color(0xFF4472C8);
     case 'classic_zionist':    return const Color(0xFF4472C8);
     case 'summer_pastel':      return const Color(0xFFF0A0C0);
-    case 'simple_gold_basic':  return const Color(0xFFFFD700);
+    case 'simple_gold_basic':  return Candy.gold;
     case 'terracotta_earth':   return const Color(0xFFE07A5F);
     // rare
     case 'jerusalem_neon':     return const Color(0xFFFF00FF);
@@ -342,23 +349,23 @@ Color _skinAccentColor(String id) {
     case 'space_cluster':      return const Color(0xFF00FFFF);
     case 'blue_fire':          return const Color(0xFF00FFFF);
     case 'hermon_glacier':     return const Color(0xFF81D4FA);
-    case 'oriental_arabesque': return const Color(0xFFD4AF37);
+    case 'oriental_arabesque': return Candy.gold;
     case 'ancient_gold_rare':  return const Color(0xFFFF8C00);
     case 'brushed_titanium':   return const Color(0xFF39FF14);
     case 'eilat_coral':        return const Color(0xFF00FFFF);
     case 'meteor_shower':      return const Color(0xFFE0E0FF);
     // premium
-    case 'royal_throne':         return const Color(0xFFFFD700);
+    case 'royal_throne':         return Candy.gold;
     case 'ancient_scroll':       return const Color(0xFFC4A47C);
-    case 'jerusalem_of_gold':    return const Color(0xFFFFD700);
-    case 'kotel_stones':         return const Color(0xFFFFD700);
+    case 'jerusalem_of_gold':    return Candy.gold;
+    case 'kotel_stones':         return Candy.gold;
     case 'anemone_red':          return const Color(0xFFFF6060);
     case 'salt_sunset':          return const Color(0xFFFF00FF);
     case 'royal_sapphire':       return const Color(0xFF88AAFF);
     case 'lava_core':            return const Color(0xFFFF4500);
     case 'diamond_shield':       return const Color(0xFF00E5FF);
     case 'cyber_future_israel':  return const Color(0xFF00FFFF);
-    default:                     return const Color(0xFFD4AF37);
+    default:                     return Candy.gold;
   }
 }
 
@@ -379,7 +386,7 @@ class _SkinTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const gold = Color(0xFFD4AF37);
+    const gold = Candy.gold;
     final accent = _skinAccentColor(skin.id);
 
     final borderColor = isSelected
@@ -388,12 +395,12 @@ class _SkinTile extends StatelessWidget {
             ? accent.withOpacity(0.55)
             : accent.withOpacity(0.22);
 
-    return GestureDetector(
+    return Pressable(
       onTap: isSelected ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         decoration: BoxDecoration(
-          color: const Color(0xFF0A1228),
+          color: Candy.surfaceLow,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: borderColor, width: isSelected ? 2.2 : 1.2),
           boxShadow: [
@@ -465,7 +472,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const gold = Color(0xFFD4AF37);
+    const gold = Candy.gold;
     final accent = _skinAccentColor(skin.id);
 
     if (isSelected) {

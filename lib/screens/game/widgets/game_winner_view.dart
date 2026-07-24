@@ -4,15 +4,22 @@ import 'dart:ui' as ui;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import '../../../core/theme/candy_theme.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:lottie/lottie.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/ad_constants.dart';
 import '../../../core/theme/app_styles.dart';
 import '../../../models/economy/match_reward_breakdown.dart';
 import '../../../models/game_image_model.dart';
+import '../../../services/settings_service.dart';
+import '../../../services/sfx_service.dart';
 import '../../../widgets/common/app_share_badges.dart';
 import '../../../widgets/common/banner_ad_widget.dart';
+import '../../../widgets/common/parallax_image.dart';
+import '../../../widgets/economy/coin_fly.dart';
 import '../../../widgets/economy/coin_icon.dart';
 import 'round_gallery_view.dart';
 
@@ -83,8 +90,11 @@ class GameWinnerView extends StatefulWidget {
   State<GameWinnerView> createState() => _GameWinnerViewState();
 }
 
-class _GameWinnerViewState extends State<GameWinnerView> {
+class _GameWinnerViewState extends State<GameWinnerView>
+    with SingleTickerProviderStateMixin {
   late final ConfettiController _confettiController;
+  // One-shot gold "detonation" flash that fires the instant the card lands.
+  late final AnimationController _flashController;
   final GlobalKey _shareCardKey = GlobalKey();
   bool _showCard = false;
   bool _showButton = false;
@@ -97,7 +107,24 @@ class _GameWinnerViewState extends State<GameWinnerView> {
   void initState() {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _flashController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 620),
+    );
     _runEntrance();
+  }
+
+  /// The celebratory "impact" — a triple haptic burst, honoring the user's
+  /// vibration setting. Kept out of _runEntrance's async gaps so it fires
+  /// exactly on the card landing.
+  void _impactHaptic() {
+    if (!SettingsService.instance.vibrationEnabled) return;
+    HapticFeedback.heavyImpact();
+    Future.delayed(const Duration(milliseconds: 90), () {
+      if (mounted && SettingsService.instance.vibrationEnabled) {
+        HapticFeedback.mediumImpact();
+      }
+    });
   }
 
   Future<void> _handleDouble() async {
@@ -151,10 +178,16 @@ class _GameWinnerViewState extends State<GameWinnerView> {
   }
 
   Future<void> _runEntrance() async {
+    // Short build-up beat before the impact so the pop lands, not eases in.
     await Future.delayed(const Duration(milliseconds: 180));
     if (!mounted) return;
     setState(() => _showCard = true);
     _confettiController.play();
+    // Impact: gold flash + haptic burst, together with the card's scale-in.
+    _impactHaptic();
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (!reduceMotion) _flashController.forward(from: 0);
 
     await Future.delayed(const Duration(milliseconds: 650));
     if (!mounted) return;
@@ -164,6 +197,7 @@ class _GameWinnerViewState extends State<GameWinnerView> {
   @override
   void dispose() {
     _confettiController.dispose();
+    _flashController.dispose();
     super.dispose();
   }
 
@@ -173,12 +207,57 @@ class _GameWinnerViewState extends State<GameWinnerView> {
       alignment: Alignment.center,
       children: [
         const Positioned.fill(child: _WinnerBackground()),
+        // One-shot gold detonation flash behind the card, driven by the
+        // entrance controller (skipped entirely under "reduce motion").
+        Positioned.fill(
+          child: IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _flashController,
+              builder: (context, _) {
+                final t = _flashController.value;
+                if (t == 0) return const SizedBox.shrink();
+                return Center(
+                  child: Opacity(
+                    opacity: (1 - t) * 0.5,
+                    child: Transform.scale(
+                      scale: 0.2 + t * 1.5,
+                      child: Container(
+                        width: 280,
+                        height: 280,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              Color(0x66FBEC9E),
+                              Color(0x33D4AF37),
+                              Color(0x00D4AF37),
+                            ],
+                            stops: [0.0, 0.55, 1.0],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
         ConfettiWidget(
           confettiController: _confettiController,
           blastDirection: math.pi / 2,
-          emissionFrequency: 0.08,
-          numberOfParticles: 18,
-          gravity: 0.16,
+          emissionFrequency: 0.10,
+          numberOfParticles: 30,
+          maxBlastForce: 22,
+          minBlastForce: 8,
+          gravity: 0.18,
+          colors: const [
+            Candy.teal,
+            Candy.pink,
+            Candy.tangerine,
+            Candy.gold,
+            Colors.white,
+          ],
           shouldLoop: false,
         ),
         Padding(
@@ -239,6 +318,26 @@ class _GameWinnerViewState extends State<GameWinnerView> {
         // Banner pinned to the bottom of the win screen (outside the scaled
         // card so it renders at its real pixel size). Self-hides when banners
         // are disabled.
+        // Premium motion asset (Lottie trophy) crowning the win — plays once
+        // on entrance. A proof-of-concept for asset-driven animation vs the
+        // hand-rolled particle effects.
+        if (_showCard)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Center(
+                child: Lottie.asset(
+                  'assets/lottie/trophy_win.json',
+                  width: 62,
+                  height: 62,
+                  repeat: false,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
         const Align(
           alignment: Alignment.bottomCenter,
           child: SafeArea(child: BannerAdWidget()),
@@ -320,12 +419,12 @@ class _WinnerCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF07101F).withOpacity(0.96),
+        color: Candy.bgBottom.withOpacity(0.96),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.52), width: 1.4),
+        border: Border.all(color: Candy.gold.withOpacity(0.52), width: 1.4),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFD4AF37).withOpacity(0.12),
+            color: Candy.gold.withOpacity(0.12),
             blurRadius: 20,
             spreadRadius: 0,
           ),
@@ -355,22 +454,24 @@ class _WinnerCard extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                    color: const Color(0xFFD4AF37).withOpacity(0.6), width: 1.5),
+                    color: Candy.gold.withOpacity(0.6), width: 1.5),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16.5),
                 child: SizedBox(
                   width: 116,
                   height: 116,
-                  child: imageUrl!.startsWith('assets/')
-                      ? Image.asset(imageUrl!, fit: BoxFit.cover)
-                      : CachedNetworkImage(
-                          imageUrl: imageUrl!,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => const Center(
-                            child: Text('🏆', style: TextStyle(fontSize: 40)),
+                  child: ParallaxImage(
+                    child: imageUrl!.startsWith('assets/')
+                        ? Image.asset(imageUrl!, fit: BoxFit.cover)
+                        : CachedNetworkImage(
+                            imageUrl: imageUrl!,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => const Center(
+                              child: Text('🏆', style: TextStyle(fontSize: 40)),
+                            ),
                           ),
-                        ),
+                  ),
                 ),
               ),
             ),
@@ -382,7 +483,7 @@ class _WinnerCard extends StatelessWidget {
             'ניצחון!',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFFD4AF37),
+              color: Candy.gold,
               fontSize: 26,
               fontWeight: FontWeight.w900,
               height: 1,
@@ -408,7 +509,7 @@ class _WinnerCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                color: Color(0xFFD4AF37),
+                color: Candy.gold,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.4,
@@ -442,7 +543,7 @@ class _WinnerCard extends StatelessWidget {
                     '💡 ידעת?',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Color(0xFF87CEEB),
+                      color: Candy.teal,
                       fontSize: 13,
                       fontWeight: FontWeight.w900,
                     ),
@@ -640,9 +741,9 @@ class _WinnerCard extends StatelessWidget {
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF87CEEB),
+                        foregroundColor: Candy.teal,
                         side: BorderSide(
-                            color: const Color(0xFF87CEEB).withOpacity(0.7)),
+                            color: Candy.teal.withOpacity(0.7)),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
                         padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -674,9 +775,9 @@ class _WinnerCard extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: sharingCard ? null : onShareCard,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFD4AF37),
+                      foregroundColor: Candy.gold,
                       side: BorderSide(
-                          color: const Color(0xFFD4AF37).withOpacity(0.7)),
+                          color: Candy.gold.withOpacity(0.7)),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16)),
                       padding: EdgeInsets.zero,
@@ -686,7 +787,7 @@ class _WinnerCard extends StatelessWidget {
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2.2, color: Color(0xFFD4AF37)),
+                                strokeWidth: 2.2, color: Candy.gold),
                           )
                         : const Icon(Icons.ios_share_rounded),
                   ),
@@ -704,7 +805,7 @@ class _WinnerCard extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFFD4AF37), Color(0xFFA1811A)],
+                    colors: [Candy.gold, Candy.goldLow],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -716,7 +817,7 @@ class _WinnerCard extends StatelessWidget {
                     backgroundColor: Colors.transparent,
                     disabledBackgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
-                    foregroundColor: const Color(0xFF07101F),
+                    foregroundColor: Candy.bgBottom,
                     textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
@@ -749,6 +850,7 @@ class _RewardSummaryState extends State<_RewardSummary> {
   bool _showPerfect = false;
   bool _showPenalty = false;
   bool _showTotal = false;
+  final GlobalKey _totalKey = GlobalKey();
 
   @override
   void initState() {
@@ -794,6 +896,24 @@ class _RewardSummaryState extends State<_RewardSummary> {
     await Future.delayed(const Duration(milliseconds: 480));
     if (!mounted) return;
     setState(() => _showTotal = true);
+    // Climax of the reward tally: a coin flourish + a satisfying tap.
+    SfxService.instance.coinGain();
+    if (SettingsService.instance.vibrationEnabled) {
+      HapticFeedback.mediumImpact();
+    }
+    // A burst of coins lifts off the total toward the balance. The tally
+    // already plays its own coin sound, so the flight stays silent.
+    if (widget.breakdown.total > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final box =
+            _totalKey.currentContext?.findRenderObject() as RenderBox?;
+        if (box == null || !box.hasSize) return;
+        final from = box.localToGlobal(box.size.center(Offset.zero));
+        final count = (widget.breakdown.total ~/ 8).clamp(8, 18);
+        CoinFly.burst(context, from: from, count: count, sound: false);
+      });
+    }
   }
 
   @override
@@ -804,7 +924,7 @@ class _RewardSummaryState extends State<_RewardSummary> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.04),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.18)),
+        border: Border.all(color: Candy.gold.withOpacity(0.18)),
       ),
       child: Column(
         children: [
@@ -819,14 +939,14 @@ class _RewardSummaryState extends State<_RewardSummary> {
               label: '🎯 זיהוי מוקדם',
               coins: b.earlyGuessBonus,
               visible: _showEarlyGuess,
-              color: const Color(0xFF87CEEB),
+              color: Candy.teal,
             ),
           if (b.speedBonus > 0)
             _RewardRow(
               label: '⚡ בונוס מהירות',
               coins: b.speedBonus,
               visible: _showSpeed,
-              color: const Color(0xFFFFE082),
+              color: Candy.gold,
             ),
           if (b.noWrongGuessBonus > 0)
             _RewardRow(
@@ -840,7 +960,7 @@ class _RewardSummaryState extends State<_RewardSummary> {
               label: '🌟 פתיחה מושלמת',
               coins: b.perfectRoundBonus,
               visible: _showPerfect,
-              color: const Color(0xFFD4AF37),
+              color: Candy.gold,
             ),
           if (b.wrongGuessPenalty > 0)
             _RewardRow(
@@ -857,7 +977,7 @@ class _RewardSummaryState extends State<_RewardSummary> {
                 ? Column(
                     children: [
                       const SizedBox(height: 8),
-                      _TotalRow(total: b.total),
+                      _TotalRow(key: _totalKey, total: b.total),
                     ],
                   )
                 : const SizedBox.shrink(),
@@ -931,16 +1051,16 @@ class _RewardRow extends StatelessWidget {
 
 class _TotalRow extends StatelessWidget {
   final int total;
-  const _TotalRow({required this.total});
+  const _TotalRow({super.key, required this.total});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFD4AF37).withOpacity(0.14),
+        color: Candy.gold.withOpacity(0.14),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.46)),
+        border: Border.all(color: Candy.gold.withOpacity(0.46)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -949,20 +1069,25 @@ class _TotalRow extends StatelessWidget {
             'סה"כ',
             textDirection: TextDirection.rtl,
             style: TextStyle(
-              color: Color(0xFFD4AF37),
+              color: Candy.gold,
               fontSize: 16,
               fontWeight: FontWeight.w900,
             ),
           ),
-          Text.rich(
-            TextSpan(
-              text: '+$total ',
-              children: [coinSpan(size: 18, color: Color(0xFFD4AF37))],
-            ),
-            style: const TextStyle(
-              color: Color(0xFFD4AF37),
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
+          TweenAnimationBuilder<int>(
+            tween: IntTween(begin: 0, end: total),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeOut,
+            builder: (context, value, _) => Text.rich(
+              TextSpan(
+                text: '+$value ',
+                children: [coinSpan(size: 18, color: Candy.gold)],
+              ),
+              style: const TextStyle(
+                color: Candy.gold,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],

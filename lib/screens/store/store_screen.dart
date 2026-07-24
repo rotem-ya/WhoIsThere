@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/ad_constants.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/economy_config.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
 import '../../core/ui/app_text_styles.dart';
@@ -38,6 +38,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
   void initState() {
     super.initState();
     _tab = TabController(length: 3, vsync: this);
+    _tab.addListener(() {
+      if (_tab.indexIsChanging) SfxService.instance.tabChange();
+    });
     AnalyticsService.instance.storeView();
   }
 
@@ -73,7 +76,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
         _handleBack();
       },
       child: AppScaffold(
-      backgroundGradient: AppColors.pageBackground,
       padding: EdgeInsets.zero,
       child: Column(
         children: [
@@ -109,8 +111,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
           // ── Tabs ──────────────────────────────────────────────────────────
           TabBar(
             controller: _tab,
-            indicatorColor: const Color(0xFFD4AF37),
-            labelColor: const Color(0xFFD4AF37),
+            indicatorColor: Candy.gold,
+            labelColor: Candy.gold,
             unselectedLabelColor: Colors.white54,
             indicatorSize: TabBarIndicatorSize.tab,
             labelStyle: const TextStyle(
@@ -291,8 +293,8 @@ class _CardsTab extends StatelessWidget {
                   title: 'חסימה 5 שניות',
                   emoji: '⏱️',
                   iconData: Icons.timer_outlined,
-                  illustrationGradient: const [Color(0xFF1890D0), Color(0xFF0060A0)],
-                  accentColor: const Color(0xFF1890D0),
+                  illustrationGradient: [Candy.glossy(Candy.blue), Candy.bevel(Candy.blue)],
+                  accentColor: Candy.blue,
                   owned: block5Count,
                   price: EconomyConfig.guessBlock5Price,
                   canAfford: coins >= EconomyConfig.guessBlock5Price,
@@ -304,8 +306,8 @@ class _CardsTab extends StatelessWidget {
                   title: 'החשכה',
                   emoji: '🕶️',
                   iconData: Icons.visibility_off_outlined,
-                  illustrationGradient: const [Color(0xFF3A3A4A), Color(0xFF1A1A2E)],
-                  accentColor: const Color(0xFF5A1A8A),
+                  illustrationGradient: [Candy.glossy(Candy.grape), Candy.bevel(Candy.grape)],
+                  accentColor: Candy.grape,
                   owned: blackoutCount,
                   price: EconomyConfig.blackoutCardPrice,
                   canAfford: coins >= EconomyConfig.blackoutCardPrice,
@@ -317,8 +319,8 @@ class _CardsTab extends StatelessWidget {
                   title: 'חסימה 10 שניות',
                   emoji: '⏰',
                   iconData: Icons.timer,
-                  illustrationGradient: const [Color(0xFF1060A0), Color(0xFF003080)],
-                  accentColor: const Color(0xFF0060A0),
+                  illustrationGradient: [Candy.glossy(Candy.blue), Candy.bevel(Candy.blue)],
+                  accentColor: Candy.blue,
                   owned: block10Count,
                   price: EconomyConfig.guessBlock10Price,
                   canAfford: coins >= EconomyConfig.guessBlock10Price,
@@ -330,8 +332,8 @@ class _CardsTab extends StatelessWidget {
                   title: 'כרטיס עצור',
                   emoji: '🔒',
                   iconData: Icons.lock_outline,
-                  illustrationGradient: const [Color(0xFF8B4FBF), Color(0xFF5A1A8A)],
-                  accentColor: const Color(0xFF8B4FBF),
+                  illustrationGradient: [Candy.glossy(Candy.pink), Candy.bevel(Candy.pink)],
+                  accentColor: Candy.pink,
                   owned: stunCount,
                   price: EconomyConfig.stunCardPrice,
                   canAfford: coins >= EconomyConfig.stunCardPrice,
@@ -343,8 +345,8 @@ class _CardsTab extends StatelessWidget {
                   title: 'הצצה',
                   emoji: '👁️',
                   iconData: Icons.visibility_outlined,
-                  illustrationGradient: const [Color(0xFF26A69A), Color(0xFF00695C)],
-                  accentColor: const Color(0xFF26A69A),
+                  illustrationGradient: [Candy.glossy(Candy.teal), Candy.bevel(Candy.teal)],
+                  accentColor: Candy.teal,
                   owned: peekCount,
                   price: EconomyConfig.peekCardPrice,
                   canAfford: coins >= EconomyConfig.peekCardPrice,
@@ -417,6 +419,7 @@ class _CardsTab extends StatelessWidget {
   }
 
   void _showNoCoins(BuildContext context) {
+    SfxService.instance.denied();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('אין מספיק מטבעות!')),
     );
@@ -474,8 +477,8 @@ class _PlayingCard extends StatelessWidget {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                accentColor.withOpacity(0.30),
-                const Color(0xFF04091A),
+                accentColor.withOpacity(0.34),
+                Candy.bgBottom,
               ],
             ),
             borderRadius: BorderRadius.circular(16),
@@ -566,7 +569,7 @@ class _PlayingCard extends StatelessWidget {
                 child: Text.rich(
                   TextSpan(
                     text: '$price ',
-                    children: [coinSpan(size: 12, color: canAfford ? const Color(0xFFFFC107) : Colors.white38)],
+                    children: [coinSpan(size: 12, color: canAfford ? Candy.gold : Colors.white38)],
                   ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -602,7 +605,7 @@ class _LockedCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF1A1A2A), Color(0xFF0A0A14)],
+          colors: [Candy.surfaceLow, Candy.bgBottom],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white12, width: 1.0),
@@ -730,21 +733,21 @@ class _SkinsTab extends ConsumerWidget {
           children: [
             _DesignCard(
               title: 'אווטרים',
-              accent: const Color(0xFF4FC3F7),
+              accent: Candy.blue,
               route: '/store/avatars',
               preview: PlayerAvatar(
                   name: name, seed: name, radius: 22, avatarId: avatarId),
             ),
             _DesignCard(
               title: 'עיצובי קלפים',
-              accent: const Color(0xFF8B6FFF),
+              accent: Candy.grape,
               route: '/store/skins',
               preview: const Icon(Icons.style_rounded,
-                  color: Color(0xFF8B6FFF), size: 34),
+                  color: Candy.grape, size: 34),
             ),
             _DesignCard(
               title: 'רקע לוח',
-              accent: const Color(0xFF4CA1AF),
+              accent: Candy.teal,
               route: '/store/board',
               preview: _BoardSwatch(skinId: boardSkinId),
             ),
@@ -772,17 +775,17 @@ class _MyLookPreview extends StatelessWidget {
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF0E2A4A), Color(0xFF1A0A2E)],
+          colors: [Candy.glossy(Candy.surface), Candy.surfaceLow],
         ),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-            color: const Color(0xFF4FC3F7).withOpacity(0.40), width: 1.2),
+            color: Candy.teal.withOpacity(0.50), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1890D0).withOpacity(0.18),
+            color: Candy.teal.withOpacity(0.20),
             blurRadius: 22,
             spreadRadius: 1,
           ),
@@ -877,10 +880,10 @@ class _DesignCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF0A1A2E), Color(0xFF120A24)],
+            colors: [Candy.glossy(Candy.surface), Candy.surfaceLow],
           ),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: accent.withOpacity(0.45), width: 1.2),
@@ -952,10 +955,10 @@ class _RewardedAdTile extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF07101F).withOpacity(0.72),
+            color: Candy.surfaceLow.withOpacity(0.72),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-                color: const Color(0xFF87CEEB).withOpacity(0.30)),
+                color: Candy.teal.withOpacity(0.35)),
           ),
           child: Row(
             children: [
@@ -963,13 +966,13 @@ class _RewardedAdTile extends ConsumerWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF87CEEB).withOpacity(0.12),
+                  color: Candy.teal.withOpacity(0.14),
                   shape: BoxShape.circle,
                   border: Border.all(
-                      color: const Color(0xFF87CEEB).withOpacity(0.30)),
+                      color: Candy.teal.withOpacity(0.35)),
                 ),
                 child: const Icon(Icons.play_circle_outline_rounded,
-                    color: Color(0xFF87CEEB), size: 30),
+                    color: Candy.teal, size: 30),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -1037,7 +1040,7 @@ class _RewardedAdTile extends ConsumerWidget {
         SnackBar(
           content:
               Text('+${EconomyConfig.adRewardCoins} מטבעות הופקדו!'),
-          backgroundColor: const Color(0xFF0A3880),
+          backgroundColor: Candy.bevel(Candy.blue),
         ),
       );
     } else {

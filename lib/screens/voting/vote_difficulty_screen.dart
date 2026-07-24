@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_styles.dart';
 import '../../core/ui/app_scaffold.dart';
@@ -12,6 +12,7 @@ import '../../core/ui/app_text_styles.dart';
 import '../../providers/providers.dart';
 import '../../models/room_model.dart';
 import '../../widgets/common/app_button.dart';
+import '../../widgets/common/branded_loader.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_header.dart';
 
@@ -181,8 +182,7 @@ class _VoteDifficultyScreenState extends ConsumerState<VoteDifficultyScreen> {
         ), // AppScaffold
         ); // PopScope
       },
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => const BrandedLoader(),
       error: (e, _) => Scaffold(body: Center(child: Text('שגיאה: $e'))),
     );
   }
@@ -239,7 +239,7 @@ class _DifficultyCard extends StatelessWidget {
             height: cardHeight,
             padding: padding,
             decoration: BoxDecoration(
-              color: selected ? AppColors.primary : AppColors.surface,
+              color: selected ? Candy.gold : Candy.ink,
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(

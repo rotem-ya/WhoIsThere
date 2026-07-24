@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/constants/app_colors.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/ui/app_scaffold.dart';
 import '../../core/ui/app_spacing.dart';
@@ -158,7 +158,6 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
     );
 
     return AppScaffold(
-      backgroundGradient: AppColors.pageBackground,
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         children: [
@@ -222,7 +221,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
                         focusedBorder: const OutlineInputBorder(
                           borderRadius: borderRadius,
                           borderSide: BorderSide(
-                            color: AppColors.accent,
+                            color: Candy.teal,
                             width: 2,
                           ),
                         ),
@@ -243,7 +242,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
                       icon: const Icon(Icons.content_paste_rounded, size: 18),
                       label: const Text('הדבק קוד'),
                       style: TextButton.styleFrom(
-                        foregroundColor: AppColors.accent,
+                        foregroundColor: Candy.teal,
                       ),
                     ),
                   ],
@@ -252,7 +251,7 @@ class _JoinRoomScreenState extends ConsumerState<JoinRoomScreen> {
             ),
           ),
           _isLoading
-              ? const CircularProgressIndicator(color: AppColors.accent)
+              ? const CircularProgressIndicator(color: Candy.teal)
               : AppButton(
                   label: 'הצטרף למשחק',
                   icon: Icons.login_rounded,

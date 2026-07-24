@@ -6,11 +6,15 @@ import '../../core/utils/share_util.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_styles.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../models/friend_models.dart';
 import '../../providers/providers.dart';
 import '../../services/analytics_service.dart';
 import '../../services/friends_service.dart';
 import '../../widgets/chat/chat_sheet.dart';
+import '../../widgets/common/coin_refresh.dart';
+import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/skeleton.dart';
 import 'widgets/groups_tab.dart';
 
 /// Friends hub: a cumulative leaderboard, the friends list with pending
@@ -331,7 +335,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               onPressed: _sending ? null : _sendRequest,
               style: FilledButton.styleFrom(
                 backgroundColor: AppStyles.cyanGlow,
-                foregroundColor: const Color(0xFF07101F),
+                foregroundColor: Candy.bgBottom,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
               ),
@@ -340,13 +344,58 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Color(0xFF07101F)))
+                          strokeWidth: 2, color: Candy.bgBottom))
                   : const Text('שלח בקשת חברות',
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Weekly global leaderboard entry button ────────────────────────────────
+
+class _WeeklyBoardButton extends StatelessWidget {
+  const _WeeklyBoardButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        context.push('/weekly');
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [
+            Candy.gold.withOpacity(0.22),
+            Candy.tangerine.withOpacity(0.12),
+          ]),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Candy.gold.withOpacity(0.5)),
+        ),
+        child: Row(
+          textDirection: TextDirection.rtl,
+          children: const [
+            Text('🏆', style: TextStyle(fontSize: 24)),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'טבלה שבועית עולמית',
+                textDirection: TextDirection.rtl,
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900),
+              ),
+            ),
+            Icon(Icons.chevron_left_rounded, color: Colors.white54),
+          ],
+        ),
       ),
     );
   }
@@ -360,49 +409,70 @@ class _LeaderboardTab extends ConsumerWidget {
     final boardAsync = ref.watch(friendsLeaderboardProvider);
     final games = ref.watch(friendGamesProvider).valueOrNull ?? const [];
 
-    return RefreshIndicator(
+    return CoinRefresh(
       onRefresh: () async => ref.invalidate(friendsLeaderboardProvider),
-      child: boardAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: AppStyles.cyanGlow)),
-        error: (e, _) => ListView(children: const [
-          SizedBox(height: 80),
-          Center(child: Text('שגיאה בטעינה', style: TextStyle(color: Colors.white54))),
-        ]),
+      padding: const EdgeInsets.all(12),
+      slivers: boardAsync.when(
+        loading: () => const [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: SkeletonList(rows: 6),
+            ),
+          ),
+        ],
+        error: (e, _) => const [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.only(top: 80),
+              child: Center(
+                child: Text('שגיאה בטעינה',
+                    style: TextStyle(color: Colors.white54)),
+              ),
+            ),
+          ),
+        ],
         data: (rows) {
           if (rows.length <= 1) {
-            return ListView(children: const [
-              SizedBox(height: 80),
-              Center(
+            return [
+              const SliverToBoxAdapter(child: _WeeklyBoardButton()),
+              SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    'עדיין אין חברים בטבלה.\nהוסיפו חברים ושחקו יחד כדי לראות מי מוביל!',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white54, fontSize: 15),
+                  padding: const EdgeInsets.only(top: 44),
+                  child: EmptyState(
+                    emoji: '🏆',
+                    title: 'הטבלה מחכה לחברים',
+                    subtitle: 'הוסיפו חברים ושחקו יחד\nכדי לראות מי מוביל',
+                    actionLabel: '➕ הוסף חבר',
+                    onAction: () =>
+                        DefaultTabController.of(context).animateTo(3),
                   ),
                 ),
               ),
-            ]);
+            ];
           }
-          return ListView(
-            padding: const EdgeInsets.all(12),
-            children: [
-              for (var i = 0; i < rows.length; i++) _scoreRow(i + 1, rows[i]),
-              if (games.isNotEmpty) ...[
-                const SizedBox(height: 18),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                  child: Text('משחקים אחרונים',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800)),
-                ),
-                for (final g in games) _gameRow(g),
-              ],
-            ],
-          );
+          return [
+            SliverList(
+              delegate: SliverChildListDelegate([
+                const _WeeklyBoardButton(),
+                const SizedBox(height: 12),
+                for (var i = 0; i < rows.length; i++)
+                  _scoreRow(i + 1, rows[i]),
+                if (games.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                    child: Text('משחקים אחרונים',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800)),
+                  ),
+                  for (final g in games) _gameRow(g),
+                ],
+              ]),
+            ),
+          ];
         },
       ),
     );
@@ -548,12 +618,14 @@ class _FriendsTab extends ConsumerWidget {
                   fontWeight: FontWeight.w800)),
         ),
         if (friends.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(
-              child: Text('עדיין אין חברים.\nעברו ל"הוסף חבר" כדי להתחיל.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white54, fontSize: 15)),
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: EmptyState(
+              emoji: '🧩',
+              title: 'עדיין אין חברים',
+              subtitle: 'הוסיפו חבר וקבלו קוד אישי\nכדי לשחק יחד ולצבור ניקוד',
+              actionLabel: '➕ הוסף חבר',
+              onAction: () => DefaultTabController.of(context).animateTo(3),
             ),
           )
         else
@@ -623,7 +695,7 @@ class _FriendsTab extends ConsumerWidget {
         children: [
           const CircleAvatar(
             radius: 16,
-            backgroundColor: Color(0xFF13243B),
+            backgroundColor: Candy.surfaceLow,
             child: Icon(Icons.person, color: Colors.white70, size: 18),
           ),
           const SizedBox(width: 10),
@@ -641,7 +713,7 @@ class _FriendsTab extends ConsumerWidget {
             IconButton(
               tooltip: 'בדיקת פוש מהבוט',
               icon: const Icon(Icons.science_outlined,
-                  color: Color(0xFFFFB74D), size: 20),
+                  color: Candy.gold, size: 20),
               onPressed: myUid == null
                   ? null
                   : () => _showBotTestMenu(context, ref, f, myUid),
@@ -743,7 +815,7 @@ class _FriendsTab extends ConsumerWidget {
     final friends = ref.read(friendsServiceProvider);
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF0D1A2E),
+      backgroundColor: Candy.surfaceLow,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (sheetContext) => SafeArea(
@@ -897,7 +969,7 @@ class _FriendsTab extends ConsumerWidget {
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          backgroundColor: const Color(0xFF0D1E30),
+          backgroundColor: Candy.surfaceLow,
           title: const Text('להסיר חבר?',
               style: TextStyle(color: Colors.white, fontSize: 17)),
           content: Text('להסיר את ${f.name} מרשימת החברים?',

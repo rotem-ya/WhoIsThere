@@ -47,6 +47,18 @@ extension PlayerRankX on PlayerRank {
     }
   }
 
+  String get description {
+    switch (this) {
+      case PlayerRank.blind: return 'בתחילת הדרך';
+      case PlayerRank.beginner: return 'הצעדים הראשונים';
+      case PlayerRank.curious: return 'העין מתחדדת';
+      case PlayerRank.detective: return 'שם לב לכל פרט';
+      case PlayerRank.researcher: return 'מפענח כל תמונה';
+      case PlayerRank.expert: return 'קשה להפתיע אותך';
+      case PlayerRank.legend: return 'שם דבר במשחק';
+    }
+  }
+
   int get minPoints {
     switch (this) {
       case PlayerRank.blind: return 0;

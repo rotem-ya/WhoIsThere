@@ -11,8 +11,9 @@ import '../../core/constants/ad_constants.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/economy_config.dart';
 import '../../core/constants/game_constants.dart';
-// player_rank removed — using discoveredCount badge instead;
+import '../../core/constants/player_rank.dart';
 import '../../core/theme/app_styles.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../providers/providers.dart';
 import '../../models/player_model.dart';
 import '../../models/room_model.dart';
@@ -24,10 +25,12 @@ import '../friends/widgets/groups_tab.dart';
 import '../../services/analytics_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../services/settings_service.dart';
+import '../../services/sfx_service.dart';
 import '../../services/content_manifest_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../widgets/common/app_feedback.dart';
+import '../../widgets/common/branded_loader.dart';
 import '../../widgets/common/player_avatar.dart';
 import '../../widgets/common/player_name_text.dart';
 import '../../widgets/common/pressable_scale.dart';
@@ -44,6 +47,7 @@ class LobbyScreen extends ConsumerStatefulWidget {
 
 class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   bool _isStarting = false;
+  bool _launching = false;
   bool _codeCopied = false;
   bool _lobbyLogged = false;
   bool _autoInvitePrompted = false;
@@ -87,7 +91,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         content: Text(granted
             ? '+${EconomyConfig.adRewardCoins} מטבעות הופקדו!'
             : 'המכסה היומית הושלמה'),
-        backgroundColor: const Color(0xFF0A3880),
+        backgroundColor: Candy.blue,
       ),
     );
   }
@@ -110,7 +114,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF20A8E0), Color(0xFF0868A8)],
+              colors: [Candy.blue, Candy.blue],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -378,7 +382,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          backgroundColor: const Color(0xFF0D1E30),
+          backgroundColor: Candy.surfaceLow,
           title: const Text('לבטל בחירת נושא?',
               style: TextStyle(color: Colors.white, fontSize: 17)),
           content: Text('לבטל את "${cat.nameHe}" שבחר $name?',
@@ -448,7 +452,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          backgroundColor: const Color(0xFF0D1E30),
+          backgroundColor: Candy.surfaceLow,
           title: const Text('לא כולם בחרו נושא',
               style: TextStyle(color: Colors.white, fontSize: 17)),
           content: Text(
@@ -465,7 +469,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('השלם והתחל',
                   style: TextStyle(
-                      color: Color(0xFF22D3EE), fontWeight: FontWeight.w800)),
+                      color: Candy.teal, fontWeight: FontWeight.w800)),
             ),
           ],
         ),
@@ -537,10 +541,17 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         }
 
         if (room.phase == GamePhase.playing) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) context.go('/game/${room.id}');
-          });
-          return const SizedBox.shrink();
+          // A short, punchy launch beat before the game screen. All clients
+          // flip to "playing" together, so the "מתחילים!" flash reads as a
+          // shared opening rather than a hard cut. Fires once.
+          if (!_launching) {
+            _launching = true;
+            SfxService.instance.reveal();
+            Future.delayed(const Duration(milliseconds: 1050), () {
+              if (context.mounted) context.go('/game/${room.id}');
+            });
+          }
+          return const _LaunchOverlay();
         }
 
         final isHost = currentUser?.id == room.hostId;
@@ -755,7 +766,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                           'צריך לפחות 2 שחקנים כדי להתחיל',
                           textAlign: TextAlign.center,
                           style: AppStyles.bodySmall.copyWith(
-                            color: const Color(0xFFFFE082).withOpacity(0.85),
+                            color: Candy.gold.withOpacity(0.85),
                           ),
                         ),
                       ),
@@ -828,14 +839,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         ), // Scaffold
         ); // PopScope
       },
-      loading: () => const Scaffold(
-        backgroundColor: AppStyles.navyTop,
-        body: Center(
-          child: CircularProgressIndicator(color: AppStyles.bananaYellow),
-        ),
-      ),
+      loading: () => const BrandedLoader(),
       error: (e, _) => Scaffold(
-        backgroundColor: AppStyles.navyTop,
+        backgroundColor: Candy.bgBottom,
         body: Center(
           child: Text('שגיאה: $e', style: AppStyles.bodyLarge),
         ),
@@ -1034,7 +1040,11 @@ class _PlayerGrid extends StatelessWidget {
       ),
       itemBuilder: (context, index) {
         if (index < players.length) {
+          // A stable key per player preserves each tile's identity across
+          // rebuilds, so only a genuinely new joiner plays the entrance pop
+          // (existing tiles don't re-animate every time the room updates).
           return _PlayerAvatarTile(
+            key: ValueKey(players[index].id),
             player: players[index],
             isMe: players[index].id == currentUserId,
             delay: Duration(milliseconds: 120 + index * 55),
@@ -1054,6 +1064,7 @@ class _PlayerAvatarTile extends StatelessWidget {
   final Duration delay;
 
   const _PlayerAvatarTile({
+    super.key,
     required this.player,
     required this.isMe,
     this.delay = Duration.zero,
@@ -1063,6 +1074,10 @@ class _PlayerAvatarTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final base = isMe ? 'אני' : (player.name.isNotEmpty ? player.name : 'שחקן');
     final label = player.isHost ? '$base ⭐' : base;
+    // A thin ring around each avatar, tinted by the player's rank tier — a
+    // subtle at-a-glance sense of who's a veteran. "You" is still marked by the
+    // card's cyan border/glow, so the ring stays free to signal rank for all.
+    final rank = PlayerRankX.fromPoints(player.totalPoints);
 
     return Stack(
       clipBehavior: Clip.none,
@@ -1081,16 +1096,22 @@ class _PlayerAvatarTile extends StatelessWidget {
           child: Row(
             textDirection: TextDirection.rtl,
             children: [
-              // Avatar with cyan ring for current user
+              // Avatar wrapped in a rank-tinted ring + soft matching glow.
               Container(
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isMe ? AppStyles.cyanGlow : Colors.white38,
+                    color: rank.color.withOpacity(0.92),
                     width: 2,
                   ),
-                  boxShadow: isMe ? AppStyles.cyanGlowShadow(intensity: 0.5) : null,
+                  boxShadow: [
+                    BoxShadow(
+                      color: rank.color.withOpacity(0.45),
+                      blurRadius: 6,
+                      spreadRadius: 0.4,
+                    ),
+                  ],
                 ),
                 child: PlayerAvatar(
                     name: player.name,
@@ -1141,8 +1162,62 @@ class _PlayerAvatarTile extends StatelessWidget {
       ],
     )
         .animate()
-        .fadeIn(delay: delay, duration: 280.ms, curve: Curves.easeOut)
-        .slideX(begin: -0.06, end: 0, delay: delay, duration: 280.ms, curve: Curves.easeOut);
+        .fadeIn(delay: delay, duration: 300.ms, curve: Curves.easeOut)
+        .scaleXY(
+            begin: 0.86,
+            end: 1.0,
+            delay: delay,
+            duration: 420.ms,
+            curve: Curves.easeOutBack)
+        .slideY(begin: 0.14, end: 0, delay: delay, duration: 320.ms, curve: Curves.easeOut);
+  }
+}
+
+// ── Launch beat: a brief "מתחילים!" flash while the game screen loads ───────
+
+class _LaunchOverlay extends StatelessWidget {
+  const _LaunchOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(gradient: Candy.bg),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🎬', style: TextStyle(fontSize: 60))
+                .animate()
+                .scaleXY(
+                    begin: 0.4,
+                    end: 1.0,
+                    duration: 420.ms,
+                    curve: Curves.easeOutBack)
+                .then()
+                .shakeX(hz: 3, amount: 2),
+            const SizedBox(height: 14),
+            const Text(
+              'מתחילים!',
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 34,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
+              ),
+            )
+                .animate()
+                .fadeIn(delay: 120.ms, duration: 260.ms)
+                .scaleXY(
+                    begin: 0.7,
+                    end: 1.0,
+                    delay: 120.ms,
+                    duration: 460.ms,
+                    curve: Curves.elasticOut),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -1380,7 +1455,7 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
         child: Container(
           height: MediaQuery.of(context).size.height * 0.78,
           decoration: const BoxDecoration(
-            color: Color(0xFF0D1E30),
+            color: Candy.surfaceLow,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + navBarInset),
@@ -1500,7 +1575,7 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
                               child: Row(
                                 children: [
                                   const Icon(Icons.group_add_rounded,
-                                      color: Color(0xFF4A9EFF), size: 18),
+                                      color: Candy.blue, size: 18),
                                   const SizedBox(width: 8),
                                   const Expanded(
                                     child: Text(
@@ -1693,7 +1768,7 @@ class _InviteFriendsSheetState extends ConsumerState<_InviteFriendsSheet> {
             icon: const Icon(Icons.share_rounded, size: 18),
             style: FilledButton.styleFrom(
               backgroundColor: AppStyles.cyanGlow,
-              foregroundColor: const Color(0xFF07101F),
+              foregroundColor: Candy.bgBottom,
             ),
             label: const Text('שתף קוד חדר',
                 style: TextStyle(fontWeight: FontWeight.w900)),
@@ -1849,9 +1924,9 @@ class _DiscoveredBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       decoration: BoxDecoration(
-        color: const Color(0xFF061422),
+        color: Candy.bgBottom,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF4A8BAA).withOpacity(0.55), width: 0.8),
+        border: Border.all(color: Candy.inkMuted.withOpacity(0.55), width: 0.8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1861,7 +1936,7 @@ class _DiscoveredBadge extends StatelessWidget {
           Text(
             '$count',
             style: const TextStyle(
-              color: Color(0xFF87CEEB),
+              color: Candy.teal,
               fontSize: 10,
               fontWeight: FontWeight.w900,
               height: 1,
@@ -1914,7 +1989,7 @@ class _TricksToggleRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1E30).withOpacity(0.85),
+        color: Candy.surfaceLow.withOpacity(0.85),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withOpacity(0.12)),
       ),
@@ -1949,7 +2024,7 @@ class _TricksToggleRow extends StatelessWidget {
           Switch(
             value: enabled,
             onChanged: onChanged,
-            activeColor: const Color(0xFF8B4FBF),
+            activeColor: Candy.grape,
           ),
         ],
       ),
@@ -1975,7 +2050,7 @@ class _ProverbsRoundsRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1E30).withOpacity(0.85),
+        color: Candy.surfaceLow.withOpacity(0.85),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withOpacity(0.12)),
       ),
@@ -2010,7 +2085,7 @@ class _ProverbsRoundsRow extends StatelessWidget {
                 ? () => onChanged!(rounds - 1)
                 : null,
             icon: const Icon(Icons.remove_circle_outline_rounded),
-            color: const Color(0xFFFFE082),
+            color: Candy.gold,
             disabledColor: Colors.white24,
           ),
           SizedBox(
@@ -2030,7 +2105,7 @@ class _ProverbsRoundsRow extends StatelessWidget {
                 ? () => onChanged!(rounds + 1)
                 : null,
             icon: const Icon(Icons.add_circle_outline_rounded),
-            color: const Color(0xFFFFE082),
+            color: Candy.gold,
             disabledColor: Colors.white24,
           ),
         ],
@@ -2059,7 +2134,7 @@ class _LetterTurnToggleRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1E30).withOpacity(0.85),
+        color: Candy.surfaceLow.withOpacity(0.85),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withOpacity(0.12)),
       ),
@@ -2094,7 +2169,7 @@ class _LetterTurnToggleRow extends StatelessWidget {
           Switch(
             value: enabled,
             onChanged: onChanged,
-            activeColor: const Color(0xFF8B4FBF),
+            activeColor: Candy.grape,
           ),
         ],
       ),

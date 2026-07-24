@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/theme/app_styles.dart';
+import '../../core/theme/candy_theme.dart';
 import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
+import '../../services/sfx_service.dart';
+import '../../widgets/common/matchmaking_tiles.dart';
 import '../../widgets/common/pressable_scale.dart';
 
 /// Shown after quick-game creation while bots fill the remaining slots.
@@ -91,6 +93,7 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
     final name = 'שחקן $botIndex';
     setState(() => _joinedNames.add(name));
     HapticFeedback.lightImpact();
+    SfxService.instance.playerJoin();
 
     // Fetch fresh room and check if we're done.
     final updatedRoom =
@@ -160,6 +163,7 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
 
     final playerCount = roomAsync.valueOrNull?.players.length ?? 1;
     final target = widget.targetPlayers;
+    final bgVariant = ref.watch(bgVariantProvider);
 
     return PopScope(
       canPop: false,
@@ -167,12 +171,12 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
         if (!didPop) _cancel();
       },
       child: Scaffold(
-        backgroundColor: AppStyles.navyTop,
+        backgroundColor: Candy.bgVariantBottom(bgVariant),
         body: Stack(
           children: [
-            const Positioned.fill(
+            Positioned.fill(
               child: DecoratedBox(
-                decoration: BoxDecoration(gradient: AppStyles.backgroundGradient),
+                decoration: BoxDecoration(gradient: Candy.bgVariant(bgVariant)),
               ),
             ),
             SafeArea(
@@ -182,45 +186,43 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Pulsing search icon
-                    Center(
-                      child: AnimatedBuilder(
-                        animation: _dotAnim,
-                        builder: (context, _) => Opacity(
-                          opacity: 0.6 + _dotAnim.value * 0.4,
-                          child: const Icon(
-                            Icons.search_rounded,
-                            size: 72,
-                            color: AppStyles.bananaYellow,
+                    // Branded hero: a mini board whose tiles reveal in a wave,
+                    // echoing the game's core mechanic instead of a spinner.
+                    const Center(child: MatchmakingTiles()),
+                    const SizedBox(height: 30),
+
+                    // Title with an animated ellipsis.
+                    AnimatedBuilder(
+                      animation: _dotAnim,
+                      builder: (context, _) {
+                        final dots = '.' * (1 + (_dotAnim.value * 2.99).floor());
+                        return Text(
+                          'מחפש יריבים$dots',
+                          textAlign: TextAlign.center,
+                          textDirection: TextDirection.rtl,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 16),
 
-                    // Title
-                    const Text(
-                      'מחפש שחקנים...',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
+                    // Slot-fill row: one pip per needed player, filling in.
+                    _SlotRow(filled: playerCount, total: target),
                     const SizedBox(height: 10),
-
-                    // Player count progress
                     Text(
-                      '$playerCount / $target שחקנים',
+                      '$playerCount מתוך $target',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: AppStyles.cyanGlow.withOpacity(0.85),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                        color: Candy.teal.withOpacity(0.9),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 22),
 
                     // Joined players list
                     if (_joinedNames.isNotEmpty)
@@ -282,6 +284,52 @@ class _FindingPlayersScreenState extends ConsumerState<FindingPlayersScreen>
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A 3x3 mini board whose tiles brighten in a diagonal wave, cycling through
+/// the Candy accents — a branded stand-in for a loading spinner that nods to
+/// the game's tile-reveal mechanic.
+/// One pip per needed player; pips fill (and pop) as players join.
+class _SlotRow extends StatelessWidget {
+  final int filled;
+  final int total;
+  const _SlotRow({required this.filled, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (var i = 0; i < total; i++)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5),
+            child: AnimatedScale(
+              scale: i < filled ? 1.0 : 0.7,
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutBack,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 260),
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: i < filled ? Candy.teal : Colors.white.withOpacity(0.12),
+                  border: Border.all(
+                    color: i < filled
+                        ? Candy.teal
+                        : Colors.white.withOpacity(0.25),
+                    width: 1.4,
+                  ),
+                  boxShadow: i < filled
+                      ? [BoxShadow(color: Candy.teal.withOpacity(0.5), blurRadius: 8)]
+                      : null,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

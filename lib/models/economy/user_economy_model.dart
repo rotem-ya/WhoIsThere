@@ -10,6 +10,9 @@ class UserEconomyModel {
   final DateTime? lastDailyRewardAt;
   final int dailyStreak;
 
+  // Daily spin-wheel tracking (all UTC)
+  final DateTime? lastDailySpinAt;
+
   // Ad reward tracking (all UTC)
   final int adRewardsTodayCount;
   final DateTime? adRewardWindowStart; // start of the UTC day window
@@ -21,6 +24,8 @@ class UserEconomyModel {
   final int totalMatchesPlayed;
   final int totalMatchesWon;
   final int totalHintsUsed;
+  // Consecutive wins (resets to 0 on a loss). Drives the "🔥 X streak" banner.
+  final int winStreak;
 
   const UserEconomyModel({
     required this.uid,
@@ -29,12 +34,14 @@ class UserEconomyModel {
     required this.totalSpent,
     this.lastDailyRewardAt,
     required this.dailyStreak,
+    this.lastDailySpinAt,
     required this.adRewardsTodayCount,
     this.adRewardWindowStart,
     this.lastFreeEntryAt,
     required this.totalMatchesPlayed,
     required this.totalMatchesWon,
     required this.totalHintsUsed,
+    this.winStreak = 0,
   });
 
   factory UserEconomyModel.empty(String uid) => UserEconomyModel(
@@ -44,12 +51,14 @@ class UserEconomyModel {
         totalSpent: 0,
         lastDailyRewardAt: null,
         dailyStreak: 0,
+        lastDailySpinAt: null,
         adRewardsTodayCount: 0,
         adRewardWindowStart: null,
         lastFreeEntryAt: null,
         totalMatchesPlayed: 0,
         totalMatchesWon: 0,
         totalHintsUsed: 0,
+        winStreak: 0,
       );
 
   factory UserEconomyModel.fromFirestore(String uid, Map<String, dynamic> d) {
@@ -61,6 +70,8 @@ class UserEconomyModel {
       lastDailyRewardAt:
           (d['lastDailyRewardAt'] as Timestamp?)?.toDate().toUtc(),
       dailyStreak: (d['dailyStreak'] as num? ?? 0).toInt(),
+      lastDailySpinAt:
+          (d['lastDailySpinAt'] as Timestamp?)?.toDate().toUtc(),
       adRewardsTodayCount: (d['adRewardsTodayCount'] as num? ?? 0).toInt(),
       adRewardWindowStart:
           (d['adRewardWindowStart'] as Timestamp?)?.toDate().toUtc(),
@@ -68,6 +79,7 @@ class UserEconomyModel {
       totalMatchesPlayed: (d['totalMatchesPlayed'] as num? ?? 0).toInt(),
       totalMatchesWon: (d['totalMatchesWon'] as num? ?? 0).toInt(),
       totalHintsUsed: (d['totalHintsUsed'] as num? ?? 0).toInt(),
+      winStreak: (d['winStreak'] as num? ?? 0).toInt(),
     );
   }
 
@@ -78,6 +90,8 @@ class UserEconomyModel {
         if (lastDailyRewardAt != null)
           'lastDailyRewardAt': Timestamp.fromDate(lastDailyRewardAt!),
         'dailyStreak': dailyStreak,
+        if (lastDailySpinAt != null)
+          'lastDailySpinAt': Timestamp.fromDate(lastDailySpinAt!),
         'adRewardsTodayCount': adRewardsTodayCount,
         if (adRewardWindowStart != null)
           'adRewardWindowStart': Timestamp.fromDate(adRewardWindowStart!),
@@ -86,6 +100,7 @@ class UserEconomyModel {
         'totalMatchesPlayed': totalMatchesPlayed,
         'totalMatchesWon': totalMatchesWon,
         'totalHintsUsed': totalHintsUsed,
+        'winStreak': winStreak,
       };
 
   UserEconomyModel copyWith({
@@ -94,12 +109,14 @@ class UserEconomyModel {
     int? totalSpent,
     DateTime? lastDailyRewardAt,
     int? dailyStreak,
+    DateTime? lastDailySpinAt,
     int? adRewardsTodayCount,
     DateTime? adRewardWindowStart,
     DateTime? lastFreeEntryAt,
     int? totalMatchesPlayed,
     int? totalMatchesWon,
     int? totalHintsUsed,
+    int? winStreak,
   }) =>
       UserEconomyModel(
         uid: uid,
@@ -108,11 +125,13 @@ class UserEconomyModel {
         totalSpent: totalSpent ?? this.totalSpent,
         lastDailyRewardAt: lastDailyRewardAt ?? this.lastDailyRewardAt,
         dailyStreak: dailyStreak ?? this.dailyStreak,
+        lastDailySpinAt: lastDailySpinAt ?? this.lastDailySpinAt,
         adRewardsTodayCount: adRewardsTodayCount ?? this.adRewardsTodayCount,
         adRewardWindowStart: adRewardWindowStart ?? this.adRewardWindowStart,
         lastFreeEntryAt: lastFreeEntryAt ?? this.lastFreeEntryAt,
         totalMatchesPlayed: totalMatchesPlayed ?? this.totalMatchesPlayed,
         totalMatchesWon: totalMatchesWon ?? this.totalMatchesWon,
         totalHintsUsed: totalHintsUsed ?? this.totalHintsUsed,
+        winStreak: winStreak ?? this.winStreak,
       );
 }

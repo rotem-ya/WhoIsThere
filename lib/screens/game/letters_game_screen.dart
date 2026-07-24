@@ -6,6 +6,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import '../../core/theme/candy_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +21,7 @@ import '../../services/analytics_service.dart';
 import '../../services/review_prompt_service.dart';
 import '../../services/settings_service.dart';
 import '../../services/sfx_service.dart';
+import '../../widgets/common/matchmaking_tiles.dart';
 
 /// The letters game (משחק האותיות) — a Wordle-style image-reveal duel.
 /// Turn-based 1v1: on your turn you place a letter into a slot. A correct
@@ -42,10 +44,10 @@ const List<List<String>> _kKeyboardRows = [
   ['ץ', 'ת', 'צ', 'מ', 'נ', 'ה', 'ב', 'ס', 'ז', "'"],
 ];
 
-const Color _kGold = Color(0xFFD4AF37);
-const Color _kGoldLight = Color(0xFFFFE082);
+const Color _kGold = Candy.gold;
+const Color _kGoldLight = Candy.gold;
 const Color _kGreen = Color(0xFF3DCC7A);
-const Color _kYellow = Color(0xFFE0A93D);
+const Color _kYellow = Candy.gold;
 const Color _kAbsent = Color(0xFF3A4A5E);
 
 class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
@@ -53,12 +55,22 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   String? _loadingImageId;
   int? _selectedSlot; // null → auto-target the first empty slot
   bool _submitting = false;
+  // Consecutive hits (a letter that lands green/yellow); a miss resets it.
+  // Surfaces a "🔥 xN" chip once it reaches 2, for a little momentum reward.
+  int _streak = 0;
   String? _lastBotTurnKey;
   bool _winSoundPlayed = false;
   bool _startTriggered = false;
   bool _rematchBusy = false;
   bool _startLogged = false;
   Timer? _randomFallbackTimer;
+
+  // Per-turn 10s clock: a ticker refreshes the visible countdown and skips a
+  // human's turn once it runs out.
+  Timer? _turnTicker;
+  final ValueNotifier<int> _turnSeconds = ValueNotifier<int>(0);
+  RoomModel? _liveRoom;
+  int _lastTimeoutAttemptMs = 0;
 
   static final AudioPlayer _bgPlayer = AudioPlayer(playerId: 'letters-bg');
   static final AssetSource _bgMusic = AssetSource('sounds/background_studio.mp3');
@@ -71,6 +83,36 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
     super.initState();
     _confetti = ConfettiController(duration: const Duration(seconds: 2));
     _startMusic();
+    _turnTicker =
+        Timer.periodic(const Duration(milliseconds: 400), (_) => _onTurnTick());
+  }
+
+  /// Refreshes the turn countdown and, when a human's clock hits zero, asks the
+  /// service to skip their turn. Bots are driven by the host, so they're
+  /// exempt. Throttled + idempotent, so both clients can watch safely.
+  void _onTurnTick() {
+    if (!mounted) return;
+    final room = _liveRoom;
+    if (room == null ||
+        room.phase != GamePhase.playing ||
+        !room.isLetters ||
+        room.letterTurnDeadlineMs == null) {
+      if (_turnSeconds.value != 0) _turnSeconds.value = 0;
+      return;
+    }
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final remainMs = room.letterTurnDeadlineMs! - now;
+    final secs = (remainMs / 1000).ceil().clamp(0, 99);
+    if (_turnSeconds.value != secs) _turnSeconds.value = secs;
+    if (remainMs > 0) return;
+    final turnUid = room.currentTurnUserId;
+    if (turnUid == null || turnUid.startsWith('virtual_')) return; // bot
+    if (now - _lastTimeoutAttemptMs < 1500) return; // throttle retries
+    _lastTimeoutAttemptMs = now;
+    ref.read(roomServiceProvider).expireLettersTurn(
+          roomId: widget.roomId,
+          expectedTurnIndex: room.currentTurnIndex,
+        );
   }
 
   Future<void> _startMusic() async {
@@ -109,6 +151,8 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   void dispose() {
     _confetti.dispose();
     _randomFallbackTimer?.cancel();
+    _turnTicker?.cancel();
+    _turnSeconds.dispose();
     _bgPlayer.stop();
     super.dispose();
   }
@@ -188,16 +232,21 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
       _selectedSlot = null;
     });
     if (!res.accepted) return;
-    // Feedback sounds for my own board.
+    // Feedback sounds for my own board + a running "hits" streak.
     if (res.win) {
       // win fanfare handled by the finished overlay
     } else if (res.feedback == LetterFeedback.exact) {
       SfxService.instance.letterCorrect();
       SfxService.instance.reveal();
+      setState(() => _streak++);
+      if (_streak >= 2) SfxService.instance.streak(_streak);
     } else if (res.feedback == LetterFeedback.present) {
       SfxService.instance.reveal();
+      setState(() => _streak++);
+      if (_streak >= 2) SfxService.instance.streak(_streak);
     } else {
       SfxService.instance.letterWrong();
+      if (_streak != 0) setState(() => _streak = 0);
     }
   }
 
@@ -371,6 +420,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   }
 
   Widget _buildPlaying(RoomModel room, LettersPuzzle puzzle) {
+    _liveRoom = room; // the ticker reads this for the countdown + timeout
     final uid = _myUid ?? '';
     final mySolved = (room.lettersSolvedSlots[uid] ?? const []).toSet();
     final myGuessed = (room.lettersGuessed[uid] ?? const []).toSet();
@@ -395,6 +445,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
           total: puzzle.length,
           oppName: opp?.name ?? 'יריב',
           oppSolved: oppSolved,
+          secondsListenable: _turnSeconds,
           onClose: () => context.go('/home'),
         ),
         Expanded(
@@ -424,13 +475,37 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                         }
                       : null,
                 ),
-                const SizedBox(height: 12),
-                _Keyboard(
-                  enabled: isMyTurn && !_submitting,
-                  puzzle: puzzle,
-                  solved: mySolved,
-                  guessed: myGuessed,
-                  onLetter: (l) => _guess(room, puzzle, l),
+                const SizedBox(height: 8),
+                _StreakChip(streak: _streak),
+                const SizedBox(height: 4),
+                // Glow the whole keyboard on your turn so it's unmistakable.
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isMyTurn
+                          ? _kGold.withOpacity(0.55)
+                          : Colors.transparent,
+                      width: 1.2,
+                    ),
+                    boxShadow: isMyTurn
+                        ? [
+                            BoxShadow(
+                                color: _kGold.withOpacity(0.35),
+                                blurRadius: 22,
+                                spreadRadius: 1)
+                          ]
+                        : const [],
+                  ),
+                  child: _Keyboard(
+                    enabled: isMyTurn && !_submitting,
+                    puzzle: puzzle,
+                    solved: mySolved,
+                    guessed: myGuessed,
+                    onLetter: (l) => _guess(room, puzzle, l),
+                  ),
                 ),
                 const SizedBox(height: 10),
               ],
@@ -442,6 +517,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   }
 
   Widget _buildWaiting(RoomModel room) {
+    _liveRoom = null; // no turn clock while waiting
     final uid = _myUid ?? '';
     final isHost = uid == room.hostId;
     final isRandom = room.isPublicRoom;
@@ -456,8 +532,8 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                     color: _kGoldLight, fontSize: 26, fontWeight: FontWeight.w900)),
             const SizedBox(height: 18),
             if (isRandom) ...[
-              const CircularProgressIndicator(color: _kGold),
-              const SizedBox(height: 20),
+              const MatchmakingTiles(tile: 30, gap: 7),
+              const SizedBox(height: 22),
               const Text('מחפש יריב…',
                   style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
@@ -481,7 +557,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF07101F),
+                    color: Candy.bgBottom,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: _kGold.withOpacity(0.6), width: 1.5),
                   ),
@@ -505,8 +581,8 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white54, fontSize: 13)),
               const SizedBox(height: 24),
-              const CircularProgressIndicator(color: _kGold),
-              const SizedBox(height: 12),
+              const MatchmakingTiles(tile: 26, gap: 6),
+              const SizedBox(height: 14),
               const Text('ממתין לחבר…',
                   style: TextStyle(color: Colors.white70, fontSize: 14)),
               const SizedBox(height: 18),
@@ -516,7 +592,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                     style: TextStyle(color: _kGoldLight, fontSize: 16, fontWeight: FontWeight.w800)),
               ),
             ] else ...[
-              const CircularProgressIndicator(color: _kGold),
+              const MatchmakingTiles(tile: 28, gap: 6),
               const SizedBox(height: 18),
               const Text('ממתין שהמשחק יתחיל…',
                   style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
@@ -534,6 +610,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
   }
 
   Widget _buildFinished(RoomModel room, LettersPuzzle puzzle) {
+    _liveRoom = null; // stop the turn clock once the duel is over
     final uid = _myUid ?? '';
     final iWon = room.winnerId == uid;
     final winner = room.players[room.winnerId];
@@ -613,7 +690,7 @@ class _LettersGameScreenState extends ConsumerState<LettersGameScreen> {
                 onPressed: _rematchBusy ? null : () => _playAgain(room),
                 style: FilledButton.styleFrom(
                   backgroundColor: _kGold,
-                  foregroundColor: const Color(0xFF07101F),
+                  foregroundColor: Candy.bgBottom,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   textStyle:
                       const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
@@ -647,6 +724,7 @@ class _Header extends StatelessWidget {
   final int total;
   final String oppName;
   final int oppSolved;
+  final ValueNotifier<int> secondsListenable;
   final VoidCallback onClose;
 
   const _Header({
@@ -655,6 +733,7 @@ class _Header extends StatelessWidget {
     required this.total,
     required this.oppName,
     required this.oppSolved,
+    required this.secondsListenable,
     required this.onClose,
   });
 
@@ -671,15 +750,15 @@ class _Header extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                Text(
-                  isMyTurn ? 'תורך, בחר אות' : 'תור $oppName',
-                  style: TextStyle(
-                    color: isMyTurn ? _kGoldLight : Colors.white60,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
+                // Glowing turn pill with a live 10s countdown so whose turn it
+                // is (and how long is left) is unmistakable. It breathes on
+                // your turn and taps a light haptic the moment it flips to you.
+                _TurnPill(
+                  isMyTurn: isMyTurn,
+                  oppName: oppName,
+                  secondsListenable: secondsListenable,
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   'אתה $mySolved/$total · $oppName $oppSolved/$total',
                   style: const TextStyle(color: Colors.white54, fontSize: 12),
@@ -690,6 +769,239 @@ class _Header extends StatelessWidget {
           const SizedBox(width: 48),
         ],
       ),
+    );
+  }
+}
+
+// ── Turn pill: breathing glow on your turn + haptic when it flips to you ────
+
+class _TurnPill extends StatefulWidget {
+  final bool isMyTurn;
+  final String oppName;
+  final ValueNotifier<int> secondsListenable;
+
+  const _TurnPill({
+    required this.isMyTurn,
+    required this.oppName,
+    required this.secondsListenable,
+  });
+
+  @override
+  State<_TurnPill> createState() => _TurnPillState();
+}
+
+class _TurnPillState extends State<_TurnPill>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    );
+    if (widget.isMyTurn) _pulse.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_TurnPill old) {
+    super.didUpdateWidget(old);
+    if (widget.isMyTurn && !old.isMyTurn) {
+      // The turn just became mine: a light tap + start breathing.
+      HapticFeedback.lightImpact();
+      _pulse.repeat(reverse: true);
+    } else if (!widget.isMyTurn && old.isMyTurn) {
+      _pulse.stop();
+      _pulse.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: widget.secondsListenable,
+      builder: (context, secs, _) {
+        final isMyTurn = widget.isMyTurn;
+        final urgent = isMyTurn && secs > 0 && secs <= 3;
+        final accent = urgent ? const Color(0xFFE0563D) : _kGold;
+        return AnimatedBuilder(
+          animation: _pulse,
+          builder: (context, child) {
+            // Breathe: 0..1 eased both ways drives glow + a hair of scale.
+            final p = isMyTurn
+                ? Curves.easeInOut.transform(_pulse.value)
+                : 0.0;
+            final glow = 12.0 + 14.0 * p;
+            final glowOp = 0.30 + 0.30 * p;
+            final scale = 1.0 + 0.03 * p;
+            return Transform.scale(
+              scale: scale,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isMyTurn
+                      ? accent.withOpacity(0.16)
+                      : Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: isMyTurn ? accent.withOpacity(0.85) : Colors.white24,
+                    width: 1.2,
+                  ),
+                  boxShadow: isMyTurn
+                      ? [
+                          BoxShadow(
+                              color: accent.withOpacity(glowOp),
+                              blurRadius: glow)
+                        ]
+                      : const [],
+                ),
+                child: child,
+              ),
+            );
+          },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isMyTurn ? 'תורך, בחר אות' : 'תור ${widget.oppName}',
+                style: TextStyle(
+                  color: isMyTurn ? Colors.white : Colors.white60,
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              if (secs > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  width: 24,
+                  height: 24,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color:
+                        isMyTurn ? accent : Colors.white.withOpacity(0.18),
+                  ),
+                  child: Text(
+                    '$secs',
+                    style: TextStyle(
+                      color: isMyTurn ? Candy.bgBottom : Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Streak chip: "🔥 xN" that pops in once you string hits together ─────────
+
+class _StreakChip extends StatelessWidget {
+  final int streak;
+  const _StreakChip({required this.streak});
+
+  @override
+  Widget build(BuildContext context) {
+    final show = streak >= 2;
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 260),
+      transitionBuilder: (child, anim) => ScaleTransition(
+        scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+        child: FadeTransition(opacity: anim, child: child),
+      ),
+      child: !show
+          ? const SizedBox(height: 24, key: ValueKey('none'))
+          : Container(
+              key: ValueKey(streak),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFF8A3D), Color(0xFFE0563D)],
+                ),
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: [
+                  BoxShadow(
+                      color: const Color(0xFFE0563D).withOpacity(0.5),
+                      blurRadius: 12),
+                ],
+              ),
+              child: Row(
+                textDirection: TextDirection.rtl,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _FlickerFlame(),
+                  const SizedBox(width: 4),
+                  Text(
+                    'רצף x$streak',
+                    textDirection: TextDirection.rtl,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+/// A small flame emoji that flickers (scale + slight sway), so the streak badge
+/// reads as a live fire rather than a static glyph.
+class _FlickerFlame extends StatefulWidget {
+  const _FlickerFlame();
+
+  @override
+  State<_FlickerFlame> createState() => _FlickerFlameState();
+}
+
+class _FlickerFlameState extends State<_FlickerFlame>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, child) {
+        final t = Curves.easeInOut.transform(_c.value);
+        return Transform.rotate(
+          angle: (t - 0.5) * 0.18,
+          child: Transform.scale(scale: 0.9 + 0.22 * t, child: child),
+        );
+      },
+      child: const Text('🔥', style: TextStyle(fontSize: 14)),
     );
   }
 }
@@ -777,7 +1089,7 @@ class _SlotBox extends StatelessWidget {
                 end: Alignment.bottomCenter,
               )
             : null,
-        color: filled ? null : const Color(0xFF07101F),
+        color: filled ? null : Candy.bgBottom,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: active
@@ -794,7 +1106,7 @@ class _SlotBox extends StatelessWidget {
       child: Text(
         letter ?? '',
         style: TextStyle(
-          color: const Color(0xFF07101F),
+          color: Candy.bgBottom,
           fontSize: math.max(16, size * 0.58),
           fontWeight: FontWeight.w900,
           height: 1,
@@ -871,7 +1183,7 @@ class _Keyboard extends StatelessWidget {
   }
 }
 
-class _Key extends StatelessWidget {
+class _Key extends StatefulWidget {
   final String label;
   final double size;
   final bool enabled;
@@ -887,27 +1199,56 @@ class _Key extends StatelessWidget {
   });
 
   @override
+  State<_Key> createState() => _KeyState();
+}
+
+class _KeyState extends State<_Key> {
+  bool _down = false;
+
+  void _setDown(bool v) {
+    if (widget.enabled && _down != v) setState(() => _down = v);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final dark = color == Colors.white;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(11),
-        child: Ink(
-          width: size,
-          height: size + 10,
+    final dark = widget.color == Colors.white;
+    return GestureDetector(
+      onTapDown: (_) => _setDown(true),
+      onTapUp: (_) {
+        _setDown(false);
+        if (widget.enabled) widget.onTap();
+      },
+      onTapCancel: () => _setDown(false),
+      // A quick key-press pop: squash on down, spring back with a hair of
+      // overshoot on release, so every letter feels tactile.
+      child: AnimatedScale(
+        scale: _down ? 0.86 : 1.0,
+        duration: Duration(milliseconds: _down ? 70 : 150),
+        curve: _down ? Curves.easeOut : Curves.easeOutBack,
+        child: Container(
+          width: widget.size,
+          height: widget.size + 10,
           decoration: BoxDecoration(
-            color: enabled ? color : color.withOpacity(0.45),
+            color: widget.enabled
+                ? widget.color
+                : widget.color.withOpacity(0.45),
             borderRadius: BorderRadius.circular(11),
             border: Border.all(color: _kGold.withOpacity(0.45), width: 1.2),
+            boxShadow: _down
+                ? [
+                    BoxShadow(
+                        color: _kGold.withOpacity(0.35),
+                        blurRadius: 10,
+                        spreadRadius: 0.5)
+                  ]
+                : const [],
           ),
           child: Center(
             child: Text(
-              label,
+              widget.label,
               style: TextStyle(
-                color: dark ? const Color(0xFF07101F) : Colors.white,
-                fontSize: math.max(18, size * 0.56),
+                color: dark ? Candy.bgBottom : Colors.white,
+                fontSize: math.max(18, widget.size * 0.56),
                 fontWeight: FontWeight.w900,
                 height: 1,
               ),
@@ -941,7 +1282,7 @@ class _FrostedBoard extends StatelessWidget {
   Widget _fullImage(double side) {
     final url = imageUrl;
     if (url == null || url.isEmpty) {
-      return Container(color: const Color(0xFF0A1A2E));
+      return Container(color: Candy.surfaceLow);
     }
     return url.startsWith('assets/')
         ? Image.asset(url, width: side, height: side, fit: BoxFit.cover)
@@ -950,7 +1291,7 @@ class _FrostedBoard extends StatelessWidget {
             width: side,
             height: side,
             fit: BoxFit.cover,
-            errorWidget: (_, __, ___) => Container(color: const Color(0xFF0A1A2E)),
+            errorWidget: (_, __, ___) => Container(color: Candy.surfaceLow),
           );
   }
 
@@ -1015,7 +1356,7 @@ class _FrostedBoard extends StatelessWidget {
                         colors: [
                           Colors.white.withOpacity(0.14),
                           Colors.white.withOpacity(0.05),
-                          const Color(0xFF0A1A2E).withOpacity(0.22),
+                          Candy.surfaceLow.withOpacity(0.22),
                         ],
                       ),
                     ),
