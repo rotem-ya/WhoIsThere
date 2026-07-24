@@ -31,7 +31,6 @@ import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_fly.dart';
 import '../../widgets/economy/coin_icon.dart';
 import '../../widgets/common/candy_particles.dart';
-import '../../widgets/economy/daily_spin_sheet.dart';
 import '../../widgets/economy/rewards_hub_sheet.dart';
 import '../../models/room_model.dart';
 
@@ -857,8 +856,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 SizedBox(width: 8),
                                 _FriendsIconButton(),
                                 Spacer(),
-                                _DailySpinButton(),
-                                SizedBox(width: 8),
+                                // The spin wheel now lives inside the rewards hub
+                                // (opened by the gifts button), so the separate
+                                // dice button was removed to declutter the bar.
                                 _DailyRewardButton(),
                               ],
                             ),
@@ -1218,53 +1218,69 @@ class _TipOfDayCard extends StatelessWidget {
     final dayIndex =
         DateTime.now().difference(DateTime(2026, 1, 1)).inDays.abs();
     final tip = _tips[dayIndex % _tips.length];
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Candy.grape.withOpacity(0.35),
-            Candy.bgMid.withOpacity(0.55),
-          ],
-          begin: Alignment.centerRight,
-          end: Alignment.centerLeft,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Candy.gold.withOpacity(0.28), width: 1),
-      ),
-      child: Row(
-        children: [
-          const Text('💡', style: TextStyle(fontSize: 22)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'טיפ היום',
-                  style: TextStyle(
-                    color: Candy.gold,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                  ),
+    // Opaque bubble colour so the little tail (same fill, no border) blends
+    // seamlessly into the bubble edge.
+    const bubbleColor = Color(0xFF2B1D52);
+    return Row(
+      children: [
+        // Mascot: Chakmon the wise owl. He bobs gently so he feels alive and
+        // "speaks" the daily tip through the bubble beside him.
+        const Text('🦉', style: TextStyle(fontSize: 40))
+            .animate(onPlay: (c) => c.repeat(reverse: true))
+            .moveY(begin: 0, end: -3, duration: 1200.ms, curve: Curves.easeInOut),
+        const SizedBox(width: 2),
+        Expanded(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(12, 7, 12, 8),
+                decoration: BoxDecoration(
+                  color: bubbleColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border:
+                      Border.all(color: Candy.gold.withOpacity(0.30), width: 1),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  tip,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    height: 1.25,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'טיפ היום',
+                      style: TextStyle(
+                        color: Candy.gold,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      tip,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              // Speech-bubble tail pointing at the owl (physical right in RTL).
+              Positioned(
+                right: -4,
+                top: 16,
+                child: Transform.rotate(
+                  angle: 0.7853981633974483, // 45°
+                  child: Container(width: 11, height: 11, color: bubbleColor),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1303,7 +1319,9 @@ class _GameTypeCard extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         opacity: onTap == null ? 0.55 : 1,
         child: Container(
-          height: 74,
+          // Trimmed slightly (was 74) so the fourth game button clears the
+          // Android navigation bar on shorter screens.
+          height: 66,
           decoration: BoxDecoration(
             gradient: Candy.jellyFill(gradientColors.first),
             borderRadius: BorderRadius.circular(22),
@@ -1515,67 +1533,6 @@ class _DailyRewardButton extends ConsumerWidget {
                         height: 1,
                       ),
                     ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Daily spin-wheel button (top bar) ─────────────────────────────────────
-
-class _DailySpinButton extends ConsumerWidget {
-  const _DailySpinButton();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final wallet = ref.watch(walletProvider).valueOrNull;
-    final isAvailable = isDailySpinAvailable(wallet?.lastDailySpinAt);
-
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        // Always open the wheel; the sheet shows a "come back tomorrow" state
-        // when today's free spin was already used.
-        showDailySpinSheet(context, ref);
-      },
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
-        opacity: isAvailable ? 1.0 : 0.38,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF050A14).withOpacity(0.60),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: isAvailable
-                      ? Candy.teal.withOpacity(0.80)
-                      : Colors.white.withOpacity(0.15),
-                  width: isAvailable ? 1.5 : 1.0,
-                ),
-              ),
-              child: const Center(
-                child: Icon(Icons.casino_rounded, color: Candy.teal, size: 20),
-              ),
-            ),
-            if (isAvailable)
-              Positioned(
-                top: -5,
-                right: -5,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: Candy.teal,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppStyles.navyTop, width: 1.5),
                   ),
                 ),
               ),

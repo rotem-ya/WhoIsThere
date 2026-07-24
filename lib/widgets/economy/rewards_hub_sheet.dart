@@ -353,10 +353,12 @@ class _QuestRowState extends ConsumerState<_QuestRow> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  // Top-align so a 2-line title sits neatly beside the chip.
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (v.weekly)
                       Container(
-                        margin: const EdgeInsets.only(left: 6),
+                        margin: const EdgeInsets.only(left: 6, top: 1),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
@@ -369,14 +371,18 @@ class _QuestRowState extends ConsumerState<_QuestRow> {
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.w800)),
                       ),
-                    Flexible(
+                    // Wrap to a second line before truncating; the weekly chip
+                    // otherwise stole enough width to clip titles like
+                    // "נצחו 15 משחקים השבוע".
+                    Expanded(
                       child: Text(d.title,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w700)),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              height: 1.15)),
                     ),
                   ],
                 ),
