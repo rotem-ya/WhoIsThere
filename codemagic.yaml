@@ -1,11 +1,15 @@
-# Codemagic CI — build WhoIsThere for iOS and ship to TestFlight.
+# Codemagic CI — build WhoIsThere and ship to the stores.
+#   • ios-testflight     → build IPA + upload to TestFlight   (tag: ios-v*)
+#   • android-googleplay → build AAB + upload to Google Play  (tag: aab-v*)
 #
-# One-time setup in the Codemagic UI (see IOS_TESTFLIGHT_SETUP.md):
+# One-time iOS setup in the Codemagic UI (see IOS_TESTFLIGHT_SETUP.md):
 #   1. Connect this repository (rotem-ya/WhoIsThere) as an app.
 #   2. Teams → Integrations → App Store Connect API key named "Apple_Key_Trivia"
 #      (Key ID 995PSX889V) — referenced below under `integrations`.
 #   3. In App Store Connect, create the app with bundle id  com.rotem.whoisthere.
-# Then run the `ios-testflight` workflow. Codemagic handles signing automatically.
+# One-time Android setup: add a Google Play service-account JSON as the
+#   `google_play` env var group (see the android-googleplay block below).
+# Then push the matching tag; Codemagic handles signing automatically.
 
 workflows:
   ios-testflight:
@@ -226,3 +230,84 @@ workflows:
         # Uploads the build to TestFlight so you can install it on your iPhone
         # via the TestFlight app. Does NOT submit for App Store review.
         submit_to_testflight: true
+
+  # ===========================================================================
+  # Android → Google Play (mirror of the iOS→TestFlight flow above).
+  #
+  # One-time setup (analogous to the Apple ASC key — only rotem can do it):
+  #   1. Google Play Console → Setup → API access → link/create a Google Cloud
+  #      project, then create a *service account* and grant it access to this
+  #      app (Users & permissions → Release apps to testing tracks, at least).
+  #   2. Download the service-account JSON key.
+  #   3. Codemagic UI → this app → Environment variables → group `google_play`,
+  #      add variable `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS` = the whole JSON,
+  #      mark it Secure.
+  # After that, pushing a tag like `aab-v5` builds a signed AAB and publishes it
+  # to the Internal testing track automatically. Signing reuses the same EA:3B
+  # Play upload key as build-aab.yml (decoded from android/app/upload_keystore.b64),
+  # so no keystore upload is needed in Codemagic.
+  # ===========================================================================
+  android-googleplay:
+    name: WhoIsThere Android — Google Play
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: 'aab-v*'
+          include: true
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      groups:
+        - google_play          # provides GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      flutter: 3.27.4          # matches the working build-aab.yml Android build
+      vars:
+        # EA:3B Play upload key — the ONLY key Play accepts (identical to
+        # build-aab.yml). Repo is public; rotate post-launch (see CLAUDE.md TODO).
+        KEYSTORE_STORE_PASS: "123456"
+        KEYSTORE_ALIAS: "upload"
+        KEYSTORE_KEY_PASS: "123456"
+        PLAY_TRACK: "internal"  # switch to "production" for a public release
+    scripts:
+      - name: Restore EA:3B upload keystore
+        script: |
+          set -e
+          base64 -d android/app/upload_keystore.b64 > android/app/keystore.jks
+          SIZE=$(stat -c%s android/app/keystore.jks 2>/dev/null || stat -f%z android/app/keystore.jks)
+          echo "keystore bytes: $SIZE"
+          if [ "$SIZE" -lt 2000 ]; then echo "keystore decode failed ($SIZE bytes)"; exit 1; fi
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Generate launcher icons
+        script: dart run flutter_launcher_icons || true
+      - name: Build signed App Bundle
+        script: |
+          set -e
+          # versionCode must exceed every code already on Play. The GitHub
+          # build-aab path is at 40; offset the Codemagic build counter by 100 so
+          # codes stay strictly increasing and never collide with that path.
+          VCODE=$((PROJECT_BUILD_NUMBER + 100))
+          echo "Using Android versionCode: $VCODE"
+          flutter build appbundle --release \
+            --build-name=1.4.3 \
+            --build-number=$VCODE
+      - name: Verify AAB signed with the EA:3B upload key
+        script: |
+          CERT=$(keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab 2>&1)
+          echo "$CERT" | grep -E "SHA1|SHA-1|Owner" || true
+          if echo "$CERT" | grep -qiE "EA:?3B:?59:?B9:?2D:?4D:?F2:?58:?77:?4C:?33:?55:?76:?F3:?42:?46:?CC:?11:?D0:?75"; then
+            echo "✓ AAB signed with the EA:3B Play upload key."
+          else
+            echo "AAB is NOT signed with the EA:3B upload key — Play would reject it."
+            exit 1
+          fi
+    artifacts:
+      - build/app/outputs/bundle/release/*.aab
+      - build/app/outputs/**/mapping.txt
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        # Publishes to the Internal testing track (no review wait). The build is
+        # released to testers, not submitted for production review.
+        track: $PLAY_TRACK
+        submit_as_draft: false
