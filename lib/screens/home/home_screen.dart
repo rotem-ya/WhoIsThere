@@ -23,6 +23,7 @@ import '../../widgets/common/banner_ad_widget.dart';
 import '../../widgets/common/pressable.dart';
 import '../../services/feedback_service.dart';
 import '../../services/settings_service.dart';
+import '../../services/rewards_config_service.dart';
 import '../../services/qa_logger_service.dart';
 import '../../widgets/common/pressable_scale.dart';
 import '../../widgets/common/tilt_card.dart';
@@ -30,9 +31,8 @@ import '../../widgets/economy/coin_display.dart';
 import '../../widgets/economy/coin_fly.dart';
 import '../../widgets/economy/coin_icon.dart';
 import '../../widgets/common/candy_particles.dart';
-import '../../widgets/economy/daily_quest_card.dart';
 import '../../widgets/economy/daily_spin_sheet.dart';
-import '../../widgets/economy/daily_reward_sheet.dart';
+import '../../widgets/economy/rewards_hub_sheet.dart';
 import '../../models/room_model.dart';
 
 enum _GameKind { places, heat, letters, proverbs }
@@ -930,6 +930,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             delayMs: 300, durationMs: 320,
                           ),
                           const _WinStreakBanner(),
+                          const _HappyHourHomeBanner(),
                           SizedBox(height: verySmall ? 10 : compact ? 14 : 20),
                           _step(
                             Column(
@@ -987,7 +988,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                           SizedBox(height: verySmall ? 6 : 10),
                           _RecentGamesStrip(onReplay: _showPlaySheet),
-                          const DailyQuestCard(),
                           SizedBox(height: verySmall ? 6 : 10),
                           const BannerAdWidget(),
                           SizedBox(height: verySmall ? 4 : 8),
@@ -1093,6 +1093,56 @@ class _RecentGamesStrip extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// ── Happy Hour banner (admin-scheduled coin multiplier) ───────────────────
+
+class _HappyHourHomeBanner extends ConsumerWidget {
+  const _HappyHourHomeBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(rewardsRevisionProvider);
+    if (!RewardsConfigService.instance.happyHourActive) {
+      return const SizedBox.shrink();
+    }
+    final mult = RewardsConfigService.instance.happyHourMultiplier;
+    final label = RewardsConfigService.instance.happyHourLabel;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+              colors: [Color(0xFFFF7A1A), Color(0xFFFFB03A)]),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+                color: const Color(0xFFFF7A1A).withOpacity(0.45),
+                blurRadius: 16,
+                spreadRadius: 1),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('⚡', style: TextStyle(fontSize: 17))
+                .animate(onPlay: (c) => c.repeat(reverse: true))
+                .scaleXY(begin: 0.9, end: 1.15, duration: 600.ms),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text('$label כל המטבעות ×$mult',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(duration: 260.ms);
   }
 }
 
@@ -1413,19 +1463,8 @@ class _DailyRewardButton extends ConsumerWidget {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        if (isAvailable) {
-          showDailyRewardSheet(context, ref);
-        } else {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              const SnackBar(
-                content: Text('הפרס היומי כבר נאסף'),
-                duration: Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-        }
+        // Opens the unified rewards hub (spin + daily reward + quests).
+        showRewardsHub(context, ref);
       },
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 200),
@@ -1499,17 +1538,9 @@ class _DailySpinButton extends ConsumerWidget {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        if (isAvailable) {
-          showDailySpinSheet(context, ref);
-        } else {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(const SnackBar(
-              content: Text('גלגל המזל כבר סובב היום'),
-              duration: Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ));
-        }
+        // Always open the wheel; the sheet shows a "come back tomorrow" state
+        // when today's free spin was already used.
+        showDailySpinSheet(context, ref);
       },
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 200),

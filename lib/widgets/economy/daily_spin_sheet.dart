@@ -267,6 +267,27 @@ class _DailySpinSheetState extends ConsumerState<_DailySpinSheet>
                 textDirection: TextDirection.rtl,
                 style: const TextStyle(
                     color: Candy.gold, fontSize: 20, fontWeight: FontWeight.w900))
+          else if (!isDailySpinAvailable(
+              ref.watch(walletProvider).valueOrNull?.lastDailySpinAt))
+            // Already spun today — show the wheel but a friendly locked state.
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white.withOpacity(0.12)),
+              ),
+              child: const Text(
+                '⏰ סובבת היום כבר. חזרו מחר לסיבוב חינם נוסף!',
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
+                style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700),
+              ),
+            )
           else
             SizedBox(
               width: double.infinity,
