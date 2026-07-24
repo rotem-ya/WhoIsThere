@@ -21,6 +21,7 @@ import 'models/user_model.dart';
 import 'providers/providers.dart';
 import 'services/content_manifest_service.dart';
 import 'services/cosmetics_catalog_service.dart';
+import 'services/rewards_config_service.dart';
 import 'services/notification_service.dart';
 import 'services/qa_logger_service.dart';
 import 'services/report_service.dart';
@@ -139,6 +140,10 @@ void main() async {
   // realtime for admin edits, bundled fallback on any failure.
   await CosmeticsCatalogService.instance.loadCached();
   CosmeticsCatalogService.instance.startRealtime();
+
+  // Live rewards config (spin wheel / happy hour / quests) — same architecture.
+  await RewardsConfigService.instance.loadCached();
+  RewardsConfigService.instance.startRealtime();
 
   runApp(const ProviderScope(child: GuessThePlaceApp()));
 }

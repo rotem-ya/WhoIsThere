@@ -10,6 +10,7 @@ import '../models/economy/user_economy_model.dart';
 import 'local_economy_cache.dart';
 import 'qa_logger_service.dart';
 import 'reward_calculator.dart';
+import 'rewards_config_service.dart';
 
 class EconomyService {
   final FirebaseFirestore _db;
@@ -123,9 +124,10 @@ class EconomyService {
     );
 
     if (breakdown.total > 0) {
+      final hhMult = RewardsConfigService.instance.happyHourMultiplier;
       await _applyDelta(
         uid: uid,
-        delta: breakdown.total,
+        delta: breakdown.total * hhMult,
         type: isWin ? TransactionType.matchWin : TransactionType.matchParticipation,
         roomId: roomId,
         meta: {
@@ -139,6 +141,7 @@ class EconomyService {
           'revealRatio': breakdown.revealRatio,
           'wrongGuessCount': wrongGuessCount,
           'secondsTaken': timeTaken.inSeconds,
+          if (hhMult > 1) 'happyHourMult': hhMult,
         },
         statUpdater: (w) => w.copyWith(
           totalMatchesPlayed: w.totalMatchesPlayed + 1,
@@ -186,7 +189,8 @@ class EconomyService {
           wallet.lastDailyRewardAt,
           now,
         );
-        final coins = RewardCalculator.calculateDailyReward(newStreak);
+        final coins = RewardCalculator.calculateDailyReward(newStreak) *
+            RewardsConfigService.instance.happyHourMultiplier;
 
         final updated = wallet.copyWith(
           coins: wallet.coins + coins,
@@ -230,9 +234,14 @@ class EconomyService {
   Future<({int index, int coins})?> claimDailySpin(String uid) async {
     final now = DateTime.now().toUtc();
     final ref = _walletRef(uid);
-    final segs = EconomyConfig.dailySpinSegments;
-    final index = segs.isEmpty ? 0 : _drawSpinIndex().clamp(0, segs.length - 1);
-    final coins = segs.isEmpty ? 0 : segs[index];
+    // Segments/weights come from the admin-managed rewards config (embedded
+    // fallback when absent). Happy Hour multiplies the payout.
+    final spin = RewardsConfigService.instance.config.spin;
+    final segs = spin.segments;
+    final index =
+        segs.isEmpty ? 0 : _drawSpinIndex(spin.weights).clamp(0, segs.length - 1);
+    final baseCoins = segs.isEmpty ? 0 : segs[index];
+    final coins = baseCoins * RewardsConfigService.instance.happyHourMultiplier;
 
     ({int index, int coins})? result;
     try {
@@ -283,10 +292,10 @@ class EconomyService {
     return result;
   }
 
-  /// Weighted draw over [EconomyConfig.dailySpinWeights].
-  int _drawSpinIndex() {
-    final weights = EconomyConfig.dailySpinWeights;
+  /// Weighted draw over [weights] (from the rewards config).
+  int _drawSpinIndex(List<int> weights) {
     final total = weights.fold<int>(0, (a, b) => a + b);
+    if (total <= 0) return 0;
     var r = Random().nextInt(total);
     for (var i = 0; i < weights.length; i++) {
       if (r < weights[i]) return i;

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/economy_config.dart';
+import '../../services/rewards_config_service.dart';
 import '../../core/theme/candy_theme.dart';
 import '../../providers/providers.dart';
 import '../../services/qa_logger_service.dart';
@@ -62,7 +62,7 @@ class _DailySpinSheetState extends ConsumerState<_DailySpinSheet>
 
   // Plays a ratchet tick each time the wheel crosses a segment boundary.
   void _spinTicker() {
-    final n = EconomyConfig.dailySpinSegments.length;
+    final n = RewardsConfigService.instance.config.spin.segments.length;
     final turns = _fromTurns + (_toTurns - _fromTurns) *
         Curves.easeOutQuart.transform(_spin.value);
     if ((turns - _lastTickTurns).abs() >= 1.0 / n) {
@@ -109,7 +109,7 @@ class _DailySpinSheetState extends ConsumerState<_DailySpinSheet>
       }
 
       // Land segment res.index under the top pointer, after several turns.
-      final n = EconomyConfig.dailySpinSegments.length;
+      final n = RewardsConfigService.instance.config.spin.segments.length;
       final idx = n == 0 ? 0 : res.index.clamp(0, n - 1);
       final seg = n == 0 ? 1.0 : 1.0 / n;
       final landing = n == 0 ? 0.0 : (n - idx) % n * seg - seg / 2; // turns
@@ -320,7 +320,7 @@ class _WheelPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
     final radius = size.width / 2;
-    final segments = EconomyConfig.dailySpinSegments;
+    final segments = RewardsConfigService.instance.config.spin.segments;
     final n = segments.length;
     final seg = 2 * math.pi / n;
     // Outer gold rim.
