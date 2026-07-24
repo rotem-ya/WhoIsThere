@@ -168,6 +168,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Live rewards config (spin wheel segments/weights, happy hour, daily &
+    // weekly quests, future events) — admin-managed, read by every client so
+    // the rewards hub reflects changes without shipping a new build.
+    match /rewards_config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // ── Card skins (tile-back designs) ────────────────────────────────────────
     // Read: any signed-in player — the game streams active card skins
     // (firestoreSkinsProvider) for the tile-back catalog. Write: admins only
